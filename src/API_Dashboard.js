@@ -169,69 +169,13 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
 
   // SMART ENGINE: Daily Proration Accrual Logic (GAAP Compliant)
   const distributeAmount = (sDateStr, eDateStr, fallbackDateStr, totalAmt, targetArr) => {
-    let sDate = parseSafeDate(sDateStr);
-    let eDate = parseSafeDate(eDateStr);
-    
-    // Fallback to the transaction date if coverage start date is missing
-    if (isNaN(sDate)) sDate = parseSafeDate(fallbackDateStr);
-    if (isNaN(sDate)) return; // Unchartable
-
     trackYear(sDateStr || fallbackDateStr);
-    
-    // SPLIT LOGIC: Prorate precise daily amount across covered calendar months
-    if (accrualMode === 'split' && !isNaN(eDate) && eDate >= sDate) {
-        
-        // Strip times to ensure pure date math
-        const start = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
-        const end = new Date(eDate.getFullYear(), eDate.getMonth(), eDate.getDate());
-        
-        // Use UTC to prevent Daylight Saving Time from causing missing hours/days
-        const msPerDay = 1000 * 60 * 60 * 24;
-        const utcStart = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
-        const utcEnd = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
-        
-        // Total days inclusive (+1 day)
-        let totalDays = Math.floor((utcEnd - utcStart) / msPerDay) + 1;
-        if (totalDays <= 0) totalDays = 1; // Safegaurd
-        
-        const dailyRate = totalAmt / totalDays;
-        
-        let current = new Date(start);
-        
-        while (current <= end) {
-            let cYear = current.getFullYear();
-            let cMonth = current.getMonth();
-            
-            // Find the last day of the current month being iterated
-            let endOfMonth = new Date(cYear, cMonth + 1, 0); 
-            
-            // The active interval ends at the end of the month, or the final end date (whichever is earlier)
-            let intervalEnd = (end < endOfMonth) ? end : endOfMonth;
-            
-            let utcCurrent = Date.UTC(current.getFullYear(), current.getMonth(), current.getDate());
-            let utcIntervalEnd = Date.UTC(intervalEnd.getFullYear(), intervalEnd.getMonth(), intervalEnd.getDate());
-            
-            let daysInInterval = Math.floor((utcIntervalEnd - utcCurrent) / msPerDay) + 1;
-            let intervalAmt = daysInInterval * dailyRate;
-            
-            // Distribute to the target year array
-            if (cYear === targetYear) {
-                targetArr[cMonth] += intervalAmt;
-            }
-            
-            // Track year for dropdown filters
-            trackYear(new Date(cYear, cMonth, 1).toISOString());
-            
-            // Jump to the 1st of the next month for the next loop iteration
-            current = new Date(cYear, cMonth + 1, 1);
-        }
-    } 
-    // ANCHOR LOGIC: Drop the entire amount on the start date (Cash Basis)
-    else {
-       if (sDate.getFullYear() === targetYear) {
-           targetArr[sDate.getMonth()] += totalAmt;
-       }
-    }
+    distributeDailyProration(sDateStr, eDateStr, fallbackDateStr, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
+      if (cYear === targetYear) {
+        targetArr[cMonth] += intervalAmt;
+      }
+      trackYear(new Date(cYear, cMonth, 1).toISOString());
+    });
   };
 
   payments.forEach(p => {
@@ -552,15 +496,3 @@ function safeNumArray(arr) {
 
 function parseAmt(val) { return Number(String(val).replace(/[^0-9.-]+/g, "")) || 0; }
 function isSuccess(statusStr) { const s = (String(statusStr) || '').toLowerCase(); return !s.includes('fail') && !s.includes('pending'); }
-function parseSafeDate(dStr) {
-  if (!dStr || dStr === 'N/A') return new Date("");
-  let d = new Date(dStr);
-  if (isNaN(d) && typeof dStr === 'string') {
-    const parts = dStr.split('-');
-    if (parts.length === 3) {
-      const mMap = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
-      d = new Date(parts[2], mMap[parts[1].toLowerCase()] || 0, parts[0]);
-    }
-  }
-  return d;
-}

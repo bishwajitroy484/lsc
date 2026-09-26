@@ -3,15 +3,7 @@
  * High-Speed Headless CMS engine.
  */
 
-function _colToLetter(column) {
-  let temp, letter = '';
-  while (column > 0) {
-    temp = (column - 1) % 26;
-    letter = String.fromCharCode(temp + 65) + letter;
-    column = (column - temp - 1) / 26;
-  }
-  return letter;
-}
+// _colToLetter is provided by Utils_DB.gs (colToLetter)
 
 function api_getSheetStructure() {
   try {

@@ -4,10 +4,7 @@
   window.modalChartInstance = null;
   window.DashboardData = null; 
 
-  var safeSetText = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.innerText = val;
-  };
+  var safeSetText = AppUtils.safeSetText;
 
   window.toggleDataLabels = function(chartKey) {
     const chart = window.AppCharts[chartKey];
@@ -72,14 +69,20 @@
       this.render('upcoming');
     },
 
+    _debouncedSearch: null,
     search: function(type, query) {
-      const q = query.toLowerCase();
-      this.filtered[type] = this.data[type].filter(row => row.name.toLowerCase().includes(q));
-      if (this.sortState[type].col) {
-        this.sort(type, this.sortState[type].col, true);
-      } else {
-        this.render(type);
+      if (!this._debouncedSearch) {
+        this._debouncedSearch = AppUtils.debounce((t, q) => {
+          const lowerQ = (q || '').toLowerCase();
+          this.filtered[t] = this.data[t].filter(row => row.name.toLowerCase().includes(lowerQ));
+          if (this.sortState[t].col) {
+            this.sort(t, this.sortState[t].col, true);
+          } else {
+            this.render(t);
+          }
+        }, 150);
       }
+      this._debouncedSearch(type, query);
     },
 
     sort: function(type, col, keepDirection = false) {
@@ -338,7 +341,7 @@
       DashboardState.populateYears(data.availableYears);
       DashboardState.updateLabel(); 
       
-      const formatCurrency = (val) => '₹' + Number(val || 0).toLocaleString('en-IN');
+      const formatCurrency = AppUtils.formatCurrency;
       
       const currentHour = new Date().getHours();
       let timeGreet = "Good Morning";

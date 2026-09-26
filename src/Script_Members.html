@@ -179,32 +179,10 @@
     },
 
     formatDateDDMMMYYYY: function(dateStr) {
-      if(!dateStr) return '';
-      let d = new Date(dateStr);
-      if(isNaN(d)) return dateStr; 
-      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = months[d.getMonth()];
-      const year = String(d.getFullYear()).slice(-2); 
-      return `${day}-${month}-${year}`;
+      return AppUtils.formatDateDDMMMYYYY(dateStr, true, true);
     },
 
-    parseToISODate: function(input) {
-      if (!input) return '';
-      let d = new Date(input);
-      if (isNaN(d) && typeof input === 'string') {
-        const parts = input.split('-');
-        if (parts.length === 3) {
-          const months = {jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11};
-          d = new Date(parts[2], months[parts[1].toLowerCase()], parts[0]);
-        }
-      }
-      if (isNaN(d)) return '';
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    },
+    parseToISODate: AppUtils.parseToISODate,
 
     onDropdownsLoaded: function(response) {
       if(!response.success) return Toast.error("Failed to load configuration: " + response.error);
@@ -315,7 +293,14 @@
       this.allData = response.data || [];
     },
 
-    search: function(query) { this.searchQuery = query.toLowerCase().trim(); this.applyFilters(); },
+    _debouncedApplyFilters: null,
+    search: function(query) {
+      this.searchQuery = query.toLowerCase().trim();
+      if (!this._debouncedApplyFilters) {
+        this._debouncedApplyFilters = AppUtils.debounce(() => this.applyFilters(), 150);
+      }
+      this._debouncedApplyFilters();
+    },
 
     setMobileFilter: function(statusName) {
       document.querySelectorAll('.mob-filter-btn').forEach(btn => {

@@ -1,4 +1,83 @@
 <script>
+  const AppUtils = {
+    formatCurrency: function(val) {
+      return '₹' + Number(val || 0).toLocaleString('en-IN');
+    },
+
+    parseAmount: function(val) {
+      return Number(String(val || 0).replace(/[^0-9.-]+/g, "")) || 0;
+    },
+
+    formatDateDDMMMYYYY: function(dateStr, uppercase = false, shortYear = false) {
+      if (!dateStr) return '';
+      let d = new Date(dateStr);
+      if (isNaN(d)) return dateStr;
+      const months = uppercase
+        ? ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+        : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = months[d.getMonth()];
+      const year = shortYear ? String(d.getFullYear()).slice(-2) : d.getFullYear();
+      return `${day}-${month}-${year}`;
+    },
+
+    parseToISODate: function(input) {
+      if (!input) return '';
+      let d = new Date(input);
+      if (isNaN(d) && typeof input === 'string') {
+        const parts = input.split('-');
+        if (parts.length === 3) {
+          const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+          let y = parseInt(parts[2], 10);
+          if (y < 100) y += 2000;
+          d = new Date(y, months[parts[1].toLowerCase()] || 0, parseInt(parts[0], 10));
+        }
+      }
+      if (isNaN(d)) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    },
+
+    safeSetText: function(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.innerText = text !== undefined && text !== null ? text : '';
+    },
+
+    safeSetValue: function(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.value = val !== undefined && val !== null ? val : '';
+    },
+
+    safeSetClass: function(id, cls) {
+      const el = document.getElementById(id);
+      if (el) el.className = cls;
+    },
+
+    debounce: function(fn, wait = 150) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn.apply(this, args), wait);
+      };
+    },
+
+    showModal: function(backdropId, contentId, hideClasses = ['opacity-0', 'pointer-events-none'], transformClasses = ['translate-y-full', 'opacity-0']) {
+      const backdrop = document.getElementById(backdropId);
+      const content = document.getElementById(contentId);
+      if (backdrop) backdrop.classList.remove(...hideClasses);
+      if (content) content.classList.remove(...transformClasses);
+    },
+
+    hideModal: function(backdropId, contentId, hideClasses = ['opacity-0', 'pointer-events-none'], transformClasses = ['translate-y-full', 'opacity-0']) {
+      const backdrop = document.getElementById(backdropId);
+      const content = document.getElementById(contentId);
+      if (backdrop) backdrop.classList.add(...hideClasses);
+      if (content) content.classList.add(...transformClasses);
+    }
+  };
+
   const SidebarManager = {
     toggle: function() {
       const sidebar = document.getElementById('main-sidebar');

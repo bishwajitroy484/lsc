@@ -22,9 +22,9 @@
     
     colorMap: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#64748b'],
 
-    safeSetText: function(id, text) { const el = document.getElementById(id); if(el) el.innerText = text; },
-    safeSetValue: function(id, val) { const el = document.getElementById(id); if(el) el.value = val; },
-    safeSetClass: function(id, cls) { const el = document.getElementById(id); if(el) el.className = cls; },
+    safeSetText: AppUtils.safeSetText,
+    safeSetValue: AppUtils.safeSetValue,
+    safeSetClass: AppUtils.safeSetClass,
 
     init: function() {
       this.isDropdownsLoaded = false;
@@ -84,33 +84,8 @@
       }
     },
 
-    formatDateDDMMMYYYY: function(dateStr) {
-      if(!dateStr) return '';
-      let d = new Date(dateStr);
-      if(isNaN(d)) return dateStr; 
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = months[d.getMonth()];
-      const year = d.getFullYear();
-      return `${day}-${month}-${year}`;
-    },
-
-    parseToISODate: function(input) {
-      if (!input) return '';
-      let d = new Date(input);
-      if (isNaN(d) && typeof input === 'string') {
-        const parts = input.split('-');
-        if (parts.length === 3) {
-          const months = {jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11};
-          d = new Date(parts[2], months[parts[1].toLowerCase()], parts[0]);
-        }
-      }
-      if (isNaN(d)) return '';
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    },
+    formatDateDDMMMYYYY: AppUtils.formatDateDDMMMYYYY,
+    parseToISODate: AppUtils.parseToISODate,
 
     showShimmer: function() {
       let dHtml = '';
@@ -135,10 +110,7 @@
       if(cr) cr.innerHTML = '<div class="absolute inset-4 shimmer opacity-50 rounded-xl"></div>';
     },
 
-    parseAmount: function(val) {
-      if(!val) return 0;
-      return Number(val.toString().replace(/[^0-9.-]+/g,"")) || 0;
-    },
+    parseAmount: AppUtils.parseAmount,
 
     getColor: function(idx) { return this.colorMap[idx % this.colorMap.length]; },
 
@@ -508,7 +480,14 @@
       });
     },
 
-    searchTable: function(query) { this.tableSearchQuery = query.toLowerCase().trim(); this.filterTable(); },
+    _debouncedFilterTable: null,
+    searchTable: function(query) {
+      this.tableSearchQuery = query.toLowerCase().trim();
+      if (!this._debouncedFilterTable) {
+        this._debouncedFilterTable = AppUtils.debounce(() => this.filterTable(), 150);
+      }
+      this._debouncedFilterTable();
+    },
 
     filterTable: function() {
       const q = this.tableSearchQuery || '';

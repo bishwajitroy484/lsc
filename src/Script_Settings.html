@@ -15,22 +15,15 @@
     // Core known settings mapped directly to UI Inputs
     coreKeys: ['GYM_NAME', 'LOGO_ID', 'Revenue_Recognition', 'OWNER_EMAIL', 'SPREADSHEET_ID', 'REMINDER_BUFFER'],
 
-    safeSetText: function(id, text) { const el = document.getElementById(id); if(el) el.innerText = text; },
-    safeSetValue: function(id, val) { const el = document.getElementById(id); if(el) el.value = val; },
+    safeSetText: AppUtils.safeSetText,
+    safeSetValue: AppUtils.safeSetValue,
 
     showToast: function(msg, isError = false) {
-      let toastEl = document.getElementById('settings-local-toast');
-      if (!toastEl) {
-         toastEl = document.createElement('div');
-         toastEl.id = 'settings-local-toast';
-         toastEl.className = 'fixed top-4 right-4 px-4 py-3 rounded-lg shadow-2xl text-white text-sm font-bold z-[9999] transition-all duration-300 transform translate-y-[-150%] opacity-0 pointer-events-none flex items-center gap-2';
-         document.body.appendChild(toastEl);
+      if (isError) {
+        Toast.error(msg);
+      } else {
+        Toast.success(msg);
       }
-      const icon = isError ? 'error' : 'check_circle';
-      toastEl.innerHTML = `<span class="material-symbols-rounded text-[18px]">${icon}</span> <span>${msg}</span>`;
-      toastEl.style.backgroundColor = isError ? '#ef4444' : '#10b981';
-      requestAnimationFrame(() => toastEl.classList.remove('translate-y-[-150%]', 'opacity-0'));
-      setTimeout(() => toastEl.classList.add('translate-y-[-150%]', 'opacity-0'), 3500);
     },
 
     init: function() {

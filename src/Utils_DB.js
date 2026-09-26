@@ -227,16 +227,100 @@ const DB = {
     return dataRanges;
   },
 
-  _indexToLetter: function (column) {
-    let temp, letter = '';
-    while (column > 0) {
-      temp = (column - 1) % 26;
-      letter = String.fromCharCode(temp + 65) + letter;
-      column = (column - temp - 1) / 26;
-    }
-    return letter;
-  }
+  _indexToLetter: colToLetter
 };
+
+/**
+ * Universal 1-based column index to letter converter (e.g. 1 -> A, 27 -> AA).
+ */
+function colToLetter(column) {
+  let temp, letter = '';
+  while (column > 0) {
+    temp = (column - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    column = (column - temp - 1) / 26;
+  }
+  return letter;
+}
+const _colToLetter = colToLetter;
+
+/**
+ * Robust date parser supporting DD-MMM-YYYY, ISO strings, and standard dates.
+ */
+function parseSafeDate(dStr) {
+  if (!dStr || dStr === 'N/A') return new Date("");
+  let d = new Date(dStr);
+  if (isNaN(d) && typeof dStr === 'string') {
+    const parts = dStr.split('-');
+    if (parts.length === 3) {
+      const mMap = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+      d = new Date(parts[2], mMap[parts[1].toLowerCase()] || 0, parts[0]);
+    }
+  }
+  return d;
+}
+
+/**
+ * GAAP-compliant Daily Proration engine using UTC dates.
+ * Distributes an amount across covered calendar months.
+ *
+ * @param {Date|string} sDateStr - Start date
+ * @param {Date|string} eDateStr - End date
+ * @param {Date|string} fallbackDateStr - Fallback date if start date is missing
+ * @param {number} totalAmt - Total amount to distribute
+ * @param {string} accrualMode - 'split' for daily proration, or 'anchor' for cash basis
+ * @param {function(number, number, number)} onInterval - Callback receiving (year, monthIndex, intervalAmount)
+ */
+function distributeDailyProration(sDateStr, eDateStr, fallbackDateStr, totalAmt, accrualMode, onInterval) {
+  let sDate = parseSafeDate(sDateStr);
+  let eDate = parseSafeDate(eDateStr);
+  if (isNaN(sDate)) sDate = parseSafeDate(fallbackDateStr);
+  if (isNaN(sDate)) return;
+
+  if (accrualMode === 'split' && !isNaN(eDate) && eDate >= sDate) {
+    const start = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
+    const end = new Date(eDate.getFullYear(), eDate.getMonth(), eDate.getDate());
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const utcStart = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+    const utcEnd = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+
+    let totalDays = Math.floor((utcEnd - utcStart) / msPerDay) + 1;
+    if (totalDays <= 0) totalDays = 1;
+
+    const dailyRate = totalAmt / totalDays;
+    let current = new Date(start);
+
+    while (current <= end) {
+      let cYear = current.getFullYear();
+      let cMonth = current.getMonth();
+      let endOfMonth = new Date(cYear, cMonth + 1, 0);
+      let intervalEnd = (end < endOfMonth) ? end : endOfMonth;
+
+      let utcCurrent = Date.UTC(current.getFullYear(), current.getMonth(), current.getDate());
+      let utcIntervalEnd = Date.UTC(intervalEnd.getFullYear(), intervalEnd.getMonth(), intervalEnd.getDate());
+
+      let daysInInterval = Math.floor((utcIntervalEnd - utcCurrent) / msPerDay) + 1;
+      let intervalAmt = daysInInterval * dailyRate;
+
+      onInterval(cYear, cMonth, intervalAmt);
+      current = new Date(cYear, cMonth + 1, 1);
+    }
+  } else {
+    // Anchor logic (cash basis)
+    onInterval(sDate.getFullYear(), sDate.getMonth(), totalAmt);
+  }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    colToLetter,
+    _colToLetter,
+    parseSafeDate,
+    distributeDailyProration,
+    SPREADSHEET_ID,
+    DB
+  };
+}
 
 /**
  * API_Mutations.gs
