@@ -96,10 +96,15 @@
       const mc = document.getElementById('mobile-staff-container');
       if(mc) mc.innerHTML = `<div class="p-4 bg-white rounded-xl shadow-sm"><div class="h-10 w-full shimmer rounded"></div></div>`;
       
-      ['kpi-total-staff', 'kpi-total-cost', 'kpi-avg-cost', 'kpi-high-amt', 'kpi-low-amt'].forEach(id => {
+      ['kpi-total-staff', 'kpi-total-cost', 'kpi-action-needed', 'kpi-high-amt', 'kpi-low-amt'].forEach(id => {
          const el = document.getElementById(id);
          if(el) el.innerHTML = '<div class="h-6 w-16 shimmer rounded mt-1"></div>';
       });
+
+      const anDesktop = document.getElementById('action-needed-desktop-body');
+      if(anDesktop) anDesktop.innerHTML = '<tr><td colspan="4" class="px-4 py-3"><div class="h-6 w-full shimmer rounded"></div></td></tr>';
+      const anMob = document.getElementById('action-needed-mobile-container');
+      if(anMob) anMob.innerHTML = '<div class="p-3 bg-white rounded-xl shadow-sm"><div class="h-10 w-full shimmer rounded"></div></div>';
 
       if(this.chartInstances.trend) this.chartInstances.trend.destroy();
       if(this.chartInstances.breakdown) this.chartInstances.breakdown.destroy();
@@ -294,6 +299,205 @@
       this.filterTable(); 
     },
 
+    getStaffPendingCycles: function(stf, staffPayments = null) {
+      if (!stf) return [];
+      const sal = this.parseAmount(stf.salary);
+      if (sal <= 0 || !stf.joinDate) return [];
+
+      const joinDate = new Date(this.parseToISODate(stf.joinDate));
+      if (isNaN(joinDate)) return [];
+
+      const sName = this.getName('status', stf.status);
+      if (sName !== 'Active' && !stf.exitDate) return [];
+
+      let today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let cutoffDate = today;
+      if (stf.exitDate) {
+        const exitD = new Date(this.parseToISODate(stf.exitDate));
+        if (!isNaN(exitD) && exitD < today) {
+          cutoffDate = exitD;
+        }
+      }
+
+      const payments = staffPayments || (this.allPayments || []).filter(p => p.staffId === stf.staffId);
+      const creditTypes = this.dropdowns.credit_type_options || this.dropdowns.credittype || this.dropdowns.credit_type || [];
+      const salaryId = creditTypes.length ? creditTypes.find(c => (c.name || '').toLowerCase().includes('salary'))?.id : null;
+
+      const validSalaries = payments.filter(p => 
+        p.endDate && p.paymentStatus && 
+        !p.paymentStatus.toLowerCase().includes('fail') && 
+        !p.paymentStatus.toLowerCase().includes('pending') && 
+        (!salaryId || p.creditType === salaryId)
+      );
+
+      validSalaries.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
+
+      let currentDue = new Date(joinDate);
+      if (validSalaries.length > 0) {
+        currentDue = new Date(this.parseToISODate(validSalaries[0].endDate));
+        currentDue.setDate(currentDue.getDate() + 1);
+      }
+
+      let virtualRecords = [];
+      let iterCount = 1;
+      while (currentDue < cutoffDate && iterCount <= 12) {
+        let vEnd = new Date(currentDue);
+        vEnd.setMonth(vEnd.getMonth() + 1);
+        vEnd.setDate(vEnd.getDate() - 1);
+
+        virtualRecords.push({
+          isVirtual: true,
+          amount: sal,
+          virtualStartDate: currentDue.toISOString(),
+          virtualEndDate: vEnd.toISOString()
+        });
+
+        currentDue = new Date(vEnd);
+        currentDue.setDate(currentDue.getDate() + 1);
+        iterCount++;
+      }
+
+      return virtualRecords;
+    },
+
+    getActionNeededStaffList: function() {
+      let list = [];
+      (this.allData || []).forEach(stf => {
+        const pendingCycles = this.getStaffPendingCycles(stf);
+        if (pendingCycles.length > 0) {
+          const totalAmt = pendingCycles.reduce((sum, c) => sum + this.parseAmount(c.amount), 0);
+          const earliest = pendingCycles[0];
+          const latest = pendingCycles[pendingCycles.length - 1];
+          const firstStart = this.formatDateDDMMMYYYY(earliest.virtualStartDate);
+          const lastEnd = this.formatDateDDMMMYYYY(latest.virtualEndDate);
+
+          list.push({
+            staff: stf,
+            staffId: stf.staffId,
+            fullName: stf.fullName,
+            role: this.getName('role', stf.role),
+            salary: this.parseAmount(stf.salary),
+            pendingCount: pendingCycles.length,
+            pendingCycles: pendingCycles,
+            totalAmount: totalAmt,
+            cycleRangeText: pendingCycles.length === 1 
+              ? `${firstStart} to ${lastEnd}` 
+              : `${firstStart} to ${lastEnd}`
+          });
+        }
+      });
+
+      list.sort((a, b) => b.pendingCount - a.pendingCount || b.totalAmount - a.totalAmount);
+      return list;
+    },
+
+    renderActionNeededList: function(list) {
+      const tBody = document.getElementById('action-needed-desktop-body');
+      const mContainer = document.getElementById('action-needed-mobile-container');
+      const badge = document.getElementById('action-needed-badge');
+      if (!tBody || !mContainer) return;
+
+      const count = list ? list.length : 0;
+      if (badge) {
+        if (count === 0) {
+          badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
+          badge.innerText = 'All Paid';
+        } else {
+          badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200';
+          badge.innerText = `${count} Staff`;
+        }
+      }
+
+      if (!list || list.length === 0) {
+        tBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-xs text-slate-500"><div class="flex items-center justify-center gap-2 text-emerald-600 font-medium"><span class="material-symbols-rounded text-lg">check_circle</span>All staff salaries are up to date. No action needed.</div></td></tr>`;
+        mContainer.innerHTML = `<div class="p-4 text-center text-xs text-slate-500 bg-white rounded-xl border border-slate-200"><div class="flex items-center justify-center gap-2 text-emerald-600 font-medium"><span class="material-symbols-rounded text-lg">check_circle</span>All staff salaries are up to date.</div></div>`;
+        return;
+      }
+
+      let dHtml = '';
+      let mHtml = '';
+
+      list.forEach(item => {
+        const initials = item.fullName ? item.fullName.substring(0, 2).toUpperCase() : 'NA';
+        const formattedTotal = AppUtils.formatCurrency(item.totalAmount);
+        const cycleBadge = `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase">${item.pendingCount} ${item.pendingCount === 1 ? 'Cycle' : 'Cycles'}</span>`;
+
+        dHtml += `
+          <tr class="hover:bg-amber-50/20 transition-colors cursor-pointer" onclick="StaffApp.openStaffSalary('${item.staffId}')">
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0">${initials}</div>
+                <div>
+                  <div class="font-bold text-slate-800 text-xs hover:text-brand-primary transition-colors">${item.fullName}</div>
+                  <div class="text-[10px] text-slate-500 font-medium">${item.role}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                ${cycleBadge}
+                <span class="text-xs text-slate-600">${item.cycleRangeText}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="font-bold text-slate-800 text-xs">${formattedTotal}</div>
+              <div class="text-[9px] text-slate-400">₹${item.salary.toLocaleString('en-IN')}/mo</div>
+            </td>
+            <td class="px-4 py-3 text-right whitespace-nowrap">
+              <button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${item.staffId}')" class="px-3 py-1.5 bg-brand-primary text-white hover:bg-blue-700 text-xs font-semibold rounded-lg shadow-sm inline-flex items-center gap-1.5 transition-colors">
+                <span class="material-symbols-rounded text-[15px]">payments</span>
+                <span>Open Salary</span>
+              </button>
+            </td>
+          </tr>`;
+
+        mHtml += `
+          <div class="bg-white p-3.5 rounded-xl border border-amber-100 shadow-sm flex flex-col gap-2.5 cursor-pointer" onclick="StaffApp.openStaffSalary('${item.staffId}')">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold shrink-0">${initials}</div>
+                <div>
+                  <h4 class="font-bold text-xs text-slate-800 leading-tight">${item.fullName}</h4>
+                  <p class="text-[10px] text-slate-500">${item.role}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="font-bold text-xs text-slate-800">${formattedTotal}</div>
+                <div class="text-[9px] text-slate-400">₹${item.salary.toLocaleString('en-IN')}/mo</div>
+              </div>
+            </div>
+            <div class="text-[10px] text-slate-500 border-t border-slate-100 pt-2 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 truncate">
+                ${cycleBadge}
+                <span class="truncate">${item.cycleRangeText}</span>
+              </div>
+              <button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${item.staffId}')" class="shrink-0 px-2.5 py-1 bg-brand-primary text-white rounded-lg text-[11px] font-semibold flex items-center gap-1 shadow-sm hover:bg-blue-700 transition-colors">
+                <span class="material-symbols-rounded text-[13px]">payments</span> Pay
+              </button>
+            </div>
+          </div>`;
+      });
+
+      tBody.innerHTML = dHtml;
+      mContainer.innerHTML = mHtml;
+    },
+
+    scrollToActionNeeded: function() {
+      const el = document.getElementById('action-needed-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    },
+
+    openStaffSalary: function(staffId) {
+      const stf = this.allData.find(s => s.staffId === staffId);
+      if (!stf) return;
+      this.openDetails(stf);
+      this.switchTab('payments');
+    },
+
     calculateKPIs: function(selectedYear, mode) {
       let totalStaff = 0;
       let highestAmt = 0; let highestName = '--';
@@ -332,19 +536,28 @@
          }
       });
 
-      const activePeriodCount = this.selectedPeriods.length || 1;
-      const avg = totalCost / activePeriodCount;
+      // 3. Calculate Action Needed Staff
+      const actionNeededList = this.getActionNeededStaffList();
+      const actionNeededCount = actionNeededList.length;
 
-      // 3. Update the DOM
+      // 4. Update the DOM
       this.safeSetText('kpi-total-staff', totalStaff);
       this.safeSetText('kpi-total-cost', AppUtils.formatCurrency(totalCost));
-      this.safeSetText('kpi-avg-cost', AppUtils.formatCurrency(Math.round(avg)));
+
+      this.safeSetText('kpi-action-needed', `${actionNeededCount} Staff`);
+      this.safeSetText('kpi-action-needed-sub', actionNeededCount === 0 ? 'All salaries up to date' : (actionNeededCount === 1 ? '1 staff requires action' : `${actionNeededCount} staff require action`));
       
-      this.safeSetText('kpi-high-amt', AppUtils.formatCurrency(highestAmt));
+      this.safeSetText('kpi-high-amt', highestAmt > 0 ? AppUtils.formatCurrency(highestAmt) : '₹0');
       this.safeSetText('kpi-high-name', highestName);
+      const highEl = document.getElementById('kpi-high-name');
+      if (highEl) highEl.title = highestName;
       
-      this.safeSetText('kpi-low-amt', AppUtils.formatCurrency(lowestAmt));
+      this.safeSetText('kpi-low-amt', lowestAmt > 0 ? AppUtils.formatCurrency(lowestAmt) : '₹0');
       this.safeSetText('kpi-low-name', lowestName);
+      const lowEl = document.getElementById('kpi-low-name');
+      if (lowEl) lowEl.title = lowestName;
+
+      this.renderActionNeededList(actionNeededList);
     },
 
     renderCharts: function() {
@@ -583,6 +796,7 @@
     },
 
     switchTab: function(tabName) {
+      if (tabName === 'salary') tabName = 'payments';
       const activeCls = 'text-brand-primary text-sm font-bold border-b-2 border-brand-primary pb-2 px-1 transition-colors';
       const inactiveCls = 'text-slate-400 hover:text-slate-800 text-sm font-medium border-b-2 border-transparent pb-2 px-1 transition-colors';
       
@@ -661,43 +875,7 @@
         .withSuccessHandler((res) => {
            this.currentStaffPayments = (res.success && res.data) ? res.data : [];
            
-           let virtualRecords = [];
-           const sal = this.parseAmount(stf.salary);
-           let currentDue = stf.joinDate ? new Date(this.parseToISODate(stf.joinDate)) : null;
-           let today = new Date();
-           today.setHours(0,0,0,0);
-           
-           const salaryId = this.dropdowns.credittype ? this.dropdowns.credittype.find(c => c.name.toLowerCase().includes('salary'))?.id : null;
-           
-           if (currentDue && !isNaN(currentDue) && sal > 0) {
-               const validSalaries = this.currentStaffPayments.filter(p => 
-                  p.endDate && p.paymentStatus && !p.paymentStatus.toLowerCase().includes('fail') && !p.paymentStatus.toLowerCase().includes('pending') && (!salaryId || p.creditType === salaryId)
-               );
-               validSalaries.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
-               
-               if (validSalaries.length > 0) {
-                   currentDue = new Date(this.parseToISODate(validSalaries[0].endDate));
-                   currentDue.setDate(currentDue.getDate() + 1); 
-               }
-
-               let iterCount = 1;
-               while (currentDue < today && iterCount <= 12) {
-                   let vEnd = new Date(currentDue);
-                   vEnd.setMonth(vEnd.getMonth() + 1);
-                   vEnd.setDate(vEnd.getDate() - 1);
-                   
-                   virtualRecords.push({
-                       isVirtual: true,
-                       amount: sal,
-                       virtualStartDate: currentDue.toISOString(),
-                       virtualEndDate: vEnd.toISOString()
-                   });
-                   
-                   currentDue = new Date(vEnd);
-                   currentDue.setDate(currentDue.getDate() + 1);
-                   iterCount++;
-               }
-           }
+           const virtualRecords = this.getStaffPendingCycles(stf, this.currentStaffPayments);
 
            let combinedHistory = [...this.currentStaffPayments, ...virtualRecords];
            combinedHistory.sort((a,b) => {
@@ -710,7 +888,6 @@
            let html = '';
            
            combinedHistory.forEach(r => {
-              // FIX: Safely parse the DB string (e.g. "₹10,000") into a raw number (10000) before any math
               const safeAmt = this.parseAmount(r.amount);
               const rAmtStr = AppUtils.formatCurrency(safeAmt);
               
@@ -720,33 +897,37 @@
                   const pJson = JSON.stringify(r).replace(/"/g, '&quot;');
                   
                   html += `
-                    <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 group bg-red-50/30">
+                    <tr class="border-b border-amber-100/60 last:border-0 hover:bg-amber-50/50 group bg-amber-50/30">
                       <td class="px-4 py-3">
-                        <div class="font-bold text-slate-800">Unpaid Cycle</div>
-                        <div class="text-[9px] text-slate-500 mt-0.5">${vStartFmt} to ${vEndFmt}</div>
+                        <div class="font-bold text-slate-800 flex items-center gap-1.5">
+                          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                          <span>Action Needed</span>
+                        </div>
+                        <div class="text-[9px] text-slate-500 mt-0.5 font-medium">${vStartFmt} to ${vEndFmt}</div>
                       </td>
                       <td class="px-4 py-3">
                         <div class="font-bold text-slate-800">${rAmtStr}</div>
-                        <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase text-red-600 bg-red-50 border-red-200">OVERDUE</span>
+                        <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase text-amber-700 bg-amber-50 border-amber-200">ACTION NEEDED</span>
                       </td>
                       <td class="px-4 py-3 text-right whitespace-nowrap">
-                         <button onclick="StaffApp.openTransactionModal(${pJson})" class="px-3 py-1.5 text-brand-primary border border-blue-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm transition-colors whitespace-nowrap">Pay Now</button>
+                         <button onclick="StaffApp.openTransactionModal(${pJson})" class="px-3 py-1.5 text-amber-700 border border-amber-300 bg-white hover:bg-amber-500 hover:text-white text-[10px] font-bold rounded shadow-sm transition-colors whitespace-nowrap">Pay Now</button>
                       </td>
                     </tr>
                   `;
               } else {
                   const pStatusName = this.getName('paymentstatus', r.paymentStatus) || r.paymentStatus || 'Completed';
-                  let statColor = 'text-emerald-600 bg-emerald-50 border-emerald-100';
-                  if (pStatusName.toLowerCase().includes('pending')) statColor = 'text-amber-600 bg-amber-50 border-amber-100';
-                  if (pStatusName.toLowerCase().includes('fail')) statColor = 'text-red-600 bg-red-50 border-red-100';
+                  const isPaidOrCompleted = !pStatusName.toLowerCase().includes('fail') && !pStatusName.toLowerCase().includes('pending');
+                  let statColor = isPaidOrCompleted 
+                    ? 'text-emerald-700 bg-emerald-50 border-emerald-200' 
+                    : (pStatusName.toLowerCase().includes('pending') ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-red-700 bg-red-50 border-red-200');
+                  let displayBadgeText = isPaidOrCompleted ? 'PAID' : pStatusName.toUpperCase();
                   
-                  if (!pStatusName.toLowerCase().includes('fail') && !pStatusName.toLowerCase().includes('pending')) {
-                      // FIX: Add the clean number to the total
+                  if (isPaidOrCompleted) {
                       totalPaid += safeAmt;
                   }
 
                   const creditName = this.getName('credittype', r.creditType);
-                  const isSal = creditName.toLowerCase().includes('salary');
+                  const isSal = (creditName || '').toLowerCase().includes('salary');
                   let coverageHtml = isSal && r.startDate && r.endDate ? `<div class="text-[9px] text-slate-500 mt-0.5">${this.formatDateDDMMMYYYY(r.startDate)} to ${this.formatDateDDMMMYYYY(r.endDate)}</div>` : `<div class="text-[9px] text-slate-400 mt-0.5">${creditName}</div>`;
                   let rcptHtml = r.receiptUrl ? `<a href="${r.receiptUrl}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1"><span class="material-symbols-rounded text-[12px] align-middle">link</span></a>` : '';
                   const pJson = JSON.stringify(r).replace(/"/g, '&quot;');
@@ -759,7 +940,7 @@
                       </td>
                       <td class="px-4 py-3">
                          <div class="font-bold text-slate-800">${rAmtStr}${rcptHtml}</div>
-                         <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${statColor}">${pStatusName}</span>
+                         <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${statColor}">${displayBadgeText}</span>
                       </td>
                       <td class="px-4 py-3 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1049,6 +1230,7 @@
             this.closeDeleteModal();
             if(res.success) {
               Toast.success(res.message);
+              this.fetchData();
               this.generatePaymentHistory();
             } else { Toast.error(res.error); }
           })
