@@ -1,0 +1,573 @@
+<script>
+  window.AppCharts = {}; 
+  window.AppChartConfigs = {}; 
+  window.modalChartInstance = null;
+  window.DashboardData = null; 
+
+  var safeSetText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = val;
+  };
+
+  window.toggleDataLabels = function(chartKey) {
+    const chart = window.AppCharts[chartKey];
+    if (!chart) return;
+    const isEnabled = chart.w.config.dataLabels.enabled;
+    chart.updateOptions({ dataLabels: { enabled: !isEnabled } });
+    if (window.AppChartConfigs[chartKey]) window.AppChartConfigs[chartKey].dataLabels.enabled = !isEnabled;
+  };
+
+  window.openChartModal = function(title, chartKey) {
+    const config = window.AppChartConfigs[chartKey];
+    if (!config) return;
+    
+    const backdrop = document.getElementById('chart-modal-backdrop');
+    if (backdrop && backdrop.parentNode !== document.body) {
+      document.body.appendChild(backdrop);
+    }
+    
+    safeSetText('chart-modal-title', title);
+    const content = document.getElementById('chart-modal-content');
+    
+    if(backdrop) {
+      backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      backdrop.classList.add('opacity-100', 'pointer-events-auto');
+    }
+    if(content) content.classList.remove('scale-95', 'opacity-0');
+    
+    const modalConfig = { ...config, chart: { ...config.chart, height: '100%', minHeight: 400 } };
+    const container = document.getElementById('modal-chart-container');
+    if(container) {
+      container.innerHTML = ''; 
+      window.modalChartInstance = new ApexCharts(container, modalConfig);
+      window.modalChartInstance.render();
+    }
+  };
+
+  window.closeChartModal = function() {
+    const backdrop = document.getElementById('chart-modal-backdrop');
+    const content = document.getElementById('chart-modal-content');
+    if (backdrop) {
+      backdrop.classList.remove('opacity-100', 'pointer-events-auto');
+      backdrop.classList.add('opacity-0', 'pointer-events-none');
+    }
+    if (content) content.classList.add('scale-95', 'opacity-0');
+    
+    if (window.modalChartInstance) {
+      setTimeout(() => { window.modalChartInstance.destroy(); window.modalChartInstance = null; }, 300);
+    }
+  };
+
+  var DashboardTables = {
+    data: { overdue: [], upcoming: [] },
+    filtered: { overdue: [], upcoming: [] },
+    sortState: { overdue: { col: '', asc: true }, upcoming: { col: '', asc: true } },
+
+    init: function(overdueData, upcomingData) {
+      this.data.overdue = overdueData || [];
+      this.data.upcoming = upcomingData || [];
+      this.filtered.overdue = [...this.data.overdue];
+      this.filtered.upcoming = [...this.data.upcoming];
+      this.render('overdue');
+      this.render('upcoming');
+    },
+
+    search: function(type, query) {
+      const q = query.toLowerCase();
+      this.filtered[type] = this.data[type].filter(row => row.name.toLowerCase().includes(q));
+      if (this.sortState[type].col) {
+        this.sort(type, this.sortState[type].col, true);
+      } else {
+        this.render(type);
+      }
+    },
+
+    sort: function(type, col, keepDirection = false) {
+      if (!keepDirection) {
+        if (this.sortState[type].col === col) {
+          this.sortState[type].asc = !this.sortState[type].asc;
+        } else {
+          this.sortState[type].col = col;
+          this.sortState[type].asc = true;
+        }
+      }
+      const asc = this.sortState[type].asc ? 1 : -1;
+      
+      this.filtered[type].sort((a, b) => {
+        let valA = a[col];
+        let valB = b[col];
+        if (col === 'amount' || col === 'days') {
+          valA = Number(valA); valB = Number(valB);
+        } else if (col === 'date') {
+          valA = new Date(valA).getTime(); valB = new Date(valB).getTime();
+        }
+        if (valA < valB) return -1 * asc;
+        if (valA > valB) return 1 * asc;
+        return 0;
+      });
+
+      const headers = ['name', 'plan', 'amount', 'date', 'days'];
+      headers.forEach(h => {
+         const el = document.getElementById(`sort-${type}-${h}`);
+         if (el) el.innerHTML = h === col ? (asc === 1 ? '&#8593;' : '&#8595;') : '';
+      });
+      this.render(type);
+    },
+
+    render: function(type) {
+      const tbody = document.getElementById(`table-${type}`);
+      if(!tbody) return;
+      let html = '';
+      this.filtered[type].forEach(row => {
+        const names = row.name.split(' ');
+        const initials = names.length > 1 ? (names[0][0] + names[1][0]).toUpperCase() : names[0].substring(0,2).toUpperCase();
+        
+        // Convert row data into a safely escaped JSON string for the click handler
+        const rowJson = JSON.stringify(row).replace(/"/g, '&quot;');
+
+        html += `
+          <tr onclick="window.navigateToMemberDetail(${row.memberId ? `'${row.memberId}'` : 'null'}, ${rowJson})" 
+              class="border-b border-slate-50 hover:bg-slate-100/80 transition-colors cursor-pointer group">
+            <td class="px-3 py-2">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[9px] font-bold shrink-0 shadow-sm group-hover:bg-brand-primary group-hover:text-white transition-colors">${initials}</div>
+                <div>
+                  <div class="font-bold text-slate-800 text-[11px] group-hover:text-brand-primary transition-colors">${row.name}</div>
+                  <div class="text-[9px] text-slate-500 md:hidden mt-0.5">${row.plan}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-3 py-2 text-slate-500 whitespace-nowrap hidden md:table-cell text-[10px]">${row.plan}</td>
+            <td class="px-3 py-2 font-semibold text-slate-800 whitespace-nowrap text-[10px]">₹${Number(row.amount).toLocaleString('en-IN')}</td>
+            <td class="px-3 py-2 text-slate-500 whitespace-nowrap hidden md:table-cell text-[10px]">${row.date}</td>
+            <td class="px-3 py-2 text-right whitespace-nowrap">
+              <span class="px-2.5 py-1 rounded text-[10px] font-bold ${row.status}">${row.days}</span>
+            </td>
+          </tr>
+        `;
+      });
+      if(html === '') {
+        const emptyMsg = type === 'overdue' ? 'Awesome! No overdue payments.' : 'No upcoming payments in the next 7 days.';
+        html = `<tr><td colspan="5" class="text-center py-6 text-xs text-slate-500 font-medium">${emptyMsg}</td></tr>`;
+      }
+      tbody.innerHTML = html;
+    }
+  };
+
+  var DashboardState = {
+    months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    quarters: ['Q1 (JFM)', 'Q2 (AMJ)', 'Q3 (JAS)', 'Q4 (OND)'],
+    selectedPeriods: [],
+    isAllSelected: true,
+    isShowingMisc: false,
+    
+    init: function() {
+      document.removeEventListener('click', window.closeMultiSelectMenu);
+      window.closeMultiSelectMenu = function(e) {
+        const menu = document.getElementById('multi-select-menu');
+        const btn = document.getElementById('multi-select-label')?.parentElement;
+        if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+          menu.classList.add('hidden');
+        }
+      };
+      document.addEventListener('click', window.closeMultiSelectMenu);
+      this.fetchData(); 
+    },
+
+    getValidOptions: function() {
+      const mode = document.getElementById('filter-mode')?.value || 'Monthly';
+      // Allow selecting all options for the chosen year without cutting off at the current month
+      return mode === 'Monthly' ? [...this.months] : [...this.quarters];
+    },
+
+    onFilterChange: function() {
+      const valid = this.getValidOptions();
+      if (this.isAllSelected) {
+          this.selectedPeriods = [...valid];
+      } else {
+          this.selectedPeriods = this.selectedPeriods.filter(p => valid.includes(p));
+          if (this.selectedPeriods.length === 0 && valid.length > 0) this.selectedPeriods = [valid[0]];
+      }
+      this.renderCheckboxes();
+      this.updateLabel();
+      this.fetchData();
+    },
+
+    handleModeSwitch: function() {
+      const mode = document.getElementById('filter-mode').value;
+      this.selectedPeriods = mode === 'Monthly' ? [...this.months] : [...this.quarters];
+      this.isAllSelected = true;
+      this.onFilterChange();
+    },
+
+    toggleMisc: function() {
+      this.isShowingMisc = !this.isShowingMisc;
+      const btn = document.getElementById('btn-misc-toggle');
+      if (btn) btn.innerText = this.isShowingMisc ? 'Back to All' : 'View Misc';
+      this.rebuildCharts();
+    },
+
+    rebuildCharts: function() {
+      if (window.DashboardData) {
+         renderDashboard({ success: true, data: window.DashboardData }, true);
+      }
+    },
+
+    renderCheckboxes: function() {
+      const validOptions = this.getValidOptions();
+      const menu = document.getElementById('multi-select-menu');
+      if(!menu) return;
+
+      const allSelected = this.selectedPeriods.length === validOptions.length && validOptions.length > 0;
+
+      let html = `<label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer rounded text-xs font-bold text-slate-800 border-b border-slate-100 mb-1"><input type="checkbox" onchange="DashboardState.toggleAll(this)" ${allSelected ? 'checked' : ''} class="accent-brand-primary w-3.5 h-3.5 rounded border-slate-300">Select All</label>`;
+      validOptions.forEach(opt => {
+        const isChecked = this.selectedPeriods.includes(opt) ? 'checked' : '';
+        html += `<label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer rounded text-xs text-slate-700"><input type="checkbox" value="${opt}" ${isChecked} onchange="DashboardState.togglePeriod(this)" class="accent-brand-primary w-3.5 h-3.5 rounded border-slate-300">${opt.split(' ')[0]}</label>`;
+      });
+      menu.innerHTML = html;
+    },
+
+    toggleAll: function(checkbox) {
+      this.isAllSelected = checkbox.checked;
+      const valid = this.getValidOptions();
+      this.selectedPeriods = this.isAllSelected ? [...valid] : (valid.length > 0 ? [valid[0]] : []);
+      this.updateLabel();
+      this.renderCheckboxes();
+      this.fetchData();
+    },
+
+    togglePeriod: function(checkbox) {
+      if (checkbox.checked) {
+        this.selectedPeriods.push(checkbox.value);
+      } else {
+        this.selectedPeriods = this.selectedPeriods.filter(v => v !== checkbox.value);
+      }
+      const valid = this.getValidOptions();
+      this.selectedPeriods.sort((a, b) => valid.indexOf(a) - valid.indexOf(b));
+      
+      if (this.selectedPeriods.length === 0 && valid.length > 0) this.selectedPeriods = [valid[0]];
+      this.isAllSelected = (this.selectedPeriods.length === valid.length && valid.length > 0);
+      
+      this.updateLabel();
+      this.renderCheckboxes();
+      this.fetchData(); 
+    },
+
+    updateLabel: function() {
+      const labelEl = document.getElementById('multi-select-label');
+      if (!labelEl) return;
+      const valid = this.getValidOptions();
+
+      if (this.isAllSelected || (this.selectedPeriods.length === valid.length && valid.length > 0)) {
+        labelEl.innerText = "All Selected";
+      } else if (this.selectedPeriods.length <= 2) {
+        labelEl.innerText = this.selectedPeriods.map(p => p.split(' ')[0]).join(', ');
+      } else {
+        const firstFew = this.selectedPeriods.slice(0, 2).map(p => p.split(' ')[0]).join(', ');
+        labelEl.innerText = `${firstFew} +${this.selectedPeriods.length - 2}`;
+      }
+    },
+
+    fetchData: function() {
+      toggleShimmer(true);
+      const year = document.getElementById('filter-year')?.value || new Date().getFullYear().toString();
+      const mode = document.getElementById('filter-mode')?.value || 'Monthly';
+      const periods = this.selectedPeriods.length > 0 ? this.selectedPeriods : this.getValidOptions();
+      google.script.run.withSuccessHandler(renderDashboard).api_getDashboardMetrics(year, mode, periods);
+    },
+
+    populateYears: function(yearsArray) {
+      const yearSelect = document.getElementById('filter-year');
+      if (!yearSelect || !yearsArray || yearsArray.length === 0) return;
+
+      const currentVal = yearSelect.value || new Date().getFullYear().toString();
+      let yearHtml = '';
+      
+      yearsArray.forEach(y => { yearHtml += `<option value="${y}">${y}</option>`; });
+      yearSelect.innerHTML = yearHtml;
+
+      if (yearsArray.includes(currentVal)) {
+        yearSelect.value = currentVal;
+      } else {
+        yearSelect.value = yearsArray[0];
+      }
+      
+      if (this.selectedPeriods.length === 0) {
+        this.selectedPeriods = [...this.getValidOptions()];
+        this.updateLabel();
+        this.renderCheckboxes();
+      }
+    }
+  };
+
+  function toggleShimmer(isActive) {
+    const kpis = ['kpi-active', 'kpi-collected', 'kpi-overdue', 'kpi-bus-exp', 'kpi-staff-cost', 'kpi-total-exp', 'kpi-net', 'mini-staff-count', 'mini-staff-cost', 'mini-staff-avg'];
+    const chartIds = ['chart-batch', 'chart-rev-exp', 'chart-trend', 'chart-expense-breakdown', 'chart-prediction', 'chart-staff-trend'];
+    const tables = ['table-overdue', 'table-upcoming'];
+    
+    if (isActive) {
+      kpis.forEach(id => { const el = document.getElementById(id); if (el) { el.innerHTML = ''; el.classList.add('shimmer', 'rounded-md', 'w-16', 'h-5'); } });
+      chartIds.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<div class="absolute inset-0 rounded-xl shimmer opacity-50"></div>'; });
+      tables.forEach(id => {
+         const el = document.getElementById(id); 
+         if (el) {
+            let sHtml = '';
+            for(let i=0; i<4; i++) sHtml += `<tr><td colspan="5" class="px-3 py-3 border-b border-slate-50"><div class="h-5 w-full shimmer rounded"></div></td></tr>`;
+            el.innerHTML = sHtml;
+         }
+      });
+    } else {
+      kpis.forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('shimmer', 'rounded-md', 'w-16', 'h-5'); });
+    }
+  }
+
+  function renderDashboard(response, isRebuild = false) {
+    if (!isRebuild) toggleShimmer(false);
+    
+    if (!response || !response.success) {
+       let errorMsg = response && response.error ? response.error : "Failed to load dashboard data. Please try again.";
+       Toast.error(errorMsg);
+       return;
+    }
+
+    window.DashboardData = response.data;
+    const data = response.data;
+
+    if (!isRebuild) {
+      DashboardState.populateYears(data.availableYears);
+      DashboardState.updateLabel(); 
+      
+      const formatCurrency = (val) => '₹' + Number(val || 0).toLocaleString('en-IN');
+      
+      const currentHour = new Date().getHours();
+      let timeGreet = "Good Morning";
+      if (currentHour >= 12 && currentHour < 17) timeGreet = "Good Afternoon";
+      else if (currentHour >= 17) timeGreet = "Good Evening";
+      
+      const displayName = data.userGreetingName || "User";
+      safeSetText('user-greeting', `${timeGreet}, ${displayName}!`);
+
+      safeSetText('kpi-active', data.kpis.activeMembers || 0);
+      safeSetText('kpi-collected', formatCurrency(data.kpis.membersCollected));
+      safeSetText('kpi-overdue', formatCurrency(data.kpis.overdueAmount));
+      safeSetText('kpi-bus-exp', formatCurrency(data.kpis.businessExpenses));
+      safeSetText('kpi-staff-cost', formatCurrency(data.kpis.staffCost));
+      safeSetText('kpi-total-exp', formatCurrency(data.kpis.totalOperatingExpenses));
+      safeSetText('kpi-net', formatCurrency(data.kpis.netInHand));
+
+      if (data.kpis.activeSegregation) {
+         const segContainer = document.getElementById('kpi-active-segregation');
+         if (segContainer) {
+            let segHtml = '';
+            Object.entries(data.kpis.activeSegregation).forEach(([planName, count]) => {
+               if (count > 0) { 
+                  segHtml += `
+                    <div class="bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 flex items-center gap-1.5 shrink-0">
+                      <span class="text-[8px] text-slate-400 font-bold uppercase truncate max-w-[45px]" title="${planName}">${planName}</span>
+                      <span class="text-[9px] font-bold text-slate-700">${count}</span>
+                    </div>`;
+               }
+            });
+            if (segHtml === '') segHtml = `<span class="text-[9px] text-slate-400 font-medium">No active memberships</span>`;
+            segContainer.innerHTML = segHtml;
+         }
+      }
+
+      safeSetText('mini-staff-count', data.kpis.staffCount || 0);
+      safeSetText('mini-staff-cost', formatCurrency(data.kpis.staffCost));
+      const avgStaffCost = (data.kpis.staffCount && data.kpis.staffCount > 0) ? (data.kpis.staffCost / data.kpis.staffCount) : 0;
+      safeSetText('mini-staff-avg', formatCurrency(Math.round(avgStaffCost)));
+    }
+
+    Object.keys(window.AppCharts).forEach(key => {
+      if (window.AppCharts[key] && typeof window.AppCharts[key].destroy === 'function') {
+        window.AppCharts[key].destroy();
+      }
+    });
+    window.AppCharts = {};
+
+    const commonToolbar = { show: true, tools: { download: false, selection: false, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true }, autoSelected: 'zoom' };
+    const commonXAxis = { categories: data.charts.categories || [], tickAmount: 'dataPoints', labels: { hideOverlappingLabels: false, rotate: -45, rotateAlways: false, style: { fontSize: '9px' } } };
+    var dlOptions = { enabled: true, formatter: (val) => val ? (val/1000).toFixed(1).replace('.0','') + 'k' : '', offsetY: -6, style: { fontSize: '9px', colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 2, padding: 2, opacity: 0.9, borderWidth: 0 } };
+
+    // 1. Rev vs Exp
+    const elRevExp = document.querySelector("#chart-rev-exp");
+    if(elRevExp) {
+      window.AppChartConfigs.revExp = {
+        series: [ { name: 'Revenue', data: data.charts.revenue }, { name: 'Expenses', data: data.charts.expenses } ],
+        chart: { type: 'bar', height: '100%', toolbar: commonToolbar, zoom: { enabled: true } },
+        plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 2, dataLabels: { position: 'top' } } },
+        dataLabels: dlOptions,
+        xaxis: commonXAxis,
+        yaxis: { labels: { formatter: (val) => (val / 1000) + 'k', style: { fontSize: '9px', colors: '#64748b' } } },
+        colors: ['#3b82f6', '#f43f5e'],
+        legend: { position: 'top', horizontalAlign: 'left', markers: { radius: 12 }, fontSize: '10px' },
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+      };
+      elRevExp.innerHTML = ''; 
+      window.AppCharts.revExp = new ApexCharts(elRevExp, window.AppChartConfigs.revExp);
+      window.AppCharts.revExp.render();
+    }
+
+    // 2. Batch
+    const elBatch = document.querySelector("#chart-batch");
+    if(elBatch) {
+      window.AppChartConfigs.batch = {
+        series: [{ name: 'Members', data: data.charts.batchData }],
+        chart: { type: 'bar', height: '100%', toolbar: commonToolbar },
+        plotOptions: { bar: { distributed: true, columnWidth: '50%', borderRadius: 4, dataLabels: { position: 'top' } } },
+        dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '10px', colors: ["#304758"] } },
+        xaxis: { categories: data.charts.batchLabels, axisBorder: { show: false }, labels: { rotate: -45, style: { fontSize: '9px', fontWeight: 600 } } },
+        yaxis: { labels: { style: { fontSize: '9px', colors: '#64748b' } } },
+        colors: ['#3b82f6', '#10b981', '#a855f7', '#fbbf24', '#3b82f6'],
+        legend: { show: false },
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+      };
+      elBatch.innerHTML = ''; 
+      window.AppCharts.batch = new ApexCharts(elBatch, window.AppChartConfigs.batch);
+      window.AppCharts.batch.render();
+    }
+
+    // 3. Actual vs Expected Net-In-Hand (connectNulls: true added)
+    const elPred = document.querySelector("#chart-prediction");
+    if(elPred) {
+      const predType = document.getElementById('toggle-pred')?.value || 'line';
+      window.AppChartConfigs.pred = {
+        series: [
+          { name: 'Actual Net-In-Hand', data: data.charts.prediction.actual },
+          { name: 'Expected Forecast', data: data.charts.prediction.expected }
+        ],
+        chart: { type: predType, height: '100%', toolbar: commonToolbar, zoom: { enabled: true } },
+        stroke: { width: predType === 'area' ? 2 : 3, curve: 'smooth', dashArray: [0, 5], connectNulls: true },
+        xaxis: commonXAxis,
+        yaxis: { labels: { formatter: (val) => (val / 1000) + 'k', style: { fontSize: '9px', colors: '#64748b' } } },
+        colors: ['#3b82f6', '#831843'], 
+        markers: { size: 4 },
+        legend: { position: 'bottom', horizontalAlign: 'center', offsetY: 5, show: true, fontSize: '10px' },
+        dataLabels: { ...dlOptions, offsetY: -10 },
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+      };
+      elPred.innerHTML = ''; 
+      window.AppCharts.pred = new ApexCharts(elPred, window.AppChartConfigs.pred);
+      window.AppCharts.pred.render();
+    }
+
+    // 4. Collection Trend (connectNulls: true added)
+    const elTrend = document.querySelector("#chart-trend");
+    if(elTrend) {
+      const trendType = document.getElementById('toggle-trend')?.value || 'line';
+      window.AppChartConfigs.trend = {
+        series: [
+          { name: 'Collected', data: data.charts.collectionTrend.collected },
+          { name: 'Overdue', data: data.charts.collectionTrend.overdue }
+        ],
+        chart: { type: trendType, height: '100%', toolbar: commonToolbar, zoom: { enabled: true } },
+        dataLabels: { ...dlOptions, offsetY: -10 },
+        stroke: { curve: 'smooth', width: trendType === 'bar' ? 0 : 2, connectNulls: true },
+        markers: { size: trendType === 'bar' ? 0 : 4 },
+        xaxis: commonXAxis,
+        yaxis: { labels: { formatter: (val) => (val / 1000) + 'k', style: { fontSize: '9px', colors: '#64748b' } } },
+        colors: ['#10b981', '#ef4444'],
+        legend: { position: 'bottom', horizontalAlign: 'center', offsetY: 5, fontSize: '10px' },
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+      };
+      elTrend.innerHTML = ''; 
+      window.AppCharts.trend = new ApexCharts(elTrend, window.AppChartConfigs.trend);
+      window.AppCharts.trend.render();
+    }
+
+    // 5. Expense Breakdown
+    const elExp = document.querySelector("#chart-expense-breakdown");
+    if (elExp) {
+      const hasMisc = data.charts.expenseBreakdown.miscSeries && data.charts.expenseBreakdown.miscSeries.length > 0;
+      const btnMisc = document.getElementById('btn-misc-toggle');
+      if(btnMisc) {
+         if (hasMisc) { btnMisc.classList.remove('hidden'); } else { btnMisc.classList.add('hidden'); }
+      }
+      
+      const expSeries = DashboardState.isShowingMisc ? data.charts.expenseBreakdown.miscSeries : data.charts.expenseBreakdown.series;
+      const expLabels = DashboardState.isShowingMisc ? data.charts.expenseBreakdown.miscLabels : data.charts.expenseBreakdown.labels;
+
+      window.AppChartConfigs.exp = {
+        series: expSeries,
+        labels: expLabels,
+        chart: { type: 'donut', height: '100%' },
+        colors: ['#3b82f6', '#10b981', '#fbbf24', '#f97316', '#a855f7', '#06b6d4', '#94a3b8', '#e2e8f0', '#6366f1', '#ec4899'],
+        plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: DashboardState.isShowingMisc ? 'Total Misc' : 'Total', formatter: function(w) { const tot = w.globals.seriesTotals.reduce((a,b)=>a+b,0); return '₹' + Number(tot).toLocaleString('en-IN'); } } } } } },
+        legend: { position: 'right', fontSize: '10px', offsetX: -10, offsetY: 20 },
+        responsive: [{ breakpoint: 768, options: { legend: { position: 'bottom', offsetX: 0, offsetY: 0 } } }],
+        dataLabels: { enabled: true }
+      };
+      elExp.innerHTML = ''; 
+      window.AppCharts.exp = new ApexCharts(elExp, window.AppChartConfigs.exp);
+      window.AppCharts.exp.render();
+    }
+
+    // 6. Staff Cost Trend
+    const elStaff = document.querySelector("#chart-staff-trend");
+    if(elStaff) {
+      const staffType = document.getElementById('toggle-staff')?.value || 'line';
+      window.AppChartConfigs.staff = {
+        series: [{ name: 'Staff Cost', data: data.charts.staffTrend }],
+        chart: { type: staffType, height: '100%', toolbar: commonToolbar, zoom: { enabled: true } },
+        stroke: { curve: 'smooth', width: staffType === 'bar' ? 0 : 3, connectNulls: true },
+        xaxis: commonXAxis,
+        yaxis: { labels: { formatter: (val) => (val / 1000) + 'k', style: { fontSize: '9px', colors: '#64748b' } } },
+        colors: ['#8b5cf6'], 
+        markers: { size: staffType === 'bar' ? 0 : 4 },
+        legend: { position: 'bottom', horizontalAlign: 'center', show: true, offsetY: 5, fontSize: '10px' },
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { left: 10, right: 10, top: 0, bottom: 0 } },
+        dataLabels: { ...dlOptions, offsetY: -10 }
+      };
+      elStaff.innerHTML = ''; 
+      window.AppCharts.staff = new ApexCharts(elStaff, window.AppChartConfigs.staff);
+      window.AppCharts.staff.render();
+    }
+
+    if (!isRebuild) {
+      DashboardTables.init(data.overdue, data.upcoming);
+    }
+  }
+
+  // Global router helper to jump from Dashboard tables directly to Member Details
+  window.navigateToMemberDetail = function(memberId, rowData) {
+    window.location.hash = '#members';
+    
+    const tryOpen = () => {
+      if (typeof MembersApp !== 'undefined') {
+        // If members data is loaded, find the full member object
+        let targetMember = MembersApp.allData ? MembersApp.allData.find(m => m.memberId === memberId || m.fullName === rowData.name) : null;
+        
+        if (targetMember) {
+          MembersApp.openDetails(targetMember);
+        } else {
+          // If data isn't loaded yet, fetch it first, then open
+          MembersApp.fetchData(() => {
+            let freshTarget = MembersApp.allData.find(m => m.memberId === memberId || m.fullName === rowData.name);
+            if (freshTarget) {
+              MembersApp.openDetails(freshTarget);
+            } else {
+              // Safe fallback minimal object with empty strings instead of undefined
+              MembersApp.openDetails({
+                memberId: memberId || rowData.memberId || '',
+                fullName: rowData.name || '',
+                membershipAmount: rowData.amount || 0,
+                dueDate: rowData.date || '',
+                membershipId: '',
+                batchId: '',
+                status: ''
+              });
+            }
+          });
+        }
+      } else {
+        setTimeout(tryOpen, 100);
+      }
+    };
+    
+    setTimeout(tryOpen, 200);
+  };
+
+  DashboardState.init();
+</script>

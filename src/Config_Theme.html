@@ -1,0 +1,27 @@
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand: {
+            dark: '#0f172a',    // Dark navy for the top dashboard section
+            primary: '#2563eb', // Bright blue for primary actions and highlights
+            surface: '#f8fafc', // App background (slate-50)
+            card: '#ffffff',
+          },
+          status: {
+            active: '#10b981',  // Emerald for 'Active' / 'Paid'
+            due: '#f59e0b',     // Amber for 'Due Soon'
+            overdue: '#ef4444'  // Red for 'Overdue'
+          }
+        },
+        fontFamily: {
+          sans: ['Inter', 'sans-serif'],
+        },
+        boxShadow: {
+          'card': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+        }
+      }
+    }
+  }
+</script>

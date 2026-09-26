@@ -1,0 +1,157 @@
+<script>
+  const SidebarManager = {
+    toggle: function() {
+      const sidebar = document.getElementById('main-sidebar');
+      const icon = document.getElementById('sidebar-toggle-icon');
+      const isCollapsed = sidebar.classList.contains('w-20');
+
+      if (isCollapsed) {
+        // Expand
+        sidebar.classList.remove('w-20');
+        sidebar.classList.add('w-64');
+        icon.innerText = 'keyboard_double_arrow_left';
+        document.querySelectorAll('.sidebar-text').forEach(el => el.classList.remove('hidden'));
+      } else {
+        // Collapse
+        sidebar.classList.remove('w-64');
+        sidebar.classList.add('w-20');
+        icon.innerText = 'keyboard_double_arrow_right';
+        document.querySelectorAll('.sidebar-text').forEach(el => el.classList.add('hidden'));
+      }
+    },
+    
+    init: function() {
+      const sidebar = document.getElementById('main-sidebar');
+      const icon = document.getElementById('sidebar-toggle-icon');
+      
+      if (sidebar) {
+        // Force closed by default on initial boot
+        sidebar.classList.remove('w-64');
+        sidebar.classList.add('w-20');
+        if (icon) icon.innerText = 'keyboard_double_arrow_right';
+        
+        setTimeout(() => {
+          document.querySelectorAll('.sidebar-text').forEach(el => el.classList.add('hidden'));
+        }, 50);
+      }
+    }
+  };
+  
+  const AppState = {
+    currentView: '',
+    
+    init: function() {
+      // 1. Inject static layout components from templates
+      this.injectTemplate('tpl-comp-sidebar', 'desktop-nav-container');
+      this.injectTemplate('tpl-comp-bottom-nav', 'mobile-nav-container');
+
+      // 2. Delegate click handler on .nav-btn for instant SPA navigation & highlighting
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.nav-btn');
+        if (btn) {
+          const route = btn.getAttribute('data-route');
+          if (route) {
+            e.preventDefault();
+            if (window.location.hash !== '#' + route) {
+              window.location.hash = '#' + route;
+            }
+            this.route(route);
+          }
+        }
+      });
+
+      // 3. Listen for URL hash changes for browser history & external triggers
+      window.addEventListener('hashchange', () => this.route());
+      
+      // 4. Trigger initial route or default to dashboard
+      if (!window.location.hash) {
+        window.location.hash = '#dashboard';
+      }
+      this.route();
+    },
+    
+    injectTemplate: function(templateId, targetId) {
+      const tpl = document.getElementById(templateId);
+      const target = document.getElementById(targetId);
+      if (tpl && target) {
+        target.innerHTML = tpl.innerHTML;
+      }
+    },
+
+    route: function(forcedView) {
+      const hash = forcedView ? ('#' + forcedView) : (window.location.hash || '#dashboard');
+      const viewName = hash.replace('#', '') || 'dashboard';
+
+      // Always update navigation highlight immediately for fast UI feedback
+      this.updateNavHighlight(viewName);
+
+      const root = document.getElementById('app-root');
+      if (this.currentView === viewName && root && root.children.length > 0) {
+        return;
+      }
+      this.currentView = viewName;
+
+      const tplId = 'tpl-view-' + viewName;
+      const tpl = document.getElementById(tplId);
+      
+      if (tpl && root) {
+         // Apply fade animation class (from Global_Styles)
+         root.classList.add('fade-enter');
+         root.innerHTML = tpl.innerHTML;
+         
+         // Trigger DOM reflow and remove fade class to animate in
+         requestAnimationFrame(() => {
+           root.classList.add('fade-enter-active');
+           setTimeout(() => {
+             root.classList.remove('fade-enter', 'fade-enter-active');
+           }, 300);
+         });
+
+         this.executeScripts(root);
+      } else if (root) {
+         root.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-slate-400">
+            <span class="material-symbols-rounded text-5xl mb-2 opacity-50">build</span>
+            <h2 class="text-lg font-medium text-slate-600">Module Under Construction</h2>
+          </div>`;
+      }
+    },
+
+    // When injecting HTML via innerHTML, <script> tags do not run automatically.
+    // This function rebuilds and forces them to execute.
+    executeScripts: function(element) {
+      const scripts = element.querySelectorAll('script');
+      scripts.forEach(oldScript => {
+        const newScript = document.createElement('script');
+        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+        oldScript.parentNode.replaceChild(newScript, oldScript);
+      });
+    },
+
+    updateNavHighlight: function(viewName) {
+      // Reset all buttons
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-brand-primary', 'bg-slate-800');
+        btn.classList.add('text-slate-400');
+      });
+
+      // Highlight active button based on current route
+      document.querySelectorAll(`[data-route="${viewName}"]`).forEach(btn => {
+        btn.classList.remove('text-slate-400');
+        btn.classList.add('text-brand-primary');
+        // If it's a desktop sidebar button, give it the dark background highlight
+        if(btn.closest('aside')) {
+           btn.classList.add('bg-slate-800');
+        }
+      });
+    }
+  };
+
+  // Boot the app when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => AppState.init());
+  } else {
+    AppState.init();
+  }
+</script>

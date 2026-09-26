@@ -1,0 +1,324 @@
+<div class="bg-slate-50 h-full flex flex-col relative overflow-hidden">
+  
+  <header class="bg-white px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center justify-between sticky top-0 border-b border-slate-100 z-20 gap-3">
+    <div class="flex items-center justify-between w-full md:w-auto shrink-0">
+      <div class="flex items-center gap-3">
+        <span onclick="window.location.hash='#dashboard'" class="material-symbols-rounded text-slate-600 cursor-pointer hover:bg-slate-100 rounded-full p-1 transition-colors">arrow_back</span>
+        <div>
+          <h1 class="text-xl font-bold text-slate-800 leading-tight">Staff</h1>
+          <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Manage your gym staff, track costs and performance</p>
+        </div>
+      </div>
+      <button onclick="StaffApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors shrink-0">
+        <span class="material-symbols-rounded text-[18px]">add</span>
+      </button>
+    </div>
+    
+    <div class="grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+      <select id="staff-filter-year" onchange="StaffApp.applyGlobalFilters()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]"></select>
+      
+      <select id="staff-filter-mode" onchange="StaffApp.handleModeSwitch()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+        <option value="Monthly">Monthly</option>
+        <option value="Quarterly">Quarterly</option>
+      </select>
+
+      <div class="relative w-full">
+        <button onclick="document.getElementById('staff-multi-select-menu').classList.toggle('hidden')" class="w-full bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 shadow-sm flex items-center justify-between relative">
+          <span id="staff-multi-select-label" class="truncate">All Selected</span>
+          <span class="material-symbols-rounded text-[14px] absolute right-1.5 text-slate-500">expand_more</span>
+        </button>
+        <div id="staff-multi-select-menu" class="hidden absolute top-full mt-1 right-0 w-full min-w-[140px] bg-white border border-slate-200 shadow-lg rounded-lg max-h-48 overflow-y-auto z-40 p-2"></div>
+      </div>
+
+      <button onclick="StaffApp.openModal()" class="hidden md:flex shrink-0 h-8 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-blue-700 transition-colors">
+        <span class="material-symbols-rounded text-[16px]">add</span><span class="font-semibold text-xs">Add Staff</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
+    
+    <!-- KPIs (Removed strict h-24 to fix cutoffs) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+      <div class="bg-cyan-50/50 p-4 rounded-xl border border-cyan-100 flex flex-col justify-center">
+        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[14px]">group</span><p class="text-[10px] text-slate-500 font-bold uppercase">Total Staff</p></div>
+        <h2 id="kpi-total-staff" class="text-xl font-bold text-slate-800">--</h2>
+      </div>
+      <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex flex-col justify-center">
+        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center material-symbols-rounded text-[14px]">account_balance_wallet</span><p class="text-[10px] text-slate-500 font-bold uppercase">Total Staff Cost</p></div>
+        <h2 id="kpi-total-cost" class="text-xl font-bold text-slate-800">--</h2>
+      </div>
+      <div class="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex flex-col justify-center">
+        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[14px]">arrow_upward</span><p class="text-[10px] text-slate-500 font-bold uppercase">Highest Paid</p></div>
+        <h2 id="kpi-high-amt" class="text-lg font-bold text-slate-800">--</h2>
+        <p id="kpi-high-name" class="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">--</p>
+      </div>
+      <div class="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex flex-col justify-center">
+        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center material-symbols-rounded text-[14px]">arrow_downward</span><p class="text-[10px] text-slate-500 font-bold uppercase">Lowest Paid</p></div>
+        <h2 id="kpi-low-amt" class="text-lg font-bold text-slate-800">--</h2>
+        <p id="kpi-low-name" class="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">--</p>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      <div class="lg:col-span-2 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-bold text-sm text-slate-800">Staff Cost Trend</h3>
+          <select id="chart-type-toggle" onchange="StaffApp.renderCharts()" class="appearance-none bg-slate-50 pl-3 pr-7 py-1.5 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+            <option value="bar">Bar Chart</option><option value="area">Area Chart</option><option value="line">Line Chart</option>
+          </select>
+        </div>
+        <div class="relative w-full flex-1 min-h-[240px]">
+          <div id="chart-staff-trend" class="absolute inset-0 flex items-center justify-center"></div>
+        </div>
+      </div>
+      
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-bold text-sm text-slate-800">Cost by Role</h3>
+        </div>
+        <div class="relative w-full flex-1 min-h-[240px]">
+          <div id="chart-staff-role" class="absolute inset-0 flex items-center justify-center"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Table / List -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+      <div class="p-3 md:p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
+        <h3 class="font-bold text-sm text-slate-800 shrink-0">Staff Members</h3>
+        
+        <!-- FIX 3: Search and Category filters exactly on one row -->
+        <div class="flex flex-nowrap items-center gap-2 w-full md:w-auto">
+          <div class="relative flex-1 md:w-48 shrink-0">
+            <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[16px]">search</span>
+            <input type="text" id="search-table" onkeyup="StaffApp.searchTable(this.value)" placeholder="Search..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary bg-white">
+          </div>
+          <select id="filter-table-role" onchange="StaffApp.filterTable()" class="shrink-0 w-32 md:w-auto appearance-none bg-white pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_6px_center]">
+            <option value="All">All Roles</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="hidden md:block overflow-y-auto no-scrollbar max-h-[300px]">
+        <table class="w-full text-left border-collapse min-w-[700px]">
+          <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
+            <tr class="text-[10px] uppercase text-slate-500 font-bold select-none">
+              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('name')">Name <span id="sort-icon-name" class="material-symbols-rounded text-[14px]">arrow_downward</span></th>
+              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('role')">Role <span id="sort-icon-role" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
+              <th class="px-4 py-3">Phone</th>
+              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('salary')">Salary <span id="sort-icon-salary" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
+              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('date')">Joined <span id="sort-icon-date" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="desktop-staff-body" class="text-xs text-slate-700"></tbody>
+        </table>
+      </div>
+
+      <div id="mobile-staff-container" class="md:hidden flex flex-col bg-slate-50 p-3 gap-3 overflow-y-auto no-scrollbar max-h-[420px]"></div>
+    </div>
+  </div>
+
+  <!-- SLIDING DRAWER -->
+  <div id="staff-drawer-backdrop" onclick="StaffApp.closeDetails()" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[120]"></div>
+  <div id="staff-drawer" class="fixed top-0 bottom-0 right-0 w-full md:w-[450px] bg-slate-50 shadow-2xl z-[130] transform translate-x-full transition-transform duration-300 flex flex-col overflow-hidden">
+    <header class="bg-white px-4 py-3 flex items-center justify-between border-b border-slate-100 shrink-0">
+      <div class="flex items-center gap-3">
+        <button onclick="StaffApp.closeDetails()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-full transition-colors"><span class="material-symbols-rounded">arrow_back</span></button>
+        <h2 class="text-lg font-bold text-slate-800">Staff Details</h2>
+      </div>
+      <div class="flex items-center gap-1">
+         <button onclick="StaffApp.editCurrentMember()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-blue-50 hover:text-brand-primary rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">edit</span></button>
+         <button onclick="StaffApp.deleteCurrentMember()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">delete</span></button>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
+      <div class="bg-white px-6 py-5 border-b border-slate-100 shrink-0">
+        <div class="flex items-start gap-4">
+          <div id="det-stf-avatar" class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xl text-slate-500 shadow-inner shrink-0">--</div>
+          <div class="flex-1 pt-1">
+            <div class="flex items-center gap-2 mb-1">
+              <h3 id="det-stf-name" class="text-lg font-bold text-slate-800">--</h3>
+              <span id="det-stf-status" class="text-[10px] font-bold px-2 py-0.5 rounded border">--</span>
+            </div>
+            <p id="det-stf-role" class="text-xs font-semibold text-brand-primary mb-1">--</p>
+            <p class="text-xs text-slate-500 flex items-center gap-1.5 mb-0.5"><span class="material-symbols-rounded text-[14px]">call</span> <span id="det-stf-phone">--</span></p>
+            <p class="text-xs text-slate-500 flex items-center gap-1.5"><span class="material-symbols-rounded text-[14px]">mail</span> <span id="det-stf-email">--</span></p>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-6 mt-6 border-b border-slate-100">
+          <button id="tab-btn-overview" onclick="StaffApp.switchTab('overview')" class="text-brand-primary text-sm font-bold border-b-2 border-brand-primary pb-2 px-1 transition-colors">Overview</button>
+          <button id="tab-btn-payments" onclick="StaffApp.switchTab('payments')" class="text-slate-400 hover:text-slate-800 text-sm font-medium border-b-2 border-transparent pb-2 px-1 transition-colors">Payments</button>
+        </div>
+      </div>
+
+      <div id="det-tab-overview" class="p-4 md:p-6 space-y-6">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-100"><h4 class="font-bold text-sm text-slate-800">Staff Information</h4></div>
+          <div class="p-4 grid grid-cols-2 gap-y-4 text-xs">
+            <div><p class="text-slate-500 font-medium mb-1">Role</p><p id="det-stf-info-role" class="font-bold text-slate-800">--</p></div>
+            <div><p class="text-slate-500 font-medium mb-1">Reporting To</p><p id="det-stf-reportingTo" class="font-bold text-slate-800">--</p></div>
+            <div><p class="text-slate-500 font-medium mb-1">Monthly Salary</p><p id="det-stf-salary" class="font-bold text-slate-800">--</p></div>
+            <div><p class="text-slate-500 font-medium mb-1">Status</p><p id="det-stf-info-status" class="font-bold text-slate-800">--</p></div>
+            <div><p class="text-slate-500 font-medium mb-1">Join Date</p><p id="det-stf-join" class="font-bold text-slate-800">--</p></div>
+            <div><p class="text-slate-500 font-medium mb-1">Date of Birth</p><p id="det-stf-dob" class="font-bold text-slate-800">--</p></div>
+            <div class="col-span-2"><p class="text-slate-500 font-medium mb-1">Notes</p><p id="det-stf-notes" class="text-slate-800">--</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="det-tab-payments" class="hidden p-4 md:p-6 space-y-4">
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 flex items-center justify-between">
+           <div><p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Total Dispensed</p><h3 id="det-stf-total-paid" class="text-xl font-bold text-emerald-600">₹0</h3></div>
+           <button onclick="StaffApp.openTransactionModal()" class="h-9 px-4 bg-brand-primary text-white rounded-lg flex items-center justify-center gap-1.5 shadow-sm hover:bg-blue-700 text-xs font-semibold"><span class="material-symbols-rounded text-[16px]">add</span> Pay</button>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-100"><h4 class="font-bold text-sm text-slate-800">Salary & Transactions</h4></div>
+          <div class="max-h-[300px] overflow-y-auto no-scrollbar">
+            <table class="w-full text-left border-collapse">
+              <thead class="bg-slate-50 border-b border-slate-100 sticky top-0">
+                <tr class="text-[9px] uppercase text-slate-500 font-bold">
+                  <th class="px-4 py-2">Date & Range</th>
+                  <th class="px-4 py-2">Type / Status</th>
+                  <th class="px-4 py-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="det-stf-payments-body" class="text-xs text-slate-700"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FIX 4: z-index 140 to appear ABOVE the drawer. FIX 5: Compact 2-column form grid -->
+  <div id="staff-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[140] flex items-end md:items-center justify-center sm:p-4 pb-20 md:pb-4">
+    <div id="staff-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh]">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+        <h2 id="stf-modal-title" class="text-lg font-bold text-slate-800">Add Staff</h2>
+        <button onclick="StaffApp.closeModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200 transition-colors"><span class="material-symbols-rounded text-lg">close</span></button>
+      </div>
+      
+      <form id="staff-form" onsubmit="StaffApp.saveStaff(event)" class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 overflow-y-auto p-5 md:p-6 no-scrollbar">
+          <input type="hidden" id="stf-id">
+          
+          <div class="grid grid-cols-2 gap-x-3 gap-y-4">
+            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Full Name *</label><input type="text" id="stf-name" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
+            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Role *</label><select id="stf-role" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none appearance-none"></select></div>
+            
+            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Phone *</label><input type="tel" id="stf-phone" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
+            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Email ID</label><input type="email" id="stf-email" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
+            
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Monthly Salary *</label>
+              <div class="relative"><span class="absolute left-2.5 top-1.5 text-slate-500 font-bold text-xs">₹</span><input type="number" id="stf-salary" required class="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none"></div>
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Reporting To</label>
+              <select id="stf-reportingTo" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none appearance-none"></select>
+            </div>
+            
+            <div>
+               <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Join Date *</label>
+               <div class="relative"><span class="material-symbols-rounded absolute right-2.5 top-1.5 text-[16px] text-slate-400 pointer-events-none">calendar_month</span><input type="text" id="stf-join" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
+            </div>
+            <div>
+               <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Date of Birth</label>
+               <div class="relative"><span class="material-symbols-rounded absolute right-2.5 top-1.5 text-[16px] text-slate-400 pointer-events-none">calendar_month</span><input type="text" id="stf-dob" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
+            </div>
+            
+            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Status *</label><select id="stf-status" onchange="StaffApp.onStatusChange()" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none appearance-none"></select></div>
+            
+            <div id="stf-exit-container" class="hidden">
+               <label class="block text-[9px] font-bold text-red-500 mb-1 uppercase tracking-wide">Exit Date *</label>
+               <div class="relative"><span class="material-symbols-rounded absolute right-2.5 top-1.5 text-[16px] text-red-400 pointer-events-none">calendar_month</span><input type="text" id="stf-exit-date" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-red-50/30 border border-red-200 rounded-lg text-xs font-bold text-slate-700 focus:border-red-400 outline-none shadow-sm"></div>
+            </div>
+            
+            <div class="col-span-2"><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Notes (Optional)</label><textarea id="stf-notes" rows="2" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none resize-none"></textarea></div>
+          </div>
+        </div>
+
+        <div class="p-4 bg-white border-t border-slate-100 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex gap-3">
+          <button type="button" onclick="StaffApp.closeModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-200 transition-colors">Cancel</button>
+          <button type="submit" id="btn-save-staff" class="flex-1 px-4 py-2.5 bg-brand-primary text-white font-bold text-sm rounded-xl shadow-sm hover:bg-blue-700 flex items-center justify-center gap-2 transition-colors">Save Staff</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- FIX 4: z-index 150. FIX 6: Compact Transaction Form -->
+  <div id="txn-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[150] flex items-end md:items-center justify-center sm:p-4 pb-20 md:pb-4">
+    <div id="txn-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh]">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+        <h2 id="txn-modal-title" class="text-lg font-bold text-slate-800">Record Salary / Credit</h2>
+        <button onclick="StaffApp.closeTransactionModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200"><span class="material-symbols-rounded text-lg">close</span></button>
+      </div>
+      
+      <form id="txn-form" onsubmit="StaffApp.saveTransaction(event)" class="flex-1 flex flex-col overflow-hidden">
+        <div class="p-5 overflow-y-auto flex-1 no-scrollbar space-y-4">
+          <input type="hidden" id="txn-id">
+          
+          <div class="grid grid-cols-2 gap-x-3 gap-y-4">
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Amount *</label>
+              <div class="relative"><span class="absolute left-2.5 font-bold text-slate-500 text-sm top-1.5">₹</span><input type="number" id="txn-amount" required class="w-full pl-6 pr-3 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm"></div>
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Paid Date *</label>
+              <div class="relative"><span class="material-symbols-rounded absolute right-2.5 top-1.5 text-[16px] text-slate-400 pointer-events-none">calendar_month</span><input type="text" id="txn-paidDate" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700"></div>
+            </div>
+
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Credit Type *</label>
+              <select id="txn-creditType" required onchange="StaffApp.onCreditTypeChange()" class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Payment Mode *</label>
+              <select id="txn-paymentMode" required class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+            </div>
+          </div>
+          
+          <div id="txn-coverage-container" class="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 mt-2">
+            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Coverage Start *</label><input type="text" id="txn-startDate" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm"></div>
+            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Coverage End *</label><input type="text" id="txn-endDate" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm"></div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-x-3 gap-y-4 pt-2">
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Payment Status *</label>
+              <select id="txn-paymentStatus" required class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt URL</label>
+              <div class="relative"><span class="material-symbols-rounded absolute left-2 top-1.5 text-[16px] text-slate-400">link</span><input type="url" id="txn-receiptUrl" placeholder="https://..." class="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700"></div>
+            </div>
+            <div class="col-span-2"><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Notes</label><textarea id="txn-notes" rows="2" class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm resize-none" placeholder="Details..."></textarea></div>
+          </div>
+        </div>
+        <div class="p-4 bg-white border-t border-slate-100 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          <button type="submit" id="btn-save-txn" class="w-full py-2.5 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-sm hover:bg-blue-700 transition-colors">Save Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="delete-stf-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[160] flex items-center justify-center p-4">
+    <div id="delete-stf-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 p-6 text-center">
+      <div class="w-16 h-16 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4"><span class="material-symbols-rounded text-3xl">delete_forever</span></div>
+      <h3 id="delete-title" class="text-lg font-bold text-slate-800 mb-2">Confirm Delete</h3>
+      <p class="text-sm text-slate-500 mb-6">Are you sure you want to delete <strong id="delete-stf-name"></strong>? This action cannot be undone.</p>
+      <div class="flex gap-3">
+        <button onclick="StaffApp.closeDeleteModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-200">Cancel</button>
+        <button onclick="StaffApp.confirmDelete()" class="flex-1 px-4 py-2.5 bg-red-500 text-white font-bold text-sm rounded-xl hover:bg-red-600 shadow-sm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+</div>

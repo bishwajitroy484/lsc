@@ -1,0 +1,573 @@
+<div class="bg-slate-50 h-full flex flex-col relative overflow-hidden">
+
+  <!-- MAIN VIEW: MEMBER LIST -->
+  <div id="view-list" class="flex-1 flex flex-col h-full w-full absolute inset-0 transition-opacity duration-300">
+    <header
+      class="bg-white px-4 md:px-6 py-4 flex items-center justify-between border-b border-slate-100 shrink-0 z-20">
+      <div class="flex items-center gap-3">
+        <span onclick="window.location.hash='#dashboard'" class="material-symbols-rounded text-slate-600 cursor-pointer hover:bg-slate-100 rounded-full p-1 transition-colors">arrow_back</span>
+        <div>
+          <h1 class="text-xl font-bold text-slate-800 leading-tight">Members</h1>
+          <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Manage your members, track payments
+            and keep your gym growing.</p>
+        </div>
+      </div>
+      <button onclick="MembersApp.openModal()" class="h-9 md:h-10 px-3 md:px-4 bg-brand-primary text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:bg-blue-700 transition-colors">
+        <span class="material-symbols-rounded text-[18px]">add</span><span class="font-semibold text-sm">Add Member</span>
+      </button>
+    </header>
+
+    <div class="bg-white px-4 md:px-6 py-3 shrink-0 shadow-sm flex flex-col md:flex-row md:items-center gap-3">
+
+      <!-- Search Input -->
+      <div class="relative flex-1 w-full max-w-md">
+        <span class="material-symbols-rounded absolute left-3 top-2 text-slate-400 text-[18px]">search</span>
+        <input type="text" id="member-search" onkeyup="MembersApp.search(this.value)" placeholder="Search by name, phone or member ID..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-brand-primary focus:bg-white transition-colors">
+      </div>
+
+      <!-- Dropdown Filters (Visible on Mobile & Desktop) -->
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar w-full md:w-auto">
+        <!-- Status Dropdown (Hidden on Mobile because Pills are used, Visible on Desktop) -->
+        <select id="filter-status" onchange="MembersApp.applyFilters()" class="hidden md:block appearance-none bg-white pl-3 pr-7 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] shrink-0">
+          <option value="All">All Status</option>
+        </select>
+
+        <!-- Batch & Plan Dropdowns -->
+        <select id="filter-batch" onchange="MembersApp.applyFilters()" class="appearance-none bg-white pl-3 pr-7 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] flex-1 md:flex-none min-w-[120px]">
+          <option value="All">All Batches</option>
+        </select>
+        <select id="filter-plan" onchange="MembersApp.applyFilters()" class="appearance-none bg-white pl-3 pr-7 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] flex-1 md:flex-none min-w-[120px]">
+          <option value="All">All Memberships</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div
+      class="md:hidden bg-white px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 border-b border-slate-50">
+      <button onclick="MembersApp.setMobileFilter('All')" id="mob-filter-All" class="mob-filter-btn px-4 py-1.5 bg-brand-primary text-white text-xs font-semibold rounded-full whitespace-nowrap">All</button>
+      <button onclick="MembersApp.setMobileFilter('Active')" id="mob-filter-Active" class="mob-filter-btn px-4 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium rounded-full whitespace-nowrap">Active</button>
+      <button onclick="MembersApp.setMobileFilter('Due Soon')" id="mob-filter-Due Soon" class="mob-filter-btn px-4 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium rounded-full whitespace-nowrap">Due Soon</button>
+      <button onclick="MembersApp.setMobileFilter('Overdue')" id="mob-filter-Overdue" class="mob-filter-btn px-4 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium rounded-full whitespace-nowrap">Overdue</button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 pb-24 md:pb-6">
+      <div class="hidden md:block bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-[10px] uppercase text-slate-500 font-bold">
+              <th class="px-4 py-3">Member Profile</th>
+              <th class="px-4 py-3">Membership & Batch</th>
+              <th class="px-4 py-3">Financials & Dates</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Notes</th>
+              <th class="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="desktop-table-body" class="text-xs text-slate-700"></tbody>
+        </table>
+      </div>
+      <div id="mobile-cards-container" class="md:hidden flex flex-col gap-3"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: MEMBER DETAILS -->
+  <div id="view-details"
+    class="flex-1 flex flex-col h-full w-full absolute inset-0 bg-slate-50 transition-transform duration-300 translate-x-full z-30">
+
+    <header class="bg-white px-4 md:px-6 py-3 flex items-center justify-between border-b border-slate-200 shrink-0">
+      <div class="flex items-center gap-2">
+        <button onclick="MembersApp.closeDetails()" class="flex items-center gap-1 text-slate-500 hover:text-slate-800 transition-colors">
+          <span class="material-symbols-rounded text-[18px]">arrow_back</span>
+          <span class="text-sm font-bold hidden md:inline">Members</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="MembersApp.editCurrentMember()" class="w-8 h-8 flex items-center justify-center border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors" title="Edit Member">
+          <span class="material-symbols-rounded text-[16px]">edit</span>
+        </button>
+        <button onclick="MembersApp.deleteCurrentMember()" class="w-8 h-8 flex items-center justify-center border border-slate-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors" title="Delete Member">
+          <span class="material-symbols-rounded text-[16px]">delete</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar pb-24 md:pb-6">
+      <div class="max-w-4xl mx-auto space-y-4 md:space-y-6">
+
+        <!-- COMPACT UNIFIED TOP CARD -->
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-5 relative">
+          <div class="flex justify-between items-start border-b border-slate-100 pb-4 mb-4">
+            <div class="flex items-center gap-3">
+              <div id="det-avatar"
+                class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center font-bold text-lg text-slate-500 shrink-0 border border-slate-200 shadow-sm">
+                --</div>
+              <div>
+                <h3 id="det-name" class="text-base font-bold text-slate-800 leading-tight">--</h3>
+                <p class="text-[10px] text-slate-500 font-medium mb-1"><span id="det-id">--</span> • 📞
+                  <span id="det-phone">--</span>
+                </p>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span id="det-status" class="text-[8px] font-bold px-1.5 py-0.5 rounded border">--</span>
+                  <!-- Dynamic Due Badge -->
+                  <span id="det-due-days" class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider">--</span>
+                </div>
+              </div>
+            </div>
+            <!-- Unified Payment Button -->
+            <button onclick="MembersApp.openRecordPayment()" class="h-9 px-4 bg-brand-primary text-white text-xs font-bold rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 shrink-0 flex items-center gap-1">
+              <span class="material-symbols-rounded text-[16px] hidden sm:block">payments</span> Pay
+            </button>
+          </div>
+
+          <!-- Compact Details Grid (6 items) -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-4">
+            <div>
+              <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">Membership</p>
+              <p id="det-plan" class="font-bold text-slate-800 text-xs">--</p>
+            </div>
+            <div>
+              <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">Batch</p>
+              <p id="det-batch" class="font-bold text-slate-800 text-xs">--</p>
+            </div>
+            <div>
+              <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">Amount</p>
+              <p id="det-amount" class="font-bold text-slate-800 text-xs">--</p>
+            </div>
+            <div>
+              <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">Joined</p>
+              <p id="det-join" class="font-bold text-slate-800 text-xs">--</p>
+            </div>
+            <div>
+              <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">Next Due</p>
+              <p id="det-due-date" class="font-bold text-slate-800 text-xs">--</p>
+            </div>
+            <div>
+              <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">DOB</p>
+              <p id="det-dob" class="font-bold text-slate-800 text-xs">--</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-rounded text-slate-400 text-[18px]">monitoring</span>
+              <h4 class="font-bold text-sm text-slate-800">Payment Insights</h4>
+            </div>
+            <div class="flex items-center gap-2">
+              <select id="filter-ltv-mode" onchange="MembersApp.renderChart()" class="appearance-none bg-slate-50 pl-3 pr-7 py-1 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+              </select>
+              <select id="filter-ltv" onchange="MembersApp.renderChart()" class="appearance-none bg-slate-50 pl-3 pr-7 py-1 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]"></select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mb-4 pb-4 border-b border-slate-100">
+            <div>
+              <p class="text-[8px] text-slate-400 font-bold uppercase tracking-wide">All Time LTV</p>
+              <h3 id="det-ltv-all" class="text-sm md:text-base font-bold text-slate-800">...</h3>
+            </div>
+            <div>
+              <p class="text-[8px] text-slate-400 font-bold uppercase tracking-wide"><span id="lbl-year-ltv"></span>
+                Earned</p>
+              <h3 id="det-ltv-year" class="text-sm md:text-base font-bold text-brand-primary">...</h3>
+            </div>
+            <div>
+              <p class="text-[8px] text-slate-400 font-bold uppercase tracking-wide">Payments</p>
+              <h3 id="det-ltv-count" class="text-sm md:text-base font-bold text-slate-800">...</h3>
+            </div>
+          </div>
+
+          <div class="relative w-full h-[180px]">
+            <div id="member-revenue-chart" class="absolute inset-0"></div>
+          </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-rounded text-slate-400 text-[18px]">history</span>
+              <h4 class="font-bold text-sm text-slate-800">History</h4>
+            </div>
+          </div>
+          <div class="overflow-x-auto no-scrollbar">
+            <table class="w-full text-left border-collapse min-w-[350px]">
+              <thead class="bg-slate-50 border-b border-slate-100">
+                <tr class="text-[9px] uppercase text-slate-400 font-bold">
+                  <th class="px-4 py-2">Date & Coverage</th>
+                  <th class="px-4 py-2">Amount & Info</th>
+                  <th class="px-4 py-2">Status</th>
+                  <th class="px-4 py-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="det-history-body" class="text-xs text-slate-700"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD/EDIT MEMBER MODAL -->
+  <div id="member-modal"
+    class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[100] flex items-end md:items-center justify-center sm:p-4 pb-20 md:pb-4">
+    <div id="member-modal-content"
+      class="bg-white w-full max-w-3xl md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh]">
+
+      <!-- Sticky Header -->
+      <div
+        class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0 bg-slate-50 rounded-t-2xl">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm">
+            <span class="material-symbols-rounded text-xl">person_add</span>
+          </div>
+          <div>
+            <h2 id="modal-title" class="text-lg font-bold text-slate-800 leading-tight">Add Member</h2>
+            <p class="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Member Profile & Configuration</p>
+          </div>
+        </div>
+        <button onclick="MembersApp.closeModal()" class="w-8 h-8 flex items-center justify-center bg-white text-slate-500 rounded-full hover:bg-slate-200 shadow-sm border border-slate-100 transition-colors">
+          <span class="material-symbols-rounded text-lg">close</span>
+        </button>
+      </div>
+
+      <!-- Form as Flex Container -->
+      <form id="member-form" onsubmit="MembersApp.saveMember(event)" class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- Scrollable Inputs Area -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar bg-white">
+          <input type="hidden" id="mem-id">
+
+          <div class="flex flex-col gap-4">
+            <div class="bg-blue-50/30 p-3 md:p-4 rounded-xl border border-blue-100/50">
+              <h4
+                class="text-[11px] font-bold text-brand-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-rounded text-[14px]">badge</span> Personal Information
+              </h4>
+
+              <div class="flex flex-col gap-3">
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Profile Image</label>
+                  <div class="flex items-center gap-3">
+                    <!-- Dynamic Image Preview -->
+                    <div id="mem-profile-preview-container" class="hidden w-10 h-10 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-sm bg-slate-50">
+                       <img id="mem-profile-preview" src="" class="w-full h-full object-cover">
+                    </div>
+                    <div class="relative flex-1">
+                      <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">image</span>
+                      <input type="file" id="mem-profile-file" accept="image/*" onchange="MembersApp.previewImage(this)" class="w-full pl-8 pr-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100 cursor-pointer text-slate-500">
+                      <input type="hidden" id="mem-profile-url">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Full Name *</label>
+                    <div class="relative">
+                      <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">person</span>
+                      <input type="text" id="mem-name" required class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Phone Number *</label>
+                    <div class="relative">
+                      <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">call</span>
+                      <input type="tel" id="mem-phone" required class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Date of Birth</label>
+                    <div class="relative">
+                      <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
+                      <input type="text" id="mem-dob" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm text-slate-700">
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Gender</label>
+                    <div class="relative">
+                      <select id="mem-gender" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm appearance-none">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                      <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Email</label>
+                  <div class="relative">
+                    <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">mail</span>
+                    <input type="email" id="mem-email" class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
+                  </div>
+                </div>
+
+                <!-- Collapsible Notes -->
+                <div class="border border-slate-200 rounded-lg overflow-hidden bg-slate-50 transition-all mt-1">
+                  <button type="button" onclick="document.getElementById('mem-notes-wrapper').classList.toggle('hidden')" class="w-full px-3 py-2 flex items-center justify-between text-[9px] font-bold text-slate-600 uppercase tracking-wide hover:bg-slate-100 transition-colors">
+                    <span class="flex items-center gap-1.5"><span class="material-symbols-rounded text-[14px]">notes</span> Additional Notes</span>
+                    <span class="material-symbols-rounded text-[14px] text-slate-400">expand_more</span>
+                  </button>
+                  <div id="mem-notes-wrapper" class="hidden p-2 pt-0 bg-white border-t border-slate-100">
+                    <textarea id="mem-notes" rows="2" class="w-full mt-2 px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm resize-none" placeholder="Medical conditions, goals, etc..."></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-emerald-50/30 p-3 md:p-4 rounded-xl border border-emerald-100/50">
+              <h4
+                class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span class="material-symbols-rounded text-[14px]">card_membership</span> Membership Details
+              </h4>
+
+              <div class="flex flex-col gap-3">
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Plan</label>
+                    <div class="relative">
+                      <select id="mem-plan" onchange="MembersApp.onPlanOrBatchChange()" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+                      <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="flex items-center justify-between mb-1">
+                      <label class="block text-[9px] font-bold text-slate-600 uppercase tracking-wide">Batch</label>
+                      <span id="batch-type-badge" class="hidden text-[8px] font-bold px-1 py-0.5 rounded border tracking-wide uppercase"></span>
+                    </div>
+                    <div class="relative">
+                      <select id="mem-batch" onchange="MembersApp.onPlanOrBatchChange()" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+                      <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Join Date</label>
+                    <div class="relative">
+                      <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
+                      <input type="text" id="mem-join" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm text-slate-700">
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Account Status</label>
+                    <div class="relative">
+                      <select id="mem-status" onchange="MembersApp.onStatusChange()" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+                      <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mt-1">
+                  <div id="mem-exit-container" class="hidden col-span-2 sm:col-span-1">
+                    <label class="block text-[9px] font-bold text-red-500 mb-1 uppercase tracking-wide">Exit Date (Required)</label>
+                    <div class="relative">
+                      <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-red-400 pointer-events-none">calendar_month</span>
+                      <input type="text" id="mem-exit-date" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-red-50/30 border border-red-200 rounded-lg text-xs font-bold text-slate-700 focus:border-red-400 outline-none shadow-sm">
+                    </div>
+                  </div>
+                  
+                  <!-- Restored & Visible Amount Field -->
+                  <div class="col-span-2 sm:col-span-1 ml-auto w-full">
+                    <label class="block text-[9px] font-bold text-brand-primary mb-1 uppercase tracking-wide">Calculated Fee (₹) *</label>
+                    <div class="relative flex items-center">
+                      <span class="absolute left-2.5 font-bold text-slate-500 text-[14px]">₹</span>
+                      <input type="number" id="mem-amount" required class="w-full pl-7 pr-3 py-2 bg-white border border-brand-primary/30 rounded-lg text-sm font-bold text-slate-800 focus:border-brand-primary outline-none shadow-sm ring-1 ring-brand-primary/30 transition-all">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="hidden">
+                  <input type="number" id="mem-amount" class="w-full pl-6 pr-3 py-2 bg-white border border-brand-primary/30 rounded-lg text-sm font-bold text-slate-800 focus:border-brand-primary outline-none shadow-sm ring-1 ring-brand-primary/10">
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- START: New Upfront Payment Section (Only visible for New Members) -->
+            <div id="upfront-payment-container" class="bg-indigo-50/30 p-3 md:p-4 rounded-xl border border-indigo-100/50 mt-4 transition-all">
+              <div class="flex items-center justify-between">
+                <h4 class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <span class="material-symbols-rounded text-[14px]">payments</span> Capture Initial Payment
+                </h4>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="mem-record-pay" onchange="document.getElementById('mem-pay-fields').classList.toggle('hidden', !this.checked)" class="w-3.5 h-3.5 text-brand-primary rounded border-slate-300 focus:ring-brand-primary">
+                  <span class="text-[9px] font-bold text-slate-600 uppercase tracking-wide">Record Now</span>
+                </label>
+              </div>
+              
+              <div id="mem-pay-fields" class="hidden flex flex-col gap-3 border-t border-indigo-100/50 pt-3 mt-3">
+                 <div class="grid grid-cols-2 gap-3">
+                   <div>
+                     <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Mode *</label>
+                     <div class="relative">
+                       <select id="mem-pay-mode" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+                       <span class="material-symbols-rounded absolute right-2 top-1.5 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+                     </div>
+                   </div>
+                   <div>
+                     <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Status *</label>
+                     <div class="relative">
+                       <select id="mem-pay-status" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+                       <span class="material-symbols-rounded absolute right-2 top-1.5 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+                     </div>
+                   </div>
+                 </div>
+              </div>
+            </div>
+            <!-- END: Upfront Payment Section -->
+
+        <!-- Sticky Footer -->
+        <div
+          class="p-4 bg-white border-t border-slate-100 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex justify-end gap-3 pb-2 md:pb-2">
+          <button type="button" onclick="MembersApp.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors">Cancel</button>
+          <button type="submit" id="btn-save-member" class="px-6 py-2.5 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 hover:bg-blue-700 flex items-center justify-center gap-2 transition-all">Save Member</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- RECORD/EDIT PAYMENT MODAL -->
+  <div id="payment-modal"
+    class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[110] flex items-end md:items-center justify-center sm:p-4 pb-20 md:pb-4">
+    <div id="payment-modal-content"
+      class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh]">
+
+      <!-- Sticky Header -->
+      <div
+        class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0 bg-slate-50 rounded-t-2xl">
+        <h2 id="pay-modal-title" class="text-lg font-bold text-slate-800">Record Payment</h2>
+        <button onclick="MembersApp.closeRecordPayment()" class="w-8 h-8 flex items-center justify-center bg-white text-slate-500 rounded-full hover:bg-slate-200 shadow-sm border border-slate-100 transition-colors">
+          <span class="material-symbols-rounded text-lg">close</span>
+        </button>
+      </div>
+
+      <!-- Form as Flex Container -->
+      <form id="payment-form" onsubmit="MembersApp.submitPayment(event)" class="flex-1 flex flex-col overflow-hidden">
+        <input type="hidden" id="pay-id">
+
+        <!-- Scrollable Inputs Area -->
+        <div class="flex-1 overflow-y-auto no-scrollbar p-5 space-y-4">
+
+          <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-[10px] font-bold text-slate-500 uppercase">Expected Next Due:</span>
+            <span id="pay-header-due" class="text-xs font-bold text-slate-800">--</span>
+          </div>
+
+          <div
+            class="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 mt-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+            <div class="col-span-2 flex justify-between items-center">
+              <p class="text-[9px] font-bold text-slate-600 uppercase tracking-wide">Coverage Period (Auto-calculated)
+              </p>
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Start Date *</label>
+              <div class="relative">
+                <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
+                <input type="text" id="pay-start" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
+              </div>
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">End Date *</label>
+              <div class="relative">
+                <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
+                <input type="text" id="pay-end" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Amount Paid *</label>
+              <div class="relative flex items-center">
+                <span class="absolute left-2.5 font-bold text-slate-500 text-sm">₹</span>
+                <input type="number" id="pay-amount" required class="w-full pl-6 pr-3 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
+              </div>
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Paid Date *</label>
+              <div class="relative">
+                <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
+                <input type="text" id="pay-date" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Payment Mode *</label>
+              <div class="relative">
+                <select id="pay-mode" required class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+                <span class="material-symbols-rounded absolute right-2 top-1.5 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+              </div>
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Payment Status *</label>
+              <div class="relative">
+                <select id="pay-status" required class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+                <span class="material-symbols-rounded absolute right-2 top-1.5 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Transaction ID</label>
+              <input type="text" id="pay-txn" placeholder="Optional" class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm">
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt URL</label>
+              <div class="relative">
+                <span class="material-symbols-rounded absolute left-2 top-1.5 text-[16px] text-slate-400">link</span>
+                <input type="url" id="pay-receipt" placeholder="https://..." class="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Notes</label>
+            <textarea id="pay-notes" rows="2" class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm resize-none" placeholder="Any additional payment info..."></textarea>
+          </div>
+
+        </div>
+
+        <!-- Sticky Footer -->
+        <div
+          class="p-4 bg-white border-t border-slate-100 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex justify-end gap-3 pb-3 md:pb-3">
+          <button type="button" onclick="MembersApp.closeRecordPayment()" class="px-5 py-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors">Cancel</button>
+          <button type="submit" id="btn-submit-payment" class="px-6 py-2.5 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 hover:bg-blue-700 flex items-center justify-center gap-2 transition-all">Save Payment</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <div id="delete-modal"
+    class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[120] flex items-center justify-center p-4">
+    <div id="delete-modal-content"
+      class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 p-6 text-center">
+      <div class="w-16 h-16 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4">
+        <span class="material-symbols-rounded text-3xl">delete_forever</span>
+      </div>
+      <h3 id="delete-title" class="text-lg font-bold text-slate-800 mb-2">Delete?</h3>
+      <p class="text-sm text-slate-500 mb-6">Are you sure you want to delete <strong id="delete-target-name"></strong>?
+        This action cannot be undone.</p>
+      <div class="flex gap-3">
+        <button onclick="MembersApp.closeDeleteModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-200">Cancel</button>
+        <button onclick="MembersApp.confirmDelete()" class="flex-1 px-4 py-2.5 bg-red-500 text-white font-bold text-sm rounded-xl shadow-sm hover:bg-red-600">Delete</button>
+      </div>
+    </div>
+  </div>
+
+</div>

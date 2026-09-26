@@ -1,0 +1,1080 @@
+<script>
+  var StaffApp = {
+    allData: [],
+    filteredData: [], 
+    tableData: [],    
+    dropdowns: {},
+    
+    isDropdownsLoaded: false,
+    isStaffLoaded: false,
+    
+    months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    quarters: ['Q1', 'Q2', 'Q3', 'Q4'],
+    selectedPeriods: [],
+    
+    sortColumn: 'date',
+    sortAsc: false,
+    
+    chartInstances: {},
+    deleteState: { type: null, id: null }, 
+    currentActiveStaff: null,
+    currentStaffPayments: [],
+    
+    colorMap: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#64748b'],
+
+    safeSetText: function(id, text) { const el = document.getElementById(id); if(el) el.innerText = text; },
+    safeSetValue: function(id, val) { const el = document.getElementById(id); if(el) el.value = val; },
+    safeSetClass: function(id, cls) { const el = document.getElementById(id); if(el) el.className = cls; },
+
+    init: function() {
+      this.isDropdownsLoaded = false;
+      this.isStaffLoaded = false;
+      this.selectedPeriods = [...this.months];
+      
+      this.renderCheckboxes();
+      this.updateMultiSelectLabel();
+      this.showShimmer();
+      this.initDatePickers();
+
+      google.script.run
+        .withSuccessHandler((res) => {
+           this.onDropdownsLoaded(res);
+           this.isDropdownsLoaded = true;
+           this.checkAndRender();
+        })
+        .api_getGlobalDropdowns();
+
+      google.script.run
+        .withSuccessHandler((res) => {
+           this.onDataLoaded(res);
+           this.isStaffLoaded = true;
+           this.checkAndRender();
+        })
+        .api_getStaff();
+
+      document.addEventListener('click', (e) => {
+        const menu = document.getElementById('staff-multi-select-menu');
+        const btn = document.getElementById('staff-multi-select-label')?.parentElement;
+        if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+          menu.classList.add('hidden');
+        }
+      });
+    },
+
+    checkAndRender: function() {
+      if (this.isDropdownsLoaded && this.isStaffLoaded) {
+          this.applyGlobalFilters();
+      }
+    },
+
+    initDatePickers: function() {
+      flatpickr(".date-field", {
+        dateFormat: "d-M-Y",    
+        allowInput: true,
+        disableMobile: "true"   
+      });
+    },
+
+    setDatePicker: function(id, dateObjOrStr) {
+      const el = document.getElementById(id);
+      if (el && el._flatpickr) {
+        el._flatpickr.setDate(dateObjOrStr);
+      } else if (el) {
+        el.value = dateObjOrStr; 
+      }
+    },
+
+    formatDateDDMMMYYYY: function(dateStr) {
+      if(!dateStr) return '';
+      let d = new Date(dateStr);
+      if(isNaN(d)) return dateStr; 
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = months[d.getMonth()];
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    },
+
+    parseToISODate: function(input) {
+      if (!input) return '';
+      let d = new Date(input);
+      if (isNaN(d) && typeof input === 'string') {
+        const parts = input.split('-');
+        if (parts.length === 3) {
+          const months = {jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11};
+          d = new Date(parts[2], months[parts[1].toLowerCase()], parts[0]);
+        }
+      }
+      if (isNaN(d)) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    },
+
+    showShimmer: function() {
+      let dHtml = '';
+      for(let i=0; i<5; i++){ dHtml += `<tr><td colspan="7" class="px-4 py-4"><div class="h-6 w-full shimmer rounded"></div></td></tr>`; }
+      const tb = document.getElementById('desktop-staff-body');
+      if(tb) tb.innerHTML = dHtml;
+      
+      const mc = document.getElementById('mobile-staff-container');
+      if(mc) mc.innerHTML = `<div class="p-4 bg-white rounded-xl shadow-sm"><div class="h-10 w-full shimmer rounded"></div></div>`;
+      
+      ['kpi-total-staff', 'kpi-total-cost', 'kpi-avg-cost', 'kpi-high-amt', 'kpi-low-amt'].forEach(id => {
+         const el = document.getElementById(id);
+         if(el) el.innerHTML = '<div class="h-6 w-16 shimmer rounded mt-1"></div>';
+      });
+
+      if(this.chartInstances.trend) this.chartInstances.trend.destroy();
+      if(this.chartInstances.breakdown) this.chartInstances.breakdown.destroy();
+      
+      const ct = document.getElementById('chart-staff-trend');
+      if(ct) ct.innerHTML = '<div class="absolute inset-4 shimmer opacity-50 rounded-xl"></div>';
+      const cr = document.getElementById('chart-staff-role');
+      if(cr) cr.innerHTML = '<div class="absolute inset-4 shimmer opacity-50 rounded-xl"></div>';
+    },
+
+    parseAmount: function(val) {
+      if(!val) return 0;
+      return Number(val.toString().replace(/[^0-9.-]+/g,"")) || 0;
+    },
+
+    getColor: function(idx) { return this.colorMap[idx % this.colorMap.length]; },
+
+    onDropdownsLoaded: function(response) {
+      if(!response.success) return Toast.error("Failed to load global options.");
+      this.dropdowns = response.data.options || {};
+      
+      const roles = this.dropdowns.role || this.dropdowns.roles || this.dropdowns.staffrole || [];
+      const statuses = this.dropdowns.status || this.dropdowns.staffstatus || this.dropdowns.statuses || [];
+      const creditTypes = this.dropdowns.credit_type_options || this.dropdowns.credittype || this.dropdowns.credit_type || [];
+      const modes = this.dropdowns.paymentmode || [];
+      const payStatuses = this.dropdowns.paymentstatus || this.dropdowns.status || [];
+      
+      this.populateSelect('stf-role', roles, null, "Select Role");
+      this.populateSelect('filter-table-role', roles, null, "All Roles", true);
+      
+      this.populateSelect('stf-status', statuses, null, "Select Status");
+      this.populateSelect('txn-paymentMode', modes, null, "Select Mode");
+      this.populateSelect('txn-paymentStatus', payStatuses, null, "Select Status");
+      this.populateSelect('txn-creditType', creditTypes, null, "Select Credit Type");
+    },
+
+    populateSelect: function(elementId, optionsArray, secondaryLabel = null, defaultText = "Select Option...", isFilter = false) {
+      const el = document.getElementById(elementId);
+      if(!el) return;
+      let html = isFilter ? `<option value="All">${defaultText}</option>` : `<option value="" disabled selected>${defaultText}</option>`;
+      
+      if (Array.isArray(optionsArray)) {
+        optionsArray.forEach(opt => {
+          const label = secondaryLabel && opt[secondaryLabel] ? `${opt.name} (${opt[secondaryLabel]})` : opt.name;
+          html += `<option value="${opt.id}">${label}</option>`;
+        });
+      }
+      el.innerHTML = html;
+    },
+
+    populateReportingTo: function(currentStaffId) {
+      const el = document.getElementById('stf-reportingTo');
+      if(!el) return;
+      let html = `<option value="Admin">Admin (Default)</option>`;
+      
+      this.allData.forEach(stf => {
+         if (stf.staffId !== currentStaffId && this.getName('status', stf.status) === 'Active') {
+            html += `<option value="${stf.staffId}">${stf.fullName}</option>`;
+         }
+      });
+      el.innerHTML = html;
+    },
+
+    getName: function(type, id) {
+      let sourceArray = this.dropdowns[type];
+      if (!sourceArray) {
+          if (type === 'role') sourceArray = this.dropdowns.role || this.dropdowns.roles || this.dropdowns.staffrole || this.dropdowns.staff_role;
+          if (type === 'status') sourceArray = this.dropdowns.status || this.dropdowns.staffstatus || this.dropdowns.statuses || this.dropdowns.staff_status;
+          if (type === 'credittype') sourceArray = this.dropdowns.credit_type_options || this.dropdowns.credittype || this.dropdowns.credit_type;
+          if (type === 'paymentmode') sourceArray = this.dropdowns.paymentmode;
+          if (type === 'paymentstatus') sourceArray = this.dropdowns.paymentstatus || this.dropdowns.status;
+      }
+      if(!id || !sourceArray) return id || 'N/A';
+      const match = sourceArray.find(item => item.id === id);
+      return match ? match.name : id;
+    },
+
+    fetchData: function() {
+      google.script.run
+        .withSuccessHandler((res) => {
+           this.onDataLoaded(res);
+           this.applyGlobalFilters();
+        })
+        .api_getStaff();
+    },
+
+    onDataLoaded: function(response) {
+      if (!response.success) {
+        const tb = document.getElementById('desktop-staff-body');
+        if (tb) tb.innerHTML = `<tr><td colspan="7" class="text-center text-red-500 py-8">Failed to load.</td></tr>`;
+        return Toast.error("Failed to load staff.");
+      }
+      
+      this.allData = response.data.staff || [];
+      this.allPayments = response.data.payments || []; // Store all actual payments globally
+      this.chartMetrics = response.chartMetrics || {};
+      
+      const yearSelect = document.getElementById('staff-filter-year');
+      if (yearSelect) {
+          let years = new Set();
+          
+          this.allData.forEach(stf => {
+            if(stf.joinDate) {
+              const d = new Date(this.parseToISODate(stf.joinDate));
+              if(!isNaN(d)) years.add(d.getFullYear().toString());
+            }
+          });
+          
+          // Also include years where payments were made
+          this.allPayments.forEach(p => {
+             if(p.paidDate) {
+                const d = new Date(this.parseToISODate(p.paidDate));
+                if(!isNaN(d)) years.add(d.getFullYear().toString());
+             }
+          });
+          
+          const currentYear = new Date().getFullYear().toString();
+          if(years.size === 0) years.add(currentYear); 
+          
+          let yearsArray = Array.from(years).sort((a,b) => b - a);
+          let yearHtml = '';
+          yearsArray.forEach(y => { yearHtml += `<option value="${y}">${y}</option>`; });
+          yearSelect.innerHTML = yearHtml;
+          yearSelect.value = yearsArray.includes(currentYear) ? currentYear : yearsArray[0];
+      }
+    },
+
+    handleModeSwitch: function() {
+      const mode = document.getElementById('staff-filter-mode').value;
+      this.selectedPeriods = mode === 'Monthly' ? [...this.months] : [...this.quarters];
+      this.renderCheckboxes();
+      this.updateMultiSelectLabel();
+      this.applyGlobalFilters();
+    },
+
+    renderCheckboxes: function() {
+      const mode = document.getElementById('staff-filter-mode').value;
+      const options = mode === 'Monthly' ? this.months : this.quarters;
+      const menu = document.getElementById('staff-multi-select-menu');
+      if(!menu) return;
+
+      const allSelected = this.selectedPeriods.length === options.length;
+
+      let html = `<label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer rounded text-xs font-bold text-slate-800 border-b border-slate-100 mb-1"><input type="checkbox" onchange="StaffApp.toggleAllPeriods(this)" ${allSelected ? 'checked' : ''} class="accent-brand-primary w-3.5 h-3.5 rounded border-slate-300">Select All</label>`;
+      options.forEach(opt => {
+        const isChecked = this.selectedPeriods.includes(opt) ? 'checked' : '';
+        html += `<label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer rounded text-xs text-slate-700"><input type="checkbox" value="${opt}" ${isChecked} onchange="StaffApp.togglePeriod(this)" class="accent-brand-primary w-3.5 h-3.5 rounded border-slate-300">${opt}</label>`;
+      });
+      menu.innerHTML = html;
+    },
+
+    toggleAllPeriods: function(checkbox) {
+      const mode = document.getElementById('staff-filter-mode').value;
+      const options = mode === 'Monthly' ? this.months : this.quarters;
+      this.selectedPeriods = checkbox.checked ? [...options] : [options[0]]; 
+      this.updateMultiSelectLabel();
+      this.renderCheckboxes();
+      this.applyGlobalFilters();
+    },
+
+    togglePeriod: function(checkbox) {
+      if (checkbox.checked) { this.selectedPeriods.push(checkbox.value); } 
+      else { this.selectedPeriods = this.selectedPeriods.filter(v => v !== checkbox.value); }
+      
+      const mode = document.getElementById('staff-filter-mode').value;
+      const options = mode === 'Monthly' ? this.months : this.quarters;
+      this.selectedPeriods.sort((a, b) => options.indexOf(a) - options.indexOf(b));
+      if (this.selectedPeriods.length === 0) this.selectedPeriods = [options[0]]; 
+      
+      this.updateMultiSelectLabel();
+      this.renderCheckboxes();
+      this.applyGlobalFilters(); 
+    },
+
+    updateMultiSelectLabel: function() {
+      const labelEl = document.getElementById('staff-multi-select-label');
+      if (!labelEl) return;
+      const mode = document.getElementById('staff-filter-mode').value;
+      const maxLen = mode === 'Monthly' ? 12 : 4;
+      if (this.selectedPeriods.length === maxLen) { labelEl.innerText = "All Selected"; } 
+      else if (this.selectedPeriods.length <= 3) { labelEl.innerText = this.selectedPeriods.join(', '); } 
+      else { labelEl.innerText = `${this.selectedPeriods.slice(0, 3).join(', ')} +${this.selectedPeriods.length - 3}`; }
+    },
+
+    applyGlobalFilters: function() {
+      const yearStr = document.getElementById('staff-filter-year')?.value;
+      const selectedYear = yearStr ? parseInt(yearStr) : new Date().getFullYear();
+      const mode = document.getElementById('staff-filter-mode')?.value || 'Monthly';
+      
+      this.filteredData = [...this.allData]; 
+      
+      // Clearly delegate to our separated functions
+      this.calculateKPIs(selectedYear, mode);
+      this.renderCharts();
+      this.filterTable(); 
+    },
+
+    calculateKPIs: function(selectedYear, mode) {
+      let totalStaff = 0;
+      let highestAmt = 0; let highestName = '--';
+      let lowestAmt = Infinity; let lowestName = '--';
+      
+      // 1. Calculate Staff Headcount & Salary Highs/Lows
+      this.filteredData.forEach(stf => {
+        const sName = this.getName('status', stf.status);
+        if(sName === 'Active') {
+           totalStaff++;
+           const sal = this.parseAmount(stf.salary);
+           
+           const rName = this.getName('role', stf.role);
+           if(sal > highestAmt) { highestAmt = sal; highestName = `${stf.fullName} (${rName})`; }
+           if(sal < lowestAmt) { lowestAmt = sal; lowestName = `${stf.fullName} (${rName})`; }
+        }
+      });
+
+      if (lowestAmt === Infinity) lowestAmt = 0;
+
+      // 2. Calculate Total Cost strictly from ACTUAL payments in the selected year/period
+      let totalCost = 0;
+      (this.allPayments || []).forEach(p => {
+         const pStatus = (p.paymentStatus || 'completed').toLowerCase();
+         // Ignore failed or pending payments
+         if (pStatus.includes('fail') || pStatus.includes('pending')) return;
+
+         const d = new Date(this.parseToISODate(p.paidDate));
+         if(isNaN(d) || d.getFullYear() !== selectedYear) return;
+
+         const periodKey = mode === 'Monthly' ? this.months[d.getMonth()] : this.quarters[Math.floor(d.getMonth() / 3)];
+         
+         // Only add to total if it falls within the currently selected checkboxes
+         if(this.selectedPeriods.includes(periodKey)) {
+             totalCost += this.parseAmount(p.amount);
+         }
+      });
+
+      const activePeriodCount = this.selectedPeriods.length || 1;
+      const avg = totalCost / activePeriodCount;
+
+      // 3. Update the DOM
+      this.safeSetText('kpi-total-staff', totalStaff);
+      this.safeSetText('kpi-total-cost', `₹${totalCost.toLocaleString('en-IN')}`);
+      this.safeSetText('kpi-avg-cost', `₹${Math.round(avg).toLocaleString('en-IN')}`);
+      
+      this.safeSetText('kpi-high-amt', `₹${highestAmt.toLocaleString('en-IN')}`);
+      this.safeSetText('kpi-high-name', highestName);
+      
+      this.safeSetText('kpi-low-amt', `₹${lowestAmt.toLocaleString('en-IN')}`);
+      this.safeSetText('kpi-low-name', lowestName);
+    },
+
+    renderCharts: function() {
+      const mode = document.getElementById('staff-filter-mode')?.value || 'Monthly';
+      const isMonthly = mode === 'Monthly';
+      const yearStr = document.getElementById('staff-filter-year')?.value;
+      const selectedYear = yearStr ? parseInt(yearStr) : new Date().getFullYear();
+      const chartType = document.getElementById('chart-type-toggle')?.value || 'bar';
+      
+      const trendDataMap = {};
+      this.selectedPeriods.forEach(p => trendDataMap[p] = 0);
+      let roleSums = {};
+
+      // Map ACTUAL payments to the trend map and role sums using Accrual Logic (Split/Anchor)
+      (this.allPayments || []).forEach(p => {
+         const pStatus = (p.paymentStatus || 'completed').toLowerCase();
+         if (pStatus.includes('fail') || pStatus.includes('pending')) return;
+
+         let totalAmt = this.parseAmount(p.amount);
+         let sDate = new Date(this.parseToISODate(p.startDate || p.paidDate));
+         let eDate = new Date(this.parseToISODate(p.endDate || p.paidDate));
+
+         if(isNaN(sDate)) return;
+
+         // Identify Staff Role once per transaction
+         const stf = this.allData.find(s => s.staffId === p.staffId);
+         const rName = stf ? this.getName('role', stf.role) : 'Unknown';
+
+         if (this.accrualMode === 'split' && !isNaN(eDate) && eDate >= sDate) {
+             let monthsSpan = (eDate.getFullYear() - sDate.getFullYear()) * 12 + eDate.getMonth() - sDate.getMonth() + 1;
+             monthsSpan = monthsSpan > 0 ? monthsSpan : 1; 
+             let splitAmt = totalAmt / monthsSpan;
+             
+             for(let i = 0; i < monthsSpan; i++) {
+                 let cMonth = (sDate.getMonth() + i) % 12;
+                 let cYear = sDate.getFullYear() + Math.floor((sDate.getMonth() + i) / 12);
+                 
+                 if (cYear === selectedYear) {
+                     const periodKey = isMonthly ? this.months[cMonth] : this.quarters[Math.floor(cMonth / 3)];
+                     if(this.selectedPeriods.includes(periodKey)) {
+                         trendDataMap[periodKey] += splitAmt;
+                         roleSums[rName] = (roleSums[rName] || 0) + splitAmt;
+                     }
+                 }
+             }
+         } else {
+             // Anchor Logic (Default)
+             if (sDate.getFullYear() === selectedYear) {
+                 const periodKey = isMonthly ? this.months[sDate.getMonth()] : this.quarters[Math.floor(sDate.getMonth() / 3)];
+                 if(this.selectedPeriods.includes(periodKey)) {
+                     trendDataMap[periodKey] += totalAmt;
+                     roleSums[rName] = (roleSums[rName] || 0) + totalAmt;
+                 }
+             }
+         }
+      });
+
+      const trendOpts = {
+        series: [{ name: 'Actual Payroll', data: Object.values(trendDataMap).map(v => Number(v.toFixed(2))) }],
+        chart: { type: chartType, height: '100%', toolbar: { show: false } },
+        plotOptions: { bar: { borderRadius: 4, columnWidth: '40%' } },
+        stroke: { curve: 'smooth', width: chartType === 'bar' ? 0 : 3 },
+        markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
+        dataLabels: { 
+          enabled: true, 
+          formatter: function (val) { return val > 0 ? "₹" + (val > 999 ? (val/1000).toFixed(1)+'k' : val) : ""; },
+          style: { fontSize: '9px', colors: ['#475569'] },
+          background: { enabled: false },
+          offsetY: chartType === 'bar' ? -10 : -20
+        },
+        xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => val > 0 ? '₹' + (val / 1000) + 'k' : '0', style: { fontSize: '9px', colors: '#64748b' } } },
+        colors: ['#3b82f6'],
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+      };
+
+      const trendEl = document.querySelector("#chart-staff-trend");
+      if(trendEl) {
+         trendEl.innerHTML = '';
+         if(this.chartInstances.trend) this.chartInstances.trend.destroy();
+         this.chartInstances.trend = new ApexCharts(trendEl, trendOpts);
+         this.chartInstances.trend.render();
+      }
+
+      const bLabels = Object.keys(roleSums);
+      const bSeries = Object.values(roleSums).map(v => Number(v.toFixed(2)));
+      const bColors = bLabels.map((l, i) => this.getColor(i));
+      const totalAmt = bSeries.reduce((a,b)=>a+b, 0);
+
+      const breakOpts = {
+        series: bSeries,
+        labels: bLabels,
+        chart: { type: 'donut', height: '100%' },
+        colors: bColors.length ? bColors : ['#e2e8f0'],
+        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => `₹${totalAmt.toLocaleString('en-IN')}` } } } } },
+        legend: { position: 'right', fontSize: '10px', offsetY: 20 },
+        dataLabels: { enabled: true, formatter: function (val, opts) { return "₹" + opts.w.globals.seriesTotals[opts.seriesIndex].toLocaleString('en-IN'); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } }
+      };
+
+      const roleEl = document.querySelector("#chart-staff-role");
+      if(roleEl) {
+         roleEl.innerHTML = '';
+         if(this.chartInstances.breakdown) this.chartInstances.breakdown.destroy();
+         this.chartInstances.breakdown = new ApexCharts(roleEl, breakOpts);
+         this.chartInstances.breakdown.render();
+      }
+    },
+
+    sortTable: function(column) {
+      if (this.sortColumn === column) {
+        this.sortAsc = !this.sortAsc;
+      } else {
+        this.sortColumn = column;
+        this.sortAsc = true;
+      }
+      this.updateSortIcons();
+      this.renderTable();
+    },
+
+    updateSortIcons: function() {
+      ['name', 'role', 'salary', 'date'].forEach(col => {
+        const icon = document.getElementById(`sort-icon-${col}`);
+        if(icon) {
+          if (this.sortColumn === col) {
+            icon.classList.remove('text-transparent');
+            icon.classList.add('text-slate-500');
+            icon.innerText = this.sortAsc ? 'arrow_upward' : 'arrow_downward';
+          } else {
+            icon.classList.remove('text-slate-500');
+            icon.classList.add('text-transparent');
+          }
+        }
+      });
+    },
+
+    searchTable: function(query) { this.tableSearchQuery = query.toLowerCase().trim(); this.filterTable(); },
+
+    filterTable: function() {
+      const q = this.tableSearchQuery || '';
+      const fRole = document.getElementById('filter-table-role')?.value || 'All';
+
+      this.tableData = this.filteredData.filter(stf => {
+         const rName = this.getName('role', stf.role);
+         const matchRole = fRole === 'All' || stf.role === fRole;
+         const matchSearch = !q || 
+                             (stf.fullName && stf.fullName.toLowerCase().includes(q)) ||
+                             (stf.phone && stf.phone.includes(q)) ||
+                             (rName && rName.toLowerCase().includes(q));
+         return matchRole && matchSearch;
+      });
+
+      this.renderTable();
+    },
+
+    renderTable: function() {
+      const tBody = document.getElementById('desktop-staff-body');
+      const mContainer = document.getElementById('mobile-staff-container');
+      if (!tBody || !mContainer) return;
+
+      this.tableData.sort((a,b) => {
+         let valA, valB;
+         if (this.sortColumn === 'date') {
+            valA = new Date(this.parseToISODate(a.joinDate)).getTime();
+            valB = new Date(this.parseToISODate(b.joinDate)).getTime();
+         } else if (this.sortColumn === 'salary') {
+            valA = this.parseAmount(a.salary);
+            valB = this.parseAmount(b.salary);
+         } else if (this.sortColumn === 'name') {
+            valA = (a.fullName || '').toLowerCase();
+            valB = (b.fullName || '').toLowerCase();
+         } else if (this.sortColumn === 'role') {
+            valA = this.getName('role', a.role).toLowerCase();
+            valB = this.getName('role', b.role).toLowerCase();
+         }
+         
+         if (valA < valB) return this.sortAsc ? -1 : 1;
+         if (valA > valB) return this.sortAsc ? 1 : -1;
+         return 0;
+      });
+
+      if (this.tableData.length === 0) {
+        tBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 px-4 text-slate-500 text-xs font-medium">No staff match your criteria.</td></tr>`;
+        mContainer.innerHTML = `<div class="bg-white p-6 text-center text-xs text-slate-500 rounded-xl border border-slate-200">No records found.</div>`;
+        return;
+      }
+
+      let dHtml = ''; let mHtml = '';
+
+      this.tableData.forEach((stf, index) => {
+        const initials = stf.fullName ? stf.fullName.substring(0, 2).toUpperCase() : 'NA';
+        const dateStr = this.formatDateDDMMMYYYY(stf.joinDate);
+        const cleanAmt = this.parseAmount(stf.salary);
+        const amtStr = cleanAmt > 0 ? `₹${cleanAmt.toLocaleString('en-IN')}` : '₹0';
+        
+        const rName = this.getName('role', stf.role);
+        const sName = this.getName('status', stf.status);
+        let sClass = sName === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100';
+        const stfJson = JSON.stringify(stf).replace(/"/g, '&quot;');
+
+        dHtml += `
+          <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onclick="StaffApp.openDetails(${stfJson})">
+            <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0">${initials}</div><div><div class="font-bold text-slate-800 text-xs hover:text-brand-primary transition-colors">${stf.fullName}</div></div></div></td>
+            <td class="px-4 py-3 text-slate-600 text-xs font-medium">${rName}</td>
+            <td class="px-4 py-3 text-slate-600 text-xs">${stf.phone}</td>
+            <td class="px-4 py-3 font-bold text-slate-800 text-xs">${amtStr}</td>
+            <td class="px-4 py-3 text-slate-500 text-xs">${dateStr}</td>
+            <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass}">${sName}</span></td>
+            <td class="px-4 py-3 text-right">
+              <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded"><span class="material-symbols-rounded text-[16px]">edit</span></button>
+              <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[16px]">delete</span></button>
+            </td>
+          </tr>`;
+
+        mHtml += `
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3 relative cursor-pointer" onclick="StaffApp.openDetails(${stfJson})">
+            <div class="absolute top-4 right-4 flex gap-1"><span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${sClass}">${sName}</span></div>
+            <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold shrink-0">${initials}</div><div class="pr-12"><h3 class="font-bold text-sm text-slate-800">${stf.fullName}</h3><p class="text-[10px] font-medium text-slate-500">${rName}</p></div></div>
+            <div class="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
+              <div><p class="text-slate-400 text-[10px] mb-0.5">Salary</p><p class="font-bold text-slate-700">${amtStr}</p></div>
+              <div><p class="text-slate-400 text-[10px] mb-0.5">Joined</p><p class="font-bold text-slate-700">${dateStr}</p></div>
+            </div>
+          </div>`;
+      });
+
+      tBody.innerHTML = dHtml;
+      mContainer.innerHTML = mHtml;
+    },
+
+    switchTab: function(tabName) {
+      const activeCls = 'text-brand-primary text-sm font-bold border-b-2 border-brand-primary pb-2 px-1 transition-colors';
+      const inactiveCls = 'text-slate-400 hover:text-slate-800 text-sm font-medium border-b-2 border-transparent pb-2 px-1 transition-colors';
+      
+      this.safeSetClass('tab-btn-overview', tabName === 'overview' ? activeCls : inactiveCls);
+      this.safeSetClass('tab-btn-payments', tabName === 'payments' ? activeCls : inactiveCls);
+      
+      const elOverview = document.getElementById('det-tab-overview');
+      const elPayments = document.getElementById('det-tab-payments');
+      
+      if(elOverview) elOverview.classList.toggle('hidden', tabName !== 'overview');
+      if(elPayments) elPayments.classList.toggle('hidden', tabName !== 'payments');
+    },
+
+    openDetails: function(stf) {
+      if(!stf) return;
+      this.currentActiveStaff = stf;
+      const initials = stf.fullName ? stf.fullName.substring(0, 2).toUpperCase() : 'NA';
+      
+      const sName = this.getName('status', stf.status);
+      const rName = this.getName('role', stf.role);
+      
+      let sClass = sName === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100';
+      const cleanAmt = this.parseAmount(stf.salary);
+      const amtStr = cleanAmt > 0 ? `₹${cleanAmt.toLocaleString('en-IN')}` : '₹0';
+      
+      const dateStr = this.formatDateDDMMMYYYY(stf.joinDate);
+      const dobStr = stf.dob ? this.formatDateDDMMMYYYY(stf.dob) : '--';
+      const exitStr = stf.exitDate ? this.formatDateDDMMMYYYY(stf.exitDate) : '';
+
+      let repName = 'Admin';
+      if (stf.reportingTo && stf.reportingTo !== 'Admin') {
+         const supervisor = this.allData.find(m => m.staffId === stf.reportingTo);
+         if (supervisor) repName = supervisor.fullName;
+      }
+
+      this.safeSetText('det-stf-avatar', initials);
+      this.safeSetText('det-stf-name', stf.fullName);
+      this.safeSetText('det-stf-status', sName);
+      this.safeSetClass('det-stf-status', `text-[10px] font-bold px-2 py-0.5 rounded border ${sClass}`);
+      this.safeSetText('det-stf-role', rName);
+      this.safeSetText('det-stf-phone', stf.phone);
+      this.safeSetText('det-stf-email', stf.email || 'No email provided');
+
+      this.safeSetText('det-stf-info-role', rName);
+      this.safeSetText('det-stf-reportingTo', repName);
+      this.safeSetText('det-stf-salary', amtStr);
+      this.safeSetText('det-stf-join', exitStr ? `${dateStr} (Left: ${exitStr})` : dateStr);
+      this.safeSetText('det-stf-dob', dobStr);
+      this.safeSetText('det-stf-info-status', sName);
+      this.safeSetText('det-stf-notes', stf.notes || '--');
+
+      this.switchTab('overview');
+      this.generatePaymentHistory();
+
+      const backdrop = document.getElementById('staff-drawer-backdrop');
+      const drawer = document.getElementById('staff-drawer');
+      if(backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      if(drawer) drawer.classList.remove('translate-x-full');
+    },
+
+    closeDetails: function() {
+      const backdrop = document.getElementById('staff-drawer-backdrop');
+      const drawer = document.getElementById('staff-drawer');
+      if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
+      if(drawer) drawer.classList.add('translate-x-full');
+      this.currentActiveStaff = null;
+    },
+
+    generatePaymentHistory: function() {
+      const stf = this.currentActiveStaff;
+      if(!stf) return;
+      const tBody = document.getElementById('det-stf-payments-body');
+      if(tBody) tBody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-xs text-slate-400"><div class="h-4 w-32 mx-auto shimmer rounded"></div></td></tr>`;
+      
+      google.script.run
+        .withSuccessHandler((res) => {
+           this.currentStaffPayments = (res.success && res.data) ? res.data : [];
+           
+           let virtualRecords = [];
+           const sal = this.parseAmount(stf.salary);
+           let currentDue = stf.joinDate ? new Date(this.parseToISODate(stf.joinDate)) : null;
+           let today = new Date();
+           today.setHours(0,0,0,0);
+           
+           const salaryId = this.dropdowns.credittype ? this.dropdowns.credittype.find(c => c.name.toLowerCase().includes('salary'))?.id : null;
+           
+           if (currentDue && !isNaN(currentDue) && sal > 0) {
+               const validSalaries = this.currentStaffPayments.filter(p => 
+                  p.endDate && p.paymentStatus && !p.paymentStatus.toLowerCase().includes('fail') && !p.paymentStatus.toLowerCase().includes('pending') && (!salaryId || p.creditType === salaryId)
+               );
+               validSalaries.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
+               
+               if (validSalaries.length > 0) {
+                   currentDue = new Date(this.parseToISODate(validSalaries[0].endDate));
+                   currentDue.setDate(currentDue.getDate() + 1); 
+               }
+
+               let iterCount = 1;
+               while (currentDue < today && iterCount <= 12) {
+                   let vEnd = new Date(currentDue);
+                   vEnd.setMonth(vEnd.getMonth() + 1);
+                   vEnd.setDate(vEnd.getDate() - 1);
+                   
+                   virtualRecords.push({
+                       isVirtual: true,
+                       amount: sal,
+                       virtualStartDate: currentDue.toISOString(),
+                       virtualEndDate: vEnd.toISOString()
+                   });
+                   
+                   currentDue = new Date(vEnd);
+                   currentDue.setDate(currentDue.getDate() + 1);
+                   iterCount++;
+               }
+           }
+
+           let combinedHistory = [...this.currentStaffPayments, ...virtualRecords];
+           combinedHistory.sort((a,b) => {
+               const dateA = a.isVirtual ? a.virtualStartDate : a.paidDate;
+               const dateB = b.isVirtual ? b.virtualStartDate : b.paidDate;
+               return new Date(this.parseToISODate(dateB)) - new Date(this.parseToISODate(dateA));
+           });
+           
+           let totalPaid = 0;
+           let html = '';
+           
+           combinedHistory.forEach(r => {
+              // FIX: Safely parse the DB string (e.g. "₹10,000") into a raw number (10000) before any math
+              const safeAmt = this.parseAmount(r.amount);
+              const rAmtStr = `₹${safeAmt.toLocaleString('en-IN')}`;
+              
+              if(r.isVirtual) {
+                  const vStartFmt = this.formatDateDDMMMYYYY(r.virtualStartDate);
+                  const vEndFmt = this.formatDateDDMMMYYYY(r.virtualEndDate);
+                  const pJson = JSON.stringify(r).replace(/"/g, '&quot;');
+                  
+                  html += `
+                    <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 group bg-red-50/30">
+                      <td class="px-4 py-3">
+                        <div class="font-bold text-slate-800">Unpaid Cycle</div>
+                        <div class="text-[9px] text-slate-500 mt-0.5">${vStartFmt} to ${vEndFmt}</div>
+                      </td>
+                      <td class="px-4 py-3">
+                        <div class="font-bold text-slate-800">${rAmtStr}</div>
+                        <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase text-red-600 bg-red-50 border-red-200">OVERDUE</span>
+                      </td>
+                      <td class="px-4 py-3 text-right whitespace-nowrap">
+                         <button onclick="StaffApp.openTransactionModal(${pJson})" class="px-3 py-1.5 text-brand-primary border border-blue-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm transition-colors whitespace-nowrap">Pay Now</button>
+                      </td>
+                    </tr>
+                  `;
+              } else {
+                  const pStatusName = this.getName('paymentstatus', r.paymentStatus) || r.paymentStatus || 'Completed';
+                  let statColor = 'text-emerald-600 bg-emerald-50 border-emerald-100';
+                  if (pStatusName.toLowerCase().includes('pending')) statColor = 'text-amber-600 bg-amber-50 border-amber-100';
+                  if (pStatusName.toLowerCase().includes('fail')) statColor = 'text-red-600 bg-red-50 border-red-100';
+                  
+                  if (!pStatusName.toLowerCase().includes('fail') && !pStatusName.toLowerCase().includes('pending')) {
+                      // FIX: Add the clean number to the total
+                      totalPaid += safeAmt;
+                  }
+
+                  const creditName = this.getName('credittype', r.creditType);
+                  const isSal = creditName.toLowerCase().includes('salary');
+                  let coverageHtml = isSal && r.startDate && r.endDate ? `<div class="text-[9px] text-slate-500 mt-0.5">${this.formatDateDDMMMYYYY(r.startDate)} to ${this.formatDateDDMMMYYYY(r.endDate)}</div>` : `<div class="text-[9px] text-slate-400 mt-0.5">${creditName}</div>`;
+                  let rcptHtml = r.receiptUrl ? `<a href="${r.receiptUrl}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1"><span class="material-symbols-rounded text-[12px] align-middle">link</span></a>` : '';
+                  const pJson = JSON.stringify(r).replace(/"/g, '&quot;');
+
+                  html += `
+                    <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 group transition-colors">
+                      <td class="px-4 py-3 text-slate-800 font-medium">
+                         <div class="font-bold text-slate-800">${this.formatDateDDMMMYYYY(r.paidDate)}</div>
+                         ${coverageHtml}
+                      </td>
+                      <td class="px-4 py-3">
+                         <div class="font-bold text-slate-800">${rAmtStr}${rcptHtml}</div>
+                         <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${statColor}">${pStatusName}</span>
+                      </td>
+                      <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <div class="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onclick="StaffApp.openTransactionModal(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
+                          <button onclick="StaffApp.openDeleteModal('payment', '${r.paymentId}', '${this.formatDateDDMMMYYYY(r.paidDate)} Record')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+              }
+           });
+           
+           this.safeSetText('det-stf-total-paid', `₹${totalPaid.toLocaleString('en-IN')}`);
+           if(html === '') html = `<tr><td colspan="3" class="text-center py-6 text-xs text-slate-400">No records found.</td></tr>`;
+           if(tBody) tBody.innerHTML = html;
+        })
+        .api_getStaffTransactions(stf.staffId);
+    },
+
+    onStatusChange: function() {
+      const statusId = document.getElementById('stf-status').value;
+      const statusName = this.getName('status', statusId).toLowerCase();
+      const exitContainer = document.getElementById('stf-exit-container');
+      const exitInput = document.getElementById('stf-exit-date');
+
+      if (statusName.includes('inactive') || statusName.includes('in-active') || statusName.includes('exit')) {
+        exitContainer.classList.remove('hidden');
+        exitInput.required = true;
+        if (!exitInput.value) {
+          this.setDatePicker('stf-exit-date', new Date());
+        }
+      } else {
+        exitContainer.classList.add('hidden');
+        exitInput.required = false;
+        this.setDatePicker('stf-exit-date', '');
+      }
+    },
+
+    editCurrentMember: function() {
+      if(this.currentActiveStaff) this.openModal(this.currentActiveStaff);
+    },
+
+    deleteCurrentMember: function() {
+      if(this.currentActiveStaff) this.openDeleteModal('staff', this.currentActiveStaff.staffId, this.currentActiveStaff.fullName);
+    },
+
+    openModal: function(stf = null) {
+      if(stf && stf instanceof Event) stf = null;
+
+      this.safeSetText('stf-modal-title', stf ? 'Edit Staff' : 'Add Staff');
+      this.safeSetValue('stf-id', stf ? stf.staffId : '');
+      this.safeSetValue('stf-name', stf ? stf.fullName : '');
+      this.safeSetValue('stf-role', stf ? stf.role : '');
+      this.safeSetValue('stf-phone', stf ? stf.phone : '');
+      this.safeSetValue('stf-email', stf ? stf.email : '');
+      
+      this.populateReportingTo(stf ? stf.staffId : null);
+      this.safeSetValue('stf-reportingTo', stf && stf.reportingTo ? stf.reportingTo : 'Admin');
+      
+      this.safeSetValue('stf-salary', stf ? this.parseAmount(stf.salary) : '');
+      
+      this.setDatePicker('stf-join', stf && stf.joinDate ? stf.joinDate : new Date());
+      this.setDatePicker('stf-dob', stf && stf.dob ? stf.dob : '');
+      this.setDatePicker('stf-exit-date', stf && stf.exitDate ? stf.exitDate : '');
+      
+      this.safeSetValue('stf-status', stf ? stf.status : '');
+      this.safeSetValue('stf-notes', stf && stf.notes ? stf.notes : '');
+
+      this.onStatusChange();
+
+      const backdrop = document.getElementById('staff-modal');
+      const content = document.getElementById('staff-modal-content');
+      if(backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      if(content) content.classList.remove('translate-y-full', 'md:translate-y-10', 'opacity-0');
+    },
+
+    closeModal: function() {
+      const backdrop = document.getElementById('staff-modal');
+      const content = document.getElementById('staff-modal-content');
+      const form = document.getElementById('staff-form');
+      if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
+      if(content) content.classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
+      if(form) form.reset();
+    },
+
+    saveStaff: function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-staff');
+      if(btn) {
+         btn.innerHTML = `<span class="material-symbols-rounded animate-spin text-[18px] mr-2">progress_activity</span> Saving...`;
+         btn.disabled = true;
+      }
+
+      const payload = {
+        staffId: document.getElementById('stf-id')?.value,
+        fullName: document.getElementById('stf-name')?.value,
+        role: document.getElementById('stf-role')?.value,
+        reportingTo: document.getElementById('stf-reportingTo')?.value || 'Admin',
+        phone: document.getElementById('stf-phone')?.value,
+        email: document.getElementById('stf-email')?.value || '',
+        dob: this.formatDateDDMMMYYYY(document.getElementById('stf-dob')?.value),
+        salary: Number(document.getElementById('stf-salary')?.value || 0),
+        joinDate: this.formatDateDDMMMYYYY(document.getElementById('stf-join')?.value),
+        exitDate: this.formatDateDDMMMYYYY(document.getElementById('stf-exit-date')?.value),
+        status: document.getElementById('stf-status')?.value,
+        notes: document.getElementById('stf-notes')?.value
+      };
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          if(btn) { btn.innerHTML = `Save Staff`; btn.disabled = false; }
+          if(res.success) {
+            Toast.success(res.message);
+            this.closeModal();
+            this.showShimmer();
+            this.fetchData();
+            if(this.currentActiveStaff && this.currentActiveStaff.staffId === payload.staffId) {
+                this.openDetails(payload);
+            }
+          } else { Toast.error(res.error); }
+        })
+        .api_saveStaff(payload);
+    },
+
+    onCreditTypeChange: function() {
+       const select = document.getElementById('txn-creditType');
+       const name = select.options[select.selectedIndex]?.text.toLowerCase() || '';
+       const covContainer = document.getElementById('txn-coverage-container');
+       
+       if (name.includes('salary')) {
+          covContainer.classList.remove('hidden');
+          document.getElementById('txn-startDate').required = true;
+          document.getElementById('txn-endDate').required = true;
+       } else {
+          covContainer.classList.add('hidden');
+          document.getElementById('txn-startDate').required = false;
+          document.getElementById('txn-endDate').required = false;
+          this.setDatePicker('txn-startDate', '');
+          this.setDatePicker('txn-endDate', '');
+       }
+    },
+
+    openTransactionModal: function(txn = null) {
+      if(!this.currentActiveStaff) return;
+      if(txn && txn instanceof Event) txn = null;
+
+      this.safeSetText('txn-modal-title', txn && !txn.isVirtual ? 'Edit Record' : 'Record Salary / Credit');
+      this.safeSetValue('txn-id', txn && !txn.isVirtual ? txn.paymentId : '');
+      
+      const rawAmt = txn ? String(txn.amount).replace(/[^0-9.-]+/g,"") : (this.currentActiveStaff.salary ? String(this.currentActiveStaff.salary).replace(/[^0-9.-]+/g,"") : '');
+      this.safeSetValue('txn-amount', rawAmt ? Number(rawAmt) : '');
+      
+      this.setDatePicker('txn-paidDate', txn && !txn.isVirtual && txn.paidDate ? txn.paidDate : new Date());
+
+      const defMode = document.getElementById('txn-paymentMode')?.options[1]?.value || '';
+      this.safeSetValue('txn-paymentMode', txn && !txn.isVirtual && txn.paymentMode ? txn.paymentMode : defMode);
+      
+      const defStatus = document.getElementById('txn-paymentStatus')?.options[1]?.value || '';
+      this.safeSetValue('txn-paymentStatus', txn && !txn.isVirtual && txn.paymentStatus ? txn.paymentStatus : defStatus);
+
+      const creditOpts = Array.from(document.getElementById('txn-creditType').options);
+      const salOpt = creditOpts.find(opt => opt.text.toLowerCase().includes('salary'));
+      this.safeSetValue('txn-creditType', txn && !txn.isVirtual && txn.creditType ? txn.creditType : (salOpt ? salOpt.value : ''));
+
+      this.safeSetValue('txn-receiptUrl', txn && !txn.isVirtual && txn.receiptUrl ? txn.receiptUrl : '');
+      this.safeSetValue('txn-notes', txn && !txn.isVirtual && txn.notes ? txn.notes : '');
+
+      if (txn && txn.isVirtual) {
+          this.setDatePicker('txn-startDate', txn.virtualStartDate);
+          this.setDatePicker('txn-endDate', txn.virtualEndDate);
+      } else if (txn && !txn.isVirtual) {
+          this.setDatePicker('txn-startDate', txn.startDate || '');
+          this.setDatePicker('txn-endDate', txn.endDate || '');
+      } else {
+          let calcStartObj = this.currentActiveStaff.joinDate ? new Date(this.parseToISODate(this.currentActiveStaff.joinDate)) : new Date();
+          const validSalaries = this.currentStaffPayments.filter(p => p.endDate && p.paymentStatus && !p.paymentStatus.toLowerCase().includes('fail') && !p.paymentStatus.toLowerCase().includes('pending'));
+          validSalaries.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
+          
+          if (validSalaries.length > 0) {
+              calcStartObj = new Date(this.parseToISODate(validSalaries[0].endDate));
+              calcStartObj.setDate(calcStartObj.getDate() + 1); 
+          }
+          let calcEndObj = new Date(calcStartObj);
+          calcEndObj.setMonth(calcEndObj.getMonth() + 1);
+          calcEndObj.setDate(calcEndObj.getDate() - 1);
+          
+          this.setDatePicker('txn-startDate', calcStartObj);
+          this.setDatePicker('txn-endDate', calcEndObj);
+      }
+
+      this.onCreditTypeChange();
+
+      const backdrop = document.getElementById('txn-modal');
+      const content = document.getElementById('txn-modal-content');
+      if(backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      if(content) content.classList.remove('translate-y-full', 'md:translate-y-10', 'opacity-0');
+    },
+
+    closeTransactionModal: function() {
+      const backdrop = document.getElementById('txn-modal');
+      const content = document.getElementById('txn-modal-content');
+      const form = document.getElementById('txn-form');
+      if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
+      if(content) content.classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
+      if(form) form.reset();
+    },
+
+    saveTransaction: function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-txn');
+      if(btn) {
+         btn.innerHTML = `<span class="material-symbols-rounded animate-spin text-[18px] mr-2">progress_activity</span> Saving...`;
+         btn.disabled = true;
+      }
+
+      const payload = {
+        paymentId: document.getElementById('txn-id')?.value,
+        staffId: this.currentActiveStaff.staffId,
+        creditType: document.getElementById('txn-creditType')?.value,
+        amount: Number(document.getElementById('txn-amount')?.value || 0),
+        paidDate: this.formatDateDDMMMYYYY(document.getElementById('txn-paidDate')?.value),
+        paymentMode: document.getElementById('txn-paymentMode')?.value,
+        paymentStatus: document.getElementById('txn-paymentStatus')?.value,
+        receiptUrl: document.getElementById('txn-receiptUrl')?.value,
+        notes: document.getElementById('txn-notes')?.value
+      };
+
+      const cName = this.getName('credittype', payload.creditType).toLowerCase();
+      if (cName.includes('salary')) {
+         payload.startDate = this.formatDateDDMMMYYYY(document.getElementById('txn-startDate')?.value);
+         payload.endDate = this.formatDateDDMMMYYYY(document.getElementById('txn-endDate')?.value);
+      } else {
+         payload.startDate = '';
+         payload.endDate = '';
+      }
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          if(btn) { btn.innerHTML = `Save Record`; btn.disabled = false; }
+          if(res.success) {
+            Toast.success(res.message);
+            this.closeTransactionModal();
+            this.fetchData();
+            this.generatePaymentHistory(); 
+          } else { Toast.error(res.error); }
+        })
+        .api_recordStaffTransaction(payload);
+    },
+
+    openDeleteModal: function(type, id, desc) {
+      this.deleteState = { type: type, id: id };
+      this.safeSetText('delete-title', type === 'staff' ? 'Delete Staff?' : 'Delete Record?');
+      this.safeSetText('delete-stf-name', desc || 'this item');
+      
+      const backdrop = document.getElementById('delete-stf-modal');
+      const content = document.getElementById('delete-stf-content');
+      if(backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      if(content) content.classList.remove('scale-95', 'opacity-0');
+    },
+
+    closeDeleteModal: function() {
+      this.deleteState = { type: null, id: null };
+      const backdrop = document.getElementById('delete-stf-modal');
+      const content = document.getElementById('delete-stf-content');
+      if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
+      if(content) content.classList.add('scale-95', 'opacity-0');
+    },
+
+    confirmDelete: function() {
+      if(!this.deleteState.id) return;
+      
+      if(this.deleteState.type === 'staff') {
+        google.script.run
+          .withSuccessHandler((res) => {
+            this.closeDeleteModal();
+            if(res.success) {
+              Toast.success(res.message);
+              this.closeDetails(); 
+              this.showShimmer();
+              this.fetchData();
+            } else { Toast.error(res.error); }
+          })
+          .api_deleteStaff(this.deleteState.id);
+      } else if(this.deleteState.type === 'payment') {
+        google.script.run
+          .withSuccessHandler((res) => {
+            this.closeDeleteModal();
+            if(res.success) {
+              Toast.success(res.message);
+              this.generatePaymentHistory();
+            } else { Toast.error(res.error); }
+          })
+          .api_deleteStaffTransaction(this.deleteState.id);
+      }
+    }
+  };
+
+  StaffApp.init();
+</script>

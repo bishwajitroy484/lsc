@@ -1,0 +1,1301 @@
+<script>
+  var MembersApp = {
+    allData: [],
+    filteredData: [],
+    dropdowns: {},
+    schemas: {},
+    currentFilter: 'All', 
+    searchQuery: '',
+    
+    isDropdownsLoaded: false,
+    isMembersLoaded: false,
+    
+    deleteState: { type: null, id: null }, 
+    currentActiveMember: null,
+    currentMemberPayments: [], 
+    effectiveDueDate: null, 
+    chartInstance: null,
+
+    init: function() {
+      this.isDropdownsLoaded = false;
+      this.isMembersLoaded = false;
+      
+      this.showShimmer();
+      this.initDatePickers(); 
+      
+      google.script.run
+        .withSuccessHandler((res) => {
+           this.onDropdownsLoaded(res);
+           this.isDropdownsLoaded = true;
+           this.checkAndRender();
+        })
+        .api_getGlobalDropdowns();
+        
+      google.script.run
+        .withSuccessHandler((res) => {
+           this.onDataLoaded(res);
+           this.isMembersLoaded = true;
+           this.checkAndRender();
+        })
+        .api_getMembers();
+    },
+    getSafeAvatarUrl: function(rawStr) {
+        if (!rawStr) return '';
+        let str = String(rawStr);
+        
+        // 1. If it's a Google Drive URL, extract just the ID
+        if (str.includes('drive.google.com')) {
+            const match = str.match(/id=([a-zA-Z0-9_-]+)/) || str.match(/d\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                str = match[1]; // Isolate the pure ID
+            }
+        }
+        
+        // 2. If it's a pure ID, convert it to the unblockable Thumbnail endpoint
+        if (!str.includes('http') && !str.includes('/')) {
+            return 'https://drive.google.com/thumbnail?id=' + str + '&sz=w200-h200';
+        }
+        
+        // 3. Otherwise, return the standard web URL (Imgur, AWS, etc.)
+        return str; 
+    },
+
+    previewImage: function(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('mem-profile-preview').src = e.target.result;
+                document.getElementById('mem-profile-preview-container').classList.remove('hidden');
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    },
+
+    checkAndRender: function() {
+      if (this.isDropdownsLoaded && this.isMembersLoaded) {
+          this.applyFilters();
+      }
+    },
+
+    initDatePickers: function() {
+      flatpickr(".date-field:not(#mem-dob)", {
+        dateFormat: "d-M-Y",    
+        allowInput: true,
+        disableMobile: "true"   
+      });
+      
+      flatpickr("#mem-dob", {
+        dateFormat: "d-M-Y",    
+        allowInput: true,
+        disableMobile: "true",
+        onChange: (selectedDates, dateStr) => {
+            this.filterBatchesByAge(dateStr);
+        }
+      });
+    },
+
+    filterBatchesByAge: function(dobStr) {
+        let batches = this.dropdowns.batch || [];
+        let age = 99;
+
+        if (dobStr) {
+            let dob = new Date(this.parseToISODate(dobStr));
+            if (!isNaN(dob)) {
+                const today = new Date();
+                age = today.getFullYear() - dob.getFullYear();
+                const m = today.getMonth() - dob.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+                    age--;
+                }
+            }
+        }
+
+        const filteredBatches = batches.filter(b => {
+            const groupName = String(b.groups || b.group || b.name || '').toLowerCase();
+            const isKidBatch = groupName.includes('kid') || groupName.includes('child');
+            return age <= 18 ? isKidBatch : !isKidBatch;
+        });
+
+        const currentBatch = document.getElementById('mem-batch').value;
+        this.populateSelect('mem-batch', filteredBatches, 'groups');
+        
+        const valid = filteredBatches.find(b => b.id === currentBatch);
+        if (valid) {
+            document.getElementById('mem-batch').value = currentBatch;
+        } else if (filteredBatches.length > 0) {
+            document.getElementById('mem-batch').value = filteredBatches[0].id;
+        }
+
+        this.onPlanOrBatchChange();
+    },
+
+    setDatePicker: function(id, dateObjOrStr) {
+      const el = document.getElementById(id);
+      if (el && el._flatpickr) {
+        el._flatpickr.setDate(dateObjOrStr);
+      } else if (el) {
+        el.value = dateObjOrStr; 
+      }
+    },
+
+    showShimmer: function() {
+      let mHtml = '';
+      for(let i=0; i<5; i++){
+        mHtml += '<div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3"><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full shimmer shrink-0"></div><div class="space-y-2 flex-1"><div class="h-3 w-32 shimmer rounded"></div><div class="h-2 w-20 shimmer rounded"></div></div></div></div>';
+      }
+      document.getElementById('mobile-cards-container').innerHTML = mHtml;
+      
+      let dHtml = '';
+      for(let i=0; i<5; i++){
+        dHtml += '<tr><td colspan="6" class="px-4 py-4"><div class="h-6 w-full shimmer rounded"></div></td></tr>';
+      }
+      document.getElementById('desktop-table-body').innerHTML = dHtml;
+    },
+
+    getDueInfo: function(dueDateStr) {
+      if (!dueDateStr || dueDateStr === 'N/A') {
+        return { text: 'No Due Date', class: 'bg-slate-50 text-slate-500 border-slate-200', days: 999 };
+      }
+      
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const due = new Date(dueDateStr);
+      due.setHours(0,0,0,0);
+      
+      const diffTime = due - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) {
+        return { text: `Overdue by ${Math.abs(diffDays)} Days`, class: 'bg-red-50 text-red-600 border-red-200', days: diffDays };
+      } else if (diffDays === 0) {
+        return { text: 'Due Today', class: 'bg-amber-50 text-amber-600 border-amber-200', days: diffDays };
+      } else if (diffDays === 1) {
+        return { text: 'Due in 1 Day', class: 'bg-amber-50 text-amber-600 border-amber-200', days: diffDays };
+      } else if (diffDays <= 5) {
+        return { text: `Due in ${diffDays} Days`, class: 'bg-yellow-50 text-yellow-600 border-yellow-200', days: diffDays };
+      } else {
+        return { text: `Due in ${diffDays} Days`, class: 'bg-emerald-50 text-emerald-600 border-emerald-200', days: diffDays };
+      }
+    },
+
+    formatDateDDMMMYYYY: function(dateStr) {
+      if(!dateStr) return '';
+      let d = new Date(dateStr);
+      if(isNaN(d)) return dateStr; 
+      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = months[d.getMonth()];
+      const year = String(d.getFullYear()).slice(-2); 
+      return `${day}-${month}-${year}`;
+    },
+
+    parseToISODate: function(input) {
+      if (!input) return '';
+      let d = new Date(input);
+      if (isNaN(d) && typeof input === 'string') {
+        const parts = input.split('-');
+        if (parts.length === 3) {
+          const months = {jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11};
+          d = new Date(parts[2], months[parts[1].toLowerCase()], parts[0]);
+        }
+      }
+      if (isNaN(d)) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    },
+
+    onDropdownsLoaded: function(response) {
+      if(!response.success) return Toast.error("Failed to load configuration: " + response.error);
+      
+      this.dropdowns = response.data.options || {};
+      this.schemas = response.data.schemas || {};
+      
+      const plans = this.dropdowns.membership || [];
+      const batches = this.dropdowns.batch || [];
+      const statuses = this.dropdowns.status || [];
+      const modes = this.dropdowns.paymentmode || [];
+      const payStatuses = this.dropdowns.paymentstatus || this.dropdowns.status || [];
+      
+      this.populateSelect('mem-plan', plans);
+      this.populateSelect('mem-batch', batches, 'groups');
+      this.populateSelect('mem-status', statuses);
+      this.populateSelect('pay-mode', modes);
+      this.populateSelect('pay-status', payStatuses, null, 'Select Status...');
+      
+      this.populateSelect('filter-status', statuses, null, 'All Status', true);
+      this.populateSelect('filter-batch', batches, null, 'All Batches', true);
+      this.populateSelect('filter-plan', plans, null, 'All Memberships', true);
+    },
+
+    setStatusFilter: function(statusName) {
+      document.querySelectorAll('.mob-filter-btn').forEach(btn => {
+        btn.classList.remove('bg-brand-primary', 'text-white');
+        btn.classList.add('bg-slate-50', 'text-slate-600');
+      });
+      const btn = document.getElementById('mob-filter-' + statusName);
+      if(btn) { 
+        btn.classList.remove('bg-slate-50', 'text-slate-600'); 
+        btn.classList.add('bg-brand-primary', 'text-white'); 
+      }
+      this.currentFilter = statusName;
+      this.applyFilters();
+    },
+
+    applyFilters: function() {
+      const fStatus = document.getElementById('filter-status')?.value || 'All';
+      const fBatch = document.getElementById('filter-batch')?.value || 'All';
+      const fPlan = document.getElementById('filter-plan')?.value || 'All';
+
+      this.filteredData = this.allData.filter(m => {
+        const sName = this.getName('status', m.status);
+        const dueInfo = this.getDueInfo(m.dueDate);
+        
+        let matchMobileStatus = false;
+        if (this.currentFilter === 'All') {
+            matchMobileStatus = true;
+        } else if (this.currentFilter === 'Active') {
+            matchMobileStatus = (sName.toLowerCase() === 'active');
+        } else if (this.currentFilter === 'Due Soon') {
+            matchMobileStatus = (dueInfo.days >= 0 && dueInfo.days <= 5);
+        } else if (this.currentFilter === 'Overdue') {
+            matchMobileStatus = (dueInfo.days < 0);
+        }
+        
+        let matchDeskStatus = fStatus === 'All' || m.status === fStatus;
+        let matchBatch = fBatch === 'All' || m.batchId === fBatch;
+        let matchPlan = fPlan === 'All' || m.membershipId === fPlan;
+        
+        let matchSearch = !this.searchQuery || 
+                          (m.fullName && m.fullName.toLowerCase().includes(this.searchQuery)) || 
+                          (m.phone && m.phone.includes(this.searchQuery)) ||
+                          (m.memberId && m.memberId.toLowerCase().includes(this.searchQuery));
+
+        return matchMobileStatus && matchDeskStatus && matchBatch && matchPlan && matchSearch;
+      });
+      this.render();
+    },
+
+    populateSelect: function(elementId, optionsArray, secondaryLabel = null, defaultText = "Select Option...", isFilter = false) {
+      const el = document.getElementById(elementId);
+      if(!el) return;
+      let html = isFilter ? `<option value="All">${defaultText}</option>` : `<option value="" disabled selected>${defaultText}</option>`;
+      if (Array.isArray(optionsArray)) {
+        optionsArray.forEach(opt => {
+          const label = secondaryLabel && opt[secondaryLabel] ? `${opt.name} (${opt[secondaryLabel]})` : opt.name;
+          html += `<option value="${opt.id}">${label}</option>`;
+        });
+      }
+      el.innerHTML = html;
+    },
+
+    getName: function(type, id) {
+      if(!id || !this.dropdowns[type]) return id || '--';
+      const match = this.dropdowns[type].find(item => item.id === id);
+      return match ? match.name : id;
+    },
+
+    fetchData: function(callback) {
+      google.script.run
+        .withSuccessHandler((res) => {
+            this.onDataLoaded(res);
+            this.applyFilters();
+            if(typeof callback === 'function') callback();
+        })
+        .api_getMembers();
+    },
+
+    onDataLoaded: function(response) {
+      if (!response.success) {
+        document.getElementById('desktop-table-body').innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8 font-bold">Failed to load members: ${response.error}</td></tr>`;
+        document.getElementById('mobile-cards-container').innerHTML = `<div class="bg-red-50 text-red-500 p-4 text-center rounded-lg font-bold">Failed to load members.</div>`;
+        return Toast.error(response.error);
+      }
+      this.allData = response.data || [];
+    },
+
+    search: function(query) { this.searchQuery = query.toLowerCase().trim(); this.applyFilters(); },
+
+    setMobileFilter: function(statusName) {
+      document.querySelectorAll('.mob-filter-btn').forEach(btn => {
+        btn.classList.remove('bg-brand-primary', 'text-white');
+        btn.classList.add('bg-slate-50', 'text-slate-600');
+      });
+      const btn = document.getElementById('mob-filter-' + statusName);
+      if(btn) { btn.classList.remove('bg-slate-50', 'text-slate-600'); btn.classList.add('bg-brand-primary', 'text-white'); }
+      this.currentFilter = statusName;
+      this.applyFilters();
+    },
+
+    render: function() {
+      const tBody = document.getElementById('desktop-table-body');
+      const mContainer = document.getElementById('mobile-cards-container');
+      if (!tBody || !mContainer) return;
+
+      if (this.filteredData.length === 0) {
+        tBody.innerHTML = `<tr><td colspan="6" class="text-center py-12 px-4"><div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3"><span class="material-symbols-rounded text-3xl text-slate-300">search_off</span></div><h3 class="text-slate-700 font-bold text-sm">No Results Found</h3></td></tr>`;
+        mContainer.innerHTML = `<div class="bg-white p-8 text-center rounded-xl border border-slate-200 text-slate-500 font-medium">No members match your criteria.</div>`;
+        return;
+      }
+
+      let dHtml = ''; let mHtml = '';
+
+      this.filteredData.forEach(member => {
+        const sName = this.getName('status', member.status);
+        const sLower = String(sName).toLowerCase();
+        
+        let sClass = 'bg-slate-50 text-slate-600 border-slate-200';
+        if (sLower === 'active') sClass = 'bg-blue-50 text-brand-primary border-blue-200';
+        if (sLower.includes('in-active') || sLower.includes('inactive')) sClass = 'bg-red-50 text-red-600 border-red-200';
+
+        const planName = this.getName('membership', member.membershipId);
+        const batchName = this.getName('batch', member.batchId);
+        
+        const batches = this.dropdowns.batch || [];
+        const batchMatch = batches.find(b => b.id === member.batchId);
+        const groupName = batchMatch ? (batchMatch.groups || batchMatch.group || batchMatch.name || 'NA') : 'NA';
+        const groupBadgeColor = groupName.toLowerCase().includes('kid') ? 'text-amber-600' : 'text-brand-primary';
+        
+        const initials = member.fullName ? member.fullName.substring(0, 2).toUpperCase() : 'NA';
+        let avatarHtml = initials;
+        
+       if (member.profileImage) {
+            const imgSrcStr = this.getSafeAvatarUrl(member.profileImage);
+            avatarHtml = '<img src="' + imgSrcStr + '" class="w-full h-full rounded-full object-cover">';
+        }
+
+        const dobStr = member.dob ? member.dob : 'N/A';
+        const genderStr = member.gender || 'N/A';
+        const notesStr = member.notes ? (member.notes.length > 25 ? member.notes.substring(0, 25) + '...' : member.notes) : '--';
+        const phoneStr = member.phone || 'No Phone';
+        const joinStr = member.joinDate ? member.joinDate : '--';
+        const rawAmt = member.membershipAmount ? member.membershipAmount.toString().replace(/[^0-9.-]+/g,"") : '';
+        
+        let dueStr = member.dueDate ? member.dueDate : 'N/A';
+        let dueInfo = this.getDueInfo(member.dueDate);
+        if (sLower.includes('inactive') || sLower.includes('in-active') || sLower.includes('exit')) {
+             dueStr = '--';
+             dueInfo = { text: 'Account Closed', class: 'bg-slate-100 text-slate-500 border-slate-200' };
+        }
+
+        const memberJson = JSON.stringify(member).replace(/"/g, '&quot;');
+
+        dHtml += `
+          <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer group" onclick="MembersApp.openDetails(${memberJson})">
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0 shadow-sm border border-slate-200">
+                   ${avatarHtml}
+                </div>
+                <div>
+                  <div class="font-bold text-slate-800 text-xs group-hover:text-brand-primary transition-colors">${member.fullName}</div>
+                  <div class="text-[9px] text-slate-500 font-medium mt-0.5">📞 ${phoneStr} • ${member.memberId || '--'} • ${genderStr} • DOB: ${dobStr}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+               <div class="text-xs text-slate-800 font-bold">${planName}</div>
+               <div class="text-[9px] text-slate-500 font-medium mt-0.5">${batchName} <span class="font-bold uppercase tracking-wider ${groupBadgeColor}">(${groupName})</span></div>
+            </td>
+            <td class="px-4 py-3">
+               <div class="text-[9px] text-slate-500 font-medium mb-0.5">Joined: <span class="font-bold text-slate-700">${joinStr}</span></div>
+               <div class="text-[9px] text-slate-500 font-medium mb-1">Due: <span class="font-bold text-slate-700">${dueStr}</span></div>
+               <div><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border ${dueInfo.class} uppercase tracking-wider">${dueInfo.text}</span></div>
+            </td>
+            <td class="px-4 py-3"><span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${sClass} uppercase tracking-wider">${sName}</span></td>
+            <td class="px-4 py-3 text-[10px] text-slate-500 max-w-[120px] truncate" title="${member.notes || ''}">${notesStr}</td>
+            <td class="px-4 py-3 text-right">
+              <button onclick="event.stopPropagation(); MembersApp.openModal(${memberJson})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-full transition-colors">
+                 <span class="material-symbols-rounded text-[18px]">edit</span>
+              </button>
+            </td>
+          </tr>`;
+
+        mHtml += `
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3" onclick="MembersApp.openDetails(${memberJson})">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold shrink-0 shadow-sm border border-slate-200">
+                   ${avatarHtml}
+                </div>
+                <div>
+                   <h3 class="font-bold text-sm text-slate-800">${member.fullName}</h3>
+                   <p class="text-[9px] font-medium text-slate-400">📞 ${phoneStr} • ${member.memberId || '--'}</p>
+                </div>
+              </div>
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${sClass} uppercase">${sName}</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 text-[10px] border-t border-slate-100 pt-3">
+              <div><span class="text-slate-400">Plan:</span> <span class="font-bold text-slate-700">${planName}</span></div>
+              <div class="text-right"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border ${dueInfo.class} uppercase tracking-wider">${dueInfo.text}</span></div>
+              <div class="col-span-2 flex justify-between items-center">
+                 <div><span class="text-slate-400">Batch:</span> <span class="font-bold text-slate-700">${batchName} <span class="${groupBadgeColor}">(${groupName})</span></span></div>
+                 <div><span class="text-slate-400">Joined:</span> <span class="font-bold text-slate-700">${joinStr}</span></div>
+              </div>
+            </div>
+          </div>`;
+      });
+
+      tBody.innerHTML = dHtml;
+      mContainer.innerHTML = mHtml;
+    },
+
+    openDetails: function(member) {
+      this.currentActiveMember = member;
+      this.effectiveDueDate = null;
+
+      const initials = member.fullName ? member.fullName.substring(0, 2).toUpperCase() : 'NA';
+      let avatarHtml = initials;
+        
+     // Clean and safe image rendering
+      if (member.profileImage) {
+          const imgSrcStr = this.getSafeAvatarUrl(member.profileImage);
+          avatarHtml = '<img src="' + imgSrcStr + '" class="w-full h-full rounded-full object-cover">';
+      }
+
+      document.getElementById('det-avatar').innerHTML = avatarHtml;
+      document.getElementById('det-name').innerText = member.fullName || '--';
+      document.getElementById('det-id').innerText = member.memberId || '--';
+      document.getElementById('det-phone').innerText = member.phone || '--';
+      document.getElementById('det-join').innerText = member.joinDate || '--';
+      document.getElementById('det-dob').innerText = member.dob || '--';
+      
+      const rawAmt = member.membershipAmount ? member.membershipAmount.toString().replace(/[^0-9.-]+/g,"") : '';
+      document.getElementById('det-plan').innerText = this.getName('membership', member.membershipId);
+      document.getElementById('det-batch').innerText = this.getName('batch', member.batchId);
+      document.getElementById('det-amount').innerText = rawAmt ? `₹${Number(rawAmt).toLocaleString('en-IN')}` : '--';
+
+      document.getElementById('det-due-date').innerHTML = '<div class="h-3 w-20 shimmer rounded inline-block"></div>';
+      
+      document.getElementById('det-status').className = '';
+      document.getElementById('det-status').innerHTML = '<div class="h-4 w-12 shimmer rounded inline-block"></div>';
+      
+      document.getElementById('det-due-days').className = '';
+      document.getElementById('det-due-days').innerHTML = '<div class="h-4 w-20 shimmer rounded inline-block"></div>';
+
+      this.currentMemberPayments = [];
+      document.getElementById('det-history-body').innerHTML = `
+        <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded mb-2"></div></td></tr>
+        <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded mb-2"></div></td></tr>
+        <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded"></div></td></tr>
+      `;
+      document.getElementById('member-revenue-chart').innerHTML = '<div class="w-full h-[180px] shimmer rounded-lg opacity-50"></div>';
+      document.getElementById('det-ltv-all').innerHTML = '<div class="h-4 w-12 shimmer rounded mt-1"></div>';
+      document.getElementById('det-ltv-year').innerHTML = '<div class="h-4 w-12 shimmer rounded mt-1"></div>';
+      document.getElementById('det-ltv-count').innerHTML = '<div class="h-4 w-6 shimmer rounded mt-1"></div>';
+      
+      google.script.run
+        .withSuccessHandler((res) => {
+           if(res.success && res.data) {
+             this.currentMemberPayments = res.data;
+             this.chartMetrics = res.chartMetrics || {};
+           } else if (!res.success) {
+             Toast.error("Failed to load payments: " + res.error);
+           }
+           
+           this.calculateEffectiveCoverage(member);
+           this.updateDetailHeader(member);
+
+           let startYear = member.joinDate ? new Date(member.joinDate).getFullYear() : new Date().getFullYear();
+           if (isNaN(startYear)) startYear = new Date().getFullYear();
+           
+           const currentYear = new Date().getFullYear();
+           this.currentMemberPayments.forEach(p => {
+               const py = new Date(p.paidDate).getFullYear();
+               if(py < startYear) startYear = py;
+           });
+           
+           const sel = document.getElementById('filter-ltv');
+           let opts = '';
+           for(let y = currentYear; y >= startYear; y--) {
+               opts += `<option value="${y}">${y}</option>`;
+           }
+           sel.innerHTML = opts;
+           sel.value = currentYear; 
+           
+           this.renderPaymentHistory();
+           this.renderChart();
+        })
+        .api_getMemberPayments(member.memberId);
+
+      document.getElementById('view-list').classList.add('opacity-0', 'pointer-events-none');
+      setTimeout(() => { document.getElementById('view-details').classList.remove('translate-x-full'); }, 50);
+    },
+
+    calculateEffectiveCoverage: function(m) {
+        let effectiveDue = null;
+        
+        if (this.currentMemberPayments && this.currentMemberPayments.length > 0) {
+            const validPayments = this.currentMemberPayments.filter(p => {
+                const status = String(p.paymentStatus || '').toLowerCase();
+                return p.endDate && !status.includes('fail') && !status.includes('pending');
+            });
+            
+            validPayments.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
+            
+            if (validPayments.length > 0) {
+                let latestEnd = new Date(this.parseToISODate(validPayments[0].endDate));
+                latestEnd.setDate(latestEnd.getDate() + 1); 
+                effectiveDue = latestEnd;
+            }
+        }
+        
+        if (!effectiveDue && m.joinDate) {
+            effectiveDue = new Date(this.parseToISODate(m.joinDate));
+        }
+        
+        if (!effectiveDue && m.dueDate && m.dueDate !== 'N/A') {
+            effectiveDue = new Date(this.parseToISODate(m.dueDate));
+        }
+        
+        this.effectiveDueDate = effectiveDue;
+    },
+
+    updateDetailHeader: function(member) {
+        const plans = this.dropdowns.membership || [];
+        const planMatch = plans.find(p => p.id === member.membershipId);
+        const planName = String(planMatch && planMatch.name ? planMatch.name : '').toUpperCase();
+        
+        const isNonRecurring = planName.includes('TRIAL') || planName.includes('ADHOC') || planName.includes('AD-HOC');
+        const validPaymentsCount = this.currentMemberPayments.filter(p => {
+            const stat = String(p.paymentStatus || '').toLowerCase();
+            return stat && !stat.includes('fail') && !stat.includes('pending');
+        }).length;
+
+        let dueStr = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'N/A';
+        let dueInfo = this.getDueInfo(dueStr);
+        
+        let mainStatusName = this.getName('status', member.status);
+        const statLower = String(mainStatusName).toLowerCase();
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        if (statLower.includes('inactive') || statLower.includes('in-active') || statLower.includes('exit')) {
+             mainStatusName = 'In-Active';
+             dueStr = '--';
+             dueInfo = { text: 'Account Closed', class: 'bg-slate-100 text-slate-500 border-slate-200' };
+        } else if (isNonRecurring && validPaymentsCount > 0 && this.effectiveDueDate && this.effectiveDueDate < today) {
+             mainStatusName = 'Expired';
+             dueStr = '--';
+             dueInfo = { text: 'Plan Expired', class: 'bg-slate-100 text-slate-500 border-slate-200' };
+        } else {
+            if (this.effectiveDueDate && this.effectiveDueDate >= today) {
+                mainStatusName = 'Active';
+            } else if (this.effectiveDueDate && this.effectiveDueDate < today) {
+                mainStatusName = 'Overdue';
+            }
+        }
+
+        document.getElementById('det-due-date').innerHTML = dueStr; 
+
+        const dueBadge = document.getElementById('det-due-days');
+        dueBadge.innerText = dueInfo.text;
+        dueBadge.className = `text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${dueInfo.class}`;
+
+        let sClass = 'bg-emerald-50 text-emerald-600 border-emerald-100';
+        if (mainStatusName.toLowerCase() === 'due soon') sClass = 'bg-amber-50 text-amber-600 border-amber-100';
+        if (mainStatusName.toLowerCase() === 'overdue' || mainStatusName.toLowerCase() === 'in-active') sClass = 'bg-red-50 text-red-600 border-red-100';
+        if (mainStatusName === 'Expired') sClass = 'bg-slate-100 text-slate-600 border-slate-200';
+
+        document.getElementById('det-status').innerText = mainStatusName;
+        document.getElementById('det-status').className = `text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${sClass}`;
+    },
+
+    closeDetails: function() {
+      document.getElementById('view-details').classList.add('translate-x-full');
+      setTimeout(() => {
+        document.getElementById('view-list').classList.remove('opacity-0', 'pointer-events-none');
+        
+        document.getElementById('det-name').innerText = '--';
+        document.getElementById('det-id').innerText = '--';
+        document.getElementById('det-phone').innerText = '--';
+        document.getElementById('det-join').innerText = '--';
+        document.getElementById('det-dob').innerText = '--'; 
+        document.getElementById('det-plan').innerText = '--';
+        document.getElementById('det-batch').innerText = '--';
+        document.getElementById('det-amount').innerText = '--';
+        document.getElementById('det-due-date').innerText = '--';
+        
+        this.currentActiveMember = null;
+        this.effectiveDueDate = null;
+        if(this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+      }, 300);
+    },
+
+    renderPaymentHistory: function() {
+      const tBody = document.getElementById('det-history-body');
+      
+      let virtualRecords = [];
+      const m = this.currentActiveMember;
+      let currentDue = this.effectiveDueDate ? new Date(this.effectiveDueDate) : null;
+      let today = new Date();
+      today.setHours(0,0,0,0);
+      
+      const mainStatusName = this.getName('status', m.status).toLowerCase();
+      const isActive = !mainStatusName.includes('inactive') && !mainStatusName.includes('in-active') && !mainStatusName.includes('exit');
+
+      if (currentDue && !isNaN(currentDue)) {
+          const plans = this.dropdowns.membership || [];
+          const planMatch = plans.find(p => p.id === m.membershipId);
+          const planName = String(planMatch && planMatch.name ? planMatch.name : '').toUpperCase();
+          
+          const validPaymentsCount = this.currentMemberPayments.filter(p => {
+              const status = String(p.paymentStatus || '').toLowerCase();
+              return status && !status.includes('fail') && !status.includes('pending');
+          }).length;
+
+          const isNonRecurring = planName.includes('TRIAL') || planName.includes('ADHOC') || planName.includes('AD-HOC');
+          const maxCycles = isNonRecurring ? (validPaymentsCount > 0 ? 0 : 1) : 36;
+          
+          let iterCount = 1;
+          
+          while (currentDue < today && iterCount <= maxCycles) {
+              let vStart = new Date(currentDue);
+              let vEnd = new Date(currentDue);
+              
+              if (planName.includes('QUARTER')) vEnd.setMonth(vEnd.getMonth() + 3);
+              else if (planName.includes('YEAR')) vEnd.setFullYear(vEnd.getFullYear() + 1);
+              else if (planName.includes('TRIAL')) vEnd.setDate(vEnd.getDate() + 7);
+              else if (planName.includes('ADHOC') || planName.includes('AD-HOC')) vEnd.setDate(vEnd.getDate() + 1);
+              else vEnd.setMonth(vEnd.getMonth() + 1); 
+              
+              const cycleText = isNonRecurring ? 'Expired / Unpaid' : `Missed Cycle ${iterCount}`;
+
+              virtualRecords.push({
+                  isVirtual: true,
+                  cycleLabel: cycleText,
+                  paidDate: this.formatDateDDMMMYYYY(vStart), 
+                  amount: m.membershipAmount || 0,
+                  paymentMode: 'Unpaid',
+                  paymentStatus: 'OVERDUE',
+                  virtualStartDate: vStart.toISOString(), 
+                  virtualEndDate: vEnd.toISOString()
+              });
+              
+              currentDue = new Date(vEnd);
+              currentDue.setDate(currentDue.getDate() + 1); 
+              iterCount++;
+          }
+          
+          if (isActive && !isNonRecurring && iterCount <= maxCycles && currentDue >= today) {
+              let vStart = new Date(currentDue);
+              let vEnd = new Date(currentDue);
+              
+              if (planName.includes('QUARTER')) vEnd.setMonth(vEnd.getMonth() + 3);
+              else if (planName.includes('YEAR')) vEnd.setFullYear(vEnd.getFullYear() + 1);
+              else if (planName.includes('TRIAL')) vEnd.setDate(vEnd.getDate() + 7);
+              else if (planName.includes('ADHOC') || planName.includes('AD-HOC')) vEnd.setDate(vEnd.getDate() + 1);
+              else vEnd.setMonth(vEnd.getMonth() + 1); 
+              
+              virtualRecords.push({
+                  isVirtual: true,
+                  cycleLabel: 'Upcoming Cycle',
+                  paidDate: this.formatDateDDMMMYYYY(vStart), 
+                  amount: m.membershipAmount || 0,
+                  paymentMode: 'Pending',
+                  paymentStatus: 'UPCOMING',
+                  virtualStartDate: vStart.toISOString(), 
+                  virtualEndDate: vEnd.toISOString()
+              });
+          }
+      }
+
+      let combinedHistory = [...this.currentMemberPayments, ...virtualRecords];
+      combinedHistory.sort((a,b) => new Date(this.parseToISODate(b.paidDate)) - new Date(this.parseToISODate(a.paidDate)));
+
+      if(combinedHistory.length === 0) {
+        tBody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-xs font-bold text-slate-400">No payment history found.</td></tr>';
+        return;
+      }
+      
+      let phtml = '';
+      combinedHistory.forEach(p => {
+        const pAmt = p.amount ? p.amount.toString().replace(/[^0-9.-]+/g,"") : '';
+        const pJson = JSON.stringify(p).replace(/"/g, '&quot;');
+        
+        if (p.isVirtual) {
+            const vStartFmt = this.formatDateDDMMMYYYY(p.virtualStartDate);
+            const vEndFmt = this.formatDateDDMMMYYYY(p.virtualEndDate);
+            
+            const isUpcoming = p.paymentStatus === 'UPCOMING';
+            const rowClass = isUpcoming ? 'bg-amber-50/20 border-l-[3px] border-l-amber-400' : 'bg-red-50/30 border-l-[3px] border-l-red-500';
+            const labelColor = isUpcoming ? 'text-amber-600' : 'text-red-500';
+            const badgeClass = isUpcoming ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-red-600 bg-red-50 border-red-200';
+            
+            phtml += `
+              <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 group transition-colors ${rowClass}">
+                <td class="px-4 py-3">
+                  <div class="font-bold text-slate-800">${p.paidDate}</div>
+                  <div class="text-[9px] ${labelColor} font-bold mt-0.5">${p.cycleLabel}</div>
+                  <div class="text-[9px] text-slate-500 mt-0.5">${vStartFmt} to ${vEndFmt}</div>
+                </td>
+                <td class="px-4 py-3"><div class="font-bold text-slate-800">₹${Number(pAmt).toLocaleString('en-IN')}</div><div class="text-[9px] text-slate-500">${p.paymentMode}</div></td>
+                <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${badgeClass}">${p.paymentStatus}</span></td>
+                <td class="px-4 py-3 text-right">
+                  <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-auto px-3 py-1.5 text-brand-primary border border-blue-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm inline-flex items-center justify-center transition-colors">Pay Now</button>
+                </td>
+              </tr>
+            `;
+        } else {
+            const modeName = this.getName('paymentmode', p.paymentMode); 
+            const pStatusName = this.getName('paymentstatus', p.paymentStatus) || p.paymentStatus || 'Completed';
+            let rcptHtml = p.receiptUrl ? `<a href="${p.receiptUrl}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1"><span class="material-symbols-rounded text-[12px] align-middle">link</span></a>` : '';
+            
+           let statColor = 'text-emerald-600 bg-emerald-50 border-emerald-100';
+            if (pStatusName.toLowerCase().includes('pending')) statColor = 'text-amber-600 bg-amber-50 border-amber-100';
+            if (pStatusName.toLowerCase().includes('fail') || pStatusName.toLowerCase().includes('overdue') || pStatusName.toLowerCase().includes('unpaid')) statColor = 'text-red-600 bg-red-50 border-red-100';
+            
+            let coverageHtml = '';
+            if (p.startDate && p.endDate) {
+                coverageHtml = `<div class="text-[9px] text-slate-500 mt-0.5">${this.formatDateDDMMMYYYY(p.startDate)} to ${this.formatDateDDMMMYYYY(p.endDate)}</div>`;
+            } else {
+                coverageHtml = `<div class="text-[9px] text-slate-400 italic mt-0.5">No coverage period recorded</div>`;
+            }
+
+            phtml += `
+              <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 group transition-colors">
+                <td class="px-4 py-3">
+                  <div class="font-bold text-slate-800">${this.formatDateDDMMMYYYY(p.paidDate)}</div>
+                  ${coverageHtml}
+                </td>
+                <td class="px-4 py-3"><div class="font-bold text-slate-800">₹${Number(pAmt).toLocaleString('en-IN')}${rcptHtml}</div><div class="text-[9px] text-slate-500">${modeName}</div></td>
+                <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${statColor}">${pStatusName}</span></td>
+                <td class="px-4 py-3 text-right">
+                  <div class="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
+                    <button onclick="MembersApp.openDeleteModal('payment', '${p.paymentId}', '${this.formatDateDDMMMYYYY(p.paidDate)} Payment')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
+                  </div>
+                </td>
+              </tr>
+            `;
+        }
+      });
+      tBody.innerHTML = phtml;
+    },
+
+    renderChart: function() {
+      const selectedYear = parseInt(document.getElementById('filter-ltv').value);
+      const viewMode = document.getElementById('filter-ltv-mode')?.value || 'monthly';
+      document.getElementById('lbl-year-ltv').innerText = selectedYear;
+
+      const allTimeAmount = this.currentMemberPayments.reduce((sum, p) => {
+        const stat = String(p.paymentStatus || '').toLowerCase();
+        if(stat.includes('fail') || stat.includes('pending') || stat.includes('overdue') || stat.includes('unpaid')) return sum;
+        return sum + Number(String(p.amount || 0).replace(/[^0-9.-]+/g,""));
+      }, 0);
+      
+      document.getElementById('det-ltv-all').innerText = `₹${allTimeAmount.toLocaleString('en-IN')}`;
+
+      const yearMetrics = this.chartMetrics[selectedYear] || { monthly: new Array(12).fill(0), quarterly: [0, 0, 0, 0], totalEarned: 0 };
+      
+      let categories = [];
+      let chartData = [];
+
+      const dlOptions = { enabled: true, formatter: (val) => val ? (val/1000).toFixed(1).replace('.0','') + 'k' : '', offsetY: -6, style: { fontSize: '9px', colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 2, padding: 2, opacity: 0.9, borderWidth: 0 } };
+
+      if (viewMode === 'quarterly') {
+          categories = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
+          chartData = yearMetrics.quarterly;
+      } else {
+          categories = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          chartData = yearMetrics.monthly;
+      }
+      
+      const yearPayments = this.currentMemberPayments.filter(p => {
+        const stat = String(p.paymentStatus || '').toLowerCase();
+        if(stat.includes('fail') || stat.includes('pending') || stat.includes('overdue') || stat.includes('unpaid')) return false;
+        
+        let sd = new Date(this.parseToISODate(p.startDate || p.paidDate));
+        let ed = new Date(this.parseToISODate(p.endDate || p.paidDate));
+        return (sd.getFullYear() === selectedYear || ed.getFullYear() === selectedYear);
+      });
+
+      document.getElementById('det-ltv-year').innerText = `₹${Number(yearMetrics.totalEarned.toFixed(2)).toLocaleString('en-IN')}`;
+      document.getElementById('det-ltv-count').innerText = yearPayments.length;
+
+      const options = {
+        series: [{ name: 'Earned', data: chartData.map(v => Number(v.toFixed(2))) }],
+        chart: { type: 'bar', height: '100%', toolbar: { show: false }, stacked: false },
+        plotOptions: { bar: { borderRadius: 2, columnWidth: '55%' } },
+        dataLabels: { ...dlOptions, offsetY: -10 },
+        xaxis: { 
+            categories: categories, 
+            labels: { style: { fontSize: '9px', colors: '#64748b' } }, 
+            axisBorder: { show: false }, axisTicks: { show: false } 
+        },
+        yaxis: { labels: { formatter: (val) => val > 0 ? '₹' + (val / 1000) + 'k' : '0', style: { fontSize: '9px', colors: '#64748b' } } },
+        colors: ['#10b981'], 
+        legend: { position: 'top', horizontalAlign: 'right', fontSize: '10px', markers: { radius: 10 } },
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 0, right: 0, bottom: 0, left: 10 } }
+      };
+
+      const container = document.querySelector("#member-revenue-chart");
+      if(container) {
+        container.innerHTML = '';
+        if(this.chartInstance) this.chartInstance.destroy();
+        this.chartInstance = new ApexCharts(container, options);
+        this.chartInstance.render();
+      }
+    },
+
+    editCurrentMember: function() { 
+      if(this.currentActiveMember) this.openModal(this.currentActiveMember); 
+    },
+
+    deleteCurrentMember: function() {
+      if (this.currentActiveMember) {
+        this.openDeleteModal('member', this.currentActiveMember.memberId, this.currentActiveMember.fullName);
+      }
+    },
+
+    onStatusChange: function() {
+      const statusId = document.getElementById('mem-status').value;
+      const statusName = this.getName('status', statusId).toLowerCase();
+      const exitContainer = document.getElementById('mem-exit-container');
+      
+      const planId = document.getElementById('mem-plan').value;
+      const planMatch = (this.dropdowns.membership || []).find(p => p.id === planId);
+      const planName = planMatch ? String(planMatch.name).toLowerCase() : '';
+      const isNonRecurring = planName.includes('trial') || planName.includes('adhoc') || planName.includes('ad-hoc');
+
+      if (statusName.includes('inactive') || statusName.includes('in-active') || isNonRecurring) {
+        exitContainer.classList.remove('hidden');
+        document.getElementById('mem-exit-date').required = true;
+      } else {
+        exitContainer.classList.add('hidden');
+        document.getElementById('mem-exit-date').required = false;
+      }
+    },
+
+    openModal: function(member = null) {
+      document.getElementById('modal-title').innerText = member ? 'Edit Member' : 'Add New Member';
+      document.getElementById('mem-id').value = member ? member.memberId : '';
+      
+      document.getElementById('mem-profile-file').value = ''; 
+      
+      const imgId = member && member.profileImage ? member.profileImage : '';
+      document.getElementById('mem-profile-url').value = imgId; 
+      
+      const previewCont = document.getElementById('mem-profile-preview-container');
+      const previewImg = document.getElementById('mem-profile-preview');
+      
+      if (imgId) {
+          previewImg.src = this.getSafeAvatarUrl(imgId);
+          previewCont.classList.remove('hidden');
+      } else {
+          previewImg.src = '';
+          previewCont.classList.add('hidden');
+      }
+
+      document.getElementById('mem-name').value = member ? member.fullName : '';
+      document.getElementById('mem-phone').value = member ? member.phone : '';
+      document.getElementById('mem-gender').value = member && member.gender ? member.gender : 'Male';
+      document.getElementById('mem-email').value = member && member.email ? member.email : '';
+      document.getElementById('mem-notes').value = member && member.notes ? member.notes : '';
+      
+      document.getElementById('mem-plan').value = member ? member.membershipId : 'All';
+      
+      const statOpt = document.getElementById('mem-status').options[1]?.value || '';
+      document.getElementById('mem-status').value = member ? member.status : statOpt;
+      
+      this.setDatePicker('mem-dob', member && member.dob ? member.dob : '');
+      this.setDatePicker('mem-join', member && member.joinDate ? member.joinDate : '');
+      this.setDatePicker('mem-exit-date', member && member.exitDate ? member.exitDate : '');
+
+      const rawAmt = member && member.membershipAmount ? member.membershipAmount.toString().replace(/[^0-9.-]+/g,"") : '';
+      document.getElementById('mem-amount').value = rawAmt;
+
+      if (member && member.notes && member.notes.trim() !== '') {
+          document.getElementById('mem-notes-wrapper').classList.remove('hidden');
+      } else {
+          document.getElementById('mem-notes-wrapper').classList.add('hidden');
+      }
+      
+      const payContainer = document.getElementById('upfront-payment-container');
+      if (payContainer) {
+          if (member) {
+              payContainer.classList.add('hidden'); 
+          } else {
+              payContainer.classList.remove('hidden'); 
+              document.getElementById('mem-record-pay').checked = false;
+              document.getElementById('mem-pay-fields').classList.add('hidden');
+              
+              this.populateSelect('mem-pay-mode', this.dropdowns.paymentmode || []);
+              const statusOpts = this.dropdowns.paymentstatus || this.dropdowns.status || [];
+              this.populateSelect('mem-pay-status', statusOpts);
+              const paidOpt = statusOpts.find(opt => String(opt.name).toLowerCase() === 'paid' || String(opt.name).toLowerCase() === 'completed');
+              if(paidOpt) document.getElementById('mem-pay-status').value = paidOpt.id;
+          }
+      }
+
+      this.filterBatchesByAge(member && member.dob ? member.dob : '');
+      if (member && member.batchId) {
+          document.getElementById('mem-batch').value = member.batchId;
+          this.onPlanOrBatchChange();
+      }
+
+      this.onStatusChange(); 
+
+      document.getElementById('member-modal').classList.remove('opacity-0', 'pointer-events-none');
+      document.getElementById('member-modal-content').classList.remove('translate-y-full', 'md:translate-y-10', 'opacity-0');
+    },
+
+    saveMember: async function(e) {
+      e.preventDefault();
+      
+      const planVal = document.getElementById('mem-plan').value;
+      if (planVal === 'All' || !planVal) return Toast.error("Please select a valid Membership Plan.");
+      
+      const batchVal = document.getElementById('mem-batch').value;
+      if (batchVal === 'All' || !batchVal) return Toast.error("Please select a valid Batch.");
+
+      const btn = document.getElementById('btn-save-member');
+      btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px] mr-2">progress_activity</span> Saving...';
+      btn.disabled = true;
+
+      const fileInput = document.getElementById('mem-profile-file');
+      let base64Image = null;
+      let imageName = null;
+      
+      if (fileInput.files && fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          imageName = file.name;
+          base64Image = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = error => reject(error);
+          });
+      }
+
+      const dobFmt = this.formatDateDDMMMYYYY(document.getElementById('mem-dob').value);
+      const joinFmt = this.formatDateDDMMMYYYY(document.getElementById('mem-join').value);
+      const exitFmt = this.formatDateDDMMMYYYY(document.getElementById('mem-exit-date').value); 
+      const isNew = !document.getElementById('mem-id').value;
+
+      const payload = {
+        memberId: document.getElementById('mem-id').value,
+        profileImage: document.getElementById('mem-profile-url').value, 
+        base64Image: base64Image,
+        imageName: imageName,
+        fullName: document.getElementById('mem-name').value,
+        phone: document.getElementById('mem-phone').value,
+        dob: dobFmt,
+        gender: document.getElementById('mem-gender').value,
+        email: document.getElementById('mem-email').value,
+        status: document.getElementById('mem-status').value,
+        notes: document.getElementById('mem-notes').value,          
+        membershipId: planVal,
+        batchId: batchVal,
+        joinDate: joinFmt,
+        exitDate: exitFmt, 
+        membershipAmount: Number(document.getElementById('mem-amount').value)
+      };
+      
+      if (isNew && document.getElementById('mem-record-pay') && document.getElementById('mem-record-pay').checked) {
+          const plans = this.dropdowns.membership || [];
+          const planMatch = plans.find(p => p.id === planVal);
+          const planName = planMatch ? (planMatch.name || '').toUpperCase() : '';
+          
+          let calcEnd = new Date(this.parseToISODate(joinFmt));
+          
+          if (exitFmt) {
+              calcEnd = new Date(this.parseToISODate(exitFmt));
+          } else {
+              if (planName.includes('QUARTER')) calcEnd.setMonth(calcEnd.getMonth() + 3);
+              else if (planName.includes('YEAR')) calcEnd.setFullYear(calcEnd.getFullYear() + 1);
+              else calcEnd.setMonth(calcEnd.getMonth() + 1);
+          }
+
+          payload.initialPayment = {
+              amount: payload.membershipAmount,
+              paidDate: joinFmt,
+              startDate: joinFmt,
+              endDate: this.formatDateDDMMMYYYY(calcEnd),
+              paymentMode: document.getElementById('mem-pay-mode').value,
+              paymentStatus: document.getElementById('mem-pay-status').value
+          };
+      }
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          btn.innerHTML = 'Save Member'; btn.disabled = false;
+          if(res.success) {
+            Toast.success(res.message);
+            this.closeModal(); 
+            this.fetchData(() => {
+                if (this.currentActiveMember && this.currentActiveMember.memberId === payload.memberId) { 
+                    const freshMember = this.allData.find(m => m.memberId === payload.memberId);
+                    if (freshMember) this.openDetails(freshMember);
+                }
+            });
+          } else { 
+            Toast.error(res.error); 
+          }
+        })
+        .api_saveMember(payload);
+    },
+
+    closeModal: function() {
+      document.getElementById('member-modal').classList.add('opacity-0', 'pointer-events-none');
+      document.getElementById('member-modal-content').classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
+      document.getElementById('member-form').reset();
+    },
+
+    onPlanOrBatchChange: function() {
+      const planId = document.getElementById('mem-plan').value;
+      const batchId = document.getElementById('mem-batch').value;
+
+      if (planId === 'All' || batchId === 'All') return;
+
+      const plans = this.dropdowns.membership || [];
+      const batches = this.dropdowns.batch || [];
+      const prices = this.dropdowns.price || this.dropdowns.price_options || this.dropdowns.prices || []; 
+
+      const planMatch = plans.find(p => p.id === planId);
+      const batchMatch = batches.find(b => b.id === batchId);
+
+      const groupName = batchMatch ? (batchMatch.groups || batchMatch.group || batchMatch.name || '') : '';
+      const badge = document.getElementById('batch-type-badge');
+
+      if (groupName) {
+          badge.innerText = groupName;
+          badge.classList.remove('hidden');
+          if (groupName.toLowerCase().includes('kid')) {
+              badge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-200 uppercase tracking-wider';
+          } else {
+              badge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-600 border-indigo-200 uppercase tracking-wider';
+          }
+      } else {
+          badge.classList.add('hidden');
+      }
+
+      let suggestedAmount = '';
+
+      if (planMatch && groupName) {
+          const exactPrice = prices.find(p => {
+              const pPlan = (p.name || '').toLowerCase();
+              const pGroup = (p.group || '').toLowerCase();
+              
+              const targetPlanName = (planMatch.name || '').toLowerCase();
+              const targetGroup = groupName.toLowerCase();
+
+              return (pPlan === targetPlanName) && (pGroup === targetGroup);
+          });
+
+          if (exactPrice && exactPrice.base_price) {
+              suggestedAmount = exactPrice.base_price;
+          }
+      }
+
+      if (!suggestedAmount && planMatch) {
+          suggestedAmount = planMatch.baseamount || planMatch.baseAmount || planMatch.amount || '';
+      }
+
+      if (suggestedAmount) {
+          document.getElementById('mem-amount').value = suggestedAmount.toString().replace(/[^0-9.-]+/g, "");
+      }
+
+      this.onStatusChange();
+    },
+
+    openRecordPayment: function(payment = null) {
+      const m = this.currentActiveMember;
+      if(!m) return;
+      
+      if (payment && payment.isVirtual) {
+          document.getElementById('pay-modal-title').innerText = payment.paymentStatus === 'UPCOMING' ? 'Pay Upcoming Cycle' : 'Pay Overdue Cycle';
+          document.getElementById('pay-id').value = ''; 
+          
+          const rawAmt = String(payment.amount).replace(/[^0-9.-]+/g,"");
+          document.getElementById('pay-amount').value = rawAmt ? Number(rawAmt) : '';
+          
+          document.getElementById('pay-mode').value = document.getElementById('pay-mode').options[1]?.value || '';
+          
+          const statusOpts = Array.from(document.getElementById('pay-status').options);
+          const paidOpt = statusOpts.find(opt => opt.text.toLowerCase() === 'paid' || opt.text.toLowerCase() === 'completed');
+          document.getElementById('pay-status').value = paidOpt ? paidOpt.value : (statusOpts[1]?.value || '');
+          
+          document.getElementById('pay-txn').value = '';
+          document.getElementById('pay-receipt').value = '';
+          document.getElementById('pay-notes').value = '';
+
+          this.setDatePicker('pay-date', new Date());
+          this.setDatePicker('pay-start', new Date(payment.virtualStartDate));
+          this.setDatePicker('pay-end', new Date(payment.virtualEndDate));
+          
+          document.getElementById('pay-header-due').innerText = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'Auto-calculated after payment';
+      } 
+      else {
+          document.getElementById('pay-modal-title').innerText = payment ? 'Edit Payment' : 'Record Payment';
+          document.getElementById('pay-id').value = payment ? payment.paymentId : '';
+          
+          const rawAmt = payment ? String(payment.amount).replace(/[^0-9.-]+/g,"") : (m.membershipAmount ? String(m.membershipAmount).replace(/[^0-9.-]+/g,"") : '');
+          document.getElementById('pay-amount').value = rawAmt ? Number(rawAmt) : '';
+          
+          const modeOpt = document.getElementById('pay-mode').options[1]?.value || '';
+          document.getElementById('pay-mode').value = payment ? payment.paymentMode : modeOpt;
+          
+          const defaultStatusOpt = document.getElementById('pay-status').options[1]?.value || '';
+          document.getElementById('pay-status').value = payment && payment.paymentStatus ? payment.paymentStatus : defaultStatusOpt;
+          
+          document.getElementById('pay-txn').value = payment && payment.txnId ? payment.txnId : '';
+          document.getElementById('pay-receipt').value = payment && payment.receiptUrl ? payment.receiptUrl : '';
+          document.getElementById('pay-notes').value = payment && payment.notes ? payment.notes : '';
+
+          const plans = this.dropdowns.membership || [];
+          const planMatch = plans.find(p => p.id === m.membershipId);
+          const planName = planMatch && (planMatch.name || '').toUpperCase();
+
+          let calcStartObj, calcEndObj;
+
+          if (payment) {
+              calcStartObj = payment.startDate ? new Date(payment.startDate) : new Date();
+              calcEndObj = payment.endDate ? new Date(payment.endDate) : new Date();
+          } else {
+              const payments = this.currentMemberPayments || [];
+              const sortedPayments = [...payments].sort((a, b) => new Date(b.endDate || b.paidDate) - new Date(a.endDate || a.paidDate));
+              
+              if (sortedPayments.length > 0 && sortedPayments[0].endDate) {
+                  calcStartObj = new Date(sortedPayments[0].endDate);
+                  calcStartObj.setDate(calcStartObj.getDate() + 1); 
+              } else {
+                  calcStartObj = m.joinDate ? new Date(m.joinDate) : new Date();
+              }
+
+              calcEndObj = new Date(calcStartObj);
+              
+              if (planName.includes('QUARTER')) {
+                  calcEndObj.setMonth(calcEndObj.getMonth() + 3);
+              } else if (planName.includes('TRIAL')) {
+                  calcEndObj.setDate(calcEndObj.getDate() + 7);
+              } else if (planName.includes('ADHOC') || planName.includes('AD-HOC')) {
+                  calcEndObj.setDate(calcEndObj.getDate() + 1);
+              } else {
+                  calcEndObj.setMonth(calcEndObj.getMonth() + 1);
+              }
+          }
+
+          this.setDatePicker('pay-date', payment && payment.paidDate ? payment.paidDate : new Date());
+          this.setDatePicker('pay-start', calcStartObj);
+          this.setDatePicker('pay-end', calcEndObj);
+
+          document.getElementById('pay-header-due').innerText = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'Auto-calculated after payment';
+      }
+
+      document.getElementById('payment-modal').classList.remove('opacity-0', 'pointer-events-none');
+      document.getElementById('payment-modal-content').classList.remove('translate-y-full', 'md:translate-y-10', 'opacity-0');
+    },
+
+    submitPayment: function(e) {
+      e.preventDefault();
+      
+      const statusVal = document.getElementById('pay-status').value;
+      if (!statusVal) return Toast.error("Please select a valid Payment Status.");
+
+      const btn = document.getElementById('btn-submit-payment');
+      btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px] mr-2">progress_activity</span> Processing...';
+      btn.disabled = true;
+
+      const payload = {
+        paymentId: document.getElementById('pay-id').value,
+        memberId: this.currentActiveMember.memberId,
+        amount: Number(document.getElementById('pay-amount').value),
+        paidDate: this.formatDateDDMMMYYYY(document.getElementById('pay-date').value),
+        paymentMode: document.getElementById('pay-mode').value,
+        paymentStatus: statusVal, 
+        startDate: this.formatDateDDMMMYYYY(document.getElementById('pay-start').value),
+        endDate: this.formatDateDDMMMYYYY(document.getElementById('pay-end').value),
+        receiptUrl: document.getElementById('pay-receipt').value,
+        notes: document.getElementById('pay-notes').value
+      };
+      
+      const txnField = document.getElementById('pay-txn').value;
+      if (txnField) payload.txnId = txnField;
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          btn.innerHTML = 'Save Payment'; btn.disabled = false;
+          if(res.success) {
+            Toast.success(res.message);
+            this.closeRecordPayment();
+            
+            const targetMember = this.allData.find(m => m.memberId === payload.memberId);
+            if (targetMember && payload.endDate) {
+                let nextDue = new Date(this.parseToISODate(payload.endDate));
+                nextDue.setDate(nextDue.getDate() + 1);
+                targetMember.dueDate = this.formatDateDDMMMYYYY(nextDue);
+            }
+            
+            this.fetchData(() => {
+                if (this.currentActiveMember) {
+                    const freshMember = this.allData.find(m => m.memberId === this.currentActiveMember.memberId);
+                    if(freshMember) this.openDetails(freshMember);
+                }
+            });
+          } else { 
+            Toast.error(res.error); 
+          }
+        })
+        .api_recordPayment(payload);
+    },
+
+    closeRecordPayment: function() {
+      document.getElementById('payment-modal').classList.add('opacity-0', 'pointer-events-none');
+      document.getElementById('payment-modal-content').classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
+      document.getElementById('payment-form').reset();
+    },
+    
+    openDeleteModal: function(type, id, name) {
+      this.deleteState = { type: type, id: id };
+      document.getElementById('delete-title').innerText = type === 'member' ? 'Delete Member?' : 'Delete Payment?';
+      document.getElementById('delete-target-name').innerText = name;
+      
+      document.getElementById('delete-modal').classList.remove('opacity-0', 'pointer-events-none');
+      document.getElementById('delete-modal-content').classList.remove('scale-95', 'opacity-0');
+    },
+
+    closeDeleteModal: function() {
+      this.deleteState = { type: null, id: null };
+      document.getElementById('delete-modal').classList.add('opacity-0', 'pointer-events-none');
+      document.getElementById('delete-modal-content').classList.add('scale-95', 'opacity-0');
+    },
+
+    confirmDelete: function() {
+      if(!this.deleteState.id) return;
+      
+      if(this.deleteState.type === 'member') {
+        google.script.run
+          .withSuccessHandler((res) => {
+            this.closeDeleteModal();
+            if(res.success) {
+              Toast.success(res.message);
+              this.closeDetails();
+              this.fetchData();
+            } else { Toast.error(res.error); }
+          })
+          .api_deleteMember(this.deleteState.id);
+      } 
+      else if (this.deleteState.type === 'payment') {
+        google.script.run
+          .withSuccessHandler((res) => {
+            this.closeDeleteModal();
+            if(res.success) {
+              Toast.success(res.message);
+              this.fetchData(() => {
+                  if (this.currentActiveMember) {
+                      const freshMember = this.allData.find(m => m.memberId === this.currentActiveMember.memberId);
+                      if (freshMember) this.openDetails(freshMember);
+                  }
+              });
+            } else { Toast.error(res.error); }
+          })
+          .api_deletePayment(this.deleteState.id);
+      }
+    }
+  };
+
+  MembersApp.init();
+</script>

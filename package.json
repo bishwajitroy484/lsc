@@ -1,0 +1,19 @@
+{
+  "name": "lsc",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "jest",
+    "push:dev": "cp .clasp-dev.json .clasp.json && clasp push",
+    "push:prod": "cp .clasp-prod.json .clasp.json && clasp push",
+    "deploy:dev": "npm run push:dev && clasp create-deployment",
+    "deploy:prod": "npm run push:prod && clasp create-deployment"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  },
+  "jest": {
+    "setupFiles": [
+      "<rootDir>/__tests__/setup.js"
+    ]
+  }
+}

@@ -1,0 +1,766 @@
+<script>
+  var SettingsApp = {
+    schemas: [],
+    allDropdowns: {}, 
+    sheetStructure: {}, 
+    generalSettingsData: [], // Stores SETTINGS sheet data
+    
+    activeTab: 'general',
+    activeSchema: null,
+    activeOptionsList: [],
+    hasUnsavedOrder: false,
+    optionToDelete: null,
+    isEditingSchema: false, 
+    
+    // Core known settings mapped directly to UI Inputs
+    coreKeys: ['GYM_NAME', 'LOGO_ID', 'Revenue_Recognition', 'OWNER_EMAIL', 'SPREADSHEET_ID', 'REMINDER_BUFFER'],
+
+    safeSetText: function(id, text) { const el = document.getElementById(id); if(el) el.innerText = text; },
+    safeSetValue: function(id, val) { const el = document.getElementById(id); if(el) el.value = val; },
+
+    showToast: function(msg, isError = false) {
+      let toastEl = document.getElementById('settings-local-toast');
+      if (!toastEl) {
+         toastEl = document.createElement('div');
+         toastEl.id = 'settings-local-toast';
+         toastEl.className = 'fixed top-4 right-4 px-4 py-3 rounded-lg shadow-2xl text-white text-sm font-bold z-[9999] transition-all duration-300 transform translate-y-[-150%] opacity-0 pointer-events-none flex items-center gap-2';
+         document.body.appendChild(toastEl);
+      }
+      const icon = isError ? 'error' : 'check_circle';
+      toastEl.innerHTML = `<span class="material-symbols-rounded text-[18px]">${icon}</span> <span>${msg}</span>`;
+      toastEl.style.backgroundColor = isError ? '#ef4444' : '#10b981';
+      requestAnimationFrame(() => toastEl.classList.remove('translate-y-[-150%]', 'opacity-0'));
+      setTimeout(() => toastEl.classList.add('translate-y-[-150%]', 'opacity-0'), 3500);
+    },
+
+    init: function() {
+      this.fetchData();
+      this.fetchGeneralSettings();
+    },
+
+    switchTab: function(tabName) {
+      this.activeTab = tabName;
+      
+      const paneGen = document.getElementById('pane-general');
+      const paneDrop = document.getElementById('pane-dropdowns');
+      const btnGen = document.getElementById('tab-btn-general');
+      const btnDrop = document.getElementById('tab-btn-dropdowns');
+      
+      const activeClass = 'bg-blue-50 text-brand-primary font-bold';
+      const inactiveClass = 'text-slate-600 hover:bg-slate-50 font-medium';
+      
+      if (tabName === 'general') {
+         if (paneGen) paneGen.classList.remove('hidden');
+         if (paneDrop) paneDrop.classList.add('hidden');
+         if (btnGen) { btnGen.className = `flex-1 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ${activeClass}`; }
+         if (btnDrop) { btnDrop.className = `flex-1 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ${inactiveClass}`; }
+      } else {
+         if (paneGen) paneGen.classList.add('hidden');
+         if (paneDrop) { paneDrop.classList.remove('hidden'); paneDrop.classList.add('flex'); }
+         if (btnGen) { btnGen.className = `flex-1 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ${inactiveClass}`; }
+         if (btnDrop) { btnDrop.className = `flex-1 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ${activeClass}`; }
+      }
+    },
+
+    // --- GENERAL SETTINGS LOGIC ---
+    fetchGeneralSettings: function() {
+      // Show Skeleton Loader
+      const content = document.getElementById('general-content');
+      const shimmer = document.getElementById('general-shimmer');
+      if (content) content.classList.add('hidden');
+      if (shimmer) shimmer.classList.remove('hidden');
+
+      google.script.run
+        .withSuccessHandler((res) => {
+           if(res.success) {
+               this.generalSettingsData = res.data;
+               this.renderGeneralSettings();
+           } else {
+               this.showToast("Failed to load General Settings.", true);
+           }
+        })
+        .api_getGeneralSettings();
+    },
+
+    renderGeneralSettings: function() {
+       // Hide Skeleton Loader, Show Real Content
+       const content = document.getElementById('general-content');
+       const shimmer = document.getElementById('general-shimmer');
+       if (shimmer) shimmer.classList.add('hidden');
+       if (content) content.classList.remove('hidden');
+
+       // Clear form first
+       this.coreKeys.forEach(k => {
+           const el = document.getElementById('gen-' + k);
+           if(el) el.value = '';
+       });
+       
+       // Clear any previously injected custom fields in the core grid
+       document.querySelectorAll('.custom-setting-row').forEach(el => el.remove());
+
+       const customPairs = [];
+
+       (this.generalSettingsData || []).forEach(item => {
+           if (!item || !item.key || String(item.key).trim() === '') return; 
+
+           const kLower = String(item.key).trim().toLowerCase();
+           let isCore = false;
+
+           this.coreKeys.forEach(core => {
+               if(core.toLowerCase() === kLower) {
+                   const el = document.getElementById('gen-' + core);
+                   if (el) el.value = item.value || '';
+                   isCore = true;
+               }
+           });
+
+           if (!isCore) {
+               customPairs.push(item);
+           }
+       });
+
+       // Re-inject custom keys directly into the main grid
+       customPairs.forEach(p => this.addCustomSettingRow('core-settings-grid', p.key, p.value));
+    },
+
+    // Updated to accept container ID and match typography
+    addCustomSettingRow: function(containerId, k = '', v = '') {
+      const container = document.getElementById(containerId);
+      if(!container) return;
+
+      const div = document.createElement('div');
+      div.className = 'md:col-span-2 flex gap-2 items-center custom-setting-row';
+      div.innerHTML = `
+        <div class="flex-1">
+           <input type="text" placeholder="CUSTOM_KEY" value="${k}" class="cs-key w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:border-brand-primary outline-none shadow-sm uppercase transition-colors">
+        </div>
+        <div class="flex-1">
+           <input type="text" placeholder="Value" value="${v}" class="cs-val w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm transition-colors">
+        </div>
+        <button type="button" onclick="this.parentElement.remove()" class="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-red-500 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded-lg transition-colors">
+          <span class="material-symbols-rounded text-[16px]">delete</span>
+        </button>
+      `;
+      container.appendChild(div);
+    },
+
+    saveGeneralSettings: function() {
+       const btn = document.getElementById('btn-save-general');
+       if(btn) { btn.innerHTML = `<span class="material-symbols-rounded animate-spin text-[18px]">progress_activity</span> Saving...`; btn.disabled = true; }
+
+       const payload = [];
+
+       // Collect Core Keys
+       this.coreKeys.forEach(k => {
+           const el = document.getElementById('gen-' + k);
+           if (el && el.value.trim() !== '') {
+               payload.push({ key: k, value: el.value.trim() });
+           }
+       });
+
+       // Collect Custom Keys
+       document.querySelectorAll('.custom-setting-row').forEach(row => {
+           const kEl = row.querySelector('.cs-key');
+           const vEl = row.querySelector('.cs-val');
+           if (kEl && vEl && kEl.value.trim() !== '') {
+               payload.push({ key: kEl.value.trim(), value: vEl.value.trim() });
+           }
+       });
+
+       google.script.run
+        .withSuccessHandler((res) => {
+           if(btn) { btn.innerHTML = `<span class="material-symbols-rounded text-[18px]">save</span> Save Settings`; btn.disabled = false; }
+           if(res.success) {
+               this.showToast(res.message, false);
+               this.generalSettingsData = payload; // Update local cache
+           } else {
+               this.showToast(res.error, true);
+           }
+        })
+        .api_saveGeneralSettings(payload);
+    },
+
+    // --- DROPDOWNS LOGIC (Unchanged functionality) ---
+    showShimmer: function() {
+      const tbody = document.getElementById('options-tbody');
+      const thead = document.getElementById('dynamic-thead-row');
+      const dskList = document.getElementById('desktop-cat-list');
+      const optContent = document.getElementById('options-content-area');
+      const emptyState = document.getElementById('options-empty-state');
+      
+      if(emptyState) emptyState.classList.add('hidden');
+      if(optContent) optContent.classList.remove('hidden');
+
+      if(thead) thead.innerHTML = `<th class="px-4 py-3"><div class="h-4 bg-slate-200 shimmer rounded w-24"></div></th>`;
+      
+      if(tbody) {
+        let shm = '';
+        for(let i=0; i<4; i++) {
+          shm += `<tr><td colspan="10" class="px-4 py-3 border-b border-slate-50"><div class="h-10 bg-slate-100 shimmer rounded-lg w-full"></div></td></tr>`;
+        }
+        tbody.innerHTML = shm;
+      }
+      
+      if(dskList) {
+        let dskShm = '';
+        for(let i=0; i<5; i++) {
+          dskShm += `<div class="p-3 mb-2 h-14 bg-slate-100 shimmer rounded-xl w-full"></div>`;
+        }
+        dskList.innerHTML = dskShm;
+      }
+    },
+
+    fetchData: function() {
+      this.showShimmer();
+
+      google.script.run
+        .withSuccessHandler((res) => { if(res.success && Object.keys(res.data).length > 0) this.sheetStructure = res.data; })
+        .api_getSheetStructure();
+
+      if (Object.keys(this.sheetStructure).length === 0) {
+        this.sheetStructure = {
+          "MEMBERS": ["memberId", "fullName", "membershipId", "batchId", "status"],
+          "STAFF": ["staffId", "fullName", "role", "status"],
+          "EXPENSES": ["expenseId", "categoryId", "amount"]
+        };
+      }
+
+      google.script.run
+        .withSuccessHandler(this.onDataLoaded.bind(this))
+        .api_getDropdownConfig();
+    },
+
+    onDataLoaded: function(response) {
+      if (!response.success) return this.showToast("Failed to load configuration.", true);
+      
+      this.schemas = response.data.schemas || [];
+      this.allDropdowns = response.data.dropdowns || {};
+      
+      if (this.activeSchema) {
+         const updatedSchema = this.schemas.find(s => s.key === this.activeSchema.key);
+         if (updatedSchema) {
+             this.activeSchema = updatedSchema;
+             this.activeOptionsList = [...(this.allDropdowns[updatedSchema.key] || [])];
+         } else {
+             this.activeSchema = null;
+         }
+      }
+      
+      this.renderCategoryLists();
+      this.handleEmptyStates();
+
+      if (this.activeSchema) {
+         this.buildDynamicTable();
+      }
+    },
+
+    handleEmptyStates: function() {
+      const masterEmpty = document.getElementById('master-empty-state');
+      const dskList = document.getElementById('desktop-cat-list');
+      const mobSelectWrap = document.getElementById('mobile-cat-wrapper');
+      const detailEmpty = document.getElementById('options-empty-state');
+      const detailContent = document.getElementById('options-content-area');
+
+      if (this.schemas.length === 0) {
+         if(masterEmpty) masterEmpty.classList.remove('hidden');
+         if(dskList && window.innerWidth >= 1024) dskList.classList.add('hidden');
+         if(mobSelectWrap) mobSelectWrap.classList.add('hidden');
+         if(detailEmpty) detailEmpty.classList.add('hidden'); 
+         if(detailContent) detailContent.classList.add('hidden');
+      } else {
+         if(masterEmpty) masterEmpty.classList.add('hidden');
+         if(dskList && window.innerWidth >= 1024) dskList.classList.remove('hidden');
+         if(mobSelectWrap) mobSelectWrap.classList.remove('hidden');
+         
+         if (!this.activeSchema) {
+            if(detailContent) detailContent.classList.add('hidden');
+            if(window.innerWidth >= 1024) {
+               this.selectCategory(this.schemas[0].key);
+            } else {
+               if(detailEmpty) detailEmpty.classList.remove('hidden');
+            }
+         }
+      }
+    },
+
+    renderCategoryLists: function() {
+      const mobSelect = document.getElementById('mobile-cat-select');
+      if (mobSelect) {
+        let mobHtml = '<option value="">Select a dropdown...</option>';
+        this.schemas.forEach(s => {
+          const count = (this.allDropdowns[s.key] || []).length;
+          mobHtml += `<option value="${s.key}">${s.name} (${count})</option>`;
+        });
+        mobSelect.innerHTML = mobHtml;
+        if(this.activeSchema) mobSelect.value = this.activeSchema.key;
+      }
+
+      const dskList = document.getElementById('desktop-cat-list');
+      if (dskList) {
+        let dskHtml = '';
+        this.schemas.forEach(s => {
+          const count = (this.allDropdowns[s.key] || []).length;
+          const isActive = this.activeSchema && this.activeSchema.key === s.key;
+          const activeClass = isActive ? 'bg-blue-50 border-blue-100' : 'bg-transparent border-transparent hover:bg-slate-50';
+          
+          dskHtml += `
+            <button onclick="SettingsApp.selectCategory('${s.key}')" class="w-full flex items-center justify-between p-3 rounded-xl border transition-all ${activeClass}">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[18px]">list</span></div>
+                <div class="text-left"><h4 class="text-sm font-bold text-slate-800 leading-tight">${s.name}</h4></div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">${count}</span>
+                <span class="material-symbols-rounded text-[16px] text-slate-300">chevron_right</span>
+              </div>
+            </button>
+          `;
+        });
+        dskList.innerHTML = dskHtml;
+      }
+    },
+
+    selectCategory: function(key) {
+      if(!key) return;
+      if(this.hasUnsavedOrder) {
+         if(!confirm("You have unsaved order changes. Discard them?")) {
+            const mSel = document.getElementById('mobile-cat-select');
+            if(mSel && this.activeSchema) mSel.value = this.activeSchema.key;
+            return;
+         }
+         this.discardOrder();
+      }
+
+      this.activeSchema = this.schemas.find(s => s.key === key);
+      this.activeOptionsList = [...(this.allDropdowns[key] || [])];
+      
+      const optEmpty = document.getElementById('options-empty-state');
+      if (optEmpty) optEmpty.classList.add('hidden');
+      
+      const optContent = document.getElementById('options-content-area');
+      if (optContent) optContent.classList.remove('hidden');
+      
+      this.safeSetText('opt-header-title', this.activeSchema.name);
+      this.safeSetText('opt-header-prefix', this.activeSchema.prefix);
+
+      const usagesContainer = document.getElementById('opt-header-usages');
+      let usagesHtml = '';
+      if(this.activeSchema.usages && this.activeSchema.usages.length > 0) {
+         this.activeSchema.usages.forEach(u => {
+            usagesHtml += `<div class="flex items-center gap-1.5 px-2 py-1 bg-slate-100 rounded-md border border-slate-200"><span class="material-symbols-rounded text-[12px] text-slate-400">link</span><span class="text-[9px] font-bold text-slate-600 uppercase tracking-wide">${u.tab} &rarr; ${u.column}</span></div>`;
+         });
+      } else {
+         usagesHtml = `<span class="text-[10px] text-slate-400 italic">No linked modules.</span>`;
+      }
+      usagesContainer.innerHTML = usagesHtml;
+
+      const mSel = document.getElementById('mobile-cat-select');
+      if(mSel && mSel.value !== key) mSel.value = key;
+
+      this.renderCategoryLists(); 
+      this.buildDynamicTable();
+    },
+
+    buildDynamicTable: function() {
+      const thead = document.getElementById('dynamic-thead-row');
+      const tbody = document.getElementById('options-tbody');
+      
+      let headHtml = ``;
+      this.activeSchema.columns.forEach(col => {
+         if(col.key !== 'id') { 
+           headHtml += `<th class="px-3 md:px-4 py-3 whitespace-nowrap">${col.label}</th>`;
+         }
+      });
+      headHtml += `<th class="px-3 md:px-4 py-3 text-right">Order / Actions</th>`;
+      if(thead) thead.innerHTML = headHtml;
+
+      if (!tbody) return;
+
+      if (this.activeOptionsList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${this.activeSchema.columns.length}" class="text-center py-8 text-sm font-medium text-slate-400">No options configured. Add one above.</td></tr>`;
+        return;
+      }
+
+      let bodyHtml = '';
+      const totalLen = this.activeOptionsList.length;
+
+      this.activeOptionsList.forEach((opt, index) => {
+        const optStr = JSON.stringify(opt).replace(/"/g, '&quot;');
+        
+        let rowHtml = `<tr class="border-b border-slate-50 hover:bg-slate-50/80 transition-colors bg-white group">`;
+        
+        this.activeSchema.columns.forEach(col => {
+           if(col.key !== 'id') {
+              const val = opt[col.key] || '--';
+              const isName = col.key === 'name';
+              rowHtml += `<td class="px-3 md:px-4 py-3 ${isName ? 'font-semibold text-slate-800' : 'text-slate-500'}">${val}</td>`;
+           }
+        });
+
+        const btnUp = index > 0 
+           ? `<button onclick="SettingsApp.moveOption(${index}, -1)" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded transition-colors"><span class="material-symbols-rounded text-[18px]">arrow_upward</span></button>` 
+           : `<div class="w-7 h-7"></div>`;
+           
+        const btnDown = index < (totalLen - 1) 
+           ? `<button onclick="SettingsApp.moveOption(${index}, 1)" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded transition-colors"><span class="material-symbols-rounded text-[18px]">arrow_downward</span></button>` 
+           : `<div class="w-7 h-7"></div>`;
+
+        rowHtml += `
+            <td class="px-3 md:px-4 py-3 text-right whitespace-nowrap">
+               <div class="flex items-center justify-end gap-1">
+                 ${btnUp}
+                 ${btnDown}
+                 <div class="w-px h-4 bg-slate-200 mx-1"></div>
+                 <button onclick="SettingsApp.openOptionModal(${optStr})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">edit</span></button>
+                 <button onclick="SettingsApp.openDeleteModal('${opt.id}', '${opt.name}')" class="w-8 h-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">delete</span></button>
+               </div>
+            </td>
+          </tr>`;
+        bodyHtml += rowHtml;
+      });
+      tbody.innerHTML = bodyHtml;
+    },
+
+    moveOption: function(index, direction) {
+       if (index + direction < 0 || index + direction >= this.activeOptionsList.length) return;
+       const item = this.activeOptionsList.splice(index, 1)[0];
+       this.activeOptionsList.splice(index + direction, 0, item);
+       this.hasUnsavedOrder = true;
+       this.showSaveToolbar(true);
+       this.buildDynamicTable();
+    },
+
+    showSaveToolbar: function(show) {
+      const tb = document.getElementById('save-order-toolbar');
+      if(!tb) return;
+      if(show) tb.classList.remove('translate-y-full');
+      else tb.classList.add('translate-y-full');
+    },
+
+    discardOrder: function() {
+      this.activeOptionsList = [...(this.allDropdowns[this.activeSchema.key] || [])];
+      this.hasUnsavedOrder = false;
+      this.showSaveToolbar(false);
+      this.buildDynamicTable();
+    },
+
+    saveOrder: function() {
+      const btn = document.getElementById('btn-save-order');
+      if(btn) { btn.innerHTML = `Saving...`; btn.disabled = true; }
+
+      google.script.run
+        .withSuccessHandler((res) => {
+           if(btn) { btn.innerHTML = `Save Order`; btn.disabled = false; }
+           if(res.success) {
+              this.showToast("Order saved to sheet.", false);
+              this.hasUnsavedOrder = false;
+              this.showSaveToolbar(false);
+              this.allDropdowns[this.activeSchema.key] = [...this.activeOptionsList];
+           } else { 
+              this.showToast(res.error, true); 
+           }
+        })
+        .api_saveDropdownOptions(this.activeSchema.key, this.activeOptionsList);
+    },
+
+    openOptionModal: function(opt = null) {
+      if(!this.activeSchema) return;
+      if(opt && opt instanceof Event) opt = null;
+
+      this.safeSetText('modal-opt-title', opt ? 'Edit Option' : 'Add Option');
+      this.safeSetValue('dyn-opt-id', opt ? opt.id : '');
+
+      const container = document.getElementById('dynamic-fields-container');
+      let formHtml = '';
+
+      this.activeSchema.columns.forEach(col => {
+         if(col.key === 'id') return; 
+         
+         const val = opt ? (opt[col.key] || '') : '';
+         const required = col.key === 'name' ? 'required' : '';
+         
+         formHtml += `
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">${col.label} ${required ? '*' : ''}</label>
+            <input type="text" id="dyn-field-${col.key}" value="${val}" ${required} class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold focus:border-brand-primary outline-none focus:bg-white transition-colors">
+          </div>
+         `;
+      });
+      
+      if(container) container.innerHTML = formHtml;
+
+      const backdrop = document.getElementById('option-modal');
+      const content = document.getElementById('option-modal-content');
+      if(backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      if(content) content.classList.remove('translate-y-full', 'md:translate-y-10', 'opacity-0');
+    },
+
+    saveOption: function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-opt');
+      if(btn) { btn.innerHTML = `Saving...`; btn.disabled = true; }
+
+      let payload = { id: document.getElementById('dyn-opt-id').value };
+      
+      this.activeSchema.columns.forEach(col => {
+         if(col.key !== 'id') {
+            payload[col.key] = document.getElementById(`dyn-field-${col.key}`).value;
+         }
+      });
+
+      if (payload.id) {
+         const idx = this.activeOptionsList.findIndex(o => o.id === payload.id);
+         if(idx > -1) this.activeOptionsList[idx] = payload;
+      } else {
+         payload.id = `${this.activeSchema.prefix}-${Math.floor(Math.random()*9000)+1000}`;
+         this.activeOptionsList.push(payload);
+      }
+
+      google.script.run
+        .withSuccessHandler((res) => {
+           if(btn) { btn.innerHTML = `Save Option`; btn.disabled = false; }
+           if(res.success) {
+              this.allDropdowns[this.activeSchema.key] = [...this.activeOptionsList];
+              this.showToast(res.message, false);
+              this.closeOptionModal();
+              this.selectCategory(this.activeSchema.key); 
+           } else {
+              this.showToast(res.error, true);
+           }
+        })
+        .api_saveDropdownOptions(this.activeSchema.key, this.activeOptionsList);
+    },
+
+    closeOptionModal: function() {
+      const backdrop = document.getElementById('option-modal');
+      const content = document.getElementById('option-modal-content');
+      if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
+      if(content) content.classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
+    },
+
+    openDeleteModal: function(id, name) {
+      this.optionToDelete = id;
+      this.safeSetText('delete-opt-name', name || 'this option');
+      const backdrop = document.getElementById('delete-opt-modal');
+      const content = document.getElementById('delete-opt-content');
+      if(backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      if(content) content.classList.remove('scale-95', 'opacity-0');
+    },
+
+    closeDeleteModal: function() {
+      this.optionToDelete = null;
+      const backdrop = document.getElementById('delete-opt-modal');
+      const content = document.getElementById('delete-opt-content');
+      if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
+      if(content) content.classList.add('scale-95', 'opacity-0');
+    },
+
+    confirmDelete: function() {
+      if(!this.optionToDelete || !this.activeSchema) return;
+      const updatedList = this.activeOptionsList.filter(o => o.id !== this.optionToDelete);
+      google.script.run
+        .withSuccessHandler((res) => {
+          this.closeDeleteModal();
+          if(res.success) {
+            this.showToast("Option deleted.", false);
+            this.activeOptionsList = updatedList;
+            this.allDropdowns[this.activeSchema.key] = [...this.activeOptionsList];
+            this.selectCategory(this.activeSchema.key);
+          } else { 
+            this.showToast(res.error, true); 
+          }
+        })
+        .api_saveDropdownOptions(this.activeSchema.key, updatedList);
+    },
+    
+    openSchemaModal: function() {
+      this.isEditingSchema = false;
+      const form = document.getElementById('schema-form');
+      if(form) form.reset();
+      
+      this.safeSetText('schema-modal-title', 'Create Dropdown');
+      const btn = document.getElementById('btn-save-schema');
+      if(btn) btn.innerText = 'Create Dropdown';
+      
+      const prefixEl = document.getElementById('sch-prefix');
+      if(prefixEl) {
+         prefixEl.disabled = false;
+         prefixEl.classList.remove('bg-slate-100', 'text-slate-500');
+      }
+
+      const colContainer = document.getElementById('schema-columns-container');
+      if (colContainer) {
+          colContainer.innerHTML = `
+             <div class="flex gap-2"><div class="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-500 flex justify-between items-center"><span>ID (Auto-generated Key)</span> <span class="material-symbols-rounded text-[14px]">lock</span></div></div>
+             <div class="flex gap-2"><div class="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-500 flex justify-between items-center"><span>Name (Required Display Label)</span> <span class="material-symbols-rounded text-[14px]">lock</span></div></div>
+          `;
+      }
+      const usageContainer = document.getElementById('schema-usages-container');
+      if(usageContainer) usageContainer.innerHTML = '';
+
+      const backdrop = document.getElementById('schema-modal');
+      const content = document.getElementById('schema-modal-content');
+      if(backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      if(content) content.classList.remove('scale-95', 'opacity-0');
+    },
+
+    editSchema: function() {
+      if(!this.activeSchema) return;
+      this.isEditingSchema = true;
+      const form = document.getElementById('schema-form');
+      if(form) form.reset();
+      
+      this.safeSetText('schema-modal-title', 'Edit Dropdown Settings');
+      const btn = document.getElementById('btn-save-schema');
+      if(btn) btn.innerText = 'Update Dropdown';
+
+      this.safeSetValue('sch-name', this.activeSchema.name);
+      const prefixEl = document.getElementById('sch-prefix');
+      if(prefixEl) {
+          prefixEl.value = this.activeSchema.prefix;
+          prefixEl.disabled = true; 
+          prefixEl.classList.add('bg-slate-100', 'text-slate-500');
+      }
+
+      const colContainer = document.getElementById('schema-columns-container');
+      if (colContainer) {
+          colContainer.innerHTML = `
+             <div class="flex gap-2"><div class="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-500 flex justify-between items-center"><span>ID (Auto-generated Key)</span> <span class="material-symbols-rounded text-[14px]">lock</span></div></div>
+             <div class="flex gap-2"><div class="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-500 flex justify-between items-center"><span>Name (Required Display Label)</span> <span class="material-symbols-rounded text-[14px]">lock</span></div></div>
+          `;
+      }
+      
+      const usageContainer = document.getElementById('schema-usages-container');
+      if (usageContainer) usageContainer.innerHTML = '';
+
+      this.activeSchema.columns.forEach(col => {
+        if(col.key !== 'id' && col.key !== 'name') {
+           this.addSchemaColumn(col.key, col.label);
+        }
+      });
+
+      if(this.activeSchema.usages) {
+        this.activeSchema.usages.forEach(use => {
+           this.addSchemaUsage(use.tab, use.column);
+        });
+      }
+
+      const backdrop = document.getElementById('schema-modal');
+      const content = document.getElementById('schema-modal-content');
+      if(backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      if(content) content.classList.remove('scale-95', 'opacity-0');
+    },
+
+    addSchemaColumn: function(initKey, initLabel) {
+      const k = typeof initKey === 'string' ? initKey : '';
+      const l = typeof initLabel === 'string' ? initLabel : '';
+      const div = document.createElement('div');
+      div.className = 'flex gap-2 items-center schema-dynamic-col mt-2 w-full';
+      div.innerHTML = `
+        <input type="text" placeholder="Key (e.g. rate)" value="${k}" required class="col-key flex-1 min-w-0 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">
+        <input type="text" placeholder="Label (e.g. Rate)" value="${l}" required class="col-label flex-1 min-w-0 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">
+        <button type="button" onclick="this.parentElement.remove()" class="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-red-500 bg-slate-100 rounded-lg transition-colors">
+          <span class="material-symbols-rounded text-[18px]">delete</span>
+        </button>
+      `;
+      document.getElementById('schema-columns-container').appendChild(div);
+    },
+
+    addSchemaUsage: function(initTab, initCol) {
+      const t = typeof initTab === 'string' ? initTab : '';
+      const c = typeof initCol === 'string' ? initCol : '';
+      const tabs = Object.keys(this.sheetStructure);
+      if (tabs.length === 0) return this.showToast("No sheet structure loaded.", true);
+
+      let tabOpts = `<option value="">Select Tab...</option>`;
+      tabs.forEach(tab => tabOpts += `<option value="${tab}">${tab}</option>`);
+
+      const div = document.createElement('div');
+      div.className = 'flex gap-2 items-center schema-dynamic-use mt-2 w-full';
+      div.innerHTML = `
+        <select required onchange="SettingsApp.updateUsageCols(this)" class="use-tab flex-1 min-w-0 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">${tabOpts}</select>
+        <select required class="use-col flex-1 min-w-0 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none"><option value="">Select Column...</option></select>
+        <button type="button" onclick="this.parentElement.remove()" class="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-red-500 bg-slate-100 rounded-lg transition-colors">
+          <span class="material-symbols-rounded text-[18px]">delete</span>
+        </button>
+      `;
+      document.getElementById('schema-usages-container').appendChild(div);
+
+      if (t) {
+         const tabSel = div.querySelector('.use-tab');
+         if(tabSel) { tabSel.value = t; this.updateUsageCols(tabSel); }
+         const colSel = div.querySelector('.use-col');
+         setTimeout(() => { if(colSel) colSel.value = c; }, 10);
+      }
+    },
+
+    updateUsageCols: function(tabSelectEl) {
+      const tabName = tabSelectEl.value;
+      const colSelectEl = tabSelectEl.parentElement.querySelector('.use-col');
+      let colOpts = `<option value="">Select Column...</option>`;
+      if (tabName && this.sheetStructure[tabName]) {
+         this.sheetStructure[tabName].forEach(c => colOpts += `<option value="${c}">${c}</option>`);
+      }
+      if(colSelectEl) colSelectEl.innerHTML = colOpts;
+    },
+
+    saveSchema: function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-schema');
+      if(btn) { btn.innerHTML = `Saving...`; btn.disabled = true; }
+      
+      let key = '';
+      if(this.isEditingSchema && this.activeSchema) {
+         key = this.activeSchema.key; 
+      } else {
+         const nameEl = document.getElementById('sch-name');
+         key = nameEl ? nameEl.value.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+      }
+      
+      const nameEl = document.getElementById('sch-name');
+      const prefixEl = document.getElementById('sch-prefix');
+
+      let newSchema = {
+        key: key,
+        name: nameEl ? nameEl.value : '',
+        prefix: prefixEl ? prefixEl.value.toUpperCase() : '',
+        columns: [ { key: 'id', label: 'ID' }, { key: 'name', label: 'Name' } ],
+        usages: []
+      };
+
+      document.querySelectorAll('.schema-dynamic-col').forEach(el => {
+         const colKey = el.querySelector('.col-key');
+         const colLabel = el.querySelector('.col-label');
+         if(colKey && colLabel) newSchema.columns.push({ key: colKey.value.replace(/\s+/g, ''), label: colLabel.value });
+      });
+
+      document.querySelectorAll('.schema-dynamic-use').forEach(el => {
+         const useTab = el.querySelector('.use-tab');
+         const useCol = el.querySelector('.use-col');
+         if(useTab && useCol) newSchema.usages.push({ tab: useTab.value, column: useCol.value });
+      });
+
+      google.script.run
+        .withSuccessHandler((res) => {
+           if(btn) { btn.innerHTML = `Update Dropdown`; btn.disabled = false; }
+           if(res.success) {
+              this.showToast(res.message, false);
+              this.closeSchemaModal();
+              this.fetchData(); 
+           } else {
+              this.showToast(res.error, true);
+           }
+        })
+        .api_saveSchema(newSchema);
+    },
+
+    closeSchemaModal: function() {
+      const backdrop = document.getElementById('schema-modal');
+      const content = document.getElementById('schema-modal-content');
+      if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
+      if(content) content.classList.add('scale-95', 'opacity-0');
+    }
+  };
+
+  SettingsApp.init();
+</script>

@@ -1,0 +1,661 @@
+<script>
+  var ExpensesApp = {
+    allData: [],
+    filteredData: [], 
+    tableData: [],    
+    dropdowns: {},
+    
+    isDropdownsLoaded: false,
+    isExpensesLoaded: false,
+    
+    months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    quarters: ['Q1', 'Q2', 'Q3', 'Q4'],
+    selectedPeriods: [],
+    
+    sortColumn: 'date',
+    sortAsc: false,
+    
+    chartInstances: {},
+    expenseToDelete: null,
+    colorMap: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#64748b'],
+
+    init: function() {
+      this.isDropdownsLoaded = false;
+      this.isExpensesLoaded = false;
+      this.selectedPeriods = [...this.months];
+      
+      this.renderCheckboxes();
+      this.updateMultiSelectLabel();
+      this.showShimmer();
+      this.initDatePickers();
+
+      google.script.run
+        .withSuccessHandler((res) => {
+           this.onDropdownsLoaded(res);
+           this.isDropdownsLoaded = true;
+           this.checkAndRender();
+        })
+        .api_getGlobalDropdowns();
+        
+      google.script.run
+        .withSuccessHandler((res) => {
+           this.onDataLoaded(res);
+           this.isExpensesLoaded = true;
+           this.checkAndRender();
+        })
+        .api_getExpenses();
+
+      document.addEventListener('click', (e) => {
+        const menu = document.getElementById('exp-multi-select-menu');
+        const btn = document.getElementById('exp-multi-select-label')?.parentElement;
+        if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+          menu.classList.add('hidden');
+        }
+      });
+    },
+
+    checkAndRender: function() {
+      if (this.isDropdownsLoaded && this.isExpensesLoaded) {
+          this.applyGlobalFilters();
+      }
+    },
+
+    initDatePickers: function() {
+      flatpickr(".date-field", {
+        dateFormat: "d-M-Y",    
+        allowInput: true,
+        disableMobile: "true"   
+      });
+    },
+
+    setDatePicker: function(id, dateObjOrStr) {
+      const el = document.getElementById(id);
+      if (el && el._flatpickr) {
+        el._flatpickr.setDate(dateObjOrStr);
+      } else if (el) {
+        el.value = dateObjOrStr; 
+      }
+    },
+
+    formatDateDDMMMYYYY: function(dateStr) {
+      if(!dateStr) return '';
+      let d = new Date(dateStr);
+      if(isNaN(d)) return dateStr; 
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = months[d.getMonth()];
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    },
+
+    parseToISODate: function(input) {
+      if (!input) return '';
+      let d = new Date(input);
+      if (isNaN(d) && typeof input === 'string') {
+        const parts = input.split('-');
+        if (parts.length === 3) {
+          const months = {jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11};
+          d = new Date(parts[2], months[parts[1].toLowerCase()], parts[0]);
+        }
+      }
+      if (isNaN(d)) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    },
+
+    showShimmer: function() {
+      let dHtml = '';
+      for(let i=0; i<5; i++){ dHtml += `<tr><td colspan="6" class="px-4 py-4"><div class="h-6 w-full shimmer rounded"></div></td></tr>`; }
+      const tb = document.getElementById('desktop-expense-body');
+      if(tb) tb.innerHTML = dHtml;
+      
+      const mc = document.getElementById('mobile-expense-container');
+      if(mc) mc.innerHTML = `<div class="p-4 bg-white rounded-xl shadow-sm"><div class="h-10 w-full shimmer rounded"></div></div>`;
+      
+      if(this.chartInstances.trend) this.chartInstances.trend.destroy();
+      if(this.chartInstances.breakdown) this.chartInstances.breakdown.destroy();
+      if(this.chartInstances.misc) this.chartInstances.misc.destroy();
+      
+      document.getElementById('chart-expense-trend').innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
+      document.getElementById('chart-expense-breakdown').innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
+      document.getElementById('chart-expense-misc').innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
+    },
+
+    parseAmount: function(val) {
+      if(!val) return 0;
+      return Number(val.toString().replace(/[^0-9.-]+/g,"")) || 0;
+    },
+
+    onDropdownsLoaded: function(response) {
+      if(!response.success) return Toast.error("Failed to load global options.");
+      this.dropdowns = response.data.options || {};
+      
+      const expenseCats = this.dropdowns.expensecategory || this.dropdowns.expense_category || this.dropdowns.expense || this.dropdowns.categories || [];
+      this.dropdowns.expenseCats = expenseCats; 
+      
+      this.populateSelect('exp-category', expenseCats, null, "Select Category");
+      this.populateSelect('filter-table-cat', expenseCats, null, "All Categories", true);
+    },
+
+    populateSelect: function(elementId, optionsArray, secondaryLabel = null, defaultText = "Select Option...", isFilter = false) {
+      const el = document.getElementById(elementId);
+      if(!el) return;
+      let html = isFilter ? `<option value="All">${defaultText}</option>` : `<option value="" disabled selected>${defaultText}</option>`;
+      
+      if (Array.isArray(optionsArray)) {
+        optionsArray.forEach(opt => {
+          const label = secondaryLabel && opt[secondaryLabel] ? `${opt.name} (${opt[secondaryLabel]})` : opt.name;
+          html += `<option value="${opt.id}">${label}</option>`;
+        });
+      }
+      el.innerHTML = html;
+    },
+
+    getName: function(id) {
+      if(!id || !this.dropdowns.expenseCats) return id || 'N/A';
+      const match = this.dropdowns.expenseCats.find(item => item.id === id);
+      return match ? match.name : id;
+    },
+
+    getColor: function(idx) { return this.colorMap[idx % this.colorMap.length]; },
+
+    fetchData: function() {
+      google.script.run
+        .withSuccessHandler((res) => {
+           this.onDataLoaded(res);
+           this.applyGlobalFilters();
+        })
+        .api_getExpenses();
+    },
+
+    onDataLoaded: function(response) {
+      if (!response.success) {
+        document.getElementById('desktop-expense-body').innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8">Failed to load.</td></tr>`;
+        return Toast.error("Failed to load expenses.");
+      }
+      
+      this.allData = response.data || [];
+      
+      const yearSelect = document.getElementById('exp-filter-year');
+      let years = new Set();
+      
+      this.allData.forEach(exp => {
+        if(exp.date) {
+          const d = new Date(this.parseToISODate(exp.date));
+          if(!isNaN(d)) years.add(d.getFullYear().toString());
+        }
+      });
+      
+      const currentYear = new Date().getFullYear().toString();
+      if(years.size === 0) years.add(currentYear); 
+      
+      let yearsArray = Array.from(years).sort((a,b) => b - a);
+      let yearHtml = '';
+      yearsArray.forEach(y => { yearHtml += `<option value="${y}">${y}</option>`; });
+      yearSelect.innerHTML = yearHtml;
+
+      if(yearsArray.includes(currentYear)) { yearSelect.value = currentYear; } 
+      else { yearSelect.value = yearsArray[0]; }
+    },
+
+    handleModeSwitch: function() {
+      const mode = document.getElementById('exp-filter-mode').value;
+      this.selectedPeriods = mode === 'Monthly' ? [...this.months] : [...this.quarters];
+      this.renderCheckboxes();
+      this.updateMultiSelectLabel();
+      this.applyGlobalFilters();
+    },
+
+    renderCheckboxes: function() {
+      const mode = document.getElementById('exp-filter-mode').value;
+      const options = mode === 'Monthly' ? this.months : this.quarters;
+      const menu = document.getElementById('exp-multi-select-menu');
+      const allSelected = this.selectedPeriods.length === options.length;
+
+      let html = `<label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer rounded text-xs font-bold text-slate-800 border-b border-slate-100 mb-1"><input type="checkbox" onchange="ExpensesApp.toggleAllPeriods(this)" ${allSelected ? 'checked' : ''} class="accent-brand-primary w-3.5 h-3.5 rounded border-slate-300">Select All</label>`;
+      options.forEach(opt => {
+        const isChecked = this.selectedPeriods.includes(opt) ? 'checked' : '';
+        html += `<label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer rounded text-xs text-slate-700"><input type="checkbox" value="${opt}" ${isChecked} onchange="ExpensesApp.togglePeriod(this)" class="accent-brand-primary w-3.5 h-3.5 rounded border-slate-300">${opt}</label>`;
+      });
+      menu.innerHTML = html;
+    },
+
+    toggleAllPeriods: function(checkbox) {
+      const mode = document.getElementById('exp-filter-mode').value;
+      const options = mode === 'Monthly' ? this.months : this.quarters;
+      this.selectedPeriods = checkbox.checked ? [...options] : [options[0]]; 
+      this.updateMultiSelectLabel();
+      this.renderCheckboxes();
+      this.applyGlobalFilters();
+    },
+
+    togglePeriod: function(checkbox) {
+      if (checkbox.checked) { this.selectedPeriods.push(checkbox.value); } 
+      else { this.selectedPeriods = this.selectedPeriods.filter(v => v !== checkbox.value); }
+      
+      const mode = document.getElementById('exp-filter-mode').value;
+      const options = mode === 'Monthly' ? this.months : this.quarters;
+      this.selectedPeriods.sort((a, b) => options.indexOf(a) - options.indexOf(b));
+      if (this.selectedPeriods.length === 0) this.selectedPeriods = [options[0]]; 
+      
+      this.updateMultiSelectLabel();
+      this.renderCheckboxes();
+      this.applyGlobalFilters(); 
+    },
+
+    updateMultiSelectLabel: function() {
+      const labelEl = document.getElementById('exp-multi-select-label');
+      if (!labelEl) return;
+      const mode = document.getElementById('exp-filter-mode').value;
+      const maxLen = mode === 'Monthly' ? 12 : 4;
+      if (this.selectedPeriods.length === maxLen) { labelEl.innerText = "All Selected"; } 
+      else if (this.selectedPeriods.length <= 3) { labelEl.innerText = this.selectedPeriods.join(', '); } 
+      else { labelEl.innerText = `${this.selectedPeriods.slice(0, 3).join(', ')} +${this.selectedPeriods.length - 3}`; }
+    },
+
+    applyGlobalFilters: function() {
+      const year = document.getElementById('exp-filter-year')?.value;
+      const mode = document.getElementById('exp-filter-mode')?.value;
+      if (!year || !mode) return;
+      
+      this.filteredData = (this.allData || []).filter(exp => {
+        if(!exp.date) return false;
+        
+        const d = new Date(this.parseToISODate(exp.date));
+        if(isNaN(d)) return false;
+        
+        if (d.getFullYear().toString() !== year) return false;
+        
+        if (mode === 'Monthly') {
+           return this.selectedPeriods.includes(this.months[d.getMonth()]);
+        } else {
+           return this.selectedPeriods.includes(this.quarters[Math.floor(d.getMonth() / 3)]);
+        }
+      });
+
+      this.calculateKPIs();
+      this.renderCharts();
+      this.filterTable(); 
+    },
+
+    calculateKPIs: function() {
+      let total = 0;
+      let catSums = {};
+      
+      (this.filteredData || []).forEach(exp => {
+        const amt = this.parseAmount(exp.amount);
+        total += amt;
+        catSums[exp.categoryId] = (catSums[exp.categoryId] || 0) + amt;
+      });
+
+      document.getElementById('kpi-total-exp').innerText = `₹${total.toLocaleString('en-IN')}`;
+      
+      let topCat = null; let topAmt = 0;
+      for (const [catId, sum] of Object.entries(catSums)) {
+         if(sum > topAmt) { topAmt = sum; topCat = catId; }
+      }
+      document.getElementById('kpi-top-cat').innerText = topCat ? this.getName(topCat) : '--';
+      document.getElementById('kpi-top-cat-amt').innerText = `₹${topAmt.toLocaleString('en-IN')}`;
+
+      // Dynamic Title and Average Calculation
+      const mode = document.getElementById('exp-filter-mode')?.value || 'Monthly';
+      const avgTitle = document.getElementById('kpi-avg-title');
+      if (avgTitle) {
+          avgTitle.innerText = mode === 'Monthly' ? 'MONTHLY AVG' : 'QUARTERLY AVG';
+      }
+
+      const periodCount = this.selectedPeriods.length || 1;
+      const avg = total / periodCount;
+      document.getElementById('kpi-avg-exp').innerText = `₹${Math.round(avg).toLocaleString('en-IN')}`;
+
+      let staffTotal = 0;
+      if (this.dropdowns.expenseCats) {
+         const staffCat = this.dropdowns.expenseCats.find(c => c.name.toLowerCase().includes('staff') || c.name.toLowerCase().includes('trainer') || c.name.toLowerCase().includes('salary'));
+         if(staffCat && catSums[staffCat.id]) { staffTotal = catSums[staffCat.id]; }
+      }
+      document.getElementById('kpi-staff-exp').innerText = `₹${staffTotal.toLocaleString('en-IN')}`;
+    },
+
+    renderCharts: function() {
+      const mode = document.getElementById('exp-filter-mode').value;
+      const isMonthly = mode === 'Monthly';
+      const chartType = document.getElementById('chart-type-toggle').value; // Read dynamic chart type
+      
+      const trendDataMap = {};
+      this.selectedPeriods.forEach(p => trendDataMap[p] = 0);
+
+      let catSums = {};
+      let miscSums = {}; 
+
+      (this.filteredData || []).forEach(exp => {
+         const amt = this.parseAmount(exp.amount);
+         const d = new Date(this.parseToISODate(exp.date));
+         if(!isNaN(d)) {
+             const expMonthIdx = d.getMonth();
+             const key = isMonthly ? this.months[expMonthIdx] : this.quarters[Math.floor(expMonthIdx / 3)];
+             if(trendDataMap[key] !== undefined) trendDataMap[key] += amt;
+         }
+
+         const cName = this.getName(exp.categoryId);
+         catSums[cName] = (catSums[cName] || 0) + amt;
+
+         if (cName.toLowerCase().includes('misc') || cName.toLowerCase().includes('other')) {
+             const label = exp.whatMisc ? exp.whatMisc : 'Unspecified';
+             miscSums[label] = (miscSums[label] || 0) + amt;
+         }
+      });
+
+      // 1. Trend Chart (Dynamic Type + Data Points)
+      const trendOpts = {
+        series: [{ name: 'Expenses', data: Object.values(trendDataMap) }],
+        chart: { type: chartType, height: '100%', toolbar: { show: false } },
+        plotOptions: { bar: { borderRadius: 4, columnWidth: '40%' } },
+        stroke: { curve: 'smooth', width: chartType === 'bar' ? 0 : 3 },
+        markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
+        dataLabels: { 
+          enabled: true, 
+          formatter: function (val) { return val > 0 ? "₹" + (val > 999 ? (val/1000).toFixed(1)+'k' : val) : ""; },
+          style: { fontSize: '9px', colors: ['#475569'] },
+          background: { enabled: false },
+          offsetY: chartType === 'bar' ? -10 : -20
+        },
+        xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => val > 0 ? '₹' + (val / 1000) + 'k' : '0', style: { fontSize: '9px', colors: '#64748b' } } },
+        colors: ['#3b82f6'],
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+      };
+
+      document.getElementById("chart-expense-trend").innerHTML = "";
+      if(this.chartInstances.trend) this.chartInstances.trend.destroy();
+      this.chartInstances.trend = new ApexCharts(document.querySelector("#chart-expense-trend"), trendOpts);
+      this.chartInstances.trend.render();
+
+      // 2. Category Breakdown Chart (Data Points Enabled)
+      const bLabels = Object.keys(catSums);
+      const bSeries = Object.values(catSums);
+      const bColors = bLabels.map((l, i) => this.getColor(i));
+      const totalAmt = bSeries.reduce((a,b)=>a+b, 0);
+
+      const breakOpts = {
+        series: bSeries,
+        labels: bLabels,
+        chart: { type: 'donut', height: '100%' },
+        colors: bColors.length ? bColors : ['#e2e8f0'],
+        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => `₹${totalAmt.toLocaleString('en-IN')}` } } } } },
+        legend: { position: 'right', fontSize: '10px', offsetY: 20 },
+        dataLabels: { enabled: true, formatter: function (val, opts) { return "₹" + opts.w.globals.seriesTotals[opts.seriesIndex].toLocaleString('en-IN'); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } }
+      };
+
+      document.getElementById("chart-expense-breakdown").innerHTML = "";
+      if(this.chartInstances.breakdown) this.chartInstances.breakdown.destroy();
+      this.chartInstances.breakdown = new ApexCharts(document.querySelector("#chart-expense-breakdown"), breakOpts);
+      this.chartInstances.breakdown.render();
+
+      // 3. Smart Misc Breakdown (Collapses if Empty)
+      const mLabels = Object.keys(miscSums);
+      const mSeries = Object.values(miscSums);
+      const mColors = mLabels.map((l, i) => this.getColor(i + 3)); 
+
+      const miscWrapper = document.getElementById("chart-misc-wrapper");
+      
+      if (mSeries.length === 0) {
+          miscWrapper.classList.add('hidden'); // Collapse entire card
+      } else {
+          miscWrapper.classList.remove('hidden'); // Show card
+          const miscOpts = {
+            series: mSeries,
+            labels: mLabels,
+            chart: { type: 'pie', height: '100%' },
+            colors: mColors,
+            legend: { position: 'bottom', fontSize: '10px' },
+            dataLabels: { enabled: true, formatter: function (val, opts) { return "₹" + opts.w.globals.seriesTotals[opts.seriesIndex].toLocaleString('en-IN'); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } }
+          };
+          
+          document.getElementById("chart-expense-misc").innerHTML = "";
+          if(this.chartInstances.misc) this.chartInstances.misc.destroy();
+          this.chartInstances.misc = new ApexCharts(document.querySelector("#chart-expense-misc"), miscOpts);
+          this.chartInstances.misc.render();
+      }
+    },
+
+    sortTable: function(column) {
+      if (this.sortColumn === column) {
+        this.sortAsc = !this.sortAsc;
+      } else {
+        this.sortColumn = column;
+        this.sortAsc = true;
+      }
+      this.updateSortIcons();
+      this.renderTable();
+    },
+
+    updateSortIcons: function() {
+      ['date', 'category', 'amount'].forEach(col => {
+        const icon = document.getElementById(`sort-icon-${col}`);
+        if(icon) {
+          if (this.sortColumn === col) {
+            icon.classList.remove('text-transparent');
+            icon.classList.add('text-slate-500');
+            icon.innerText = this.sortAsc ? 'arrow_upward' : 'arrow_downward';
+          } else {
+            icon.classList.remove('text-slate-500');
+            icon.classList.add('text-transparent');
+          }
+        }
+      });
+    },
+
+    searchTable: function(query) { this.tableSearchQuery = query.toLowerCase().trim(); this.filterTable(); },
+
+    filterTable: function() {
+      const q = this.tableSearchQuery || '';
+      const cat = document.getElementById('filter-table-cat')?.value || 'All';
+
+      this.tableData = (this.filteredData || []).filter(exp => {
+         const matchCat = cat === 'All' || exp.categoryId === cat;
+         const matchSearch = !q || 
+                             (exp.description && exp.description.toLowerCase().includes(q)) ||
+                             (exp.amount && exp.amount.toString().includes(q)) ||
+                             (exp.whatMisc && exp.whatMisc.toLowerCase().includes(q));
+         return matchCat && matchSearch;
+      });
+
+      this.renderTable();
+    },
+
+    renderTable: function() {
+      const tBody = document.getElementById('desktop-expense-body');
+      const mContainer = document.getElementById('mobile-expense-container');
+      if (!tBody || !mContainer) return;
+
+      this.tableData.sort((a, b) => {
+         let valA, valB;
+         if (this.sortColumn === 'date') {
+            valA = new Date(this.parseToISODate(a.date)).getTime();
+            valB = new Date(this.parseToISODate(b.date)).getTime();
+         } else if (this.sortColumn === 'amount') {
+            valA = this.parseAmount(a.amount);
+            valB = this.parseAmount(b.amount);
+         } else if (this.sortColumn === 'category') {
+            valA = this.getName(a.categoryId).toLowerCase();
+            valB = this.getName(b.categoryId).toLowerCase();
+         }
+         
+         if (valA < valB) return this.sortAsc ? -1 : 1;
+         if (valA > valB) return this.sortAsc ? 1 : -1;
+         return 0;
+      });
+
+      if (this.tableData.length === 0) {
+        tBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 px-4 text-slate-500 text-xs font-medium">No expenses match your criteria.</td></tr>`;
+        mContainer.innerHTML = `<div class="bg-white p-6 text-center text-xs text-slate-500 rounded-xl border border-slate-200">No records found.</div>`;
+        return;
+      }
+
+      let dHtml = ''; let mHtml = '';
+
+      this.tableData.forEach((exp, index) => {
+        let cName = this.getName(exp.categoryId);
+        const cIdx = this.dropdowns.expenseCats ? this.dropdowns.expenseCats.findIndex(c => c.id === exp.categoryId) : index;
+        const color = this.getColor(cIdx > -1 ? cIdx : index);
+        
+        // Append Misc info for desktop table
+        if ((cName.toLowerCase().includes('misc') || cName.toLowerCase().includes('other')) && exp.whatMisc) {
+            cName += ` (${exp.whatMisc})`;
+        }
+
+        const dateStr = this.formatDateDDMMMYYYY(exp.date) || 'N/A';
+        const cleanAmt = this.parseAmount(exp.amount);
+        const amtStr = cleanAmt > 0 ? `₹${cleanAmt.toLocaleString('en-IN')}` : '₹0';
+        
+        const creator = exp.createdBy ? exp.createdBy.split('@')[0] : 'Admin';
+        const expJson = JSON.stringify(exp).replace(/"/g, '&quot;');
+        const safeDesc = exp.description || '--';
+        let rcptHtml = exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1"><span class="material-symbols-rounded text-[12px] align-middle">link</span></a>` : '';
+
+        dHtml += `
+          <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+            <td class="px-4 py-3 font-medium text-slate-600">${dateStr}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color}"></span><span class="font-semibold text-slate-700 truncate max-w-[140px]">${cName}</span></div>
+            </td>
+            <td class="px-4 py-3 text-slate-800">${safeDesc}</td>
+            <td class="px-4 py-3 font-bold text-slate-800">${amtStr}${rcptHtml}</td>
+            <td class="px-4 py-3 text-slate-500 capitalize">${creator}</td>
+            <td class="px-4 py-3 text-right">
+              <button onclick="ExpensesApp.openModal(${expJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded"><span class="material-symbols-rounded text-[16px]">edit</span></button>
+              <button onclick="ExpensesApp.openDeleteModal('${exp.expenseId}', '${safeDesc}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[16px]">delete</span></button>
+            </td>
+          </tr>
+        `;
+
+        // Mobile Card Implementation (Optimized inline description)
+        mHtml += `
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 relative">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-start gap-2">
+                <span class="w-2 h-2 rounded-full shrink-0 mt-1.5" style="background-color: ${color}"></span>
+                <div>
+                  <span class="text-sm font-bold text-slate-700 leading-tight">${cName} ${exp.description ? `<span class="font-medium text-slate-500 text-xs block sm:inline">(${exp.description})</span>` : ''}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button onclick="ExpensesApp.openModal(${expJson})" class="text-slate-400 hover:text-brand-primary"><span class="material-symbols-rounded text-[18px]">edit</span></button>
+                <button onclick="ExpensesApp.openDeleteModal('${exp.expenseId}', '${safeDesc}')" class="text-slate-400 hover:text-red-500"><span class="material-symbols-rounded text-[18px]">delete</span></button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between mt-1 pt-2 border-t border-slate-100">
+              <span class="text-xs font-medium text-slate-500">${dateStr}</span>
+              <span class="text-sm font-bold text-slate-800">${amtStr}${rcptHtml}</span>
+            </div>
+          </div>
+        `;
+      });
+
+      tBody.innerHTML = dHtml;
+      mContainer.innerHTML = mHtml;
+    },
+
+    checkMiscCategory: function() {
+       const select = document.getElementById('exp-category');
+       const name = select.options[select.selectedIndex]?.text.toLowerCase() || '';
+       const miscContainer = document.getElementById('misc-field-container');
+       const miscInput = document.getElementById('exp-what-misc');
+       
+       if (name.includes('misc') || name.includes('other')) {
+          miscContainer.classList.remove('hidden');
+          miscInput.setAttribute('required', 'true');
+       } else {
+          miscContainer.classList.add('hidden');
+          miscInput.removeAttribute('required');
+       }
+    },
+
+    openModal: function(exp = null) {
+      document.getElementById('exp-modal-title').innerText = exp ? 'Edit Expense' : 'Add Expense';
+      document.getElementById('exp-id').value = exp ? exp.expenseId : '';
+      
+      this.setDatePicker('exp-date', exp && exp.date ? exp.date : new Date());
+      
+      document.getElementById('exp-category').value = exp ? exp.categoryId : '';
+      document.getElementById('exp-amount').value = exp ? this.parseAmount(exp.amount) : '';
+      document.getElementById('exp-desc').value = exp ? exp.description : '';
+      document.getElementById('exp-receipt').value = exp && exp.receiptUrl ? exp.receiptUrl : '';
+      document.getElementById('exp-notes').value = exp && exp.notes ? exp.notes : '';
+      document.getElementById('exp-what-misc').value = exp && exp.whatMisc ? exp.whatMisc : '';
+
+      this.checkMiscCategory();
+
+      document.getElementById('expense-modal').classList.remove('opacity-0', 'pointer-events-none');
+      document.getElementById('expense-modal-content').classList.remove('translate-y-full', 'md:translate-y-10', 'opacity-0');
+    },
+
+    closeModal: function() {
+      document.getElementById('expense-modal').classList.add('opacity-0', 'pointer-events-none');
+      document.getElementById('expense-modal-content').classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
+      document.getElementById('expense-form').reset();
+      document.getElementById('misc-field-container').classList.add('hidden');
+    },
+
+    saveExpense: function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-expense');
+      btn.innerHTML = `<span class="material-symbols-rounded animate-spin text-[18px] mr-2">progress_activity</span> Saving...`;
+      btn.disabled = true;
+
+      const payload = {
+        expenseId: document.getElementById('exp-id').value,
+        categoryId: document.getElementById('exp-category').value,
+        whatMisc: document.getElementById('exp-what-misc').value,
+        date: this.formatDateDDMMMYYYY(document.getElementById('exp-date').value),
+        amount: Number(document.getElementById('exp-amount').value),
+        description: document.getElementById('exp-desc').value || '', 
+        receiptUrl: document.getElementById('exp-receipt').value || '', 
+        notes: document.getElementById('exp-notes').value
+      };
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          btn.innerHTML = `Save Expense`; btn.disabled = false;
+          if(res.success) {
+            Toast.success(res.message);
+            this.closeModal();
+            this.showShimmer();
+            this.fetchData();
+          } else { Toast.error(res.error); }
+        })
+        .api_saveExpense(payload);
+    },
+
+    openDeleteModal: function(id, desc) {
+      this.expenseToDelete = id;
+      document.getElementById('delete-exp-desc').innerText = desc || 'this expense';
+      document.getElementById('delete-exp-modal').classList.remove('opacity-0', 'pointer-events-none');
+      document.getElementById('delete-exp-content').classList.remove('scale-95', 'opacity-0');
+    },
+
+    closeDeleteModal: function() {
+      this.expenseToDelete = null;
+      document.getElementById('delete-exp-modal').classList.add('opacity-0', 'pointer-events-none');
+      document.getElementById('delete-exp-content').classList.add('scale-95', 'opacity-0');
+    },
+
+    confirmDelete: function() {
+      if(!this.expenseToDelete) return;
+      google.script.run
+        .withSuccessHandler((res) => {
+          this.closeDeleteModal();
+          if(res.success) {
+            Toast.success(res.message);
+            this.showShimmer();
+            this.fetchData();
+          } else { Toast.error(res.error); }
+        })
+        .api_deleteExpense(this.expenseToDelete);
+    }
+  };
+
+  ExpensesApp.init();
+</script>
