@@ -370,5 +370,49 @@ describe('Staff Module - Action Needed & Salary Cycle Calculations', () => {
       StaffApp.openModal({ staffId: 'STF-2', fullName: 'Jane', notes: '' });
       expect(mockClassList.add).toHaveBeenCalledWith('hidden');
     });
+
+    test('adjusted amount payment for joining month marks cycle paid without duplicate pending cycle', () => {
+      const stf = {
+        staffId: 'STF-MAY20-ADJ',
+        fullName: 'Trainer Alex',
+        salary: 30000,
+        joinDate: '20-May-2026',
+        status: 'Active'
+      };
+
+      // Initially 5 pending cycles
+      const initCycles = StaffApp.getStaffCycles(stf, []);
+      expect(initCycles.totalCycles).toBeGreaterThanOrEqual(5);
+      expect(initCycles.pendingCycles.length).toBeGreaterThanOrEqual(5);
+      expect(initCycles.pendingCycles[0].monthLabel).toBe('May-26');
+
+      // User pays for May with adjusted amount (e.g. 11613 for 12 days) and creditType 'CRD-1'
+      const paymentMay = [
+        {
+          paymentId: 'SAL-ADJ-01',
+          staffId: 'STF-MAY20-ADJ',
+          amount: 11613,
+          startDate: '20-May-2026',
+          endDate: '31-May-2026',
+          paidDate: '27-Sep-2026',
+          creditType: 'CRD-1', // Real Google Sheet ID
+          paymentStatus: 'Completed'
+        }
+      ];
+
+      const afterCycles = StaffApp.getStaffCycles(stf, paymentMay);
+      // May must be marked paid!
+      expect(afterCycles.paidCycles.length).toBe(1);
+      expect(afterCycles.paidCycles[0].monthLabel).toBe('May-26');
+      expect(afterCycles.paidCycles[0].payment.paymentId).toBe('SAL-ADJ-01');
+
+      // Pending cycles must NOT include May-26!
+      const pendingMonths = afterCycles.pendingCycles.map(c => c.monthLabel);
+      expect(pendingMonths).not.toContain('May-26');
+      expect(pendingMonths).toEqual(expect.arrayContaining(['Jun-26', 'Jul-26', 'Aug-26', 'Sep-26']));
+
+      // Total pending cycles should be exactly 4 (Jun, Jul, Aug, Sep)
+      expect(afterCycles.pendingCycles.length).toBe(4);
+    });
   });
 });

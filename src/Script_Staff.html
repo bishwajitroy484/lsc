@@ -397,10 +397,10 @@
       const allPayments = staffPayments || this.allPayments || [];
       const payments = allPayments.filter(p => {
         if (!p || String(p.staffId || '').trim() !== String(stf.staffId || '').trim()) return false;
-        const stat = String(p.paymentStatus || '').toLowerCase();
-        if (stat.includes('fail') || stat.includes('pending')) return false;
-        const ct = String(p.creditType || '').toLowerCase();
-        if (ct && !ct.includes('sal') && !ct.includes('ct-1')) return false;
+        const statName = (this.getName('paymentstatus', p.paymentStatus) || p.paymentStatus || '').toLowerCase();
+        if (statName.includes('fail') || statName.includes('pending')) return false;
+        const ctName = (this.getName('credittype', p.creditType) || p.creditType || '').toLowerCase();
+        if (ctName.includes('bonus') || ctName.includes('advance') || ctName.includes('incentive') || ctName.includes('reimbursement')) return false;
         return true;
       });
 
@@ -412,7 +412,7 @@
       });
 
       const matchedTxnIds = new Set();
-      // 1. Match by exact/near date coverage first
+      // 1. Match by exact/near date coverage first (< 5 days)
       cycles.forEach(cyc => {
         const match = payments.find(p => {
           if (matchedTxnIds.has(p.paymentId)) return false;
@@ -435,7 +435,29 @@
         }
       });
 
-      // 2. Match remaining chronologically
+      // 2. Match by cycle month & year (payment startDate OR endDate matches cycle month & year)
+      cycles.forEach(cyc => {
+        if (!cyc.isPaid) {
+          const match = payments.find(p => {
+            if (matchedTxnIds.has(p.paymentId)) return false;
+            const targetDate = p.startDate ? this.parseDateRobust(p.startDate) : (p.endDate ? this.parseDateRobust(p.endDate) : (p.paidDate ? this.parseDateRobust(p.paidDate) : null));
+            if (targetDate && !isNaN(targetDate)) {
+              if (targetDate.getUTCFullYear() === cyc.startDate.getUTCFullYear() && targetDate.getUTCMonth() === cyc.startDate.getUTCMonth()) {
+                return true;
+              }
+            }
+            return false;
+          });
+
+          if (match) {
+            cyc.isPaid = true;
+            cyc.payment = match;
+            matchedTxnIds.add(match.paymentId);
+          }
+        }
+      });
+
+      // 3. Match remaining chronologically
       let pIdx = 0;
       cycles.forEach(cyc => {
         if (!cyc.isPaid) {
@@ -1192,16 +1214,16 @@
        const name = select.options[select.selectedIndex]?.text.toLowerCase() || '';
        const covContainer = document.getElementById('txn-coverage-container');
        
-       if (name.includes('salary')) {
-          covContainer.classList.remove('hidden');
-          document.getElementById('txn-startDate').required = true;
-          document.getElementById('txn-endDate').required = true;
-       } else {
+       if (name.includes('bonus') || name.includes('reimbursement')) {
           covContainer.classList.add('hidden');
           document.getElementById('txn-startDate').required = false;
           document.getElementById('txn-endDate').required = false;
           this.setDatePicker('txn-startDate', '');
           this.setDatePicker('txn-endDate', '');
+       } else {
+          covContainer.classList.remove('hidden');
+          document.getElementById('txn-startDate').required = true;
+          document.getElementById('txn-endDate').required = true;
        }
     },
 
@@ -1295,10 +1317,11 @@
         notes: document.getElementById('txn-notes')?.value
       };
 
-      const cName = this.getName('credittype', payload.creditType).toLowerCase();
-      if (cName.includes('salary')) {
-         payload.startDate = this.formatDateDDMMMYYYY(document.getElementById('txn-startDate')?.value);
-         payload.endDate = this.formatDateDDMMMYYYY(document.getElementById('txn-endDate')?.value);
+      const startVal = document.getElementById('txn-startDate')?.value;
+      const endVal = document.getElementById('txn-endDate')?.value;
+      if (startVal && endVal) {
+         payload.startDate = this.formatDateDDMMMYYYY(startVal);
+         payload.endDate = this.formatDateDDMMMYYYY(endVal);
       } else {
          payload.startDate = '';
          payload.endDate = '';
