@@ -450,7 +450,7 @@
       const rawAmt = member.membershipAmount ? member.membershipAmount.toString().replace(/[^0-9.-]+/g,"") : '';
       document.getElementById('det-plan').innerText = this.getName('membership', member.membershipId);
       document.getElementById('det-batch').innerText = this.getName('batch', member.batchId);
-      document.getElementById('det-amount').innerText = rawAmt ? `₹${Number(rawAmt).toLocaleString('en-IN')}` : '--';
+      document.getElementById('det-amount').innerText = rawAmt ? AppUtils.formatCurrency(rawAmt) : '--';
 
       document.getElementById('det-due-date').innerHTML = '<div class="h-3 w-20 shimmer rounded inline-block"></div>';
       
@@ -716,7 +716,7 @@
                   <div class="text-[9px] ${labelColor} font-bold mt-0.5">${p.cycleLabel}</div>
                   <div class="text-[9px] text-slate-500 mt-0.5">${vStartFmt} to ${vEndFmt}</div>
                 </td>
-                <td class="px-4 py-3"><div class="font-bold text-slate-800">₹${Number(pAmt).toLocaleString('en-IN')}</div><div class="text-[9px] text-slate-500">${p.paymentMode}</div></td>
+                <td class="px-4 py-3"><div class="font-bold text-slate-800">${AppUtils.formatCurrency(pAmt)}</div><div class="text-[9px] text-slate-500">${p.paymentMode}</div></td>
                 <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${badgeClass}">${p.paymentStatus}</span></td>
                 <td class="px-4 py-3 text-right">
                   <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-auto px-3 py-1.5 text-brand-primary border border-blue-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm inline-flex items-center justify-center transition-colors">Pay Now</button>
@@ -745,7 +745,7 @@
                   <div class="font-bold text-slate-800">${this.formatDateDDMMMYYYY(p.paidDate)}</div>
                   ${coverageHtml}
                 </td>
-                <td class="px-4 py-3"><div class="font-bold text-slate-800">₹${Number(pAmt).toLocaleString('en-IN')}${rcptHtml}</div><div class="text-[9px] text-slate-500">${modeName}</div></td>
+                <td class="px-4 py-3"><div class="font-bold text-slate-800">${AppUtils.formatCurrency(pAmt)}${rcptHtml}</div><div class="text-[9px] text-slate-500">${modeName}</div></td>
                 <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${statColor}">${pStatusName}</span></td>
                 <td class="px-4 py-3 text-right">
                   <div class="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
@@ -771,14 +771,14 @@
         return sum + Number(String(p.amount || 0).replace(/[^0-9.-]+/g,""));
       }, 0);
       
-      document.getElementById('det-ltv-all').innerText = `₹${allTimeAmount.toLocaleString('en-IN')}`;
+      document.getElementById('det-ltv-all').innerText = AppUtils.formatCurrency(allTimeAmount);
 
       const yearMetrics = this.chartMetrics[selectedYear] || { monthly: new Array(12).fill(0), quarterly: [0, 0, 0, 0], totalEarned: 0 };
       
       let categories = [];
       let chartData = [];
 
-      const dlOptions = { enabled: true, formatter: (val) => val ? (val/1000).toFixed(1).replace('.0','') + 'k' : '', offsetY: -6, style: { fontSize: '9px', colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 2, padding: 2, opacity: 0.9, borderWidth: 0 } };
+      const dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCurrency(val) : '', offsetY: -6, style: { fontSize: '9px', colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 2, padding: 2, opacity: 0.9, borderWidth: 0 } };
 
       if (viewMode === 'quarterly') {
           categories = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
@@ -797,7 +797,7 @@
         return (sd.getFullYear() === selectedYear || ed.getFullYear() === selectedYear);
       });
 
-      document.getElementById('det-ltv-year').innerText = `₹${Number(yearMetrics.totalEarned.toFixed(2)).toLocaleString('en-IN')}`;
+      document.getElementById('det-ltv-year').innerText = AppUtils.formatCurrency(yearMetrics.totalEarned);
       document.getElementById('det-ltv-count').innerText = yearPayments.length;
 
       const options = {
@@ -810,7 +810,8 @@
             labels: { style: { fontSize: '9px', colors: '#64748b' } }, 
             axisBorder: { show: false }, axisTicks: { show: false } 
         },
-        yaxis: { labels: { formatter: (val) => val > 0 ? '₹' + (val / 1000) + 'k' : '0', style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#10b981'], 
         legend: { position: 'top', horizontalAlign: 'right', fontSize: '10px', markers: { radius: 10 } },
         grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 0, right: 0, bottom: 0, left: 10 } }

@@ -100,7 +100,7 @@
               </div>
             </div>
             <div class="text-right flex flex-col items-end gap-1">
-              <span class="text-xs font-bold text-slate-800">₹ ${tx.amount.toLocaleString('en-IN')}</span>
+              <span class="text-xs font-bold text-slate-800">${AppUtils.formatCurrency(tx.amount)}</span>
               <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${sStyle}">${tx.status}</span>
               <span class="text-[9px] text-slate-400">${tx.time}</span>
             </div>

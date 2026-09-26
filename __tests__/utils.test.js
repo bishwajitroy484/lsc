@@ -139,9 +139,19 @@ describe('Client Shared Utilities (AppUtils in Global_State.html)', () => {
     }
   });
 
-  test('formatCurrency correctly formats values as INR', () => {
-    expect(AppUtils.formatCurrency(1500)).toBe('₹1,500');
+  test('formatCurrency correctly formats values as compact INR (e.g. ₹1, ₹1k, ₹1.5k, ₹1M)', () => {
     expect(AppUtils.formatCurrency(0)).toBe('₹0');
+    expect(AppUtils.formatCurrency(1)).toBe('₹1');
+    expect(AppUtils.formatCurrency(500)).toBe('₹500');
+    expect(AppUtils.formatCurrency(1000)).toBe('₹1k');
+    expect(AppUtils.formatCurrency(1500)).toBe('₹1.5k');
+    expect(AppUtils.formatCurrency(1540)).toBe('₹1.5k');
+    expect(AppUtils.formatCurrency(1560)).toBe('₹1.6k');
+    expect(AppUtils.formatCurrency(25000)).toBe('₹25k');
+    expect(AppUtils.formatCurrency('₹25,400')).toBe('₹25.4k');
+    expect(AppUtils.formatCurrency(1000000)).toBe('₹1M');
+    expect(AppUtils.formatCurrency(1200000)).toBe('₹1.2M');
+    expect(AppUtils.formatCurrency(-5000)).toBe('-₹5k');
     expect(AppUtils.formatCurrency(null)).toBe('₹0');
   });
 

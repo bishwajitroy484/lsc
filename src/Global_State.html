@@ -1,7 +1,33 @@
 <script>
   const AppUtils = {
     formatCurrency: function(val) {
-      return '₹' + Number(val || 0).toLocaleString('en-IN');
+      if (val === null || val === undefined || val === '') return '₹0';
+      const clean = typeof val === 'number' ? val : Number(String(val).replace(/[^0-9.-]+/g, ''));
+      if (isNaN(clean)) return '₹0';
+      const sign = clean < 0 ? '-' : '';
+      const abs = Math.abs(clean);
+
+      let formatted;
+      let suffix = '';
+
+      if (abs >= 1e9) {
+        formatted = (abs / 1e9).toFixed(1);
+        suffix = 'B';
+      } else if (abs >= 1e6) {
+        formatted = (abs / 1e6).toFixed(1);
+        suffix = 'M';
+      } else if (abs >= 1e3) {
+        formatted = (abs / 1e3).toFixed(1);
+        suffix = 'k';
+      } else {
+        formatted = Number.isInteger(abs) ? abs.toString() : abs.toFixed(1);
+      }
+
+      if (formatted.endsWith('.0')) {
+        formatted = formatted.slice(0, -2);
+      }
+
+      return `${sign}₹${formatted}${suffix}`;
     },
 
     parseAmount: function(val) {
