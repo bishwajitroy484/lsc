@@ -300,10 +300,42 @@ describe('Staff Module - Action Needed & Salary Cycle Calculations', () => {
       expect(res.paidCycles.length).toBe(3);
       expect(res.pendingCycles.length).toBeGreaterThanOrEqual(2);
 
-      // Verify the 2 pending cycles are August and September
+      // Verify the 2 pending cycles are August and September in MMM-YY format
       const pendingLabels = res.pendingCycles.map(c => c.monthLabel);
-      expect(pendingLabels).toContain('Aug 2026');
-      expect(pendingLabels).toContain('Sep 2026');
+      expect(pendingLabels).toContain('Aug-26');
+      expect(pendingLabels).toContain('Sep-26');
+
+      // Verify calendar month cycle structure (initial partial month, then 1st to last of month)
+      const c1 = res.allCycles[0];
+      expect(c1.monthLabel).toBe('May-26');
+      expect(c1.startDate.getUTCDate()).toBe(20);
+      expect(c1.startDate.getUTCMonth()).toBe(4); // May
+      expect(c1.endDate.getUTCDate()).toBe(31);
+      expect(c1.endDate.getUTCMonth()).toBe(4); // May
+
+      const c2 = res.allCycles[1];
+      expect(c2.monthLabel).toBe('Jun-26');
+      expect(c2.startDate.getUTCDate()).toBe(1);
+      expect(c2.startDate.getUTCMonth()).toBe(5); // June
+      expect(c2.endDate.getUTCDate()).toBe(30);
+      expect(c2.endDate.getUTCMonth()).toBe(5); // June
+
+      const c3 = res.allCycles[2];
+      expect(c3.monthLabel).toBe('Jul-26');
+      expect(c3.startDate.getUTCDate()).toBe(1);
+      expect(c3.endDate.getUTCDate()).toBe(31);
+    });
+
+    test('getCycleMonthLabel always derives month name from cycle end date in MMM-YY format', () => {
+      // From endDate
+      expect(StaffApp.getCycleMonthLabel({ endDate: '31-May-2026', paidDate: '20-Jun-2026' })).toBe('May-26');
+      expect(StaffApp.getCycleMonthLabel({ endDate: '30-Jun-2026', paidDate: '05-Jul-2026' })).toBe('Jun-26');
+      
+      // From virtualEndDate
+      expect(StaffApp.getCycleMonthLabel({ virtualEndDate: '2026-08-31T00:00:00.000Z' })).toBe('Aug-26');
+      
+      // From paidDate fallback (never raw date string)
+      expect(StaffApp.getCycleMonthLabel({ paidDate: '15-Sep-2026' })).toBe('Sep-26');
     });
 
     test('parseDateRobust correctly parses diverse date formats', () => {

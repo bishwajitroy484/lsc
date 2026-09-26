@@ -352,8 +352,9 @@
       const today = new Date();
       let cutoff = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
       
+      let exit = null;
       if (stf.exitDate) {
-        const exit = this.parseDateRobust(stf.exitDate);
+        exit = this.parseDateRobust(stf.exitDate);
         if (exit && exit < cutoff) cutoff = exit;
       }
 
@@ -363,11 +364,20 @@
       let iter = 0;
 
       while (curStart < cutoff && iter < 120) {
-        let curEnd = new Date(curStart);
-        curEnd.setUTCMonth(curEnd.getUTCMonth() + 1);
-        curEnd.setUTCDate(curEnd.getUTCDate() - 1);
+        const y = curStart.getUTCFullYear();
+        const m = curStart.getUTCMonth();
 
-        const mLabel = monthNames[curStart.getUTCMonth()] + ' ' + curStart.getUTCFullYear();
+        // Cycle ends on the last day of month m
+        let curEnd = new Date(Date.UTC(y, m + 1, 0));
+        if (exit && exit < curEnd) {
+          curEnd = new Date(exit);
+        }
+
+        // Cycle month label is ALWAYS derived from cycle end date in MMM-YY format
+        const endM = curEnd.getUTCMonth();
+        const endY = String(curEnd.getUTCFullYear()).slice(-2);
+        const mLabel = `${monthNames[endM]}-${endY}`;
+
         cycles.push({
           cycleIndex: iter + 1,
           monthLabel: mLabel,
@@ -378,8 +388,8 @@
           payment: null
         });
 
-        curStart = new Date(curEnd);
-        curStart.setUTCDate(curStart.getUTCDate() + 1);
+        // From next month onwards, cycle starts strictly on the 1st of the month
+        curStart = new Date(Date.UTC(y, m + 1, 1));
         iter++;
       }
 
@@ -402,7 +412,7 @@
       });
 
       const matchedTxnIds = new Set();
-      // Match by exact/near date coverage first
+      // 1. Match by exact/near date coverage first
       cycles.forEach(cyc => {
         const match = payments.find(p => {
           if (matchedTxnIds.has(p.paymentId)) return false;
@@ -425,7 +435,7 @@
         }
       });
 
-      // Match remaining chronologically
+      // 2. Match remaining chronologically
       let pIdx = 0;
       cycles.forEach(cyc => {
         if (!cyc.isPaid) {
@@ -457,6 +467,18 @@
         paidCycles: paidCycles,
         totalCycles: cycles.length
       };
+    },
+
+    getCycleMonthLabel: function(item) {
+      if (!item) return '--';
+      const dateStr = item.endDate || item.virtualEndDate || item.startDate || item.virtualStartDate || item.paidDate;
+      if (!dateStr) return item.monthLabel || '--';
+      const d = this.parseDateRobust(dateStr);
+      if (!d) return item.monthLabel || '--';
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const m = monthNames[d.getUTCMonth()];
+      const y = String(d.getUTCFullYear()).slice(-2);
+      return `${m}-${y}`;
     },
 
     getStaffPendingCycles: function(stf, staffPayments = null) {
@@ -1018,9 +1040,11 @@
                   }
 
                   const matchedCyc = cycleInfo.allCycles.find(c => c.payment && c.payment.paymentId === r.paymentId);
-                  const cycleLabel = matchedCyc ? matchedCyc.monthLabel : this.formatDateDDMMMYYYY(r.paidDate);
+                  const cycleLabel = matchedCyc ? matchedCyc.monthLabel : this.getCycleMonthLabel(r);
                   const creditName = this.getName('credittype', r.creditType);
-                  let coverageHtml = r.startDate && r.endDate ? `<div class="text-[9px] text-slate-500 mt-0.5">${this.formatDateDDMMMYYYY(r.startDate)} to ${this.formatDateDDMMMYYYY(r.endDate)}</div>` : `<div class="text-[9px] text-slate-400 mt-0.5">${creditName}</div>`;
+                  let coverageHtml = r.startDate && r.endDate 
+                    ? `<div class="text-[9px] text-slate-500 mt-0.5">${this.formatDateDDMMMYYYY(r.startDate)} to ${this.formatDateDDMMMYYYY(r.endDate)}</div>` 
+                    : (r.paidDate ? `<div class="text-[9px] text-slate-400 mt-0.5">Paid on ${this.formatDateDDMMMYYYY(r.paidDate)}</div>` : `<div class="text-[9px] text-slate-400 mt-0.5">${creditName}</div>`);
                   let rcptHtml = r.receiptUrl ? `<a href="${r.receiptUrl}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1"><span class="material-symbols-rounded text-[12px] align-middle">link</span></a>` : '';
                   const pJson = JSON.stringify(r).replace(/"/g, '&quot;');
 
@@ -1037,7 +1061,7 @@
                       <td class="px-4 py-3 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onclick="StaffApp.openTransactionModal(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
-                          <button onclick="StaffApp.openDeleteModal('payment', '${r.paymentId}', '${this.formatDateDDMMMYYYY(r.paidDate)} Record')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
+                          <button onclick="StaffApp.openDeleteModal('payment', '${r.paymentId}', '${cycleLabel} Record')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
                         </div>
                       </td>
                     </tr>
@@ -1219,20 +1243,19 @@
           this.setDatePicker('txn-startDate', txn.startDate || '');
           this.setDatePicker('txn-endDate', txn.endDate || '');
       } else {
-          let calcStartObj = this.currentActiveStaff.joinDate ? new Date(this.parseToISODate(this.currentActiveStaff.joinDate)) : new Date();
-          const validSalaries = this.currentStaffPayments.filter(p => p.endDate && p.paymentStatus && !p.paymentStatus.toLowerCase().includes('fail') && !p.paymentStatus.toLowerCase().includes('pending'));
-          validSalaries.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
-          
-          if (validSalaries.length > 0) {
-              calcStartObj = new Date(this.parseToISODate(validSalaries[0].endDate));
-              calcStartObj.setDate(calcStartObj.getDate() + 1); 
+          // Pre-fill next cycle dates (prioritizing the earliest pending cycle)
+          const cycleInfo = this.getStaffCycles(this.currentActiveStaff, this.currentStaffPayments);
+          if (cycleInfo && cycleInfo.pendingCycles && cycleInfo.pendingCycles.length > 0) {
+              const nextCyc = cycleInfo.pendingCycles[0];
+              this.setDatePicker('txn-startDate', nextCyc.virtualStartDate);
+              this.setDatePicker('txn-endDate', nextCyc.virtualEndDate);
+          } else {
+              const today = new Date();
+              const nextMonthStart = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 1));
+              const nextMonthEnd = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 2, 0));
+              this.setDatePicker('txn-startDate', nextMonthStart);
+              this.setDatePicker('txn-endDate', nextMonthEnd);
           }
-          let calcEndObj = new Date(calcStartObj);
-          calcEndObj.setMonth(calcEndObj.getMonth() + 1);
-          calcEndObj.setDate(calcEndObj.getDate() - 1);
-          
-          this.setDatePicker('txn-startDate', calcStartObj);
-          this.setDatePicker('txn-endDate', calcEndObj);
       }
 
       this.onCreditTypeChange();
