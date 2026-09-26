@@ -10,3 +10,4 @@ trigger: always_on
 4. **GAAP-Compliant Math:** All financial charting and revenue recognition logic must use daily proration arrays based on UTC dates. Do not suggest blunt monthly division for accruals.
 5. **No Arrow Functions in Global GAS:** Do not use arrow functions for top-level backend Google Apps Script functions. They must be standard `function api_myFunction() {}` so they are exposed to `google.script.run`.
 6. **Frontend Separation:** Maintain the structural separation of `View_*.html` (UI markup) and `Script_*.html` (Vanilla JS logic).
+7. **Branching & Git Workflow:** Never commit directly to `main`. Always create a descriptive branch (e.g., `feature/*`, `refactor/*`, `fix/*`), commit changes there, and merge it into `main`.
