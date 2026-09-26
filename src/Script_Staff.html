@@ -87,6 +87,49 @@
     formatDateDDMMMYYYY: AppUtils.formatDateDDMMMYYYY,
     parseToISODate: AppUtils.parseToISODate,
 
+    parseDateRobust: function(input) {
+      if (!input) return null;
+      if (input instanceof Date && !isNaN(input)) {
+        return new Date(Date.UTC(input.getFullYear(), input.getMonth(), input.getDate()));
+      }
+      if (typeof input !== 'string') {
+        const d = new Date(input);
+        return isNaN(d) ? null : new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      }
+      const str = input.trim();
+      if (!str || str === 'N/A') return null;
+
+      const monthMap = {
+        jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2,
+        apr: 3, april: 3, may: 4, jun: 5, june: 5, jul: 6, july: 6,
+        aug: 7, august: 7, sep: 8, sept: 8, september: 8, oct: 9, october: 9,
+        nov: 10, november: 10, dec: 11, december: 11
+      };
+
+      const parts = str.split(/[\s\-\/\.]+/);
+      if (parts.length >= 3) {
+        if (parts[0].length === 4 && !isNaN(parts[0])) {
+          const y = parseInt(parts[0], 10);
+          const m = isNaN(parts[1]) ? monthMap[parts[1].toLowerCase()] : parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[2], 10);
+          if (m !== undefined && !isNaN(m) && !isNaN(d)) return new Date(Date.UTC(y, m, d));
+        }
+        if (parts[2].length === 4 || parts[2].length === 2) {
+          let y = parseInt(parts[2], 10);
+          if (y < 100) y += 2000;
+          let m = isNaN(parts[1]) ? monthMap[parts[1].toLowerCase()] : parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[0], 10);
+          if (m !== undefined && !isNaN(m) && !isNaN(d)) return new Date(Date.UTC(y, m, d));
+        }
+      }
+
+      const direct = new Date(str);
+      if (!isNaN(direct)) {
+        return new Date(Date.UTC(direct.getUTCFullYear(), direct.getUTCMonth(), direct.getUTCDate()));
+      }
+      return null;
+    },
+
     showShimmer: function() {
       let dHtml = '';
       for(let i=0; i<5; i++){ dHtml += `<tr><td colspan="7" class="px-4 py-4"><div class="h-6 w-full shimmer rounded"></div></td></tr>`; }
@@ -100,11 +143,6 @@
          const el = document.getElementById(id);
          if(el) el.innerHTML = '<div class="h-6 w-16 shimmer rounded mt-1"></div>';
       });
-
-      const anDesktop = document.getElementById('action-needed-desktop-body');
-      if(anDesktop) anDesktop.innerHTML = '<tr><td colspan="4" class="px-4 py-3"><div class="h-6 w-full shimmer rounded"></div></td></tr>';
-      const anMob = document.getElementById('action-needed-mobile-container');
-      if(anMob) anMob.innerHTML = '<div class="p-3 bg-white rounded-xl shadow-sm"><div class="h-10 w-full shimmer rounded"></div></div>';
 
       if(this.chartInstances.trend) this.chartInstances.trend.destroy();
       if(this.chartInstances.breakdown) this.chartInstances.breakdown.destroy();
@@ -299,73 +337,137 @@
       this.filterTable(); 
     },
 
-    getStaffPendingCycles: function(stf, staffPayments = null) {
-      if (!stf) return [];
-      const sal = this.parseAmount(stf.salary);
-      if (sal <= 0 || !stf.joinDate) return [];
+    getStaffCycles: function(stf, staffPayments = null) {
+      if (!stf) return { allCycles: [], pendingCycles: [], paidCycles: [], totalCycles: 0 };
+      const join = this.parseDateRobust(stf.joinDate);
+      if (!join) return { allCycles: [], pendingCycles: [], paidCycles: [], totalCycles: 0 };
 
-      const joinDate = new Date(this.parseToISODate(stf.joinDate));
-      if (isNaN(joinDate)) return [];
+      const salAmt = this.parseAmount(stf.salary);
+      if (salAmt <= 0) return { allCycles: [], pendingCycles: [], paidCycles: [], totalCycles: 0 };
 
       const sName = this.getName('status', stf.status);
-      if (sName !== 'Active' && !stf.exitDate) return [];
+      const isInactive = sName && (sName.toLowerCase().includes('inactive') || sName.toLowerCase().includes('in-active'));
+      if (isInactive && !stf.exitDate) return { allCycles: [], pendingCycles: [], paidCycles: [], totalCycles: 0 };
 
-      let today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      let cutoffDate = today;
+      const today = new Date();
+      let cutoff = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+      
       if (stf.exitDate) {
-        const exitD = new Date(this.parseToISODate(stf.exitDate));
-        if (!isNaN(exitD) && exitD < today) {
-          cutoffDate = exitD;
-        }
+        const exit = this.parseDateRobust(stf.exitDate);
+        if (exit && exit < cutoff) cutoff = exit;
       }
 
-      const payments = staffPayments || (this.allPayments || []).filter(p => p.staffId === stf.staffId);
-      const creditTypes = this.dropdowns.credit_type_options || this.dropdowns.credittype || this.dropdowns.credit_type || [];
-      const salaryId = creditTypes.length ? creditTypes.find(c => (c.name || '').toLowerCase().includes('salary'))?.id : null;
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      let cycles = [];
+      let curStart = new Date(join);
+      let iter = 0;
 
-      const validSalaries = payments.filter(p => 
-        p.endDate && p.paymentStatus && 
-        !p.paymentStatus.toLowerCase().includes('fail') && 
-        !p.paymentStatus.toLowerCase().includes('pending') && 
-        (!salaryId || p.creditType === salaryId)
-      );
+      while (curStart < cutoff && iter < 120) {
+        let curEnd = new Date(curStart);
+        curEnd.setUTCMonth(curEnd.getUTCMonth() + 1);
+        curEnd.setUTCDate(curEnd.getUTCDate() - 1);
 
-      validSalaries.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
-
-      let currentDue = new Date(joinDate);
-      if (validSalaries.length > 0) {
-        currentDue = new Date(this.parseToISODate(validSalaries[0].endDate));
-        currentDue.setDate(currentDue.getDate() + 1);
-      }
-
-      let virtualRecords = [];
-      let iterCount = 1;
-      while (currentDue < cutoffDate && iterCount <= 12) {
-        let vEnd = new Date(currentDue);
-        vEnd.setMonth(vEnd.getMonth() + 1);
-        vEnd.setDate(vEnd.getDate() - 1);
-
-        virtualRecords.push({
-          isVirtual: true,
-          amount: sal,
-          virtualStartDate: currentDue.toISOString(),
-          virtualEndDate: vEnd.toISOString()
+        const mLabel = monthNames[curStart.getUTCMonth()] + ' ' + curStart.getUTCFullYear();
+        cycles.push({
+          cycleIndex: iter + 1,
+          monthLabel: mLabel,
+          startDate: new Date(curStart),
+          endDate: new Date(curEnd),
+          amount: salAmt,
+          isPaid: false,
+          payment: null
         });
 
-        currentDue = new Date(vEnd);
-        currentDue.setDate(currentDue.getDate() + 1);
-        iterCount++;
+        curStart = new Date(curEnd);
+        curStart.setUTCDate(curStart.getUTCDate() + 1);
+        iter++;
       }
 
-      return virtualRecords;
+      // Filter valid payments for this staff
+      const allPayments = staffPayments || this.allPayments || [];
+      const payments = allPayments.filter(p => {
+        if (!p || String(p.staffId || '').trim() !== String(stf.staffId || '').trim()) return false;
+        const stat = String(p.paymentStatus || '').toLowerCase();
+        if (stat.includes('fail') || stat.includes('pending')) return false;
+        const ct = String(p.creditType || '').toLowerCase();
+        if (ct && !ct.includes('sal') && !ct.includes('ct-1')) return false;
+        return true;
+      });
+
+      // Sort chronologically
+      payments.sort((a, b) => {
+        const da = this.parseDateRobust(a.startDate || a.paidDate) || 0;
+        const db = this.parseDateRobust(b.startDate || b.paidDate) || 0;
+        return da - db;
+      });
+
+      const matchedTxnIds = new Set();
+      // Match by exact/near date coverage first
+      cycles.forEach(cyc => {
+        const match = payments.find(p => {
+          if (matchedTxnIds.has(p.paymentId)) return false;
+          if (p.startDate && p.endDate) {
+            const ps = this.parseDateRobust(p.startDate);
+            const pe = this.parseDateRobust(p.endDate);
+            if (ps && pe) {
+              const diffS = Math.abs(ps - cyc.startDate);
+              const diffE = Math.abs(pe - cyc.endDate);
+              if (diffS < 5 * 86400000 && diffE < 5 * 86400000) return true;
+            }
+          }
+          return false;
+        });
+
+        if (match) {
+          cyc.isPaid = true;
+          cyc.payment = match;
+          matchedTxnIds.add(match.paymentId);
+        }
+      });
+
+      // Match remaining chronologically
+      let pIdx = 0;
+      cycles.forEach(cyc => {
+        if (!cyc.isPaid) {
+          while (pIdx < payments.length && matchedTxnIds.has(payments[pIdx].paymentId)) {
+            pIdx++;
+          }
+          if (pIdx < payments.length) {
+            cyc.isPaid = true;
+            cyc.payment = payments[pIdx];
+            matchedTxnIds.add(payments[pIdx].paymentId);
+            pIdx++;
+          }
+        }
+      });
+
+      const pendingCycles = cycles.filter(c => !c.isPaid).map(c => ({
+        isVirtual: true,
+        amount: c.amount,
+        monthLabel: c.monthLabel,
+        virtualStartDate: c.startDate.toISOString(),
+        virtualEndDate: c.endDate.toISOString()
+      }));
+
+      const paidCycles = cycles.filter(c => c.isPaid);
+
+      return {
+        allCycles: cycles,
+        pendingCycles: pendingCycles,
+        paidCycles: paidCycles,
+        totalCycles: cycles.length
+      };
+    },
+
+    getStaffPendingCycles: function(stf, staffPayments = null) {
+      return this.getStaffCycles(stf, staffPayments).pendingCycles;
     },
 
     getActionNeededStaffList: function() {
       let list = [];
       (this.allData || []).forEach(stf => {
-        const pendingCycles = this.getStaffPendingCycles(stf);
+        const cycleInfo = this.getStaffCycles(stf);
+        const pendingCycles = cycleInfo.pendingCycles;
         if (pendingCycles.length > 0) {
           const totalAmt = pendingCycles.reduce((sum, c) => sum + this.parseAmount(c.amount), 0);
           const earliest = pendingCycles[0];
@@ -382,9 +484,8 @@
             pendingCount: pendingCycles.length,
             pendingCycles: pendingCycles,
             totalAmount: totalAmt,
-            cycleRangeText: pendingCycles.length === 1 
-              ? `${firstStart} to ${lastEnd}` 
-              : `${firstStart} to ${lastEnd}`
+            cycleRangeText: `${firstStart} to ${lastEnd}`,
+            monthLabels: pendingCycles.map(c => c.monthLabel)
           });
         }
       });
@@ -393,101 +494,13 @@
       return list;
     },
 
-    renderActionNeededList: function(list) {
-      const tBody = document.getElementById('action-needed-desktop-body');
-      const mContainer = document.getElementById('action-needed-mobile-container');
-      const badge = document.getElementById('action-needed-badge');
-      if (!tBody || !mContainer) return;
-
-      const count = list ? list.length : 0;
-      if (badge) {
-        if (count === 0) {
-          badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
-          badge.innerText = 'All Paid';
-        } else {
-          badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200';
-          badge.innerText = `${count} Staff`;
-        }
-      }
-
-      if (!list || list.length === 0) {
-        tBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-xs text-slate-500"><div class="flex items-center justify-center gap-2 text-emerald-600 font-medium"><span class="material-symbols-rounded text-lg">check_circle</span>All staff salaries are up to date. No action needed.</div></td></tr>`;
-        mContainer.innerHTML = `<div class="p-4 text-center text-xs text-slate-500 bg-white rounded-xl border border-slate-200"><div class="flex items-center justify-center gap-2 text-emerald-600 font-medium"><span class="material-symbols-rounded text-lg">check_circle</span>All staff salaries are up to date.</div></div>`;
-        return;
-      }
-
-      let dHtml = '';
-      let mHtml = '';
-
-      list.forEach(item => {
-        const initials = item.fullName ? item.fullName.substring(0, 2).toUpperCase() : 'NA';
-        const formattedTotal = AppUtils.formatCurrency(item.totalAmount);
-        const cycleBadge = `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase">${item.pendingCount} ${item.pendingCount === 1 ? 'Cycle' : 'Cycles'}</span>`;
-
-        dHtml += `
-          <tr class="hover:bg-amber-50/20 transition-colors cursor-pointer" onclick="StaffApp.openStaffSalary('${item.staffId}')">
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0">${initials}</div>
-                <div>
-                  <div class="font-bold text-slate-800 text-xs hover:text-brand-primary transition-colors">${item.fullName}</div>
-                  <div class="text-[10px] text-slate-500 font-medium">${item.role}</div>
-                </div>
-              </div>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2">
-                ${cycleBadge}
-                <span class="text-xs text-slate-600">${item.cycleRangeText}</span>
-              </div>
-            </td>
-            <td class="px-4 py-3">
-              <div class="font-bold text-slate-800 text-xs">${formattedTotal}</div>
-              <div class="text-[9px] text-slate-400">₹${item.salary.toLocaleString('en-IN')}/mo</div>
-            </td>
-            <td class="px-4 py-3 text-right whitespace-nowrap">
-              <button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${item.staffId}')" class="px-3 py-1.5 bg-brand-primary text-white hover:bg-blue-700 text-xs font-semibold rounded-lg shadow-sm inline-flex items-center gap-1.5 transition-colors">
-                <span class="material-symbols-rounded text-[15px]">payments</span>
-                <span>Open Salary</span>
-              </button>
-            </td>
-          </tr>`;
-
-        mHtml += `
-          <div class="bg-white p-3.5 rounded-xl border border-amber-100 shadow-sm flex flex-col gap-2.5 cursor-pointer" onclick="StaffApp.openStaffSalary('${item.staffId}')">
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold shrink-0">${initials}</div>
-                <div>
-                  <h4 class="font-bold text-xs text-slate-800 leading-tight">${item.fullName}</h4>
-                  <p class="text-[10px] text-slate-500">${item.role}</p>
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="font-bold text-xs text-slate-800">${formattedTotal}</div>
-                <div class="text-[9px] text-slate-400">₹${item.salary.toLocaleString('en-IN')}/mo</div>
-              </div>
-            </div>
-            <div class="text-[10px] text-slate-500 border-t border-slate-100 pt-2 flex items-center justify-between gap-2">
-              <div class="flex items-center gap-1.5 truncate">
-                ${cycleBadge}
-                <span class="truncate">${item.cycleRangeText}</span>
-              </div>
-              <button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${item.staffId}')" class="shrink-0 px-2.5 py-1 bg-brand-primary text-white rounded-lg text-[11px] font-semibold flex items-center gap-1 shadow-sm hover:bg-blue-700 transition-colors">
-                <span class="material-symbols-rounded text-[13px]">payments</span> Pay
-              </button>
-            </div>
-          </div>`;
-      });
-
-      tBody.innerHTML = dHtml;
-      mContainer.innerHTML = mHtml;
-    },
-
     scrollToActionNeeded: function() {
-      const el = document.getElementById('action-needed-section');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const fSal = document.getElementById('filter-table-salary');
+      if (fSal) fSal.value = 'action_needed';
+      this.filterTable();
+      const card = document.getElementById('staff-table-card');
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     },
 
@@ -556,8 +569,6 @@
       this.safeSetText('kpi-low-name', lowestName);
       const lowEl = document.getElementById('kpi-low-name');
       if (lowEl) lowEl.title = lowestName;
-
-      this.renderActionNeededList(actionNeededList);
     },
 
     renderCharts: function() {
@@ -707,6 +718,7 @@
     filterTable: function() {
       const q = this.tableSearchQuery || '';
       const fRole = document.getElementById('filter-table-role')?.value || 'All';
+      const fSalary = document.getElementById('filter-table-salary')?.value || 'All';
 
       this.tableData = this.filteredData.filter(stf => {
          const rName = this.getName('role', stf.role);
@@ -715,8 +727,23 @@
                              (stf.fullName && stf.fullName.toLowerCase().includes(q)) ||
                              (stf.phone && stf.phone.includes(q)) ||
                              (rName && rName.toLowerCase().includes(q));
-         return matchRole && matchSearch;
+
+         if (!matchRole || !matchSearch) return false;
+
+         if (fSalary !== 'All') {
+           const pending = this.getStaffPendingCycles(stf);
+           if (fSalary === 'action_needed') {
+             return pending.length > 0;
+           } else if (fSalary === 'up_to_date') {
+             return pending.length === 0;
+           }
+         }
+
+         return true;
       });
+
+      const countBadge = document.getElementById('staff-count-badge');
+      if (countBadge) countBadge.innerText = this.tableData.length;
 
       this.renderTable();
     },
@@ -766,27 +793,90 @@
         let sClass = sName === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100';
         const stfJson = JSON.stringify(stf).replace(/"/g, '&quot;');
 
+        const cycleInfo = this.getStaffCycles(stf);
+        const pendingCycles = cycleInfo.pendingCycles;
+        const hasActionNeeded = pendingCycles.length > 0;
+        
+        let monthCycleHtml = '';
+        if (hasActionNeeded) {
+          const countBadge = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>${pendingCycles.length} Due</span>`;
+          const pendingMonths = pendingCycles.map(c => c.monthLabel).join(', ');
+          monthCycleHtml = `
+            <div class="flex items-center gap-1.5 flex-wrap">
+              ${countBadge}
+              <span class="text-xs font-semibold text-slate-800">${pendingMonths}</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Joined ${dateStr}</div>`;
+        } else {
+          const lastPaidMonth = cycleInfo.paidCycles.length > 0 ? cycleInfo.paidCycles[cycleInfo.paidCycles.length - 1].monthLabel : null;
+          const statusText = lastPaidMonth ? `Through ${lastPaidMonth}` : 'Up to date';
+          monthCycleHtml = `
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide"><span class="material-symbols-rounded text-[11px]">check_circle</span>Paid</span>
+              <span class="text-xs text-slate-600 font-medium">${statusText}</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Joined ${dateStr}</div>`;
+        }
+
+        const payButtonHtml = hasActionNeeded 
+          ? `<button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${stf.staffId}')" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-bold rounded-lg inline-flex items-center gap-1 shadow-sm transition-colors mr-1" title="Pay pending salary"><span class="material-symbols-rounded text-[14px]">payments</span>Pay</button>` 
+          : '';
+
         dHtml += `
           <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onclick="StaffApp.openDetails(${stfJson})">
-            <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0">${initials}</div><div><div class="font-bold text-slate-800 text-xs hover:text-brand-primary transition-colors">${stf.fullName}</div></div></div></td>
+            <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${hasActionNeeded ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'} flex items-center justify-center text-[10px] font-bold shrink-0">${initials}</div><div><div class="font-bold text-slate-800 text-xs hover:text-brand-primary transition-colors">${stf.fullName}</div></div></div></td>
             <td class="px-4 py-3 text-slate-600 text-xs font-medium">${rName}</td>
             <td class="px-4 py-3 text-slate-600 text-xs">${stf.phone}</td>
-            <td class="px-4 py-3 font-bold text-slate-800 text-xs">${amtStr}</td>
-            <td class="px-4 py-3 text-slate-500 text-xs">${dateStr}</td>
+            <td class="px-4 py-3 whitespace-nowrap"><span class="font-bold text-slate-800 text-xs">${amtStr}</span> <span class="text-[10px] text-slate-400 font-normal">/ mo</span></td>
+            <td class="px-4 py-3">${monthCycleHtml}</td>
             <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass}">${sName}</span></td>
-            <td class="px-4 py-3 text-right">
-              <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded"><span class="material-symbols-rounded text-[16px]">edit</span></button>
-              <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[16px]">delete</span></button>
+            <td class="px-4 py-3 text-right whitespace-nowrap">
+              ${payButtonHtml}
+              <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[16px]">edit</span></button>
+              <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[16px]">delete</span></button>
             </td>
           </tr>`;
 
         mHtml += `
-          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3 relative cursor-pointer" onclick="StaffApp.openDetails(${stfJson})">
-            <div class="absolute top-4 right-4 flex gap-1"><span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${sClass}">${sName}</span></div>
-            <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold shrink-0">${initials}</div><div class="pr-12"><h3 class="font-bold text-sm text-slate-800">${stf.fullName}</h3><p class="text-[10px] font-medium text-slate-500">${rName}</p></div></div>
+          <div class="bg-white p-4 rounded-xl border ${hasActionNeeded ? 'border-amber-200 shadow-sm' : 'border-slate-200 shadow-sm'} flex flex-col gap-3 relative cursor-pointer" onclick="StaffApp.openDetails(${stfJson})">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full ${hasActionNeeded ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'} flex items-center justify-center font-bold text-xs shrink-0">${initials}</div>
+                <div>
+                  <h3 class="font-bold text-sm text-slate-800">${stf.fullName}</h3>
+                  <p class="text-[10px] font-medium text-slate-500">${rName}</p>
+                </div>
+              </div>
+              <div class="flex flex-col items-end gap-1">
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${sClass}">${sName}</span>
+                ${hasActionNeeded 
+                  ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>${pendingCycles.length} Due</span>`
+                  : `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1"><span class="material-symbols-rounded text-[10px]">check</span>Paid</span>`
+                }
+              </div>
+            </div>
+
             <div class="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
-              <div><p class="text-slate-400 text-[10px] mb-0.5">Salary</p><p class="font-bold text-slate-700">${amtStr}</p></div>
-              <div><p class="text-slate-400 text-[10px] mb-0.5">Joined</p><p class="font-bold text-slate-700">${dateStr}</p></div>
+              <div>
+                <p class="text-slate-400 text-[10px] mb-0.5">Salary / Month</p>
+                <p class="font-bold text-slate-700">${amtStr} <span class="text-[9px] font-normal text-slate-400">/ mo</span></p>
+              </div>
+              <div>
+                <p class="text-slate-400 text-[10px] mb-0.5">Month / Cycle</p>
+                ${hasActionNeeded 
+                  ? `<p class="font-bold text-amber-700 text-xs">${pendingCycles.map(c => c.monthLabel).join(', ')}</p>`
+                  : `<p class="font-semibold text-slate-700 text-xs">${cycleInfo.paidCycles.length > 0 ? cycleInfo.paidCycles[cycleInfo.paidCycles.length - 1].monthLabel : 'Up to date'}</p>`
+                }
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-50 pt-2">
+              <span>Joined ${dateStr}</span>
+              <div class="flex items-center gap-1.5">
+                ${hasActionNeeded ? `<button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${stf.staffId}')" class="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold rounded flex items-center gap-1 hover:bg-amber-100"><span class="material-symbols-rounded text-[13px]">payments</span>Pay</button>` : ''}
+                <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="p-1 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[15px]">edit</span></button>
+                <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="p-1 text-slate-400 hover:text-red-500 rounded"><span class="material-symbols-rounded text-[15px]">delete</span></button>
+              </div>
             </div>
           </div>`;
       });
@@ -871,16 +961,17 @@
       const tBody = document.getElementById('det-stf-payments-body');
       if(tBody) tBody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-xs text-slate-400"><div class="h-4 w-32 mx-auto shimmer rounded"></div></td></tr>`;
       
-      google.script.run
+       google.script.run
         .withSuccessHandler((res) => {
            this.currentStaffPayments = (res.success && res.data) ? res.data : [];
            
-           const virtualRecords = this.getStaffPendingCycles(stf, this.currentStaffPayments);
+           const cycleInfo = this.getStaffCycles(stf, this.currentStaffPayments);
+           const virtualRecords = cycleInfo.pendingCycles;
 
            let combinedHistory = [...this.currentStaffPayments, ...virtualRecords];
            combinedHistory.sort((a,b) => {
-               const dateA = a.isVirtual ? a.virtualStartDate : a.paidDate;
-               const dateB = b.isVirtual ? b.virtualStartDate : b.paidDate;
+               const dateA = a.isVirtual ? a.virtualStartDate : (a.startDate || a.paidDate);
+               const dateB = b.isVirtual ? b.virtualStartDate : (b.startDate || b.paidDate);
                return new Date(this.parseToISODate(dateB)) - new Date(this.parseToISODate(dateA));
            });
            
@@ -901,7 +992,7 @@
                       <td class="px-4 py-3">
                         <div class="font-bold text-slate-800 flex items-center gap-1.5">
                           <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                          <span>Action Needed</span>
+                          <span>${r.monthLabel || 'Action Needed'}</span>
                         </div>
                         <div class="text-[9px] text-slate-500 mt-0.5 font-medium">${vStartFmt} to ${vEndFmt}</div>
                       </td>
@@ -926,16 +1017,17 @@
                       totalPaid += safeAmt;
                   }
 
+                  const matchedCyc = cycleInfo.allCycles.find(c => c.payment && c.payment.paymentId === r.paymentId);
+                  const cycleLabel = matchedCyc ? matchedCyc.monthLabel : this.formatDateDDMMMYYYY(r.paidDate);
                   const creditName = this.getName('credittype', r.creditType);
-                  const isSal = (creditName || '').toLowerCase().includes('salary');
-                  let coverageHtml = isSal && r.startDate && r.endDate ? `<div class="text-[9px] text-slate-500 mt-0.5">${this.formatDateDDMMMYYYY(r.startDate)} to ${this.formatDateDDMMMYYYY(r.endDate)}</div>` : `<div class="text-[9px] text-slate-400 mt-0.5">${creditName}</div>`;
+                  let coverageHtml = r.startDate && r.endDate ? `<div class="text-[9px] text-slate-500 mt-0.5">${this.formatDateDDMMMYYYY(r.startDate)} to ${this.formatDateDDMMMYYYY(r.endDate)}</div>` : `<div class="text-[9px] text-slate-400 mt-0.5">${creditName}</div>`;
                   let rcptHtml = r.receiptUrl ? `<a href="${r.receiptUrl}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1"><span class="material-symbols-rounded text-[12px] align-middle">link</span></a>` : '';
                   const pJson = JSON.stringify(r).replace(/"/g, '&quot;');
 
                   html += `
                     <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 group transition-colors">
                       <td class="px-4 py-3 text-slate-800 font-medium">
-                         <div class="font-bold text-slate-800">${this.formatDateDDMMMYYYY(r.paidDate)}</div>
+                         <div class="font-bold text-slate-800">${cycleLabel}</div>
                          ${coverageHtml}
                       </td>
                       <td class="px-4 py-3">
@@ -1008,6 +1100,12 @@
       
       this.safeSetValue('stf-status', stf ? stf.status : '');
       this.safeSetValue('stf-notes', stf && stf.notes ? stf.notes : '');
+
+      if (stf && stf.notes && stf.notes.trim() !== '') {
+          document.getElementById('stf-notes-wrapper')?.classList.remove('hidden');
+      } else {
+          document.getElementById('stf-notes-wrapper')?.classList.add('hidden');
+      }
 
       this.onStatusChange();
 
@@ -1107,6 +1205,12 @@
 
       this.safeSetValue('txn-receiptUrl', txn && !txn.isVirtual && txn.receiptUrl ? txn.receiptUrl : '');
       this.safeSetValue('txn-notes', txn && !txn.isVirtual && txn.notes ? txn.notes : '');
+
+      if (txn && !txn.isVirtual && txn.notes && txn.notes.trim() !== '') {
+          document.getElementById('txn-notes-wrapper')?.classList.remove('hidden');
+      } else {
+          document.getElementById('txn-notes-wrapper')?.classList.add('hidden');
+      }
 
       if (txn && txn.isVirtual) {
           this.setDatePicker('txn-startDate', txn.virtualStartDate);

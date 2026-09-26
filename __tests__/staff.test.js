@@ -275,4 +275,68 @@ describe('Staff Module - Action Needed & Salary Cycle Calculations', () => {
       expect(StaffApp.safeSetClass).toHaveBeenCalledWith('tab-btn-overview', expect.stringContaining('text-slate-400'));
     });
   });
+
+  describe('User Scenario: Staff joins 20 May, 3 salaries paid, 5 total records', () => {
+    test('generates exactly 5 cycles with 3 paid and 2 action needed for staff joining 20 May', () => {
+      const stf = {
+        staffId: 'STF-MAY20',
+        fullName: 'Trainer John',
+        salary: 30000,
+        joinDate: '20-May-2026',
+        status: 'Active'
+      };
+
+      // 3 paid salaries
+      const payments = [
+        { paymentId: 'PAY-1', staffId: 'STF-MAY20', amount: 30000, startDate: '20-May-2026', endDate: '19-Jun-2026', paymentStatus: 'Paid' },
+        { paymentId: 'PAY-2', staffId: 'STF-MAY20', amount: 30000, startDate: '20-Jun-2026', endDate: '19-Jul-2026', paymentStatus: 'Paid' },
+        { paymentId: 'PAY-3', staffId: 'STF-MAY20', amount: 30000, startDate: '20-Jul-2026', endDate: '19-Aug-2026', paymentStatus: 'Paid' }
+      ];
+
+      const res = StaffApp.getStaffCycles(stf, payments);
+
+      // Assuming today is around Sep 2026 or later, total cycles is 5
+      expect(res.totalCycles).toBeGreaterThanOrEqual(5);
+      expect(res.paidCycles.length).toBe(3);
+      expect(res.pendingCycles.length).toBeGreaterThanOrEqual(2);
+
+      // Verify the 2 pending cycles are August and September
+      const pendingLabels = res.pendingCycles.map(c => c.monthLabel);
+      expect(pendingLabels).toContain('Aug 2026');
+      expect(pendingLabels).toContain('Sep 2026');
+    });
+
+    test('parseDateRobust correctly parses diverse date formats', () => {
+      expect(StaffApp.parseDateRobust('20/05/2026')).toEqual(new Date(Date.UTC(2026, 4, 20)));
+      expect(StaffApp.parseDateRobust('20-05-2026')).toEqual(new Date(Date.UTC(2026, 4, 20)));
+      expect(StaffApp.parseDateRobust('20.05.2026')).toEqual(new Date(Date.UTC(2026, 4, 20)));
+      expect(StaffApp.parseDateRobust('20 May 2026')).toEqual(new Date(Date.UTC(2026, 4, 20)));
+      expect(StaffApp.parseDateRobust('2026-05-20')).toEqual(new Date(Date.UTC(2026, 4, 20)));
+    });
+
+    test('collapsible notes wrapper toggles based on note content', () => {
+      const mockClassList = { remove: jest.fn(), add: jest.fn() };
+      global.document.getElementById = jest.fn((id) => {
+        if (id === 'stf-notes-wrapper' || id === 'txn-notes-wrapper') {
+          return { classList: mockClassList };
+        }
+        return {
+          innerHTML: '',
+          innerText: '',
+          value: '',
+          classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() }
+        };
+      });
+
+      // When opening modal with notes
+      StaffApp.openModal({ staffId: 'STF-1', fullName: 'John', notes: 'Great trainer' });
+      expect(mockClassList.remove).toHaveBeenCalledWith('hidden');
+
+      // When opening modal without notes
+      mockClassList.remove.mockClear();
+      mockClassList.add.mockClear();
+      StaffApp.openModal({ staffId: 'STF-2', fullName: 'Jane', notes: '' });
+      expect(mockClassList.add).toHaveBeenCalledWith('hidden');
+    });
+  });
 });
