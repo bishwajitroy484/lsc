@@ -26,53 +26,19 @@ function api_getStaff() {
         if (!chartMetrics[y]) chartMetrics[y] = { monthly: new Array(12).fill(0), quarterly: [0, 0, 0, 0], totalCost: 0 };
     };
 
-    const parseSafeDate = (dStr) => {
-        if (!dStr) return new Date("");
-        let d = new Date(dStr);
-        if (isNaN(d) && typeof dStr === 'string') {
-          const parts = dStr.split('-');
-          if (parts.length === 3) {
-            const mMap = {jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11};
-            d = new Date(parts[2], mMap[parts[1].toLowerCase()] || 0, parts[0]);
-          }
-        }
-        return d;
-    };
-
     payments.forEach(t => {
         const status = String(t.paymentStatus || '').toLowerCase();
         if (status.includes('fail') || status.includes('pending')) return;
 
         let totalAmt = Number(String(t.amount || 0).replace(/[^0-9.-]+/g,""));
-        let sDate = parseSafeDate(t.startDate || t.paidDate);
-        let eDate = parseSafeDate(t.endDate || t.paidDate);
+        if (!totalAmt) return;
 
-        if (isNaN(sDate)) return;
-
-        if (accrualMode === 'split' && !isNaN(eDate) && eDate >= sDate) {
-            let monthsSpan = (eDate.getFullYear() - sDate.getFullYear()) * 12 + eDate.getMonth() - sDate.getMonth() + 1;
-            monthsSpan = monthsSpan > 0 ? monthsSpan : 1; 
-            let splitAmt = totalAmt / monthsSpan;
-            
-            for(let i = 0; i < monthsSpan; i++) {
-                let cMonth = (sDate.getMonth() + i) % 12;
-                let cYear = sDate.getFullYear() + Math.floor((sDate.getMonth() + i) / 12);
-                
-                ensureYear(cYear);
-                chartMetrics[cYear].totalCost += splitAmt;
-                chartMetrics[cYear].monthly[cMonth] += splitAmt;
-                chartMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += splitAmt;
-            }
-        } else {
-            // Anchor Logic
-            let cYear = sDate.getFullYear();
-            let cMonth = sDate.getMonth();
-            
+        distributeDailyProration(t.startDate || t.paidDate, t.endDate || t.paidDate, t.paidDate, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
             ensureYear(cYear);
-            chartMetrics[cYear].totalCost += totalAmt;
-            chartMetrics[cYear].monthly[cMonth] += totalAmt;
-            chartMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += totalAmt;
-        }
+            chartMetrics[cYear].totalCost += intervalAmt;
+            chartMetrics[cYear].monthly[cMonth] += intervalAmt;
+            chartMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += intervalAmt;
+        });
     });
 
     return { 
@@ -153,53 +119,19 @@ function api_getStaffTransactions(staffId) {
         if (!chartMetrics[y]) chartMetrics[y] = { monthly: new Array(12).fill(0), quarterly: [0, 0, 0, 0], totalEarned: 0 };
     };
 
-    const parseSafeDate = (dStr) => {
-        if (!dStr) return new Date("");
-        let d = new Date(dStr);
-        if (isNaN(d) && typeof dStr === 'string') {
-          const parts = dStr.split('-');
-          if (parts.length === 3) {
-            const mMap = {jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11};
-            d = new Date(parts[2], mMap[parts[1].toLowerCase()] || 0, parts[0]);
-          }
-        }
-        return d;
-    };
-
     staffTxn.forEach(t => {
         const status = String(t.paymentStatus || '').toLowerCase();
         if (status.includes('fail') || status.includes('pending')) return;
 
         let totalAmt = Number(String(t.amount || 0).replace(/[^0-9.-]+/g,""));
-        let sDate = parseSafeDate(t.startDate || t.paidDate);
-        let eDate = parseSafeDate(t.endDate || t.paidDate);
+        if (!totalAmt) return;
 
-        if (isNaN(sDate)) return;
-
-        if (accrualMode === 'split' && !isNaN(eDate) && eDate >= sDate) {
-            let monthsSpan = (eDate.getFullYear() - sDate.getFullYear()) * 12 + eDate.getMonth() - sDate.getMonth() + 1;
-            monthsSpan = monthsSpan > 0 ? monthsSpan : 1; 
-            let splitAmt = totalAmt / monthsSpan;
-            
-            for(let i = 0; i < monthsSpan; i++) {
-                let cMonth = (sDate.getMonth() + i) % 12;
-                let cYear = sDate.getFullYear() + Math.floor((sDate.getMonth() + i) / 12);
-                
-                ensureYear(cYear);
-                chartMetrics[cYear].totalEarned += splitAmt;
-                chartMetrics[cYear].monthly[cMonth] += splitAmt;
-                chartMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += splitAmt;
-            }
-        } else {
-            // Anchor Logic
-            let cYear = sDate.getFullYear();
-            let cMonth = sDate.getMonth();
-            
+        distributeDailyProration(t.startDate || t.paidDate, t.endDate || t.paidDate, t.paidDate, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
             ensureYear(cYear);
-            chartMetrics[cYear].totalEarned += totalAmt;
-            chartMetrics[cYear].monthly[cMonth] += totalAmt;
-            chartMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += totalAmt;
-        }
+            chartMetrics[cYear].totalEarned += intervalAmt;
+            chartMetrics[cYear].monthly[cMonth] += intervalAmt;
+            chartMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += intervalAmt;
+        });
     });
 
     return { success: true, data: staffTxn, chartMetrics: chartMetrics };

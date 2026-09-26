@@ -94,68 +94,12 @@ function api_getMembers() {
       return m;
     });
 
-    console.log("enrichedMembers ", enrichedMembers)
     // 3. Return accrualMode at the root level to avoid breaking the frontend data array
     return { success: true, data: enrichedMembers, accrualMode: accrualMode };
   } catch (error) {
     return { success: false, error: error.toString() };
   }
 }
-
-// function api_saveMember(memberData) {
-//   try {
-//     if (!memberData.fullName || !memberData.phone) throw new Error("Name and Phone are required.");
-//     const now = new Date().toISOString();
-//     const userEmail = Session.getActiveUser().getEmail();
-
-//     memberData.updatedAt = now;
-//     memberData.updatedBy = userEmail;
-
-//     // 1. Isolate payment data so it doesn't save inside the Member DB object
-//     const initialPayment = memberData.initialPayment;
-//     delete memberData.initialPayment;
-
-//     // 2. Handle Image Upload intercept
-//     if (memberData.base64Image) {
-//         const uploadRes = api_uploadImageToDrive(memberData.base64Image, memberData.imageName || memberData.fullName);
-//         if (uploadRes.success) {
-//             memberData.profileimage = uploadRes.url; // Assign new Drive URL
-//         } else {
-//             throw new Error("Image Upload Failed: " + uploadRes.error);
-//         }
-//     }
-//     // Clean payload before DB save
-//     delete memberData.base64Image;
-//     delete memberData.imageName;
-
-//     let savedData;
-//     let isNew = !memberData.memberId;
-    
-//     // 3. Save Member to DB
-//     if (!isNew) {
-//       savedData = DB.update('MEMBERS', memberData.memberId, memberData);
-//     } else {
-//       memberData.memberId = generateId('MEM');
-//       memberData.createdAt = now;
-//       memberData.createdBy = userEmail;
-//       savedData = DB.create('MEMBERS', memberData);
-      
-//       // 4. Instantly process upfront payment if checked in UI
-//       if (initialPayment && initialPayment.amount > 0) {
-//           initialPayment.paymentId = generateId('PAY');
-//           initialPayment.memberId = memberData.memberId;
-//           initialPayment.createdAt = now;
-//           initialPayment.createdBy = userEmail;
-//           initialPayment.updatedAt = now;
-//           initialPayment.updatedBy = userEmail;
-//           DB.create('PAYMENTS', initialPayment);
-//       }
-//     }
-//     return { success: true, data: savedData, message: isNew ? "Member added successfully." : "Member updated successfully." };
-//   } catch (error) {
-//     return { success: false, error: error.toString() };
-//   }
-// }
 
 function api_saveMember(memberData) {
   try {
@@ -222,7 +166,6 @@ function api_deleteMember(memberId) {
     DB.remove('MEMBERS', memberId);
     return { success: true, message: "Member deleted successfully." };
   } catch (error) {
-    console.log("ERROR ", { success: false, error: error.toString() })
     return { success: false, error: error.toString() };
   }
 }
@@ -252,82 +195,18 @@ function api_getMemberPayments(memberId) {
       if (!chartMetrics[y]) chartMetrics[y] = { monthly: new Array(12).fill(0), quarterly: [0, 0, 0, 0], totalEarned: 0 };
     };
 
-    const parseSafeDate = (dStr) => {
-      if (!dStr) return new Date("");
-      let d = new Date(dStr);
-      if (isNaN(d) && typeof dStr === 'string') {
-        const parts = dStr.split('-');
-        if (parts.length === 3) {
-          const mMap = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
-          d = new Date(parts[2], mMap[parts[1].toLowerCase()] || 0, parts[0]);
-        }
-      }
-      return d;
-    };
-
     memberPayments.forEach(p => {
       const status = String(p.paymentStatus || '').toLowerCase();
       if (status.includes('fail') || status.includes('pending') || status.includes('overdue') || status.includes('unpaid')) return;
       let totalAmt = Number(String(p.amount || 0).replace(/[^0-9.-]+/g, ""));
-      let sDate = parseSafeDate(p.startDate || p.paidDate);
-      let eDate = parseSafeDate(p.endDate || p.paidDate);
+      if (!totalAmt) return;
 
-      if (isNaN(sDate)) return;
-
-      // SMART ENGINE: Daily Proration Accrual Logic (GAAP Compliant)
-      if (accrualMode === 'split' && !isNaN(eDate) && eDate >= sDate) {
-
-        // Strip times to ensure pure date math
-        const start = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate());
-        const end = new Date(eDate.getFullYear(), eDate.getMonth(), eDate.getDate());
-
-        // Use UTC to prevent Daylight Saving Time from causing missing hours/days
-        const msPerDay = 1000 * 60 * 60 * 24;
-        const utcStart = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
-        const utcEnd = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
-
-        // Total days inclusive (+1 day)
-        let totalDays = Math.floor((utcEnd - utcStart) / msPerDay) + 1;
-        if (totalDays <= 0) totalDays = 1; // Safeguard
-
-        const dailyRate = totalAmt / totalDays;
-
-        let current = new Date(start);
-
-        while (current <= end) {
-          let cYear = current.getFullYear();
-          let cMonth = current.getMonth();
-
-          // Find the last day of the current month being iterated
-          let endOfMonth = new Date(cYear, cMonth + 1, 0);
-
-          // The active interval ends at the end of the month, or the final end date (whichever is earlier)
-          let intervalEnd = (end < endOfMonth) ? end : endOfMonth;
-
-          let utcCurrent = Date.UTC(current.getFullYear(), current.getMonth(), current.getDate());
-          let utcIntervalEnd = Date.UTC(intervalEnd.getFullYear(), intervalEnd.getMonth(), intervalEnd.getDate());
-
-          let daysInInterval = Math.floor((utcIntervalEnd - utcCurrent) / msPerDay) + 1;
-          let intervalAmt = daysInInterval * dailyRate;
-
-          ensureYear(cYear);
-          chartMetrics[cYear].totalEarned += intervalAmt;
-          chartMetrics[cYear].monthly[cMonth] += intervalAmt;
-          chartMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += intervalAmt;
-
-          // Jump to the 1st of the next month for the next loop iteration
-          current = new Date(cYear, cMonth + 1, 1);
-        }
-      } else {
-        // Anchor Logic (Cash Basis)
-        let cYear = sDate.getFullYear();
-        let cMonth = sDate.getMonth();
-
+      distributeDailyProration(p.startDate || p.paidDate, p.endDate || p.paidDate, p.paidDate, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
         ensureYear(cYear);
-        chartMetrics[cYear].totalEarned += totalAmt;
-        chartMetrics[cYear].monthly[cMonth] += totalAmt;
-        chartMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += totalAmt;
-      }
+        chartMetrics[cYear].totalEarned += intervalAmt;
+        chartMetrics[cYear].monthly[cMonth] += intervalAmt;
+        chartMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += intervalAmt;
+      });
     });
 
     return { success: true, data: memberPayments, chartMetrics: chartMetrics };
