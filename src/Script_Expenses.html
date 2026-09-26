@@ -262,14 +262,14 @@
         catSums[exp.categoryId] = (catSums[exp.categoryId] || 0) + amt;
       });
 
-      document.getElementById('kpi-total-exp').innerText = `₹${total.toLocaleString('en-IN')}`;
+      document.getElementById('kpi-total-exp').innerText = AppUtils.formatCurrency(total);
       
       let topCat = null; let topAmt = 0;
       for (const [catId, sum] of Object.entries(catSums)) {
          if(sum > topAmt) { topAmt = sum; topCat = catId; }
       }
       document.getElementById('kpi-top-cat').innerText = topCat ? this.getName(topCat) : '--';
-      document.getElementById('kpi-top-cat-amt').innerText = `₹${topAmt.toLocaleString('en-IN')}`;
+      document.getElementById('kpi-top-cat-amt').innerText = AppUtils.formatCurrency(topAmt);
 
       // Dynamic Title and Average Calculation
       const mode = document.getElementById('exp-filter-mode')?.value || 'Monthly';
@@ -280,14 +280,14 @@
 
       const periodCount = this.selectedPeriods.length || 1;
       const avg = total / periodCount;
-      document.getElementById('kpi-avg-exp').innerText = `₹${Math.round(avg).toLocaleString('en-IN')}`;
+      document.getElementById('kpi-avg-exp').innerText = AppUtils.formatCurrency(avg);
 
       let staffTotal = 0;
       if (this.dropdowns.expenseCats) {
          const staffCat = this.dropdowns.expenseCats.find(c => c.name.toLowerCase().includes('staff') || c.name.toLowerCase().includes('trainer') || c.name.toLowerCase().includes('salary'));
          if(staffCat && catSums[staffCat.id]) { staffTotal = catSums[staffCat.id]; }
       }
-      document.getElementById('kpi-staff-exp').innerText = `₹${staffTotal.toLocaleString('en-IN')}`;
+      document.getElementById('kpi-staff-exp').innerText = AppUtils.formatCurrency(staffTotal);
     },
 
     renderCharts: function() {
@@ -328,13 +328,14 @@
         markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
         dataLabels: { 
           enabled: true, 
-          formatter: function (val) { return val > 0 ? "₹" + (val > 999 ? (val/1000).toFixed(1)+'k' : val) : ""; },
+          formatter: function (val) { return val ? AppUtils.formatCurrency(val) : ""; },
           style: { fontSize: '9px', colors: ['#475569'] },
           background: { enabled: false },
           offsetY: chartType === 'bar' ? -10 : -20
         },
         xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '9px', colors: '#64748b' } } },
-        yaxis: { labels: { formatter: (val) => val > 0 ? '₹' + (val / 1000) + 'k' : '0', style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#3b82f6'],
         grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
       };
@@ -355,9 +356,10 @@
         labels: bLabels,
         chart: { type: 'donut', height: '100%' },
         colors: bColors.length ? bColors : ['#e2e8f0'],
-        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => `₹${totalAmt.toLocaleString('en-IN')}` } } } } },
+        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
         legend: { position: 'right', fontSize: '10px', offsetY: 20 },
-        dataLabels: { enabled: true, formatter: function (val, opts) { return "₹" + opts.w.globals.seriesTotals[opts.seriesIndex].toLocaleString('en-IN'); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } }
+        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
+        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
       };
 
       document.getElementById("chart-expense-breakdown").innerHTML = "";
@@ -382,7 +384,8 @@
             chart: { type: 'pie', height: '100%' },
             colors: mColors,
             legend: { position: 'bottom', fontSize: '10px' },
-            dataLabels: { enabled: true, formatter: function (val, opts) { return "₹" + opts.w.globals.seriesTotals[opts.seriesIndex].toLocaleString('en-IN'); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } }
+            dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
+            tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
           };
           
           document.getElementById("chart-expense-misc").innerHTML = "";
@@ -487,7 +490,7 @@
 
         const dateStr = this.formatDateDDMMMYYYY(exp.date) || 'N/A';
         const cleanAmt = this.parseAmount(exp.amount);
-        const amtStr = cleanAmt > 0 ? `₹${cleanAmt.toLocaleString('en-IN')}` : '₹0';
+        const amtStr = cleanAmt > 0 ? AppUtils.formatCurrency(cleanAmt) : '₹0';
         
         const creator = exp.createdBy ? exp.createdBy.split('@')[0] : 'Admin';
         const expJson = JSON.stringify(exp).replace(/"/g, '&quot;');

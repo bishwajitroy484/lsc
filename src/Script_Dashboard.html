@@ -141,7 +141,7 @@
               </div>
             </td>
             <td class="px-3 py-2 text-slate-500 whitespace-nowrap hidden md:table-cell text-[10px]">${row.plan}</td>
-            <td class="px-3 py-2 font-semibold text-slate-800 whitespace-nowrap text-[10px]">₹${Number(row.amount).toLocaleString('en-IN')}</td>
+            <td class="px-3 py-2 font-semibold text-slate-800 whitespace-nowrap text-[10px]">${AppUtils.formatCurrency(row.amount)}</td>
             <td class="px-3 py-2 text-slate-500 whitespace-nowrap hidden md:table-cell text-[10px]">${row.date}</td>
             <td class="px-3 py-2 text-right whitespace-nowrap">
               <span class="px-2.5 py-1 rounded text-[10px] font-bold ${row.status}">${row.days}</span>
@@ -392,7 +392,7 @@
 
     const commonToolbar = { show: true, tools: { download: false, selection: false, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true }, autoSelected: 'zoom' };
     const commonXAxis = { categories: data.charts.categories || [], tickAmount: 'dataPoints', labels: { hideOverlappingLabels: false, rotate: -45, rotateAlways: false, style: { fontSize: '9px' } } };
-    var dlOptions = { enabled: true, formatter: (val) => val ? (val/1000).toFixed(1).replace('.0','') + 'k' : '', offsetY: -6, style: { fontSize: '9px', colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 2, padding: 2, opacity: 0.9, borderWidth: 0 } };
+    var dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCurrency(val) : '', offsetY: -6, style: { fontSize: '9px', colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 2, padding: 2, opacity: 0.9, borderWidth: 0 } };
 
     // 1. Rev vs Exp
     const elRevExp = document.querySelector("#chart-rev-exp");
@@ -403,7 +403,8 @@
         plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 2, dataLabels: { position: 'top' } } },
         dataLabels: dlOptions,
         xaxis: commonXAxis,
-        yaxis: { labels: { formatter: (val) => (val / 1000) + 'k', style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#3b82f6', '#f43f5e'],
         legend: { position: 'top', horizontalAlign: 'left', markers: { radius: 12 }, fontSize: '10px' },
         grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
@@ -444,7 +445,8 @@
         chart: { type: predType, height: '100%', toolbar: commonToolbar, zoom: { enabled: true } },
         stroke: { width: predType === 'area' ? 2 : 3, curve: 'smooth', dashArray: [0, 5], connectNulls: true },
         xaxis: commonXAxis,
-        yaxis: { labels: { formatter: (val) => (val / 1000) + 'k', style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#3b82f6', '#831843'], 
         markers: { size: 4 },
         legend: { position: 'bottom', horizontalAlign: 'center', offsetY: 5, show: true, fontSize: '10px' },
@@ -470,7 +472,8 @@
         stroke: { curve: 'smooth', width: trendType === 'bar' ? 0 : 2, connectNulls: true },
         markers: { size: trendType === 'bar' ? 0 : 4 },
         xaxis: commonXAxis,
-        yaxis: { labels: { formatter: (val) => (val / 1000) + 'k', style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#10b981', '#ef4444'],
         legend: { position: 'bottom', horizontalAlign: 'center', offsetY: 5, fontSize: '10px' },
         grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
@@ -497,10 +500,11 @@
         labels: expLabels,
         chart: { type: 'donut', height: '100%' },
         colors: ['#3b82f6', '#10b981', '#fbbf24', '#f97316', '#a855f7', '#06b6d4', '#94a3b8', '#e2e8f0', '#6366f1', '#ec4899'],
-        plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: DashboardState.isShowingMisc ? 'Total Misc' : 'Total', formatter: function(w) { const tot = w.globals.seriesTotals.reduce((a,b)=>a+b,0); return '₹' + Number(tot).toLocaleString('en-IN'); } } } } } },
+        plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: DashboardState.isShowingMisc ? 'Total Misc' : 'Total', formatter: function(w) { const tot = w.globals.seriesTotals.reduce((a,b)=>a+b,0); return AppUtils.formatCurrency(tot); } } } } } },
         legend: { position: 'right', fontSize: '10px', offsetX: -10, offsetY: 20 },
         responsive: [{ breakpoint: 768, options: { legend: { position: 'bottom', offsetX: 0, offsetY: 0 } } }],
-        dataLabels: { enabled: true }
+        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); } },
+        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
       };
       elExp.innerHTML = ''; 
       window.AppCharts.exp = new ApexCharts(elExp, window.AppChartConfigs.exp);
@@ -516,7 +520,8 @@
         chart: { type: staffType, height: '100%', toolbar: commonToolbar, zoom: { enabled: true } },
         stroke: { curve: 'smooth', width: staffType === 'bar' ? 0 : 3, connectNulls: true },
         xaxis: commonXAxis,
-        yaxis: { labels: { formatter: (val) => (val / 1000) + 'k', style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#8b5cf6'], 
         markers: { size: staffType === 'bar' ? 0 : 4 },
         legend: { position: 'bottom', horizontalAlign: 'center', show: true, offsetY: 5, fontSize: '10px' },
