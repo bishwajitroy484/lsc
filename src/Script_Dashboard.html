@@ -174,7 +174,10 @@
         }
       };
       document.addEventListener('click', window.closeMultiSelectMenu);
-      this.fetchData(); 
+      AppUtils.loadAvailableYears(() => {
+        this.populateYears();
+        this.fetchData();
+      });
     },
 
     getValidOptions: function() {
@@ -280,21 +283,8 @@
       google.script.run.withSuccessHandler(renderDashboard).api_getDashboardMetrics(year, mode, periods);
     },
 
-    populateYears: function(yearsArray) {
-      const yearSelect = document.getElementById('filter-year');
-      if (!yearSelect || !yearsArray || yearsArray.length === 0) return;
-
-      const currentVal = yearSelect.value || new Date().getFullYear().toString();
-      let yearHtml = '';
-      
-      yearsArray.forEach(y => { yearHtml += `<option value="${y}">${y}</option>`; });
-      yearSelect.innerHTML = yearHtml;
-
-      if (yearsArray.includes(currentVal)) {
-        yearSelect.value = currentVal;
-      } else {
-        yearSelect.value = yearsArray[0];
-      }
+    populateYears: function() {
+      AppUtils.populateYearSelect('filter-year');
       
       if (this.selectedPeriods.length === 0) {
         this.selectedPeriods = [...this.getValidOptions()];
@@ -338,7 +328,6 @@
     const data = response.data;
 
     if (!isRebuild) {
-      DashboardState.populateYears(data.availableYears);
       DashboardState.updateLabel(); 
       
       const formatCurrency = AppUtils.formatCurrency;

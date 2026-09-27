@@ -11,8 +11,10 @@
 
   <div class="px-4 py-3 flex items-center justify-between border-b border-slate-50">
     <div class="flex items-center gap-2">
-      <div id="cal-year-select" class="flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 cursor-pointer">
-        2026 <span class="material-symbols-rounded text-[14px]">expand_more</span>
+      <div class="relative">
+        <select id="cal-year-select" aria-label="Select calendar year" class="appearance-none bg-slate-50 pl-3 pr-7 py-1.5 rounded-lg text-xs font-medium text-slate-700 cursor-pointer focus:outline-none">
+        </select>
+        <span class="material-symbols-rounded absolute right-2 top-1/2 -translate-y-1/2 text-[14px] text-slate-500 pointer-events-none">expand_more</span>
       </div>
     </div>
     <button id="cal-today-btn" class="text-brand-primary text-xs font-semibold hover:underline">Today</button>

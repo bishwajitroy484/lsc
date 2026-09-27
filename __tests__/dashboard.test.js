@@ -81,12 +81,41 @@ describe('Dashboard Module', () => {
 
     expect(response.success).toBe(true);
     expect(response.data.userGreetingName).toBe('Alex');
-    expect(response.data.availableYears).toContain('2024');
     expect(response.data.kpis).toHaveProperty('activeMembers');
     expect(response.data.kpis).toHaveProperty('totalOperatingExpenses');
     expect(response.data.charts).toHaveProperty('categories');
     expect(response.data.charts).toHaveProperty('revenue');
     expect(response.data.charts).toHaveProperty('expenses');
+  });
+
+  test('api_getAvailableYears includes years present in application data and sorts them newest first', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../src/API_Dashboard.js'), 'utf8');
+    const dashboardApi = new Function(
+      'DB',
+      'parseSafeDate',
+      `
+        ${source};
+        return { api_getAvailableYears };
+      `
+    )(
+      {
+        batchRead: jest.fn(() => ({
+          MEMBERS: [{ joinDate: '15-Jan-2026' }],
+          PAYMENTS: [{ startDate: '2027-02-01', endDate: '2027-02-28' }],
+          EXPENSES: [{ date: '2024-03-05' }],
+          STAFF: [{ joinDate: 'invalid-date' }],
+          SALARY: []
+        }))
+      },
+      parseSafeDate
+    );
+
+    const response = dashboardApi.api_getAvailableYears();
+
+    expect(response.success).toBe(true);
+    expect(response.data).toContain('2026');
+    expect(response.data).toContain('2027');
+    expect(response.data.indexOf('2027')).toBeLessThan(response.data.indexOf('2026'));
   });
 
   test('api_getDashboardMetrics safely handles empty or failed dropdown data without crashing', () => {

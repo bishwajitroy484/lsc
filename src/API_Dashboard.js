@@ -2,6 +2,33 @@
  * API_Finance.gs
  * Dynamically aggregates real financial data with correct dropdown name resolution and dynamic greeting.
  */
+function api_getAvailableYears() {
+  try {
+    const dbData = DB.batchRead(['MEMBERS', 'PAYMENTS', 'EXPENSES', 'STAFF', 'SALARY']);
+    const datesBySheet = {
+      MEMBERS: ['joinDate'],
+      PAYMENTS: ['startDate', 'endDate', 'paidDate', 'date'],
+      EXPENSES: ['startDate', 'endDate', 'date'],
+      STAFF: ['joinDate'],
+      SALARY: ['startDate', 'endDate', 'paidDate', 'date']
+    };
+    const years = new Set([String(new Date().getFullYear())]);
+
+    Object.keys(datesBySheet).forEach(sheetName => {
+      (dbData[sheetName] || []).forEach(record => {
+        datesBySheet[sheetName].forEach(field => {
+          const date = parseSafeDate(record[field]);
+          if (!isNaN(date)) years.add(String(date.getFullYear()));
+        });
+      });
+    });
+
+    return { success: true, data: Array.from(years).sort((a, b) => Number(b) - Number(a)) };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
 function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mode = 'Monthly', periods = []) {
   try {
     const targetYear = parseInt(year);
@@ -37,15 +64,9 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
       : {};
     const resolveName = createDropdownResolver(dropdownMeta, dropDowns);
 
-    let availableYears = new Set([today.getFullYear().toString()]);
-    const trackYear = (dStr) => {
-      const d = parseSafeDate(dStr);
-      if(!isNaN(d)) availableYears.add(d.getFullYear().toString());
-    };
-
     // 3. Pass the accrualMode into the financials processor
-    const financialData = processFinancials(payments, expenses, salaries, targetYear, resolveName, trackYear, accrualMode);
-    const operationalData = processOperations(members, staff, payments, targetYear, today, resolveName, trackYear, dropDowns);
+    const financialData = processFinancials(payments, expenses, salaries, targetYear, resolveName, accrualMode);
+    const operationalData = processOperations(members, staff, payments, targetYear, today, resolveName, dropDowns);
     const chartMetrics = formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today);
 
     // Dynamic Greeting Name Extraction based on Login Email
@@ -57,7 +78,6 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
       success: true,
       data: {
         userGreetingName: formattedName,
-        availableYears: Array.from(availableYears).sort((a, b) => b - a),
         kpis: {
           activeMembers: operationalData.activeCount || 0,
           activeSegregation: operationalData.activeSegregation,
@@ -162,7 +182,7 @@ function createDropdownResolver(dropdownMetaRows, dropDownOptions) {
   };
 }
 
-function processFinancials(payments, expenses, salaries, targetYear, resolveName, trackYear, accrualMode) {
+function processFinancials(payments, expenses, salaries, targetYear, resolveName, accrualMode) {
   let revArr = new Array(12).fill(0);
   let expArr = new Array(12).fill(0);
   let staffArr = new Array(12).fill(0);    
@@ -171,12 +191,10 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
 
   // SMART ENGINE: Daily Proration Accrual Logic (GAAP Compliant)
   const distributeAmount = (sDateStr, eDateStr, fallbackDateStr, totalAmt, targetArr) => {
-    trackYear(sDateStr || fallbackDateStr);
     distributeDailyProration(sDateStr, eDateStr, fallbackDateStr, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
       if (cYear === targetYear) {
         targetArr[cMonth] += intervalAmt;
       }
-      trackYear(new Date(cYear, cMonth, 1).toISOString());
     });
   };
 
@@ -231,7 +249,7 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
   return { revArr, expArr, staffArr, expLabels, expSeries, mLabels, mSeries };
 }
 
-function processOperations(members, staff, payments, targetYear, today, resolveName, trackYear, dropDowns) {
+function processOperations(members, staff, payments, targetYear, today, resolveName, dropDowns) {
   let activeCount = 0;
   let staffCount = 0;
   let batchCounts = {};
@@ -251,7 +269,6 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
   });
 
   staff.forEach(s => {
-    trackYear(s.joinDate);
     const sName = resolveName('STAFF', 'status', s.status).toLowerCase();
     if (!sName.includes('inactive') && !sName.includes('in-active') && !sName.includes('exit')) staffCount++;
   });
@@ -265,7 +282,6 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
   };
 
   members.forEach(m => {
-    trackYear(m.joinDate);
     const statusName = resolveName('MEMBERS', 'status', m.status).toLowerCase();
     const isActive = !statusName.includes('inactive') && !statusName.includes('in-active') && !statusName.includes('exit');
     const amt = parseAmt(m.membershipAmount);
