@@ -112,16 +112,21 @@ function api_getCalendarData(month, year) {
       const urgency = getUrgency(daysLeft);
 
       if (isNaN(daysLeft)) return;
-      if (nextDue < monthStart || nextDue > monthEnd) {
+
+      const isSelectedMonthDue = nextDue >= monthStart && nextDue <= monthEnd;
+      const isRelevantForMonth = isSelectedMonthDue || daysLeft <= 10;
+      if (!isRelevantForMonth) {
         return;
       }
+
+      const memberAmount = Number(String(member.membershipAmount ?? member.amount ?? 0).replace(/[^0-9.-]+/g, '')) || 0;
 
       const item = {
         memberId: member.memberId,
         name: member.fullName,
         plan: rawPlanName,
-        amount: Number(String(member.membershipAmount || 0).replace(/[^0-9.-]+/g, '')) || 0,
-        nextDueDate: nextDue,
+        amount: memberAmount,
+        nextDueDate: nextDue.toISOString(),
         dueDateLabel: nextDue.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
         daysLeft: daysLeft,
         statusText: urgency.label,
