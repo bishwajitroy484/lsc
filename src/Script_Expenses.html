@@ -24,15 +24,15 @@
       this.isExpensesLoaded = false;
       this.selectedPeriods = [...this.months];
 
+      // Pre-populate year selector so it is never blank
       const yearSelect = document.getElementById('exp-filter-year');
       if (yearSelect && yearSelect.options.length === 0) {
         const curY = new Date().getFullYear();
         yearSelect.innerHTML = `
-          <option value="${curY}">${curY}</option>
+          <option value="${curY}" selected>${curY}</option>
           <option value="${curY - 1}">${curY - 1}</option>
           <option value="${curY - 2}">${curY - 2}</option>
         `;
-        yearSelect.value = curY.toString();
       }
       
       this.renderCheckboxes();
@@ -47,7 +47,7 @@
            this.checkAndRender();
         })
         .withFailureHandler((err) => {
-           console.error("api_getGlobalDropdowns failed:", err);
+           console.error('api_getGlobalDropdowns failed:', err);
            this.dropdowns = this.dropdowns || {};
            this.dropdowns.expenseCats = [];
            this.isDropdownsLoaded = true;
@@ -62,8 +62,8 @@
            this.checkAndRender();
         })
         .withFailureHandler((err) => {
-           console.error("api_getExpenses failed:", err);
-           this.onDataLoaded({ success: false, error: err.message || "Failed to load expenses." });
+           console.error('api_getExpenses failed:', err);
+           this.onDataLoaded({ success: false, error: err.message || 'Failed to load expenses.' });
            this.isExpensesLoaded = true;
            this.checkAndRender();
         })
@@ -104,95 +104,6 @@
     formatDateDDMMMYYYY: AppUtils.formatDateDDMMMYYYY,
     parseToISODate: AppUtils.parseToISODate,
 
-    parseDateRobust: function(input) {
-      if (!input) return null;
-      if (input instanceof Date && !isNaN(input)) {
-        return new Date(Date.UTC(input.getFullYear(), input.getMonth(), input.getDate()));
-      }
-      if (typeof input !== 'string') {
-        const d = new Date(input);
-        return isNaN(d) ? null : new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      }
-      const str = input.trim();
-      if (!str || str === 'N/A') return null;
-
-      const monthMap = {
-        jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2,
-        apr: 3, april: 3, may: 4, jun: 5, june: 5, jul: 6, july: 6,
-        aug: 7, august: 7, sep: 8, sept: 8, september: 8, oct: 9, october: 9,
-        nov: 10, november: 10, dec: 11, december: 11
-      };
-
-      const parts = str.split(/[\s\-\/\.]+/);
-      if (parts.length >= 3) {
-        if (parts[0].length === 4 && !isNaN(parts[0])) {
-          const y = parseInt(parts[0], 10);
-          const m = isNaN(parts[1]) ? monthMap[parts[1].toLowerCase()] : parseInt(parts[1], 10) - 1;
-          const d = parseInt(parts[2], 10);
-          if (m !== undefined && !isNaN(m) && !isNaN(d)) return new Date(Date.UTC(y, m, d));
-        }
-        if (parts[2].length === 4 || parts[2].length === 2) {
-          let y = parseInt(parts[2], 10);
-          if (y < 100) y += 2000;
-          let m = isNaN(parts[1]) ? monthMap[parts[1].toLowerCase()] : parseInt(parts[1], 10) - 1;
-          const d = parseInt(parts[0], 10);
-          if (m !== undefined && !isNaN(m) && !isNaN(d)) return new Date(Date.UTC(y, m, d));
-        }
-      }
-
-      const direct = new Date(str);
-      if (!isNaN(direct)) {
-        return new Date(Date.UTC(direct.getUTCFullYear(), direct.getUTCMonth(), direct.getUTCDate()));
-      }
-      return null;
-    },
-
-    getSafeReceiptThumbnail: function(rawUrl) {
-      if (!rawUrl) return '';
-      let str = String(rawUrl).trim();
-      if (str.includes('drive.google.com')) {
-        const match = str.match(/id=([a-zA-Z0-9_-]+)/) || str.match(/d\/([a-zA-Z0-9_-]+)/);
-        if (match && match[1]) {
-          str = match[1];
-        }
-      }
-      if (!str.includes('http') && !str.includes('/')) {
-        return 'https://drive.google.com/thumbnail?id=' + str + '&sz=w200-h200';
-      }
-      return str;
-    },
-
-    getSafeReceiptUrl: function(rawUrl) {
-      if (!rawUrl) return '';
-      let str = String(rawUrl).trim();
-      if (str.includes('drive.google.com')) {
-        const match = str.match(/id=([a-zA-Z0-9_-]+)/) || str.match(/d\/([a-zA-Z0-9_-]+)/);
-        if (match && match[1]) {
-          return `https://drive.google.com/file/d/${match[1]}/view?usp=sharing`;
-        }
-        return str;
-      }
-      if (!str.includes('http') && !str.includes('/')) {
-        return `https://drive.google.com/file/d/${str}/view?usp=sharing`;
-      }
-      return str;
-    },
-
-    previewReceipt: function(input) {
-      if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const previewImg = document.getElementById('exp-receipt-preview');
-          const previewCont = document.getElementById('exp-receipt-preview-container');
-          if (previewImg && previewCont) {
-            previewImg.src = e.target.result;
-            previewCont.classList.remove('hidden');
-          }
-        };
-        reader.readAsDataURL(input.files[0]);
-      }
-    },
-
     showShimmer: function() {
       let dHtml = '';
       for(let i=0; i<5; i++){ dHtml += `<tr><td colspan="6" class="px-4 py-4"><div class="h-6 w-full shimmer rounded"></div></td></tr>`; }
@@ -202,31 +113,22 @@
       const mc = document.getElementById('mobile-expense-container');
       if(mc) mc.innerHTML = `<div class="p-4 bg-white rounded-xl shadow-sm"><div class="h-10 w-full shimmer rounded"></div></div>`;
       
-      if(this.chartInstances.trend) {
-        try { this.chartInstances.trend.destroy(); } catch(e){}
-        this.chartInstances.trend = null;
-      }
-      if(this.chartInstances.breakdown) {
-        try { this.chartInstances.breakdown.destroy(); } catch(e){}
-        this.chartInstances.breakdown = null;
-      }
-      if(this.chartInstances.misc) {
-        try { this.chartInstances.misc.destroy(); } catch(e){}
-        this.chartInstances.misc = null;
-      }
+      if(this.chartInstances.trend) { try { this.chartInstances.trend.destroy(); } catch(e){} this.chartInstances.trend = null; }
+      if(this.chartInstances.breakdown) { try { this.chartInstances.breakdown.destroy(); } catch(e){} this.chartInstances.breakdown = null; }
+      if(this.chartInstances.misc) { try { this.chartInstances.misc.destroy(); } catch(e){} this.chartInstances.misc = null; }
       
-      const trChart = document.getElementById('chart-expense-trend');
-      if (trChart) trChart.innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
-      const brChart = document.getElementById('chart-expense-breakdown');
-      if (brChart) brChart.innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
-      const msChart = document.getElementById('chart-expense-misc');
-      if (msChart) msChart.innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
+      const trEl = document.getElementById('chart-expense-trend');
+      if(trEl) trEl.innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
+      const brEl = document.getElementById('chart-expense-breakdown');
+      if(brEl) brEl.innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
+      const msEl = document.getElementById('chart-expense-misc');
+      if(msEl) msEl.innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
     },
 
     parseAmount: AppUtils.parseAmount,
 
     onDropdownsLoaded: function(response) {
-      if(!response || !response.success) {
+      if (!response || !response.success) {
         this.dropdowns = this.dropdowns || {};
         this.dropdowns.expenseCats = this.dropdowns.expenseCats || [];
         return;
@@ -234,7 +136,7 @@
       this.dropdowns = response.data?.options || {};
       
       const expenseCats = this.dropdowns.expensecategory || this.dropdowns.expense_category || this.dropdowns.expense || this.dropdowns.categories || [];
-      this.dropdowns.expenseCats = Array.isArray(expenseCats) ? expenseCats : []; 
+      this.dropdowns.expenseCats = Array.isArray(expenseCats) ? expenseCats : [];
       
       this.populateSelect('exp-category', this.dropdowns.expenseCats, null, "Select Category");
       this.populateSelect('filter-table-cat', this.dropdowns.expenseCats, null, "All Categories", true);
@@ -247,36 +149,18 @@
       
       if (Array.isArray(optionsArray)) {
         optionsArray.forEach(opt => {
-          if (!opt) return;
-          if (typeof opt === 'string') {
-            html += `<option value="${opt}">${opt}</option>`;
-          } else {
-            const optId = opt.id || opt.value || opt.code || opt.name || '';
-            const optName = opt.name || opt.label || opt.category || opt.id || '';
-            const label = secondaryLabel && opt[secondaryLabel] ? `${optName} (${opt[secondaryLabel]})` : optName;
-            html += `<option value="${optId}">${label}</option>`;
-          }
+          const label = secondaryLabel && opt[secondaryLabel] ? `${opt.name} (${opt[secondaryLabel]})` : opt.name;
+          html += `<option value="${opt.id}">${label}</option>`;
         });
       }
       el.innerHTML = html;
     },
 
     getName: function(id) {
-      if (!id || id === 'N/A' || id === '--') return 'N/A';
-      if (!this.dropdowns || !Array.isArray(this.dropdowns.expenseCats)) return String(id);
-      const searchId = String(id).trim().toLowerCase();
-      const match = this.dropdowns.expenseCats.find(item => {
-        if (!item) return false;
-        if (typeof item === 'string') return item.trim().toLowerCase() === searchId;
-        const itemId = String(item.id || item.value || item.code || '').trim().toLowerCase();
-        const itemName = String(item.name || item.label || item.category || '').trim().toLowerCase();
-        return itemId === searchId || itemName === searchId;
-      });
-      if (match) {
-        if (typeof match === 'string') return match;
-        return match.name || match.category || match.label || match.title || match.id || String(id);
-      }
-      return String(id);
+      if(!id || !this.dropdowns.expenseCats) return id || 'N/A';
+      const match = this.dropdowns.expenseCats.find(item => item && item.id === id);
+      if (!match) return id;
+      return match.name || match.category || match.label || match.id || id;
     },
 
     getColor: function(idx) { return this.colorMap[idx % this.colorMap.length]; },
@@ -287,74 +171,57 @@
            this.onDataLoaded(res);
            this.applyGlobalFilters();
         })
-        .withFailureHandler((err) => {
-           console.error("fetchData failed:", err);
-           this.onDataLoaded({ success: false, error: err.message || "Failed to load expenses." });
-        })
         .api_getExpenses();
     },
 
     onDataLoaded: function(response) {
-try {
       if (!response || !response.success) {
-        const errMsg = (response && response.error) || "Failed to load expenses.";
+        const errMsg = (response && response.error) || 'Failed to load expenses.';
         const tb = document.getElementById('desktop-expense-body');
-        if (tb) tb.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8">${errMsg}</td></tr>`;
+        if(tb) tb.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8">${errMsg}</td></tr>`;
         const mc = document.getElementById('mobile-expense-container');
-        if (mc) mc.innerHTML = `<div class="bg-white p-6 text-center text-xs text-red-500 rounded-xl border border-red-200">${errMsg}</div>`;
-        const trChart = document.getElementById('chart-expense-trend');
-        if (trChart) trChart.innerHTML = `<div class="h-full flex items-center justify-center text-xs text-red-400">${errMsg}</div>`;
-        const brChart = document.getElementById('chart-expense-breakdown');
-        if (brChart) brChart.innerHTML = `<div class="h-full flex items-center justify-center text-xs text-red-400">${errMsg}</div>`;
-        const msChart = document.getElementById('chart-expense-misc');
-        if (msChart) msChart.innerHTML = `<div class="h-full flex items-center justify-center text-xs text-red-400">${errMsg}</div>`;
-        return Toast.error("Failed to load expenses: " + errMsg);
+        if(mc) mc.innerHTML = `<div class="bg-white p-6 text-center text-xs text-red-500 rounded-xl border border-red-200">${errMsg}</div>`;
+        Toast.error('Failed to load expenses.');
+        return;
       }
       
       this.allData = response.data || [];
       this.salaries = response.salaries || [];
       this.staffMetrics = response.staffMetrics || {};
       
+      // Dynamically update year selector to include years from data
       const yearSelect = document.getElementById('exp-filter-year');
       if (yearSelect) {
         let years = new Set();
         const currentYear = new Date().getFullYear().toString();
         years.add(currentYear);
         years.add((Number(currentYear) - 1).toString());
+        years.add((Number(currentYear) - 2).toString());
         
         this.allData.forEach(exp => {
-          if (exp.date) {
-            const d = this.parseDateRobust(exp.date);
-            if (d && !isNaN(d.getTime())) years.add(d.getUTCFullYear().toString());
+          if(exp.date) {
+            const d = new Date(this.parseToISODate(exp.date));
+            if(!isNaN(d)) years.add(d.getFullYear().toString());
           }
         });
 
         if (this.staffMetrics) {
           Object.keys(this.staffMetrics).forEach(y => {
-            if (this.staffMetrics[y] && (this.staffMetrics[y].totalCost > 0 || (this.staffMetrics[y].monthly && this.staffMetrics[y].monthly.some(v => v > 0)))) {
+            if (this.staffMetrics[y] && this.staffMetrics[y].totalCost > 0) {
               years.add(y.toString());
             }
           });
         }
         
+        const prevSelected = yearSelect.value || currentYear;
         let yearsArray = Array.from(years).sort((a,b) => b - a);
         let yearHtml = '';
-        const prevSelected = yearSelect.value || currentYear;
-        yearsArray.forEach(y => { 
-          yearHtml += `<option value="${y}" ${y === prevSelected ? 'selected' : ''}>${y}</option>`; 
-        });
+        yearsArray.forEach(y => { yearHtml += `<option value="${y}" ${y === prevSelected ? 'selected' : ''}>${y}</option>`; });
         yearSelect.innerHTML = yearHtml;
-        if (yearsArray.includes(prevSelected)) {
-          yearSelect.value = prevSelected;
-        } else if (yearsArray.includes(currentYear)) {
-          yearSelect.value = currentYear;
-        } else if (yearsArray.length > 0) {
-          yearSelect.value = yearsArray[0];
-        }
+
+        if(yearsArray.includes(currentYear)) { yearSelect.value = currentYear; } 
+        else if(yearsArray.length > 0) { yearSelect.value = yearsArray[0]; }
       }
-} catch (err) {
-document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6" class="text-red-500 font-bold p-4">onDataLoaded error: ${err.toString()}</td></tr>`; console.error("onDataLoaded error:", err);
-}
     },
 
     handleModeSwitch: function() {
@@ -413,303 +280,234 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
     },
 
     applyGlobalFilters: function() {
-      try {
-        const yearSelect = document.getElementById('exp-filter-year');
-        const modeSelect = document.getElementById('exp-filter-mode');
-        const currentYearStr = new Date().getFullYear().toString();
-        const year = (yearSelect && yearSelect.value) ? yearSelect.value : currentYearStr;
-        const mode = (modeSelect && modeSelect.value) ? modeSelect.value : 'Monthly';
+      const year = document.getElementById('exp-filter-year')?.value;
+      const mode = document.getElementById('exp-filter-mode')?.value;
+      if (!year || !mode) return;
+      
+      this.filteredData = (this.allData || []).filter(exp => {
+        if(!exp.date) return false;
         
-        if (yearSelect && !yearSelect.value) {
-          yearSelect.value = year;
+        const d = new Date(this.parseToISODate(exp.date));
+        if(isNaN(d)) return false;
+        
+        if (d.getFullYear().toString() !== year) return false;
+        
+        if (mode === 'Monthly') {
+           return this.selectedPeriods.includes(this.months[d.getMonth()]);
+        } else {
+           return this.selectedPeriods.includes(this.quarters[Math.floor(d.getMonth() / 3)]);
         }
+      });
 
-        this.filteredData = (this.allData || []).filter(exp => {
-          if (!exp.date) return false;
-          
-          const d = this.parseDateRobust(exp.date);
-          if (!d || isNaN(d.getTime())) return false;
-          
-          if (d.getUTCFullYear().toString() !== year) return false;
-          
-          const mIdx = d.getUTCMonth();
-          if (mode === 'Monthly') {
-             return this.selectedPeriods.includes(this.months[mIdx]);
-          } else {
-             return this.selectedPeriods.includes(this.quarters[Math.floor(mIdx / 3)]);
-          }
-        });
-
-        try { this.calculateKPIs(); } catch (e) { console.error("calculateKPIs error:", e); }
-        try { this.renderCharts(); } catch (e) { console.error("renderCharts error:", e); }
-        try { this.filterTable(); } catch (e) { document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6" class="text-red-500">${e.toString()} <br/> ${e.stack}</td></tr>`; console.error("filterTable error:", e); }
-      } catch (err) {
-        document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6" class="text-red-500 font-bold p-4">applyGlobalFilters error: ${err.toString()}</td></tr>`; console.error("Error in applyGlobalFilters:", err);
-      }
+      this.calculateKPIs();
+      this.renderCharts();
+      this.filterTable(); 
     },
 
     calculateKPIs: function() {
-      try {
-        let total = 0;
-        let catSums = {};
-        
-        (this.filteredData || []).forEach(exp => {
-          const amt = this.parseAmount(exp.amount);
-          total += amt;
-          const catKey = exp.categoryId || exp.category || 'Other';
-          catSums[catKey] = (catSums[catKey] || 0) + amt;
-        });
+      let total = 0;
+      let catSums = {};
+      
+      (this.filteredData || []).forEach(exp => {
+        const amt = this.parseAmount(exp.amount);
+        total += amt;
+        catSums[exp.categoryId] = (catSums[exp.categoryId] || 0) + amt;
+      });
 
-        // Dynamic Title and Average Calculation
-        const mode = document.getElementById('exp-filter-mode')?.value || 'Monthly';
-        const isMonthly = mode === 'Monthly';
-        const avgTitle = document.getElementById('kpi-avg-title');
-        if (avgTitle) {
-            avgTitle.innerText = isMonthly ? 'MONTHLY AVG' : 'QUARTERLY AVG';
-        }
+      // Dynamic Title and Average Calculation
+      const mode = document.getElementById('exp-filter-mode')?.value || 'Monthly';
+      const isMonthly = mode === 'Monthly';
+      const avgTitle = document.getElementById('kpi-avg-title');
+      if (avgTitle) {
+          avgTitle.innerText = isMonthly ? 'MONTHLY AVG' : 'QUARTERLY AVG';
+      }
 
-        // Calculate Staff Cost for the selected year and selected periods from staffMetrics
-        const year = document.getElementById('exp-filter-year')?.value || new Date().getFullYear().toString();
-        let staffTotal = 0;
-        const yearStaffMetrics = (this.staffMetrics && year) ? (this.staffMetrics[year] || this.staffMetrics[Number(year)]) : null;
+      // Calculate Staff Cost for the selected year and selected periods from staffMetrics
+      const year = document.getElementById('exp-filter-year')?.value;
+      let staffTotal = 0;
+      const yearStaffMetrics = (this.staffMetrics && year) ? this.staffMetrics[year] : null;
 
-        if (yearStaffMetrics && Array.isArray(this.selectedPeriods)) {
-          this.selectedPeriods.forEach(p => {
-            if (isMonthly) {
-              const mIdx = this.months.indexOf(p);
-              if (mIdx !== -1 && yearStaffMetrics.monthly && yearStaffMetrics.monthly[mIdx]) {
-                staffTotal += Number(yearStaffMetrics.monthly[mIdx]) || 0;
-              }
-            } else {
-              const qIdx = this.quarters.indexOf(p);
-              if (qIdx !== -1 && yearStaffMetrics.quarterly && yearStaffMetrics.quarterly[qIdx]) {
-                staffTotal += Number(yearStaffMetrics.quarterly[qIdx]) || 0;
-              }
+      if (yearStaffMetrics) {
+        this.selectedPeriods.forEach(p => {
+          if (isMonthly) {
+            const mIdx = this.months.indexOf(p);
+            if (mIdx !== -1 && yearStaffMetrics.monthly[mIdx]) {
+              staffTotal += yearStaffMetrics.monthly[mIdx];
             }
-          });
-        }
-
-        // Also account for any direct expense categorized as staff/salary in EXPENSES
-        if (Array.isArray(this.dropdowns.expenseCats)) {
-          const staffCat = this.dropdowns.expenseCats.find(c => {
-            if (!c) return false;
-            const n = String(c.name || c.category || c.label || '').toLowerCase();
-            return n.includes('staff') || n.includes('trainer') || n.includes('salary');
-          });
-          if (staffCat) {
-            const sKey = staffCat.id || staffCat.name;
-            if (sKey && catSums[sKey]) {
-              staffTotal += catSums[sKey];
+          } else {
+            const qIdx = this.quarters.indexOf(p);
+            if (qIdx !== -1 && yearStaffMetrics.quarterly[qIdx]) {
+              staffTotal += yearStaffMetrics.quarterly[qIdx];
             }
           }
-        }
-
-        const elStaffExp = document.getElementById('kpi-staff-exp');
-        if (elStaffExp) elStaffExp.innerText = AppUtils.formatCurrency(staffTotal);
-
-        // Total Expenses includes General Expenses + Staff Cost
-        const grandTotal = total + staffTotal;
-        const elTotalExp = document.getElementById('kpi-total-exp');
-        if (elTotalExp) elTotalExp.innerText = AppUtils.formatCurrency(grandTotal);
-
-        // Top category (considering both general categories and Staff Cost)
-        let topCatName = '--';
-        let topAmt = 0;
-        for (const [catId, sum] of Object.entries(catSums)) {
-           if (sum > topAmt) {
-             topAmt = sum;
-             topCatName = this.getName(catId);
-           }
-        }
-        if (staffTotal > topAmt) {
-          topAmt = staffTotal;
-          topCatName = 'Staff Cost';
-        }
-        const elTopCat = document.getElementById('kpi-top-cat');
-        if (elTopCat) elTopCat.innerText = topCatName;
-        const elTopAmt = document.getElementById('kpi-top-cat-amt');
-        if (elTopAmt) elTopAmt.innerText = AppUtils.formatCurrency(topAmt);
-
-        const periodCount = (this.selectedPeriods && this.selectedPeriods.length) || 1;
-        const avg = grandTotal / periodCount;
-        const elAvgExp = document.getElementById('kpi-avg-exp');
-        if (elAvgExp) elAvgExp.innerText = AppUtils.formatCurrency(avg);
-      } catch (kpiErr) {
-        console.error("Error in calculateKPIs:", kpiErr);
+        });
       }
+
+      // Also account for any direct expense categorized as staff/salary in EXPENSES
+      if (this.dropdowns.expenseCats) {
+        const staffCat = this.dropdowns.expenseCats.find(c => {
+          if (!c || !c.name) return false;
+          const n = c.name.toLowerCase();
+          return n.includes('staff') || n.includes('trainer') || n.includes('salary');
+        });
+        if (staffCat && catSums[staffCat.id]) {
+          staffTotal += catSums[staffCat.id];
+        }
+      }
+
+      document.getElementById('kpi-staff-exp').innerText = AppUtils.formatCurrency(staffTotal);
+
+      // Total Expenses includes General Expenses + Staff Cost
+      const grandTotal = total + staffTotal;
+      document.getElementById('kpi-total-exp').innerText = AppUtils.formatCurrency(grandTotal);
+
+      // Top category (considering both general categories and Staff Cost)
+      let topCatName = '--';
+      let topAmt = 0;
+      for (const [catId, sum] of Object.entries(catSums)) {
+         if (sum > topAmt) {
+           topAmt = sum;
+           topCatName = this.getName(catId);
+         }
+      }
+      if (staffTotal > topAmt) {
+        topAmt = staffTotal;
+        topCatName = 'Staff Cost';
+      }
+      document.getElementById('kpi-top-cat').innerText = topCatName;
+      document.getElementById('kpi-top-cat-amt').innerText = AppUtils.formatCurrency(topAmt);
+
+      const periodCount = this.selectedPeriods.length || 1;
+      const avg = grandTotal / periodCount;
+      document.getElementById('kpi-avg-exp').innerText = AppUtils.formatCurrency(avg);
     },
 
     renderCharts: function() {
-      try {
-        const mode = document.getElementById('exp-filter-mode')?.value || 'Monthly';
-        const isMonthly = mode === 'Monthly';
-        const chartType = document.getElementById('chart-type-toggle')?.value || 'bar';
-        
-        const trendDataMap = {};
-        if (Array.isArray(this.selectedPeriods)) {
-          this.selectedPeriods.forEach(p => trendDataMap[p] = 0);
-        }
+      const mode = document.getElementById('exp-filter-mode').value;
+      const isMonthly = mode === 'Monthly';
+      const chartType = document.getElementById('chart-type-toggle').value; // Read dynamic chart type
+      
+      const trendDataMap = {};
+      this.selectedPeriods.forEach(p => trendDataMap[p] = 0);
 
-        let catSums = {};
-        let miscSums = {}; 
+      let catSums = {};
+      let miscSums = {}; 
 
-        (this.filteredData || []).forEach(exp => {
-           const amt = this.parseAmount(exp.amount);
-           const d = this.parseDateRobust(exp.date);
-           if (d && !isNaN(d.getTime())) {
-               const expMonthIdx = d.getUTCMonth();
-               const key = isMonthly ? this.months[expMonthIdx] : this.quarters[Math.floor(expMonthIdx / 3)];
-               if (trendDataMap[key] !== undefined) trendDataMap[key] += amt;
-           }
+      (this.filteredData || []).forEach(exp => {
+         const amt = this.parseAmount(exp.amount);
+         const d = new Date(this.parseToISODate(exp.date));
+         if(!isNaN(d)) {
+             const expMonthIdx = d.getMonth();
+             const key = isMonthly ? this.months[expMonthIdx] : this.quarters[Math.floor(expMonthIdx / 3)];
+             if(trendDataMap[key] !== undefined) trendDataMap[key] += amt;
+         }
 
-           const catKey = exp.categoryId || exp.category || 'Other';
-           const cName = String(this.getName(catKey) || 'Other');
-           catSums[cName] = (catSums[cName] || 0) + amt;
+         const cName = String(this.getName(exp.categoryId) || 'N/A');
+         catSums[cName] = (catSums[cName] || 0) + amt;
 
-           if (cName.toLowerCase().includes('misc') || cName.toLowerCase().includes('other')) {
-               const label = exp.whatMisc ? exp.whatMisc : 'Unspecified';
-               miscSums[label] = (miscSums[label] || 0) + amt;
-           }
-        });
+         if (cName.toLowerCase().includes('misc') || cName.toLowerCase().includes('other')) {
+             const label = exp.whatMisc ? exp.whatMisc : 'Unspecified';
+             miscSums[label] = (miscSums[label] || 0) + amt;
+         }
+      });
 
-        // Integrate Staff Cost into Trend and Category Breakdown
-        const year = document.getElementById('exp-filter-year')?.value || new Date().getFullYear().toString();
-        const yearStaffMetrics = (this.staffMetrics && year) ? (this.staffMetrics[year] || this.staffMetrics[Number(year)]) : null;
-        let staffTotal = 0;
+      // Integrate Staff Cost into Trend and Category Breakdown
+      const year = document.getElementById('exp-filter-year')?.value;
+      const yearStaffMetrics = (this.staffMetrics && year) ? this.staffMetrics[year] : null;
+      let staffTotal = 0;
 
-        if (yearStaffMetrics && Array.isArray(this.selectedPeriods)) {
-          this.selectedPeriods.forEach(p => {
-            let sAmt = 0;
-            if (isMonthly) {
-              const mIdx = this.months.indexOf(p);
-              if (mIdx !== -1 && yearStaffMetrics.monthly && yearStaffMetrics.monthly[mIdx]) sAmt = Number(yearStaffMetrics.monthly[mIdx]) || 0;
-            } else {
-              const qIdx = this.quarters.indexOf(p);
-              if (qIdx !== -1 && yearStaffMetrics.quarterly && yearStaffMetrics.quarterly[qIdx]) sAmt = Number(yearStaffMetrics.quarterly[qIdx]) || 0;
-            }
-            if (trendDataMap[p] !== undefined) trendDataMap[p] += sAmt;
-            staffTotal += sAmt;
-          });
-        }
-
-        if (staffTotal > 0) {
-          catSums['Staff Cost'] = (catSums['Staff Cost'] || 0) + staffTotal;
-        }
-
-        // 1. Trend Chart
-        try {
-          const trendEl = document.getElementById("chart-expense-trend");
-          if (trendEl && typeof ApexCharts !== 'undefined') {
-            if (this.chartInstances.trend) {
-              try { this.chartInstances.trend.destroy(); } catch (e) {}
-              this.chartInstances.trend = null;
-            }
-            trendEl.innerHTML = "";
-
-            const trendOpts = {
-              series: [{ name: 'Expenses', data: Object.values(trendDataMap) }],
-              chart: { type: chartType, height: '100%', toolbar: { show: false } },
-              plotOptions: { bar: { borderRadius: 4, columnWidth: '40%' } },
-              stroke: { curve: 'smooth', width: chartType === 'bar' ? 0 : 3 },
-              markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
-              dataLabels: { 
-                enabled: true, 
-                formatter: function (val) { return val ? AppUtils.formatCurrency(val) : ""; },
-                style: { fontSize: '9px', colors: ['#475569'] },
-                background: { enabled: false },
-                offsetY: chartType === 'bar' ? -10 : -20
-              },
-              xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '9px', colors: '#64748b' } } },
-              yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
-              tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
-              colors: ['#3b82f6'],
-              grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
-            };
-
-            this.chartInstances.trend = new ApexCharts(trendEl, trendOpts);
-            this.chartInstances.trend.render();
-          }
-        } catch (trendErr) {
-          console.error("Error rendering trend chart:", trendErr);
-        }
-
-        // 2. Category Breakdown Chart
-        try {
-          const bLabels = Object.keys(catSums);
-          const bSeries = Object.values(catSums);
-          const bColors = bLabels.map((l, i) => this.getColor(i));
-          const totalAmt = bSeries.reduce((a,b)=>a+b, 0);
-
-          const breakdownEl = document.getElementById("chart-expense-breakdown");
-          if (breakdownEl && typeof ApexCharts !== 'undefined') {
-            if (this.chartInstances.breakdown) {
-              try { this.chartInstances.breakdown.destroy(); } catch (e) {}
-              this.chartInstances.breakdown = null;
-            }
-            breakdownEl.innerHTML = "";
-
-            if (bSeries.length === 0 || totalAmt <= 0) {
-              breakdownEl.innerHTML = '<div class="h-full flex items-center justify-center text-xs text-slate-400">No expenses recorded</div>';
-            } else {
-              const breakOpts = {
-                series: bSeries,
-                labels: bLabels,
-                chart: { type: 'donut', height: '100%' },
-                colors: bColors.length ? bColors : ['#e2e8f0'],
-                plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
-                legend: { position: 'right', fontSize: '10px', offsetY: 20 },
-                dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w?.globals?.seriesTotals?.[opts.seriesIndex] || val || 0); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
-                tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
-              };
-
-              this.chartInstances.breakdown = new ApexCharts(breakdownEl, breakOpts);
-              this.chartInstances.breakdown.render();
-            }
-          }
-        } catch (breakdownErr) {
-          console.error("Error rendering breakdown chart:", breakdownErr);
-        }
-
-        // 3. Smart Misc Breakdown (Collapses if Empty or zero)
-        try {
-          const mLabels = Object.keys(miscSums);
-          const mSeries = Object.values(miscSums);
-          const mColors = mLabels.map((l, i) => this.getColor(i + 3)); 
-          const mTotal = mSeries.reduce((a,b)=>a+b, 0);
-
-          const miscWrapper = document.getElementById("chart-misc-wrapper");
-          const miscEl = document.getElementById("chart-expense-misc");
-          
-          if (mSeries.length === 0 || mTotal <= 0) {
-              if (miscWrapper) miscWrapper.classList.add('hidden');
+      if (yearStaffMetrics) {
+        this.selectedPeriods.forEach(p => {
+          let sAmt = 0;
+          if (isMonthly) {
+            const mIdx = this.months.indexOf(p);
+            if (mIdx !== -1 && yearStaffMetrics.monthly[mIdx]) sAmt = yearStaffMetrics.monthly[mIdx];
           } else {
-              if (miscWrapper) miscWrapper.classList.remove('hidden');
-              if (miscEl && typeof ApexCharts !== 'undefined') {
-                if (this.chartInstances.misc) {
-                  try { this.chartInstances.misc.destroy(); } catch (e) {}
-                  this.chartInstances.misc = null;
-                }
-                miscEl.innerHTML = "";
-
-                const miscOpts = {
-                  series: mSeries,
-                  labels: mLabels,
-                  chart: { type: 'pie', height: '100%' },
-                  colors: mColors,
-                  legend: { position: 'bottom', fontSize: '10px' },
-                  dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w?.globals?.seriesTotals?.[opts.seriesIndex] || val || 0); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
-                  tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
-                };
-                
-                this.chartInstances.misc = new ApexCharts(miscEl, miscOpts);
-                this.chartInstances.misc.render();
-              }
+            const qIdx = this.quarters.indexOf(p);
+            if (qIdx !== -1 && yearStaffMetrics.quarterly[qIdx]) sAmt = yearStaffMetrics.quarterly[qIdx];
           }
-        } catch (miscErr) {
-          console.error("Error rendering misc chart:", miscErr);
-        }
-      } catch (chartErr) {
-        console.error("Error in renderCharts:", chartErr);
+          if (trendDataMap[p] !== undefined) trendDataMap[p] += sAmt;
+          staffTotal += sAmt;
+        });
+      }
+
+      if (staffTotal > 0) {
+        catSums['Staff Cost'] = (catSums['Staff Cost'] || 0) + staffTotal;
+      }
+
+      // 1. Trend Chart (Dynamic Type + Data Points)
+      const trendOpts = {
+        series: [{ name: 'Expenses', data: Object.values(trendDataMap) }],
+        chart: { type: chartType, height: '100%', toolbar: { show: false } },
+        plotOptions: { bar: { borderRadius: 4, columnWidth: '40%' } },
+        stroke: { curve: 'smooth', width: chartType === 'bar' ? 0 : 3 },
+        markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
+        dataLabels: { 
+          enabled: true, 
+          formatter: function (val) { return val ? AppUtils.formatCurrency(val) : ""; },
+          style: { fontSize: '9px', colors: ['#475569'] },
+          background: { enabled: false },
+          offsetY: chartType === 'bar' ? -10 : -20
+        },
+        xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
+        colors: ['#3b82f6'],
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+      };
+
+      document.getElementById("chart-expense-trend").innerHTML = "";
+      if(this.chartInstances.trend) this.chartInstances.trend.destroy();
+      this.chartInstances.trend = new ApexCharts(document.querySelector("#chart-expense-trend"), trendOpts);
+      this.chartInstances.trend.render();
+
+      // 2. Category Breakdown Chart (Data Points Enabled)
+      const bLabels = Object.keys(catSums);
+      const bSeries = Object.values(catSums);
+      const bColors = bLabels.map((l, i) => this.getColor(i));
+      const totalAmt = bSeries.reduce((a,b)=>a+b, 0);
+
+      const breakOpts = {
+        series: bSeries,
+        labels: bLabels,
+        chart: { type: 'donut', height: '100%' },
+        colors: bColors.length ? bColors : ['#e2e8f0'],
+        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
+        legend: { position: 'right', fontSize: '10px', offsetY: 20 },
+        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
+        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
+      };
+
+      document.getElementById("chart-expense-breakdown").innerHTML = "";
+      if(this.chartInstances.breakdown) this.chartInstances.breakdown.destroy();
+      this.chartInstances.breakdown = new ApexCharts(document.querySelector("#chart-expense-breakdown"), breakOpts);
+      this.chartInstances.breakdown.render();
+
+      // 3. Smart Misc Breakdown (Collapses if Empty)
+      const mLabels = Object.keys(miscSums);
+      const mSeries = Object.values(miscSums);
+      const mColors = mLabels.map((l, i) => this.getColor(i + 3)); 
+
+      const miscWrapper = document.getElementById("chart-misc-wrapper");
+      
+      if (mSeries.length === 0) {
+          miscWrapper.classList.add('hidden'); // Collapse entire card
+      } else {
+          miscWrapper.classList.remove('hidden'); // Show card
+          const miscOpts = {
+            series: mSeries,
+            labels: mLabels,
+            chart: { type: 'pie', height: '100%' },
+            colors: mColors,
+            legend: { position: 'bottom', fontSize: '10px' },
+            dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
+            tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
+          };
+          
+          document.getElementById("chart-expense-misc").innerHTML = "";
+          if(this.chartInstances.misc) this.chartInstances.misc.destroy();
+          this.chartInstances.misc = new ApexCharts(document.querySelector("#chart-expense-misc"), miscOpts);
+          this.chartInstances.misc.render();
       }
     },
 
@@ -754,8 +552,7 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
       const cat = document.getElementById('filter-table-cat')?.value || 'All';
 
       this.tableData = (this.filteredData || []).filter(exp => {
-         const catVal = exp.categoryId || exp.category || '';
-         const matchCat = cat === 'All' || catVal === cat || this.getName(catVal) === cat;
+         const matchCat = cat === 'All' || exp.categoryId === cat;
          const matchSearch = !q || 
                              (exp.description && exp.description.toLowerCase().includes(q)) ||
                              (exp.amount && exp.amount.toString().includes(q)) ||
@@ -766,18 +563,6 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
       this.renderTable();
     },
 
-    openModalByIndex: function(index) {
-      const exp = this.tableData && this.tableData[index];
-      this.openModal(exp || null);
-    },
-
-    openDeleteModalByIndex: function(index) {
-      const exp = this.tableData && this.tableData[index];
-      if (exp) {
-        this.openDeleteModal(exp.expenseId, exp.description);
-      }
-    },
-
     renderTable: function() {
       const tBody = document.getElementById('desktop-expense-body');
       const mContainer = document.getElementById('mobile-expense-container');
@@ -786,16 +571,14 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
       this.tableData.sort((a, b) => {
          let valA, valB;
          if (this.sortColumn === 'date') {
-            const dA = this.parseDateRobust(a.date);
-            const dB = this.parseDateRobust(b.date);
-            valA = dA ? dA.getTime() : 0;
-            valB = dB ? dB.getTime() : 0;
+            valA = new Date(this.parseToISODate(a.date)).getTime();
+            valB = new Date(this.parseToISODate(b.date)).getTime();
          } else if (this.sortColumn === 'amount') {
             valA = this.parseAmount(a.amount);
             valB = this.parseAmount(b.amount);
          } else if (this.sortColumn === 'category') {
-            valA = String(this.getName(a.categoryId || a.category) || '').toLowerCase();
-            valB = String(this.getName(b.categoryId || b.category) || '').toLowerCase();
+            valA = this.getName(a.categoryId).toLowerCase();
+            valB = this.getName(b.categoryId).toLowerCase();
          }
          
          if (valA < valB) return this.sortAsc ? -1 : 1;
@@ -812,9 +595,8 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
       let dHtml = ''; let mHtml = '';
 
       this.tableData.forEach((exp, index) => {
-        const catKey = exp.categoryId || exp.category;
-        let cName = String(this.getName(catKey) || 'N/A');
-        const cIdx = this.dropdowns.expenseCats ? this.dropdowns.expenseCats.findIndex(c => c && (c.id === catKey || c.name === catKey || c.category === catKey)) : index;
+        let cName = String(this.getName(exp.categoryId) || 'N/A');
+        const cIdx = this.dropdowns.expenseCats ? this.dropdowns.expenseCats.findIndex(c => c.id === exp.categoryId) : index;
         const color = this.getColor(cIdx > -1 ? cIdx : index);
         
         // Append Misc info for desktop table
@@ -828,7 +610,9 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
         
         const creator = exp.createdBy ? exp.createdBy.split('@')[0] : 'Admin';
         const safeDesc = exp.description || '--';
-        let rcptHtml = exp.receiptUrl ? `<a href="${this.getSafeReceiptUrl(exp.receiptUrl)}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1" title="View Receipt"><span class="material-symbols-rounded text-[13px] align-middle">receipt_long</span></a>` : '';
+        // Use receiptFileId (the Drive file ID stored from upload)
+        const fileId = exp.receiptFileId || exp.receiptUrl || '';
+        let rcptHtml = fileId ? `<a href="https://drive.google.com/file/d/${fileId}/view?usp=sharing" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1" title="View Receipt"><span class="material-symbols-rounded text-[12px] align-middle">receipt_long</span></a>` : '';
 
         dHtml += `
           <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
@@ -846,7 +630,7 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
           </tr>
         `;
 
-        // Mobile Card Implementation (Optimized inline description)
+        // Mobile Card
         mHtml += `
           <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 relative">
             <div class="flex items-start justify-between gap-2">
@@ -873,9 +657,20 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
       mContainer.innerHTML = mHtml;
     },
 
+    // --- Index-based modal openers (safe for descriptions with special chars) ---
+    openModalByIndex: function(index) {
+      const exp = this.tableData && this.tableData[index];
+      this.openModal(exp || null);
+    },
+
+    openDeleteModalByIndex: function(index) {
+      const exp = this.tableData && this.tableData[index];
+      if (exp) { this.openDeleteModal(exp.expenseId, exp.description); }
+    },
+
     checkMiscCategory: function() {
        const select = document.getElementById('exp-category');
-       const name = select && select.selectedIndex >= 0 && select.options[select.selectedIndex] ? select.options[select.selectedIndex].text.toLowerCase() : '';
+       const name = (select && select.selectedIndex >= 0 && select.options[select.selectedIndex]) ? select.options[select.selectedIndex].text.toLowerCase() : '';
        const miscContainer = document.getElementById('misc-field-container');
        const miscInput = document.getElementById('exp-what-misc');
        
@@ -888,6 +683,21 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
        }
     },
 
+    previewReceipt: function(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const previewImg = document.getElementById('exp-receipt-preview');
+          const previewCont = document.getElementById('exp-receipt-preview-container');
+          if (previewImg && previewCont) {
+            previewImg.src = e.target.result;
+            previewCont.classList.remove('hidden');
+          }
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    },
+
     openModal: function(exp = null) {
       document.getElementById('exp-modal-title').innerText = exp ? 'Edit Expense' : 'Add Expense';
       document.getElementById('exp-id').value = exp ? exp.expenseId : '';
@@ -896,28 +706,30 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
       
       document.getElementById('exp-category').value = exp ? exp.categoryId : '';
       document.getElementById('exp-amount').value = exp ? this.parseAmount(exp.amount) : '';
-      document.getElementById('exp-desc').value = exp ? exp.description : '';
+      document.getElementById('exp-desc').value = exp ? (exp.description || '') : '';
+      document.getElementById('exp-what-misc').value = exp && exp.whatMisc ? exp.whatMisc : '';
 
+      // Reset file input
       const fileInput = document.getElementById('exp-receipt-file');
       if (fileInput) fileInput.value = '';
 
-      const rcptUrl = exp && exp.receiptUrl ? exp.receiptUrl : '';
-      const hiddenRcpt = document.getElementById('exp-receipt');
-      if (hiddenRcpt) hiddenRcpt.value = rcptUrl;
+      // Store existing receiptFileId in hidden field
+      const hiddenFileId = document.getElementById('exp-receipt-file-id');
+      const existingFileId = exp && (exp.receiptFileId || exp.receiptUrl) ? (exp.receiptFileId || exp.receiptUrl) : '';
+      if (hiddenFileId) hiddenFileId.value = existingFileId;
 
+      // Show existing receipt preview if available
       const previewCont = document.getElementById('exp-receipt-preview-container');
       const previewImg = document.getElementById('exp-receipt-preview');
       if (previewCont && previewImg) {
-        if (rcptUrl) {
-          previewImg.src = this.getSafeReceiptThumbnail(rcptUrl);
+        if (existingFileId) {
+          previewImg.src = `https://drive.google.com/thumbnail?id=${existingFileId}&sz=w200-h200`;
           previewCont.classList.remove('hidden');
         } else {
           previewImg.src = '';
           previewCont.classList.add('hidden');
         }
       }
-
-      document.getElementById('exp-what-misc').value = exp && exp.whatMisc ? exp.whatMisc : '';
 
       this.checkMiscCategory();
 
@@ -932,14 +744,9 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
       document.getElementById('misc-field-container').classList.add('hidden');
       const previewCont = document.getElementById('exp-receipt-preview-container');
       const previewImg = document.getElementById('exp-receipt-preview');
-      if (previewCont && previewImg) {
-        previewImg.src = '';
-        previewCont.classList.add('hidden');
-      }
-      const fileInput = document.getElementById('exp-receipt-file');
-      if (fileInput) fileInput.value = '';
-      const hiddenRcpt = document.getElementById('exp-receipt');
-      if (hiddenRcpt) hiddenRcpt.value = '';
+      if (previewCont && previewImg) { previewImg.src = ''; previewCont.classList.add('hidden'); }
+      const hiddenFileId = document.getElementById('exp-receipt-file-id');
+      if (hiddenFileId) hiddenFileId.value = '';
     },
 
     saveExpense: async function(e) {
@@ -948,6 +755,7 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
       btn.innerHTML = `<span class="material-symbols-rounded animate-spin text-[18px] mr-2">progress_activity</span> Saving...`;
       btn.disabled = true;
 
+      // Handle file upload if a new file was selected
       const fileInput = document.getElementById('exp-receipt-file');
       let base64Image = null;
       let imageName = null;
@@ -973,8 +781,8 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
         whatMisc: document.getElementById('exp-what-misc').value,
         date: this.formatDateDDMMMYYYY(document.getElementById('exp-date').value),
         amount: Number(document.getElementById('exp-amount').value),
-        description: document.getElementById('exp-desc').value || '', 
-        receiptUrl: document.getElementById('exp-receipt') ? document.getElementById('exp-receipt').value : '',
+        description: document.getElementById('exp-desc').value || '',
+        receiptFileId: document.getElementById('exp-receipt-file-id') ? document.getElementById('exp-receipt-file-id').value : '',
         base64Image: base64Image,
         imageName: imageName
       };
@@ -991,7 +799,7 @@ document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6"
         })
         .withFailureHandler((err) => {
           btn.innerHTML = `Save Expense`; btn.disabled = false;
-          Toast.error(err.message || "Server Error.");
+          Toast.error(err.message || 'Server Error.');
         })
         .api_saveExpense(payload);
     },
