@@ -15,9 +15,9 @@ function api_getExpenses() {
         'SETTINGS': DB.read('SETTINGS') || []
       };
     }
-    const expenses = dbData['EXPENSES'] || [];
-    const salaries = dbData['SALARY'] || [];
-    const settingsRows = dbData['SETTINGS'] || [];
+    const expenses = (dbData && Array.isArray(dbData['EXPENSES'])) ? dbData['EXPENSES'] : [];
+    const salaries = (dbData && Array.isArray(dbData['SALARY'])) ? dbData['SALARY'] : [];
+    const settingsRows = (dbData && Array.isArray(dbData['SETTINGS'])) ? dbData['SETTINGS'] : [];
 
     let accrualMode = 'anchor';
     const accSetting = settingsRows.find(s => {
@@ -39,20 +39,24 @@ function api_getExpenses() {
       }
     };
 
-    salaries.forEach(t => {
-      const status = String(t.paymentStatus || '').toLowerCase();
-      if (status.includes('fail') || status.includes('pending') || status.includes('action')) return;
+    try {
+      salaries.forEach(t => {
+        const status = String(t.paymentStatus || '').toLowerCase();
+        if (status.includes('fail') || status.includes('pending') || status.includes('action')) return;
 
-      let totalAmt = Number(String(t.amount || 0).replace(/[^0-9.-]+/g, ""));
-      if (!totalAmt || isNaN(totalAmt)) return;
+        let totalAmt = Number(String(t.amount || 0).replace(/[^0-9.-]+/g, ""));
+        if (!totalAmt || isNaN(totalAmt)) return;
 
-      distributeDailyProration(t.startDate || t.paidDate, t.endDate || t.paidDate, t.paidDate, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
-        ensureYear(cYear);
-        staffMetrics[cYear].totalCost += intervalAmt;
-        staffMetrics[cYear].monthly[cMonth] += intervalAmt;
-        staffMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += intervalAmt;
+        distributeDailyProration(t.startDate || t.paidDate, t.endDate || t.paidDate, t.paidDate, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
+          ensureYear(cYear);
+          staffMetrics[cYear].totalCost += intervalAmt;
+          staffMetrics[cYear].monthly[cMonth] += intervalAmt;
+          staffMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += intervalAmt;
+        });
       });
-    });
+    } catch (salErr) {
+      console.error("Salary proration error in api_getExpenses:", salErr);
+    }
 
     return {
       success: true,
@@ -77,22 +81,41 @@ function api_saveExpense(expenseData) {
     
     expenseData.updatedAt = now;
     expenseData.updatedBy = userEmail;
-    
-    let savedData;
-    if (expenseData.expenseId) {
-      savedData = DB.update('EXPENSES', expenseData.expenseId, expenseData);
-    } else {
+
+    let isNew = !expenseData.expenseId;
+    if (isNew) {
       expenseData.expenseId = generateId('EXP');
       expenseData.createdAt = now;
       expenseData.createdBy = userEmail;
-      
+    }
+
+    // Handle receipt image upload intercept if base64Image is provided
+    if (expenseData.base64Image) {
+      const filename = expenseData.expenseId + '_' + (expenseData.imageName || 'receipt.png');
+      const uploadRes = api_uploadImageToDrive(expenseData.base64Image, filename);
+      if (uploadRes.success) {
+        expenseData.receiptUrl = uploadRes.url || uploadRes.fileId;
+      } else {
+        throw new Error("Receipt Upload Failed: " + uploadRes.error);
+      }
+    }
+
+    // Clean payload before saving to DB
+    delete expenseData.base64Image;
+    delete expenseData.imageName;
+    delete expenseData.notes;
+    
+    let savedData;
+    if (!isNew) {
+      savedData = DB.update('EXPENSES', expenseData.expenseId, expenseData);
+    } else {
       savedData = DB.create('EXPENSES', expenseData);
     }
     
     return { 
       success: true, 
       data: savedData, 
-      message: expenseData.expenseId ? "Expense updated successfully." : "Expense added successfully." 
+      message: !isNew ? "Expense updated successfully." : "Expense added successfully." 
     };
   } catch (error) {
     return { success: false, error: error.toString() };

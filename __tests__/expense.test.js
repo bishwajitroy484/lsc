@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { distributeDailyProration, parseSafeDate } = require('../src/Utils_DB');
-const { api_getExpenses } = require('../src/API_Expense');
+const { api_getExpenses, api_saveExpense } = require('../src/API_Expense');
 
 describe('Expense Module - Staff Cost Integration & Calculations', () => {
   let ExpensesApp;
@@ -152,5 +152,221 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
       const totalKpi = document.getElementById('kpi-total-exp').innerText;
       expect(totalKpi).toBe(AppUtils.formatCurrency(60000));
     });
+
+    it('should safely render without throwing when dropdown options have missing name or unexpected structures', () => {
+      ExpensesApp.dropdowns = {
+        expenseCats: [
+          { id: 'CAT-1' },
+          { id: 'CAT-2', category: 'Maintenance' },
+          null
+        ]
+      };
+      ExpensesApp.allData = [
+        { expenseId: 'EXP-1', categoryId: 'CAT-1', amount: 500, date: '10-Jan-2026' },
+        { expenseId: 'EXP-2', categoryId: 'CAT-2', amount: 1200, date: '12-Jan-2026' }
+      ];
+      ExpensesApp.filteredData = ExpensesApp.allData;
+
+      expect(() => {
+        ExpensesApp.calculateKPIs();
+        ExpensesApp.renderCharts();
+        ExpensesApp.filterTable();
+      }).not.toThrow();
+
+      expect(ExpensesApp.getName('CAT-1')).toBe('CAT-1');
+      expect(ExpensesApp.getName('CAT-2')).toBe('Maintenance');
+      expect(ExpensesApp.getName('UNKNOWN')).toBe('UNKNOWN');
+    });
+  });
+
+  describe('Backend api_saveExpense', () => {
+    beforeEach(() => {
+      global.Session = {
+        getActiveUser: () => ({ getEmail: () => 'admin@lsc.com' })
+      };
+      global.generateId = (prefix) => `${prefix}-TEST123`;
+      global.api_uploadImageToDrive = jest.fn((base64, filename) => ({
+        success: true,
+        fileId: 'DRIVE_FILE_999',
+        url: 'https://drive.google.com/uc?export=view&id=DRIVE_FILE_999'
+      }));
+    });
+
+    it('should save a new expense, intercept base64Image upload to Drive, and omit notes', () => {
+      let createdRecord = null;
+      global.DB = {
+        create: jest.fn((table, data) => {
+          createdRecord = { ...data };
+          return createdRecord;
+        })
+      };
+
+      const payload = {
+        categoryId: 'CAT-1',
+        amount: 5000,
+        date: '25-Sep-2026',
+        description: 'New Dumbbells',
+        notes: 'Some temporary notes',
+        base64Image: 'data:image/png;base64,iVBORw0KGgo...',
+        imageName: 'receipt.png'
+      };
+
+      const res = api_saveExpense(payload);
+      expect(res.success).toBe(true);
+      expect(global.api_uploadImageToDrive).toHaveBeenCalledWith(
+        'data:image/png;base64,iVBORw0KGgo...',
+        'EXP-TEST123_receipt.png'
+      );
+      expect(createdRecord.expenseId).toBe('EXP-TEST123');
+      expect(createdRecord.receiptUrl).toBe('https://drive.google.com/uc?export=view&id=DRIVE_FILE_999');
+      expect(createdRecord.notes).toBeUndefined();
+      expect(createdRecord.base64Image).toBeUndefined();
+      expect(createdRecord.imageName).toBeUndefined();
+      expect(createdRecord.createdBy).toBe('admin@lsc.com');
+    });
+
+    it('should update an existing expense and omit notes', () => {
+      let updatedRecord = null;
+      global.DB = {
+        update: jest.fn((table, id, data) => {
+          updatedRecord = { ...data };
+          return updatedRecord;
+        })
+      };
+
+      const payload = {
+        expenseId: 'EXP-EXISTING',
+        categoryId: 'CAT-2',
+        amount: 12000,
+        date: '20-Sep-2026',
+        description: 'Electricity Bill',
+        receiptUrl: 'https://drive.google.com/existing_receipt',
+        notes: 'Old notes'
+      };
+
+      const res = api_saveExpense(payload);
+      expect(res.success).toBe(true);
+      expect(global.DB.update).toHaveBeenCalledWith('EXPENSES', 'EXP-EXISTING', expect.any(Object));
+      expect(updatedRecord.notes).toBeUndefined();
+      expect(updatedRecord.receiptUrl).toBe('https://drive.google.com/existing_receipt');
+    });
+  });
+
+  describe('Frontend Receipt URL & Thumbnail Helpers', () => {
+    it('should correctly format Google Drive URLs and pure IDs for thumbnails and viewer links', () => {
+      // 1. Pure File ID
+      const pureId = '1AbCdEfGhIjKlMnOpQrStUvWxYz';
+      expect(ExpensesApp.getSafeReceiptThumbnail(pureId)).toBe(
+        'https://drive.google.com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvWxYz&sz=w200-h200'
+      );
+      expect(ExpensesApp.getSafeReceiptUrl(pureId)).toBe(
+        'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view?usp=sharing'
+      );
+
+      // 2. Google Drive URL with id parameter
+      const driveUrlWithId = 'https://drive.google.com/uc?export=view&id=1AbCdEfGhIjKlMnOpQrStUvWxYz';
+      expect(ExpensesApp.getSafeReceiptThumbnail(driveUrlWithId)).toBe(
+        'https://drive.google.com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvWxYz&sz=w200-h200'
+      );
+      expect(ExpensesApp.getSafeReceiptUrl(driveUrlWithId)).toBe(
+        'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view?usp=sharing'
+      );
+
+      // 3. Regular external link
+      const regularUrl = 'https://example.com/receipt.jpg';
+      expect(ExpensesApp.getSafeReceiptThumbnail(regularUrl)).toBe('https://example.com/receipt.jpg');
+      expect(ExpensesApp.getSafeReceiptUrl(regularUrl)).toBe('https://example.com/receipt.jpg');
+
+      // 4. Empty / null
+      expect(ExpensesApp.getSafeReceiptThumbnail('')).toBe('');
+      expect(ExpensesApp.getSafeReceiptUrl(null)).toBe('');
+    });
+  });
+
+  describe('Robust Date & Category Parsing Helpers', () => {
+    it('should parse dates robustly across different formats using parseDateRobust', () => {
+      // DD-MMM-YYYY
+      const d1 = ExpensesApp.parseDateRobust('15-Jan-2026');
+      expect(d1.getUTCFullYear()).toBe(2026);
+      expect(d1.getUTCMonth()).toBe(0);
+      expect(d1.getUTCDate()).toBe(15);
+
+      // ISO format YYYY-MM-DD
+      const d2 = ExpensesApp.parseDateRobust('2026-05-20');
+      expect(d2.getUTCFullYear()).toBe(2026);
+      expect(d2.getUTCMonth()).toBe(4);
+      expect(d2.getUTCDate()).toBe(20);
+
+      // DD/MM/YYYY
+      const d3 = ExpensesApp.parseDateRobust('25/12/2026');
+      expect(d3.getUTCFullYear()).toBe(2026);
+      expect(d3.getUTCMonth()).toBe(11);
+      expect(d3.getUTCDate()).toBe(25);
+
+      // Date instance
+      const d4 = ExpensesApp.parseDateRobust(new Date(Date.UTC(2026, 6, 4)));
+      expect(d4.getUTCFullYear()).toBe(2026);
+      expect(d4.getUTCMonth()).toBe(6);
+      expect(d4.getUTCDate()).toBe(4);
+
+      // Empty / invalid
+      expect(ExpensesApp.parseDateRobust('')).toBeNull();
+      expect(ExpensesApp.parseDateRobust(null)).toBeNull();
+      expect(ExpensesApp.parseDateRobust('N/A')).toBeNull();
+    });
+
+    it('should match category name by ID, Name, or case-insensitive search in getName', () => {
+      ExpensesApp.dropdowns = {
+        expenseCats: [
+          { id: 'CAT-RENT', name: 'Rent' },
+          { id: 'CAT-UTIL', name: 'Utilities' }
+        ]
+      };
+
+      expect(ExpensesApp.getName('CAT-RENT')).toBe('Rent');
+      expect(ExpensesApp.getName('rent')).toBe('Rent');
+      expect(ExpensesApp.getName('Rent')).toBe('Rent');
+      expect(ExpensesApp.getName('Utilities')).toBe('Utilities');
+      expect(ExpensesApp.getName('CAT-UTIL')).toBe('Utilities');
+      expect(ExpensesApp.getName('NON-EXISTENT')).toBe('NON-EXISTENT');
+    });
+
+    it('should calculate KPIs correctly when expenses use category instead of categoryId', () => {
+      ExpensesApp.dropdowns = {
+        expenseCats: [
+          { id: 'CAT-1', name: 'Rent' }
+        ]
+      };
+      ExpensesApp.filteredData = [
+        { expenseId: 'EXP-1', category: 'CAT-1', amount: 5000, date: '10-Jan-2026' }
+      ];
+      ExpensesApp.staffMetrics = {};
+      ExpensesApp.selectedPeriods = ['Jan'];
+      document.getElementById('exp-filter-year').value = '2026';
+      document.getElementById('exp-filter-mode').value = 'Monthly';
+
+      ExpensesApp.calculateKPIs();
+
+      expect(document.getElementById('kpi-total-exp').innerText).toBe(AppUtils.formatCurrency(5000));
+      expect(document.getElementById('kpi-top-cat').innerText).toBe('Rent');
+      expect(document.getElementById('kpi-top-cat-amt').innerText).toBe(AppUtils.formatCurrency(5000));
+    });
+
+    it('should test backend parseSafeDate with various date strings', () => {
+      const d1 = parseSafeDate('15-Jan-2026');
+      expect(d1.getFullYear()).toBe(2026);
+      expect(d1.getMonth()).toBe(0);
+
+      const d2 = parseSafeDate('2026-05-20');
+      expect(d2.getFullYear()).toBe(2026);
+
+      const d3 = parseSafeDate('20/05/2026');
+      expect(d3.getFullYear()).toBe(2026);
+
+      const d4 = parseSafeDate('invalid');
+      expect(isNaN(d4.getTime())).toBe(true);
+    });
   });
 });
+
+
