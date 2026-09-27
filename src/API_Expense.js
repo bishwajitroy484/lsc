@@ -5,8 +5,62 @@
 
 function api_getExpenses() {
   try {
-    const expenses = DB.read('EXPENSES') || [];
-    return { success: true, data: expenses };
+    let dbData;
+    try {
+      dbData = DB.batchRead(['EXPENSES', 'SALARY', 'SETTINGS']);
+    } catch (e) {
+      dbData = {
+        'EXPENSES': DB.read('EXPENSES') || [],
+        'SALARY': DB.read('SALARY') || [],
+        'SETTINGS': DB.read('SETTINGS') || []
+      };
+    }
+    const expenses = dbData['EXPENSES'] || [];
+    const salaries = dbData['SALARY'] || [];
+    const settingsRows = dbData['SETTINGS'] || [];
+
+    let accrualMode = 'anchor';
+    const accSetting = settingsRows.find(s => {
+      const k = String(s.key || s.setting || s.Name || '').toLowerCase();
+      return k === 'revenue_recognition' || k === 'revenue recognition';
+    });
+    if (accSetting) {
+      accrualMode = String(accSetting.value || accSetting.Value || '').toLowerCase();
+    }
+
+    const staffMetrics = {};
+    const ensureYear = (y) => {
+      if (!staffMetrics[y]) {
+        staffMetrics[y] = {
+          monthly: new Array(12).fill(0),
+          quarterly: [0, 0, 0, 0],
+          totalCost: 0
+        };
+      }
+    };
+
+    salaries.forEach(t => {
+      const status = String(t.paymentStatus || '').toLowerCase();
+      if (status.includes('fail') || status.includes('pending') || status.includes('action')) return;
+
+      let totalAmt = Number(String(t.amount || 0).replace(/[^0-9.-]+/g, ""));
+      if (!totalAmt || isNaN(totalAmt)) return;
+
+      distributeDailyProration(t.startDate || t.paidDate, t.endDate || t.paidDate, t.paidDate, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
+        ensureYear(cYear);
+        staffMetrics[cYear].totalCost += intervalAmt;
+        staffMetrics[cYear].monthly[cMonth] += intervalAmt;
+        staffMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += intervalAmt;
+      });
+    });
+
+    return {
+      success: true,
+      data: expenses,
+      salaries: salaries,
+      staffMetrics: staffMetrics,
+      accrualMode: accrualMode
+    };
   } catch (error) {
     return { success: false, error: error.toString() };
   }
@@ -53,4 +107,12 @@ function api_deleteExpense(expenseId) {
   } catch (error) {
     return { success: false, error: error.toString() };
   }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    api_getExpenses,
+    api_saveExpense,
+    api_deleteExpense
+  };
 }
