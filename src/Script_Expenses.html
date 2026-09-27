@@ -295,6 +295,7 @@
     },
 
     onDataLoaded: function(response) {
+try {
       if (!response || !response.success) {
         const errMsg = (response && response.error) || "Failed to load expenses.";
         const tb = document.getElementById('desktop-expense-body');
@@ -351,6 +352,9 @@
           yearSelect.value = yearsArray[0];
         }
       }
+} catch (err) {
+document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6" class="text-red-500 font-bold p-4">onDataLoaded error: ${err.toString()}</td></tr>`; console.error("onDataLoaded error:", err);
+}
     },
 
     handleModeSwitch: function() {
@@ -438,9 +442,9 @@
 
         try { this.calculateKPIs(); } catch (e) { console.error("calculateKPIs error:", e); }
         try { this.renderCharts(); } catch (e) { console.error("renderCharts error:", e); }
-        try { this.filterTable(); } catch (e) { console.error("filterTable error:", e); }
+        try { this.filterTable(); } catch (e) { document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6" class="text-red-500">${e.toString()} <br/> ${e.stack}</td></tr>`; console.error("filterTable error:", e); }
       } catch (err) {
-        console.error("Error in applyGlobalFilters:", err);
+        document.getElementById("desktop-expense-body").innerHTML = `<tr><td colspan="6" class="text-red-500 font-bold p-4">applyGlobalFilters error: ${err.toString()}</td></tr>`; console.error("Error in applyGlobalFilters:", err);
       }
     },
 
