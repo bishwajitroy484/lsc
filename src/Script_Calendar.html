@@ -105,8 +105,16 @@
         this.renderCalendarFromData();
       };
 
+      const safeResponse = (response) => {
+        if (!response || !response.success) {
+          this.monthMembers = [];
+          this.dateBuckets = {};
+        }
+        return response;
+      };
+
       google.script.run
-        .withSuccessHandler((response) => finalizeLoad(response))
+        .withSuccessHandler((response) => finalizeLoad(safeResponse(response)))
         .withFailureHandler(() => {
           this.monthMembers = [];
           this.dateBuckets = {};

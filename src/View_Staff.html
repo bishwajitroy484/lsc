@@ -38,7 +38,7 @@
 
   <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
     
-    <!-- KPIs (Removed strict h-24 to fix cutoffs) -->
+    
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
       <div class="bg-cyan-50/50 p-4 rounded-xl border border-cyan-100 flex flex-col justify-center">
         <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[14px]">group</span><p class="text-[10px] text-slate-500 font-bold uppercase">Total Staff</p></div>
@@ -85,7 +85,7 @@
       </div>
     </div>
 
-    <!-- Charts -->
+    
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
       <div class="lg:col-span-2 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
         <div class="flex items-center justify-between mb-2">
@@ -109,7 +109,7 @@
       </div>
     </div>
 
-    <!-- Data Table / List -->
+    
     <div id="staff-table-card" class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
       <div class="p-3 md:p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
         <div class="flex items-center gap-2">
@@ -117,7 +117,7 @@
           <span id="staff-count-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">0</span>
         </div>
         
-        <!-- Search and Category / Salary filters on one row -->
+        
         <div class="flex flex-nowrap items-center gap-2 w-full md:w-auto">
           <div class="relative flex-1 md:w-44 shrink-0">
             <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[16px]">search</span>
@@ -155,7 +155,7 @@
     </div>
   </div>
 
-  <!-- SLIDING DRAWER -->
+  
   <div id="staff-drawer-backdrop" onclick="StaffApp.closeDetails()" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[120]"></div>
   <div id="staff-drawer" class="fixed top-0 bottom-0 right-0 w-full md:w-[450px] bg-slate-50 shadow-2xl z-[130] transform translate-x-full transition-transform duration-300 flex flex-col overflow-hidden">
     <header class="bg-white px-4 py-3 flex items-center justify-between border-b border-slate-100 shrink-0">
@@ -233,7 +233,7 @@
     </div>
   </div>
 
-  <!-- FIX 4: z-index 140 to appear ABOVE the drawer. FIX 5: Compact 2-column form grid -->
+  
   <div id="staff-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[140] flex items-end md:items-center justify-center sm:p-4 pb-20 md:pb-4">
     <div id="staff-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh]">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
@@ -299,7 +299,7 @@
     </div>
   </div>
 
-  <!-- FIX 4: z-index 150. FIX 6: Compact Transaction Form -->
+  
   <div id="txn-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[150] flex items-end md:items-center justify-center sm:p-4 pb-20 md:pb-4">
     <div id="txn-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh]">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">

@@ -22,8 +22,10 @@ function api_getMembers() {
       accrualMode = String(accSetting.value || accSetting.Value || '').toLowerCase();
     }
 
-    const globalData = api_getGlobalDropdowns();
-    const plans = (globalData.success && globalData.data.options.membership) ? globalData.data.options.membership : [];
+    const globalData = api_getGlobalDropdowns && api_getGlobalDropdowns();
+    const plans = (globalData && globalData.success && globalData.data && globalData.data.options && globalData.data.options.membership)
+      ? globalData.data.options.membership
+      : [];
 
     const paymentsByMember = {};
     payments.forEach(p => {

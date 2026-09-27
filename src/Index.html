@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>LSC Gym Management</title>
 
-  <!-- Google Fonts & Material Symbols (Rounded for modern look) -->
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -16,53 +16,47 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
-  <!-- ApexCharts for responsive data visualization -->
+  
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-  <!-- Tailwind CSS CDN -->
+  
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Inject Theme Config & Custom CSS -->
+  
   <?!= include('Config_Theme'); ?>
   <?!= include('Global_Styles'); ?>
 </head>
 
 <body class="bg-brand-surface font-sans text-slate-800 antialiased h-screen w-full flex overflow-hidden">
 
-  <!-- Desktop/Tablet Sidebar (Hidden on mobile) -->
-  <!-- Change w-64 to w-20 here -->
+  
+  
   <aside id="main-sidebar"
     class="hidden md:flex w-20 flex-col bg-brand-dark border-r border-slate-800 z-20 h-full shrink-0 transition-all duration-300">
     <div id="desktop-nav-container" class="h-full w-full"></div>
   </aside>
 
-  <!-- Main App Container -->
+  
   <div class="flex-1 flex flex-col h-full relative overflow-hidden">
 
-    <!-- Dynamic View Router Target -->
+    
     <main id="app-root" class="flex-1 overflow-y-auto no-scrollbar pb-20 md:pb-0 relative z-0">
-      <!-- Views will be injected here by the SPA router -->
+      
     </main>
 
-    <!-- Mobile Bottom Navigation (Hidden on tablet/desktop) -->
+    
     <nav class="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 pb-safe z-20">
-      <!-- Will inject Comp_BottomNav here -->
+      
       <div id="mobile-nav-container"></div>
     </nav>
 
   </div>
 
-  <!-- Global Modal/Drawer Overlay Container -->
-  <div id="modal-root" class="fixed inset-0 z-50 hidden pointer-events-none">
-    <?!= include('Comp_Modals'); ?>
-    <?!= include('Script_Modal'); ?>
-  </div>
+  
 
-  <!-- ========================================== -->
-  <!-- TEMPLATES: SPA Views & Components          -->
-  <!-- ========================================== -->
 
-  <!-- Views -->
+
+  
   <template id="tpl-view-dashboard">
     <?!= include('View_Dashboard'); ?>
     <?!= include('Script_Dashboard'); ?>
@@ -89,7 +83,7 @@
     <?!= include('Script_Settings'); ?>
   </template>
 
-  <!-- Components -->
+  
   <template id="tpl-comp-bottom-nav">
     <?!= include('Comp_BottomNav'); ?>
   </template>
@@ -99,7 +93,7 @@
 
 
 
-  <!-- Core State & Routing Logic -->
+  
   <?!= include('Global_State'); ?>
   <?!= include('Toast'); ?>
 

@@ -158,9 +158,12 @@
     getColor: function(idx) { return this.colorMap[idx % this.colorMap.length]; },
 
     onDropdownsLoaded: function(response) {
-      if(!response.success) return Toast.error("Failed to load global options.");
-      this.dropdowns = response.data.options || {};
-      
+      if (!response || !response.success) {
+        const errorText = (response && response.error) ? response.error : 'Failed to load global options.';
+        return Toast.error(errorText);
+      }
+      this.dropdowns = response.data && response.data.options ? response.data.options : {};
+
       const roles = this.dropdowns.role || this.dropdowns.roles || this.dropdowns.staffrole || [];
       const statuses = this.dropdowns.status || this.dropdowns.staffstatus || this.dropdowns.statuses || [];
       const creditTypes = this.dropdowns.credit_type_options || this.dropdowns.credittype || this.dropdowns.credit_type || [];

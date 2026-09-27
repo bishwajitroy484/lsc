@@ -185,10 +185,13 @@
     parseToISODate: AppUtils.parseToISODate,
 
     onDropdownsLoaded: function(response) {
-      if(!response.success) return Toast.error("Failed to load configuration: " + response.error);
-      
-      this.dropdowns = response.data.options || {};
-      this.schemas = response.data.schemas || {};
+      if (!response || !response.success) {
+        const errorText = (response && response.error) ? response.error : 'Failed to load configuration.';
+        return Toast.error(errorText);
+      }
+
+      this.dropdowns = response.data && response.data.options ? response.data.options : {};
+      this.schemas = response.data && response.data.schemas ? response.data.schemas : {};
       
       const plans = this.dropdowns.membership || [];
       const batches = this.dropdowns.batch || [];
