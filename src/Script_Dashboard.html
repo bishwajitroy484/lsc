@@ -327,14 +327,14 @@
 
   function renderDashboard(response, isRebuild = false) {
     if (!isRebuild) toggleShimmer(false);
-    
+
     if (!response || !response.success) {
        let errorMsg = response && response.error ? response.error : "Failed to load dashboard data. Please try again.";
        Toast.error(errorMsg);
        return;
     }
 
-    window.DashboardData = response.data;
+    window.DashboardData = response.data || {};
     const data = response.data;
 
     if (!isRebuild) {

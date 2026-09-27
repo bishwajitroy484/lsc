@@ -31,8 +31,10 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
         accrualMode = String(accSetting.value || accSetting.Value || '').toLowerCase();
     }
 
-    const globalDataRes = api_getGlobalDropdowns();
-    const dropDowns = globalDataRes.success ? globalDataRes.data.options : {};
+    const globalDataRes = api_getGlobalDropdowns && api_getGlobalDropdowns();
+    const dropDowns = (globalDataRes && globalDataRes.success && globalDataRes.data && globalDataRes.data.options)
+      ? globalDataRes.data.options
+      : {};
     const resolveName = createDropdownResolver(dropdownMeta, dropDowns);
 
     let availableYears = new Set([today.getFullYear().toString()]);

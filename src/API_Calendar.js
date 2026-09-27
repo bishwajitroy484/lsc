@@ -15,7 +15,7 @@ function api_getCalendarData(month, year) {
     const members = dbData['MEMBERS'] || [];
     const payments = dbData['PAYMENTS'] || [];
 
-    const planOptions = api_getGlobalDropdowns();
+    const planOptions = api_getGlobalDropdowns && api_getGlobalDropdowns();
     const plans = planOptions && planOptions.success && planOptions.data && planOptions.data.options && planOptions.data.options.membership ? planOptions.data.options.membership : [];
     const planMap = {};
     plans.forEach(plan => {

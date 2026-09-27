@@ -224,10 +224,13 @@
     },
 
     onDataLoaded: function(response) {
-      if (!response.success) return this.showToast("Failed to load configuration.", true);
-      
-      this.schemas = response.data.schemas || [];
-      this.allDropdowns = response.data.dropdowns || {};
+      if (!response || !response.success) {
+        const errorText = (response && response.error) ? response.error : 'Failed to load configuration.';
+        return this.showToast(errorText, true);
+      }
+
+      this.schemas = response.data && response.data.schemas ? response.data.schemas : [];
+      this.allDropdowns = response.data && response.data.dropdowns ? response.data.dropdowns : {};
       
       if (this.activeSchema) {
          const updatedSchema = this.schemas.find(s => s.key === this.activeSchema.key);
