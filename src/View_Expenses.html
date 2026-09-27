@@ -61,8 +61,14 @@
         <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[14px]">calendar_month</span><p id="kpi-avg-title" class="text-[10px] text-slate-500 font-bold uppercase">Monthly Avg</p></div>
         <h2 id="kpi-avg-exp" class="text-xl font-bold text-slate-800">₹0</h2>
       </div>
-      <div class="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex flex-col justify-center">
-        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[14px]">badge</span><p class="text-[10px] text-slate-500 font-bold uppercase">Staff Cost</p></div>
+      <div onclick="window.location.hash='#staff'" class="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex flex-col justify-center cursor-pointer hover:border-purple-200 hover:shadow-sm transition-all group" title="View Staff Management">
+        <div class="flex items-center justify-between mb-1">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[14px]">badge</span>
+            <p class="text-[10px] text-slate-500 font-bold uppercase">Staff Cost</p>
+          </div>
+          <span class="material-symbols-rounded text-[14px] text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
+        </div>
         <h2 id="kpi-staff-exp" class="text-xl font-bold text-slate-800">₹0</h2>
       </div>
     </div>

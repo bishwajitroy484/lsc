@@ -149,6 +149,8 @@
       }
       
       this.allData = response.data || [];
+      this.salaries = response.salaries || [];
+      this.staffMetrics = response.staffMetrics || {};
       
       const yearSelect = document.getElementById('exp-filter-year');
       let years = new Set();
@@ -159,6 +161,14 @@
           if(!isNaN(d)) years.add(d.getFullYear().toString());
         }
       });
+
+      if (this.staffMetrics) {
+        Object.keys(this.staffMetrics).forEach(y => {
+          if (this.staffMetrics[y] && this.staffMetrics[y].totalCost > 0) {
+            years.add(y.toString());
+          }
+        });
+      }
       
       const currentYear = new Date().getFullYear().toString();
       if(years.size === 0) years.add(currentYear); 
@@ -262,32 +272,68 @@
         catSums[exp.categoryId] = (catSums[exp.categoryId] || 0) + amt;
       });
 
-      document.getElementById('kpi-total-exp').innerText = AppUtils.formatCurrency(total);
-      
-      let topCat = null; let topAmt = 0;
-      for (const [catId, sum] of Object.entries(catSums)) {
-         if(sum > topAmt) { topAmt = sum; topCat = catId; }
-      }
-      document.getElementById('kpi-top-cat').innerText = topCat ? this.getName(topCat) : '--';
-      document.getElementById('kpi-top-cat-amt').innerText = AppUtils.formatCurrency(topAmt);
-
       // Dynamic Title and Average Calculation
       const mode = document.getElementById('exp-filter-mode')?.value || 'Monthly';
+      const isMonthly = mode === 'Monthly';
       const avgTitle = document.getElementById('kpi-avg-title');
       if (avgTitle) {
-          avgTitle.innerText = mode === 'Monthly' ? 'MONTHLY AVG' : 'QUARTERLY AVG';
+          avgTitle.innerText = isMonthly ? 'MONTHLY AVG' : 'QUARTERLY AVG';
       }
+
+      // Calculate Staff Cost for the selected year and selected periods from staffMetrics
+      const year = document.getElementById('exp-filter-year')?.value;
+      let staffTotal = 0;
+      const yearStaffMetrics = (this.staffMetrics && year) ? this.staffMetrics[year] : null;
+
+      if (yearStaffMetrics) {
+        this.selectedPeriods.forEach(p => {
+          if (isMonthly) {
+            const mIdx = this.months.indexOf(p);
+            if (mIdx !== -1 && yearStaffMetrics.monthly[mIdx]) {
+              staffTotal += yearStaffMetrics.monthly[mIdx];
+            }
+          } else {
+            const qIdx = this.quarters.indexOf(p);
+            if (qIdx !== -1 && yearStaffMetrics.quarterly[qIdx]) {
+              staffTotal += yearStaffMetrics.quarterly[qIdx];
+            }
+          }
+        });
+      }
+
+      // Also account for any direct expense categorized as staff/salary in EXPENSES
+      if (this.dropdowns.expenseCats) {
+        const staffCat = this.dropdowns.expenseCats.find(c => c.name.toLowerCase().includes('staff') || c.name.toLowerCase().includes('trainer') || c.name.toLowerCase().includes('salary'));
+        if (staffCat && catSums[staffCat.id]) {
+          staffTotal += catSums[staffCat.id];
+        }
+      }
+
+      document.getElementById('kpi-staff-exp').innerText = AppUtils.formatCurrency(staffTotal);
+
+      // Total Expenses includes General Expenses + Staff Cost
+      const grandTotal = total + staffTotal;
+      document.getElementById('kpi-total-exp').innerText = AppUtils.formatCurrency(grandTotal);
+
+      // Top category (considering both general categories and Staff Cost)
+      let topCatName = '--';
+      let topAmt = 0;
+      for (const [catId, sum] of Object.entries(catSums)) {
+         if (sum > topAmt) {
+           topAmt = sum;
+           topCatName = this.getName(catId);
+         }
+      }
+      if (staffTotal > topAmt) {
+        topAmt = staffTotal;
+        topCatName = 'Staff Cost';
+      }
+      document.getElementById('kpi-top-cat').innerText = topCatName;
+      document.getElementById('kpi-top-cat-amt').innerText = AppUtils.formatCurrency(topAmt);
 
       const periodCount = this.selectedPeriods.length || 1;
-      const avg = total / periodCount;
+      const avg = grandTotal / periodCount;
       document.getElementById('kpi-avg-exp').innerText = AppUtils.formatCurrency(avg);
-
-      let staffTotal = 0;
-      if (this.dropdowns.expenseCats) {
-         const staffCat = this.dropdowns.expenseCats.find(c => c.name.toLowerCase().includes('staff') || c.name.toLowerCase().includes('trainer') || c.name.toLowerCase().includes('salary'));
-         if(staffCat && catSums[staffCat.id]) { staffTotal = catSums[staffCat.id]; }
-      }
-      document.getElementById('kpi-staff-exp').innerText = AppUtils.formatCurrency(staffTotal);
     },
 
     renderCharts: function() {
@@ -318,6 +364,30 @@
              miscSums[label] = (miscSums[label] || 0) + amt;
          }
       });
+
+      // Integrate Staff Cost into Trend and Category Breakdown
+      const year = document.getElementById('exp-filter-year')?.value;
+      const yearStaffMetrics = (this.staffMetrics && year) ? this.staffMetrics[year] : null;
+      let staffTotal = 0;
+
+      if (yearStaffMetrics) {
+        this.selectedPeriods.forEach(p => {
+          let sAmt = 0;
+          if (isMonthly) {
+            const mIdx = this.months.indexOf(p);
+            if (mIdx !== -1 && yearStaffMetrics.monthly[mIdx]) sAmt = yearStaffMetrics.monthly[mIdx];
+          } else {
+            const qIdx = this.quarters.indexOf(p);
+            if (qIdx !== -1 && yearStaffMetrics.quarterly[qIdx]) sAmt = yearStaffMetrics.quarterly[qIdx];
+          }
+          if (trendDataMap[p] !== undefined) trendDataMap[p] += sAmt;
+          staffTotal += sAmt;
+        });
+      }
+
+      if (staffTotal > 0) {
+        catSums['Staff Cost'] = (catSums['Staff Cost'] || 0) + staffTotal;
+      }
 
       // 1. Trend Chart (Dynamic Type + Data Points)
       const trendOpts = {
