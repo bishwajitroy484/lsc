@@ -80,6 +80,52 @@
     formatDateDDMMMYYYY: AppUtils.formatDateDDMMMYYYY,
     parseToISODate: AppUtils.parseToISODate,
 
+    getSafeReceiptThumbnail: function(rawUrl) {
+      if (!rawUrl) return '';
+      let str = String(rawUrl).trim();
+      if (str.includes('drive.google.com')) {
+        const match = str.match(/id=([a-zA-Z0-9_-]+)/) || str.match(/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+          str = match[1];
+        }
+      }
+      if (!str.includes('http') && !str.includes('/')) {
+        return 'https://drive.google.com/thumbnail?id=' + str + '&sz=w200-h200';
+      }
+      return str;
+    },
+
+    getSafeReceiptUrl: function(rawUrl) {
+      if (!rawUrl) return '';
+      let str = String(rawUrl).trim();
+      if (str.includes('drive.google.com')) {
+        const match = str.match(/id=([a-zA-Z0-9_-]+)/) || str.match(/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+          return `https://drive.google.com/file/d/${match[1]}/view?usp=sharing`;
+        }
+        return str;
+      }
+      if (!str.includes('http') && !str.includes('/')) {
+        return `https://drive.google.com/file/d/${str}/view?usp=sharing`;
+      }
+      return str;
+    },
+
+    previewReceipt: function(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const previewImg = document.getElementById('exp-receipt-preview');
+          const previewCont = document.getElementById('exp-receipt-preview-container');
+          if (previewImg && previewCont) {
+            previewImg.src = e.target.result;
+            previewCont.classList.remove('hidden');
+          }
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    },
+
     showShimmer: function() {
       let dHtml = '';
       for(let i=0; i<5; i++){ dHtml += `<tr><td colspan="6" class="px-4 py-4"><div class="h-6 w-full shimmer rounded"></div></td></tr>`; }
@@ -565,7 +611,7 @@
         const creator = exp.createdBy ? exp.createdBy.split('@')[0] : 'Admin';
         const expJson = JSON.stringify(exp).replace(/"/g, '&quot;');
         const safeDesc = exp.description || '--';
-        let rcptHtml = exp.receiptUrl ? `<a href="${exp.receiptUrl}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1"><span class="material-symbols-rounded text-[12px] align-middle">link</span></a>` : '';
+        let rcptHtml = exp.receiptUrl ? `<a href="${this.getSafeReceiptUrl(exp.receiptUrl)}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1" title="View Receipt"><span class="material-symbols-rounded text-[13px] align-middle">receipt_long</span></a>` : '';
 
         dHtml += `
           <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
@@ -634,8 +680,26 @@
       document.getElementById('exp-category').value = exp ? exp.categoryId : '';
       document.getElementById('exp-amount').value = exp ? this.parseAmount(exp.amount) : '';
       document.getElementById('exp-desc').value = exp ? exp.description : '';
-      document.getElementById('exp-receipt').value = exp && exp.receiptUrl ? exp.receiptUrl : '';
-      document.getElementById('exp-notes').value = exp && exp.notes ? exp.notes : '';
+
+      const fileInput = document.getElementById('exp-receipt-file');
+      if (fileInput) fileInput.value = '';
+
+      const rcptUrl = exp && exp.receiptUrl ? exp.receiptUrl : '';
+      const hiddenRcpt = document.getElementById('exp-receipt');
+      if (hiddenRcpt) hiddenRcpt.value = rcptUrl;
+
+      const previewCont = document.getElementById('exp-receipt-preview-container');
+      const previewImg = document.getElementById('exp-receipt-preview');
+      if (previewCont && previewImg) {
+        if (rcptUrl) {
+          previewImg.src = this.getSafeReceiptThumbnail(rcptUrl);
+          previewCont.classList.remove('hidden');
+        } else {
+          previewImg.src = '';
+          previewCont.classList.add('hidden');
+        }
+      }
+
       document.getElementById('exp-what-misc').value = exp && exp.whatMisc ? exp.whatMisc : '';
 
       this.checkMiscCategory();
@@ -649,13 +713,42 @@
       document.getElementById('expense-modal-content').classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
       document.getElementById('expense-form').reset();
       document.getElementById('misc-field-container').classList.add('hidden');
+      const previewCont = document.getElementById('exp-receipt-preview-container');
+      const previewImg = document.getElementById('exp-receipt-preview');
+      if (previewCont && previewImg) {
+        previewImg.src = '';
+        previewCont.classList.add('hidden');
+      }
+      const fileInput = document.getElementById('exp-receipt-file');
+      if (fileInput) fileInput.value = '';
+      const hiddenRcpt = document.getElementById('exp-receipt');
+      if (hiddenRcpt) hiddenRcpt.value = '';
     },
 
-    saveExpense: function(e) {
+    saveExpense: async function(e) {
       e.preventDefault();
       const btn = document.getElementById('btn-save-expense');
       btn.innerHTML = `<span class="material-symbols-rounded animate-spin text-[18px] mr-2">progress_activity</span> Saving...`;
       btn.disabled = true;
+
+      const fileInput = document.getElementById('exp-receipt-file');
+      let base64Image = null;
+      let imageName = null;
+
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        imageName = file.name;
+        try {
+          base64Image = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+          });
+        } catch (err) {
+          console.error('Error reading receipt file:', err);
+        }
+      }
 
       const payload = {
         expenseId: document.getElementById('exp-id').value,
@@ -664,8 +757,9 @@
         date: this.formatDateDDMMMYYYY(document.getElementById('exp-date').value),
         amount: Number(document.getElementById('exp-amount').value),
         description: document.getElementById('exp-desc').value || '', 
-        receiptUrl: document.getElementById('exp-receipt').value || '', 
-        notes: document.getElementById('exp-notes').value
+        receiptUrl: document.getElementById('exp-receipt') ? document.getElementById('exp-receipt').value : '',
+        base64Image: base64Image,
+        imageName: imageName
       };
 
       google.script.run
@@ -677,6 +771,10 @@
             this.showShimmer();
             this.fetchData();
           } else { Toast.error(res.error); }
+        })
+        .withFailureHandler((err) => {
+          btn.innerHTML = `Save Expense`; btn.disabled = false;
+          Toast.error(err.message || "Server Error.");
         })
         .api_saveExpense(payload);
     },

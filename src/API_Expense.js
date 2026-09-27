@@ -77,22 +77,41 @@ function api_saveExpense(expenseData) {
     
     expenseData.updatedAt = now;
     expenseData.updatedBy = userEmail;
-    
-    let savedData;
-    if (expenseData.expenseId) {
-      savedData = DB.update('EXPENSES', expenseData.expenseId, expenseData);
-    } else {
+
+    let isNew = !expenseData.expenseId;
+    if (isNew) {
       expenseData.expenseId = generateId('EXP');
       expenseData.createdAt = now;
       expenseData.createdBy = userEmail;
-      
+    }
+
+    // Handle receipt image upload intercept if base64Image is provided
+    if (expenseData.base64Image) {
+      const filename = expenseData.expenseId + '_' + (expenseData.imageName || 'receipt.png');
+      const uploadRes = api_uploadImageToDrive(expenseData.base64Image, filename);
+      if (uploadRes.success) {
+        expenseData.receiptUrl = uploadRes.url || uploadRes.fileId;
+      } else {
+        throw new Error("Receipt Upload Failed: " + uploadRes.error);
+      }
+    }
+
+    // Clean payload before saving to DB
+    delete expenseData.base64Image;
+    delete expenseData.imageName;
+    delete expenseData.notes;
+    
+    let savedData;
+    if (!isNew) {
+      savedData = DB.update('EXPENSES', expenseData.expenseId, expenseData);
+    } else {
       savedData = DB.create('EXPENSES', expenseData);
     }
     
     return { 
       success: true, 
       data: savedData, 
-      message: expenseData.expenseId ? "Expense updated successfully." : "Expense added successfully." 
+      message: !isNew ? "Expense updated successfully." : "Expense added successfully." 
     };
   } catch (error) {
     return { success: false, error: error.toString() };

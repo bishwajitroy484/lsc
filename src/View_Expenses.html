@@ -43,7 +43,7 @@
   </header>
 
   <!-- Scrollable Body -->
-  <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
+  <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-6 md:pb-6 relative">
     
     <!-- KPIs (Reduced to 4) -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
@@ -165,9 +165,9 @@
 
   </div>
 
-  <!-- MODAL: ADD/EDIT EXPENSE (Kept exactly same as previous iteration) -->
-<div id="expense-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[100] flex items-end md:items-center justify-center sm:p-4 pb-20 md:pb-4">
-    <div id="expense-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh]">
+  <!-- MODAL: ADD/EDIT EXPENSE -->
+  <div id="expense-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[100] flex items-end md:items-center justify-center sm:p-4 pb-0 md:pb-4">
+    <div id="expense-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col max-h-[85dvh] md:h-auto md:max-h-[90vh]">
       
       <!-- Sticky Header -->
       <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0 bg-slate-50 rounded-t-2xl">
@@ -179,7 +179,7 @@
       
       <!-- Scrollable Inputs Area -->
       <div class="p-4 md:p-5 overflow-y-auto flex-1 no-scrollbar">
-        <form id="expense-form" onsubmit="ExpensesApp.saveExpense(event)" class="flex flex-col h-full space-y-3">
+        <form id="expense-form" onsubmit="ExpensesApp.saveExpense(event)" class="flex flex-col space-y-3">
           <input type="hidden" id="exp-id">
           
           <div class="grid grid-cols-2 gap-3">
@@ -220,20 +220,22 @@
           </div>
 
           <div>
-            <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt URL (Optional)</label>
-            <div class="relative">
-              <span class="material-symbols-rounded absolute left-2 top-1.5 text-[16px] text-slate-400">link</span>
-              <input type="url" id="exp-receipt" placeholder="https://..." class="w-full pl-7 pr-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none text-slate-700">
+            <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt / Bill (Optional)</label>
+            <div class="flex items-center gap-3">
+              <!-- Dynamic Receipt Preview -->
+              <div id="exp-receipt-preview-container" class="hidden w-10 h-10 rounded-lg border border-slate-200 overflow-hidden shrink-0 shadow-sm bg-slate-50">
+                <img id="exp-receipt-preview" src="" class="w-full h-full object-cover">
+              </div>
+              <div class="relative flex-1">
+                <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">receipt_long</span>
+                <input type="file" id="exp-receipt-file" accept="image/*" onchange="ExpensesApp.previewReceipt(this)" class="w-full pl-8 pr-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100 cursor-pointer text-slate-500">
+                <input type="hidden" id="exp-receipt">
+              </div>
             </div>
           </div>
 
-          <div>
-            <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Notes (Optional)</label>
-            <textarea id="exp-notes" rows="2" placeholder="Add any additional notes..." class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none resize-none"></textarea>
-          </div>
-
           <!-- Footer / Buttons -->
-          <div class="mt-auto flex gap-3 pt-3 border-t border-slate-100">
+          <div class="mt-2 flex gap-3 pt-3 border-t border-slate-100">
             <button type="button" onclick="ExpensesApp.closeModal()" class="flex-1 px-4 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors">Cancel</button>
             <button type="submit" id="btn-save-expense" class="flex-1 px-4 py-2 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 hover:bg-blue-700 flex items-center justify-center gap-1.5 transition-all active:scale-95">Save Expense</button>
           </div>
