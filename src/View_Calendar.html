@@ -1,102 +1,94 @@
 <div class="bg-white h-full flex flex-col overflow-y-auto no-scrollbar pb-6 relative">
-  
-  <!-- Header -->
   <header class="bg-white px-4 py-3 flex items-center justify-between border-b border-slate-100 sticky top-0 z-10">
     <div class="flex items-center gap-3">
       <span onclick="window.location.hash='#dashboard'" class="material-symbols-rounded text-slate-600 cursor-pointer hover:bg-slate-50 p-1 rounded-full">arrow_back</span>
-      <h1 class="text-lg font-bold text-slate-800">Payment Calendar</h1>
+      <h1 class="text-lg font-bold text-slate-800">Upcoming Subscriptions</h1>
     </div>
     <div class="flex items-center gap-3 text-slate-500">
       <span class="material-symbols-rounded text-xl cursor-pointer">calendar_today</span>
-      <span class="material-symbols-rounded text-xl cursor-pointer">more_vert</span>
     </div>
   </header>
 
-  <!-- Controls -->
   <div class="px-4 py-3 flex items-center justify-between border-b border-slate-50">
     <div class="flex items-center gap-2">
-      <div class="flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 cursor-pointer">
+      <div id="cal-year-select" class="flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 cursor-pointer">
         2026 <span class="material-symbols-rounded text-[14px]">expand_more</span>
       </div>
-      <div class="flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 cursor-pointer">
-        Month <span class="material-symbols-rounded text-[14px]">expand_more</span>
-      </div>
     </div>
-    <button class="text-brand-primary text-xs font-semibold hover:underline">Today</button>
+    <button id="cal-today-btn" class="text-brand-primary text-xs font-semibold hover:underline">Today</button>
   </div>
 
-  <!-- Month Navigation -->
   <div class="px-4 py-4 flex items-center justify-between">
-    <span class="material-symbols-rounded text-slate-400 cursor-pointer">chevron_left</span>
+    <span id="cal-prev-month" class="material-symbols-rounded text-slate-400 cursor-pointer">chevron_left</span>
     <h2 id="cal-month-title" class="font-bold text-slate-800">September 2026</h2>
-    <span class="material-symbols-rounded text-slate-400 cursor-pointer">chevron_right</span>
+    <span id="cal-next-month" class="material-symbols-rounded text-slate-400 cursor-pointer">chevron_right</span>
   </div>
 
-  <!-- Summary Stats Grid -->
-  <div class="px-4 grid grid-cols-4 gap-2 mb-6">
-    <div class="bg-emerald-50/50 border border-emerald-100 rounded-xl p-2 flex flex-col items-center">
-      <div class="flex items-center gap-1 text-emerald-600 font-bold"><span class="material-symbols-rounded text-[14px]">person</span> <span id="cal-stat-paid">--</span></div>
-      <span class="text-[10px] text-slate-500 font-medium">Paid</span>
+  <div class="px-4 grid grid-cols-4 gap-2 mb-5">
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 flex flex-col items-center">
+      <div class="flex items-center gap-1 text-slate-700 font-bold"><span class="material-symbols-rounded text-[14px]">person</span> <span id="cal-stat-due-soon">--</span></div>
+      <span class="text-[10px] text-slate-500 font-medium">Due Soon</span>
     </div>
-    <div class="bg-amber-50/50 border border-amber-100 rounded-xl p-2 flex flex-col items-center">
-      <div class="flex items-center gap-1 text-amber-600 font-bold"><span class="material-symbols-rounded text-[14px]">monetization_on</span> <span id="cal-stat-due">--</span></div>
-      <span class="text-[10px] text-slate-500 font-medium">Due</span>
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 flex flex-col items-center">
+      <div class="flex items-center gap-1 text-amber-600 font-bold"><span class="material-symbols-rounded text-[14px]">schedule</span> <span id="cal-stat-3-5">--</span></div>
+      <span class="text-[10px] text-slate-500 font-medium">In 3-5 days</span>
     </div>
-    <div class="bg-red-50/50 border border-red-100 rounded-xl p-2 flex flex-col items-center">
-      <div class="flex items-center gap-1 text-red-600 font-bold"><span class="material-symbols-rounded text-[14px]">error</span> <span id="cal-stat-overdue">--</span></div>
-      <span class="text-[10px] text-slate-500 font-medium">Overdue</span>
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 flex flex-col items-center">
+      <div class="flex items-center gap-1 text-red-600 font-bold"><span class="material-symbols-rounded text-[14px]">error</span> <span id="cal-stat-6-10">--</span></div>
+      <span class="text-[10px] text-slate-500 font-medium">In 6-10 days</span>
     </div>
-    <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-2 flex flex-col items-center">
+    <div class="bg-blue-50 border border-blue-100 rounded-xl p-2 flex flex-col items-center">
       <div class="flex items-center gap-1 text-brand-primary font-bold"><span class="material-symbols-rounded text-[14px]">receipt_long</span> <span id="cal-stat-total">--</span></div>
       <span class="text-[10px] text-slate-500 font-medium">Total</span>
     </div>
   </div>
 
-  <!-- Calendar Grid -->
   <div class="px-4 mb-4">
-    <!-- Days Header -->
     <div class="grid grid-cols-7 mb-2 text-center text-[10px] font-semibold text-slate-400">
       <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
     </div>
-    <!-- Dates Container -->
-    <div id="cal-grid" class="grid grid-cols-7 gap-y-4 text-center">
-      <!-- Injected via JS -->
-    </div>
+    <div id="cal-grid" class="grid grid-cols-7 gap-y-4 text-center"></div>
   </div>
 
-  <!-- Legend -->
-  <div class="px-4 flex items-center justify-between text-[10px] font-medium text-slate-500 mb-6 border-b border-slate-50 pb-4">
-    <div class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>Paid</div>
-    <div class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-amber-400"></div>Due</div>
-    <div class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500"></div>Overdue</div>
-    <div class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>No Activity</div>
+  <div class="px-4 flex items-center justify-between text-[10px] font-medium text-slate-500 mb-4 border-b border-slate-50 pb-4">
+    <div class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500"></div>≤2 days</div>
+    <div class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-amber-400"></div>3-5 days</div>
+    <div class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>6-10 days</div>
   </div>
 
-  <!-- Transactions List Header -->
   <div class="px-4 mb-3 flex items-center justify-between">
-    <h3 class="font-bold text-sm text-slate-800">All Transactions</h3>
+    <h3 class="font-bold text-sm text-slate-800">Members (<span id="cal-member-count">0</span>)</h3>
     <span class="material-symbols-rounded text-slate-500 text-lg">tune</span>
   </div>
 
-  <!-- Filters -->
-  <div class="px-4 flex items-center gap-2 overflow-x-auto no-scrollbar mb-3">
-    <button class="px-3 py-1.5 bg-brand-primary text-white text-[11px] font-medium rounded-full whitespace-nowrap">All (112)</button>
-    <button class="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium rounded-full whitespace-nowrap">Paid (82)</button>
-    <button class="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium rounded-full whitespace-nowrap">Due (18)</button>
-    <button class="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium rounded-full whitespace-nowrap">Overdue (12)</button>
-  </div>
-
-  <!-- Search -->
   <div class="px-4 mb-4">
     <div class="relative flex items-center w-full">
       <span class="material-symbols-rounded absolute left-3 text-slate-400 text-sm">search</span>
-      <input type="text" placeholder="Search members, amount, plan..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-lg text-xs focus:outline-none focus:border-brand-primary">
+      <input id="cal-search" type="text" placeholder="Search member name..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-lg text-xs focus:outline-none focus:border-brand-primary">
     </div>
   </div>
 
-  <!-- List Container -->
-  <div id="cal-tx-list" class="px-4 flex flex-col gap-4">
-    <!-- Injected via JS -->
-  </div>
+  <div id="cal-member-list" class="px-4 flex flex-col gap-4"></div>
 
+  <div id="calendar-drawer-backdrop" class="fixed inset-0 bg-slate-900/50 opacity-0 pointer-events-none transition-opacity duration-300 z-40"></div>
+  <aside id="calendar-drawer" class="fixed right-0 top-0 bottom-0 w-full md:w-[430px] bg-slate-50 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col overflow-hidden">
+    <div class="bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between shrink-0">
+      <div>
+        <h3 id="drawer-title" class="font-bold text-lg text-slate-800">10 September 2026</h3>
+        <p id="drawer-subtitle" class="text-[11px] text-slate-500">0 members</p>
+      </div>
+      <button id="calendar-drawer-close" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
+        <span class="material-symbols-rounded text-lg">close</span>
+      </button>
+    </div>
+
+    <div class="px-4 py-3 border-b border-slate-100 bg-white shrink-0">
+      <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+        <span class="material-symbols-rounded text-sm text-slate-400">search</span>
+        <input id="calendar-drawer-search" type="text" placeholder="Search member..." class="w-full bg-transparent text-xs outline-none placeholder:text-slate-400">
+      </div>
+    </div>
+
+    <div id="calendar-drawer-content" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+  </aside>
 </div>
