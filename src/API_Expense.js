@@ -15,9 +15,9 @@ function api_getExpenses() {
         'SETTINGS': DB.read('SETTINGS') || []
       };
     }
-    const expenses = (dbData && Array.isArray(dbData['EXPENSES'])) ? dbData['EXPENSES'] : [];
-    const salaries = (dbData && Array.isArray(dbData['SALARY'])) ? dbData['SALARY'] : [];
-    const settingsRows = (dbData && Array.isArray(dbData['SETTINGS'])) ? dbData['SETTINGS'] : [];
+    const expenses = dbData['EXPENSES'] || [];
+    const salaries = dbData['SALARY'] || [];
+    const settingsRows = dbData['SETTINGS'] || [];
 
     let accrualMode = 'anchor';
     const accSetting = settingsRows.find(s => {
@@ -40,14 +40,14 @@ function api_getExpenses() {
     };
 
     try {
-      salaries.forEach(t => {
-        const status = String(t.paymentStatus || '').toLowerCase();
+      salaries.forEach(function(t) {
+        var status = String(t.paymentStatus || '').toLowerCase();
         if (status.includes('fail') || status.includes('pending') || status.includes('action')) return;
 
-        let totalAmt = Number(String(t.amount || 0).replace(/[^0-9.-]+/g, ""));
+        var totalAmt = Number(String(t.amount || 0).replace(/[^0-9.-]+/g, ""));
         if (!totalAmt || isNaN(totalAmt)) return;
 
-        distributeDailyProration(t.startDate || t.paidDate, t.endDate || t.paidDate, t.paidDate, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
+        distributeDailyProration(t.startDate || t.paidDate, t.endDate || t.paidDate, t.paidDate, totalAmt, accrualMode, function(cYear, cMonth, intervalAmt) {
           ensureYear(cYear);
           staffMetrics[cYear].totalCost += intervalAmt;
           staffMetrics[cYear].monthly[cMonth] += intervalAmt;
@@ -76,36 +76,34 @@ function api_saveExpense(expenseData) {
       throw new Error("Category, Amount, and Date are required.");
     }
 
-    const now = new Date().toISOString();
-    const userEmail = Session.getActiveUser().getEmail(); 
+    var now = new Date().toISOString();
+    var userEmail = Session.getActiveUser().getEmail(); 
     
     expenseData.updatedAt = now;
     expenseData.updatedBy = userEmail;
 
-    let isNew = !expenseData.expenseId;
+    var isNew = !expenseData.expenseId;
     if (isNew) {
       expenseData.expenseId = generateId('EXP');
       expenseData.createdAt = now;
       expenseData.createdBy = userEmail;
     }
 
-    // Handle receipt image upload intercept if base64Image is provided
+    // Handle receipt image upload — use expenseId as filename (matches Members pattern)
     if (expenseData.base64Image) {
-      const filename = expenseData.expenseId + '_' + (expenseData.imageName || 'receipt.png');
-      const uploadRes = api_uploadImageToDrive(expenseData.base64Image, filename);
+      var uploadRes = api_uploadImageToDrive(expenseData.base64Image, expenseData.expenseId);
       if (uploadRes.success) {
-        expenseData.receiptUrl = uploadRes.url || uploadRes.fileId;
+        expenseData.receiptFileId = uploadRes.fileId;
       } else {
         throw new Error("Receipt Upload Failed: " + uploadRes.error);
       }
     }
 
-    // Clean payload before saving to DB
+    // Clean transient upload fields before saving to DB
     delete expenseData.base64Image;
     delete expenseData.imageName;
-    delete expenseData.notes;
     
-    let savedData;
+    var savedData;
     if (!isNew) {
       savedData = DB.update('EXPENSES', expenseData.expenseId, expenseData);
     } else {
