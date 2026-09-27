@@ -126,7 +126,7 @@ function api_getCalendarData(month, year) {
         name: member.fullName,
         plan: rawPlanName,
         amount: memberAmount,
-        nextDueDate: nextDue,
+        nextDueDate: nextDue.toISOString(),
         dueDateLabel: nextDue.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
         daysLeft: daysLeft,
         statusText: urgency.label,
