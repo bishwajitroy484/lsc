@@ -249,15 +249,27 @@ const _colToLetter = colToLetter;
  */
 function parseSafeDate(dStr) {
   if (!dStr || dStr === 'N/A') return new Date("");
+  if (dStr instanceof Date && !isNaN(dStr)) return dStr;
   let d = new Date(dStr);
-  if (isNaN(d) && typeof dStr === 'string') {
-    const parts = dStr.split('-');
-    if (parts.length === 3) {
-      const mMap = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
-      d = new Date(parts[2], mMap[parts[1].toLowerCase()] || 0, parts[0]);
+  if (!isNaN(d)) return d;
+  if (typeof dStr === 'string') {
+    const parts = dStr.trim().split(/[\s\-\/\.]+/);
+    const mMap = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+    if (parts.length >= 3) {
+      if (parts[0].length === 4) {
+        const y = parseInt(parts[0], 10);
+        const m = isNaN(parts[1]) ? mMap[parts[1].toLowerCase()] : parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        if (m !== undefined && !isNaN(m) && !isNaN(day)) return new Date(y, m, day);
+      }
+      let y = parseInt(parts[2], 10);
+      if (y < 100) y += 2000;
+      const m = isNaN(parts[1]) ? mMap[parts[1].toLowerCase()] : parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[0], 10);
+      if (m !== undefined && !isNaN(m) && !isNaN(day)) return new Date(y, m, day);
     }
   }
-  return d;
+  return new Date("");
 }
 
 /**

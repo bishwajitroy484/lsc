@@ -282,5 +282,91 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
       expect(ExpensesApp.getSafeReceiptUrl(null)).toBe('');
     });
   });
+
+  describe('Robust Date & Category Parsing Helpers', () => {
+    it('should parse dates robustly across different formats using parseDateRobust', () => {
+      // DD-MMM-YYYY
+      const d1 = ExpensesApp.parseDateRobust('15-Jan-2026');
+      expect(d1.getUTCFullYear()).toBe(2026);
+      expect(d1.getUTCMonth()).toBe(0);
+      expect(d1.getUTCDate()).toBe(15);
+
+      // ISO format YYYY-MM-DD
+      const d2 = ExpensesApp.parseDateRobust('2026-05-20');
+      expect(d2.getUTCFullYear()).toBe(2026);
+      expect(d2.getUTCMonth()).toBe(4);
+      expect(d2.getUTCDate()).toBe(20);
+
+      // DD/MM/YYYY
+      const d3 = ExpensesApp.parseDateRobust('25/12/2026');
+      expect(d3.getUTCFullYear()).toBe(2026);
+      expect(d3.getUTCMonth()).toBe(11);
+      expect(d3.getUTCDate()).toBe(25);
+
+      // Date instance
+      const d4 = ExpensesApp.parseDateRobust(new Date(Date.UTC(2026, 6, 4)));
+      expect(d4.getUTCFullYear()).toBe(2026);
+      expect(d4.getUTCMonth()).toBe(6);
+      expect(d4.getUTCDate()).toBe(4);
+
+      // Empty / invalid
+      expect(ExpensesApp.parseDateRobust('')).toBeNull();
+      expect(ExpensesApp.parseDateRobust(null)).toBeNull();
+      expect(ExpensesApp.parseDateRobust('N/A')).toBeNull();
+    });
+
+    it('should match category name by ID, Name, or case-insensitive search in getName', () => {
+      ExpensesApp.dropdowns = {
+        expenseCats: [
+          { id: 'CAT-RENT', name: 'Rent' },
+          { id: 'CAT-UTIL', name: 'Utilities' }
+        ]
+      };
+
+      expect(ExpensesApp.getName('CAT-RENT')).toBe('Rent');
+      expect(ExpensesApp.getName('rent')).toBe('Rent');
+      expect(ExpensesApp.getName('Rent')).toBe('Rent');
+      expect(ExpensesApp.getName('Utilities')).toBe('Utilities');
+      expect(ExpensesApp.getName('CAT-UTIL')).toBe('Utilities');
+      expect(ExpensesApp.getName('NON-EXISTENT')).toBe('NON-EXISTENT');
+    });
+
+    it('should calculate KPIs correctly when expenses use category instead of categoryId', () => {
+      ExpensesApp.dropdowns = {
+        expenseCats: [
+          { id: 'CAT-1', name: 'Rent' }
+        ]
+      };
+      ExpensesApp.filteredData = [
+        { expenseId: 'EXP-1', category: 'CAT-1', amount: 5000, date: '10-Jan-2026' }
+      ];
+      ExpensesApp.staffMetrics = {};
+      ExpensesApp.selectedPeriods = ['Jan'];
+      document.getElementById('exp-filter-year').value = '2026';
+      document.getElementById('exp-filter-mode').value = 'Monthly';
+
+      ExpensesApp.calculateKPIs();
+
+      expect(document.getElementById('kpi-total-exp').innerText).toBe(AppUtils.formatCurrency(5000));
+      expect(document.getElementById('kpi-top-cat').innerText).toBe('Rent');
+      expect(document.getElementById('kpi-top-cat-amt').innerText).toBe(AppUtils.formatCurrency(5000));
+    });
+
+    it('should test backend parseSafeDate with various date strings', () => {
+      const d1 = parseSafeDate('15-Jan-2026');
+      expect(d1.getFullYear()).toBe(2026);
+      expect(d1.getMonth()).toBe(0);
+
+      const d2 = parseSafeDate('2026-05-20');
+      expect(d2.getFullYear()).toBe(2026);
+
+      const d3 = parseSafeDate('20/05/2026');
+      expect(d3.getFullYear()).toBe(2026);
+
+      const d4 = parseSafeDate('invalid');
+      expect(isNaN(d4.getTime())).toBe(true);
+    });
+  });
 });
+
 
