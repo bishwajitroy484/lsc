@@ -1,0 +1,108 @@
+const fs = require('fs');
+const path = require('path');
+
+function loadMembersApi() {
+  const source = fs.readFileSync(path.join(__dirname, '../src/API_Members.js'), 'utf8');
+
+  return new Function(
+    'DB',
+    'api_getGlobalDropdowns',
+    'Session',
+    'generateId',
+    'parseSafeDate',
+    'distributeDailyProration',
+    `
+      ${source};
+      return { api_getMembers };
+    `
+  )(
+    {
+      batchRead: jest.fn(() => ({
+        MEMBERS: [
+          { memberId: 'MEM-1', fullName: 'Alice Johnson', membershipId: 'PLAN-1', joinDate: '2024-01-10', phone: '9876543210', status: 'Active' },
+          { memberId: 'MEM-2', fullName: 'Bob Smith', membershipId: 'PLAN-2', joinDate: '2024-02-15', phone: '9123456780', status: 'Active' },
+          { memberId: 'MEM-3', fullName: 'Charlie Brown', membershipId: 'PLAN-3', joinDate: '2024-03-10', phone: '9988776655', status: 'Inactive' }
+        ],
+        PAYMENTS: [
+          { memberId: 'MEM-1', paymentStatus: 'Paid', endDate: '2024-08-31', amount: 2500, paidDate: '2024-08-01' },
+          { memberId: 'MEM-2', paymentStatus: 'Paid', endDate: '2024-09-30', amount: 6000, paidDate: '2024-09-01' }
+        ],
+        SETTINGS: [{ key: 'Revenue_Recognition', value: 'anchor' }]
+      }))
+    },
+    () => ({
+      success: true,
+      data: {
+        options: {
+          membership: [
+            { id: 'PLAN-1', name: 'Monthly', frequency: 'MONTHLY' },
+            { id: 'PLAN-2', name: 'Quarterly', frequency: 'QUARTERLY' },
+            { id: 'PLAN-3', name: 'Trial', frequency: 'TRIAL' }
+          ]
+        }
+      }
+    }),
+    { getActiveUser: () => ({ getEmail: () => 'admin@gym.com' }) },
+    (prefix) => `${prefix}-TEST123`,
+    (dStr) => new Date(dStr),
+    (sDateStr, eDateStr, fallbackDateStr, totalAmt, accrualMode, onInterval) => {
+      const start = new Date(sDateStr || fallbackDateStr);
+      if (!isNaN(start)) {
+        onInterval(start.getFullYear(), start.getMonth(), totalAmt);
+      }
+    }
+  );
+}
+
+describe('Members Module', () => {
+  test('api_getMembers returns enriched member records with dueDate and accrual mode', () => {
+    const membersApi = loadMembersApi();
+    const response = membersApi.api_getMembers();
+
+    expect(response.success).toBe(true);
+    expect(response.accrualMode).toBe('anchor');
+    expect(Array.isArray(response.data)).toBe(true);
+    expect(response.data.length).toBe(3);
+    expect(response.data[0].dueDate).toBeTruthy();
+    expect(response.data[0].memberId).toBe('MEM-1');
+  });
+
+  test('api_getMembers handles missing dropdown data without breaking member list generation', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../src/API_Members.js'), 'utf8');
+    const membersApi = new Function(
+      'DB',
+      'api_getGlobalDropdowns',
+      'Session',
+      'generateId',
+      'parseSafeDate',
+      'distributeDailyProration',
+      `
+        ${source};
+        return { api_getMembers };
+      `
+    )(
+      {
+        batchRead: jest.fn(() => ({
+          MEMBERS: [
+            { memberId: 'MEM-9', fullName: 'Dana Ross', membershipId: 'PLAN-2', joinDate: '2024-01-01', phone: '1234567890' }
+          ],
+          PAYMENTS: [],
+          SETTINGS: []
+        }))
+      },
+      () => ({ success: false, error: 'No options available' }),
+      { getActiveUser: () => ({ getEmail: () => 'admin@gym.com' }) },
+      (prefix) => `${prefix}-TEST123`,
+      (dStr) => new Date(dStr),
+      (sDateStr, eDateStr, fallbackDateStr, totalAmt, accrualMode, onInterval) => {
+        const start = new Date(sDateStr || fallbackDateStr);
+        if (!isNaN(start)) onInterval(start.getFullYear(), start.getMonth(), totalAmt);
+      }
+    );
+
+    const response = membersApi.api_getMembers();
+    expect(response.success).toBe(true);
+    expect(Array.isArray(response.data)).toBe(true);
+    expect(response.data[0].fullName).toBe('Dana Ross');
+  });
+});
