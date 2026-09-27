@@ -1,118 +1,331 @@
 <script>
-  (() => {
-    
-    // Core state for calendar
-    let currentDate = new Date(2026, 8, 1); // Mocked to Sep 2026 to match design
-    let selectedDate = 10; // Highlight the 10th
+  var CalendarModule = {
+    monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    today: null,
+    currentDate: null,
+    selectedDate: null,
+    monthMembers: [],
+    dateBuckets: {},
+    lowercaseSearchTerm: '',
 
-    function loadCalendarData() {
+    init: function() {
+      this.today = new Date();
+      this.today.setHours(0, 0, 0, 0);
+      this.currentDate = new Date(this.today.getFullYear(), this.today.getMonth(), 1);
+      this.selectedDate = this.today.getDate();
+      this.bindControls();
+      this.loadCalendarData();
+    },
+
+    showLoadingShimmer: function() {
+      const grid = document.getElementById('cal-grid');
+      const list = document.getElementById('cal-member-list');
+      if (grid) {
+        let skeleton = '';
+        for (let i = 0; i < 35; i++) {
+          skeleton += '<div class="h-12 rounded-lg shimmer opacity-70"></div>';
+        }
+        grid.innerHTML = skeleton;
+      }
+      if (list) {
+        let listSkeleton = '';
+        for (let i = 0; i < 4; i++) {
+          listSkeleton += '<div class="flex items-center justify-between gap-3 py-3"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full shimmer"></div><div class="space-y-2"><div class="h-3 w-24 shimmer rounded"></div><div class="h-2 w-16 shimmer rounded"></div></div></div><div class="h-4 w-12 shimmer rounded"></div></div>';
+        }
+        list.innerHTML = listSkeleton;
+      }
+      ['cal-stat-due-soon', 'cal-stat-3-5', 'cal-stat-6-10', 'cal-stat-total'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.innerHTML = '<span class="h-4 w-8 inline-block shimmer rounded"></span>';
+        }
+      });
+    },
+
+    formatMonthYear: function(date) {
+      return `${this.monthNames[date.getMonth()]} ${date.getFullYear()}`;
+    },
+
+    getVisibleMonthItems: function() {
+      const monthKey = `${this.currentDate.getFullYear()}-${String(this.currentDate.getMonth() + 1).padStart(2, '0')}`;
+      const monthItems = this.monthMembers.filter((item) => {
+        const next = new Date(item.nextDueDate);
+        const itemMonth = next.getMonth();
+        const itemYear = next.getFullYear();
+        return `${itemYear}-${String(itemMonth + 1).padStart(2, '0')}` === monthKey;
+      });
+
+      if (!this.lowercaseSearchTerm) return monthItems;
+      return monthItems.filter((item) => item.name.toLowerCase().includes(this.lowercaseSearchTerm));
+    },
+
+    renderCalendarFromData: function() {
+      const stats = this.monthMembers.reduce((acc, item) => {
+        if (item.daysLeft <= 10 && item.daysLeft >= 0) {
+          acc.dueSoon += 1;
+          if (item.daysLeft <= 2) acc.due2 += 1;
+          else if (item.daysLeft <= 5) acc.due3To5 += 1;
+          else acc.due6To10 += 1;
+        }
+        return acc;
+      }, { dueSoon: 0, due2: 0, due3To5: 0, due6To10: 0 });
+
+      const dueSoonEl = document.getElementById('cal-stat-due-soon');
+      const due3to5El = document.getElementById('cal-stat-3-5');
+      const due6to10El = document.getElementById('cal-stat-6-10');
+      const totalEl = document.getElementById('cal-stat-total');
+      if (dueSoonEl) dueSoonEl.innerText = stats.dueSoon || 0;
+      if (due3to5El) due3to5El.innerText = stats.due3To5 || 0;
+      if (due6to10El) due6to10El.innerText = stats.due6To10 || 0;
+      if (totalEl) totalEl.innerText = this.monthMembers.length || 0;
+
+      const monthTitle = document.getElementById('cal-month-title');
+      const yearSelect = document.getElementById('cal-year-select');
+      if (monthTitle) monthTitle.innerText = this.formatMonthYear(this.currentDate);
+      if (yearSelect) yearSelect.innerHTML = `${this.currentDate.getFullYear()} <span class="material-symbols-rounded text-[14px]">expand_more</span>`;
+
+      this.buildGrid();
+      this.renderMemberList();
+      this.setupDrawerClose();
+    },
+
+    loadCalendarData: function() {
+      this.showLoadingShimmer();
+
+      const finalizeLoad = (response) => {
+        const payload = response && response.success && response.data ? response.data : {};
+        this.monthMembers = Array.isArray(payload.monthMembers) ? payload.monthMembers : [];
+        this.dateBuckets = payload.dateBuckets || {};
+
+        if (!response || !response.success) {
+          const listEl = document.getElementById('cal-member-list');
+          if (listEl) listEl.innerHTML = '<div class="text-xs text-slate-500">Unable to load calendar data.</div>';
+        }
+
+        this.renderCalendarFromData();
+      };
+
       google.script.run
-        .withSuccessHandler(renderCalendar)
-        .api_getCalendarData(currentDate.getMonth(), currentDate.getFullYear());
-    }
+        .withSuccessHandler((response) => finalizeLoad(response))
+        .withFailureHandler(() => {
+          this.monthMembers = [];
+          this.dateBuckets = {};
+          this.renderCalendarFromData();
+        })
+        .api_getCalendarData(this.currentDate.getMonth(), this.currentDate.getFullYear());
+    },
 
-    function renderCalendar(response) {
-      if (!response.success) return;
-
-      const data = response.data; // stats, dayData, transactions
-      
-      // 1. Update Stats
-      document.getElementById('cal-stat-paid').innerText = response.stats.paid;
-      document.getElementById('cal-stat-due').innerText = response.stats.due;
-      document.getElementById('cal-stat-overdue').innerText = response.stats.overdue;
-      document.getElementById('cal-stat-total').innerText = response.stats.total;
-
-      // 2. Build Grid
-      buildGrid(response.dayData);
-
-      // 3. Build List
-      buildList(response.transactions);
-    }
-
-    function buildGrid(dayData) {
+    buildGrid: function() {
       const grid = document.getElementById('cal-grid');
       if (!grid) return;
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      
-      // Determine days in month and starting day of week
+
+      const year = this.currentDate.getFullYear();
+      const month = this.currentDate.getMonth();
       const firstDay = new Date(year, month, 1).getDay();
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const daysInPrevMonth = new Date(year, month, 0).getDate();
 
       let html = '';
-
-      // Padding for previous month
       for (let i = 0; i < firstDay; i++) {
         const d = daysInPrevMonth - firstDay + i + 1;
-        html += `<div class="flex flex-col items-center justify-start h-10 opacity-30"><span class="text-xs font-medium text-slate-400">${d}</span></div>`;
+        html += `<div class="flex flex-col items-center justify-start h-12 opacity-30"><span class="text-xs font-medium text-slate-400">${d}</span></div>`;
       }
 
-      // Current month days
       for (let day = 1; day <= daysInMonth; day++) {
-        const isSelected = day === selectedDate;
-        const bgClass = isSelected ? 'bg-brand-primary text-white' : 'text-slate-700';
-        const dots = dayData[day] || [];
-        
-        let dotsHtml = '';
-        if (dots.includes('paid')) dotsHtml += `<div class="w-1 h-1 rounded-full bg-emerald-500"></div>`;
-        if (dots.includes('due')) dotsHtml += `<div class="w-1 h-1 rounded-full bg-amber-400"></div>`;
-        if (dots.includes('overdue')) dotsHtml += `<div class="w-1 h-1 rounded-full bg-red-500"></div>`;
+        const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const bucket = this.dateBuckets[dateKey] || [];
+        const isSelected = day === this.selectedDate && month === this.today.getMonth() && year === this.today.getFullYear();
+        const accent = isSelected ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-700 hover:bg-slate-50';
+
+        const dotsHtml = bucket.slice(0, 3).map((item) => {
+          if (item.daysLeft < 0 || item.daysLeft <= 2) return '<div class="w-1.5 h-1.5 rounded-full bg-red-500"></div>';
+          if (item.daysLeft <= 5) return '<div class="w-1.5 h-1.5 rounded-full bg-amber-400"></div>';
+          if (item.daysLeft <= 10) return '<div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>';
+          return '<div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>';
+        }).join('');
 
         html += `
-          <div class="flex flex-col items-center justify-start h-10 cursor-pointer group" onclick="alert('Open Drawer for Day: ${day}')">
-            <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-semibold ${bgClass} group-hover:bg-slate-100 group-hover:text-slate-800 transition-colors">
+          <div class="flex flex-col items-center justify-start h-12 cursor-pointer" data-date-key="${dateKey}" data-day="${day}">
+            <div class="w-7 h-7 rounded-md flex items-center justify-center text-xs font-semibold ${accent} transition-colors">
               ${day}
             </div>
-            <div class="flex gap-0.5 mt-1 h-1">
-              ${dotsHtml}
-            </div>
+            <div class="flex gap-1 mt-1 h-2 items-center justify-center">${dotsHtml || '<span class="w-4 h-0.5"></span>'}</div>
           </div>
         `;
       }
 
       grid.innerHTML = html;
-    }
+      grid.querySelectorAll('[data-date-key]').forEach((el) => {
+        el.addEventListener('click', () => this.openDrawer(el.dataset.dateKey));
+      });
+    },
 
-    function buildList(txs) {
-      const container = document.getElementById('cal-tx-list');
-      let html = '';
+    renderMemberList: function() {
+      const listEl = document.getElementById('cal-member-list');
+      const visible = this.getVisibleMonthItems();
+      const memberCountEl = document.getElementById('cal-member-count');
+      if (memberCountEl) memberCountEl.innerText = visible.length;
 
-      const statusStyles = {
-        'Paid': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-        'Due': 'bg-amber-50 text-amber-600 border-amber-100',
-        'Overdue': 'bg-red-50 text-red-600 border-red-100'
-      };
+      if (!listEl) return;
+      if (!visible.length) {
+        listEl.innerHTML = '<div class="text-xs text-slate-500 py-2">No members with upcoming due dates in this month.</div>';
+        return;
+      }
 
-      txs.forEach(tx => {
-        const initials = tx.name.substring(0, 2).toUpperCase();
-        const sStyle = statusStyles[tx.status];
+      listEl.innerHTML = visible.map((item) => {
+        const initials = item.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
+        const dueBadge = item.daysLeft < 0
+          ? 'bg-red-50 text-red-600 border-red-200'
+          : item.daysLeft <= 2
+            ? 'bg-red-50 text-red-600 border-red-200'
+            : item.daysLeft <= 5
+              ? 'bg-amber-50 text-amber-600 border-amber-200'
+              : 'bg-emerald-50 text-emerald-600 border-emerald-200';
 
-        html += `
+        return `
           <div class="flex items-center justify-between pb-3 border-b border-slate-50 last:border-0">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold shrink-0">
-                ${initials}
-              </div>
-              <div>
-                <h4 class="text-xs font-bold text-slate-800">${tx.name}</h4>
-                <p class="text-[10px] text-slate-500">${tx.plan}</p>
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0">${initials}</div>
+              <div class="min-w-0">
+                <div class="text-xs font-bold text-slate-800 truncate">${item.name}</div>
+                <div class="text-[10px] text-slate-500">${item.plan}</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">Next due: ${item.dueDateLabel}</div>
               </div>
             </div>
-            <div class="text-right flex flex-col items-end gap-1">
-              <span class="text-xs font-bold text-slate-800">${AppUtils.formatCurrency(tx.amount)}</span>
-              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${sStyle}">${tx.status}</span>
-              <span class="text-[9px] text-slate-400">${tx.time}</span>
+            <div class="text-right flex flex-col items-end gap-1 shrink-0">
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${dueBadge}">${item.daysLeft < 0 ? `${Math.abs(item.daysLeft)}d overdue` : `${item.daysLeft}d left`}</span>
+              <span class="text-xs font-bold text-slate-800">${AppUtils.formatCurrency(item.amount)}</span>
             </div>
           </div>
         `;
-      });
+      }).join('');
+    },
 
-      container.innerHTML = html;
+    openDrawer: function(dateKey) {
+      const bucket = this.dateBuckets[dateKey] || [];
+      const [year, month, day] = dateKey.split('-').map(Number);
+      const drawerTitle = document.getElementById('drawer-title');
+      const drawerSubtitle = document.getElementById('drawer-subtitle');
+      if (drawerTitle) drawerTitle.innerText = `${day} ${this.monthNames[month - 1]} ${year}`;
+      if (drawerSubtitle) drawerSubtitle.innerText = `${bucket.length} member${bucket.length === 1 ? '' : 's'}`;
+
+      const drawerSearch = document.getElementById('calendar-drawer-search');
+      const searchValue = (drawerSearch ? drawerSearch.value : '').trim().toLowerCase();
+      const filtered = bucket.filter((item) => item.name.toLowerCase().includes(searchValue));
+
+      const content = document.getElementById('calendar-drawer-content');
+      if (!content) return;
+      if (!filtered.length) {
+        content.innerHTML = '<div class="text-xs text-slate-500">No members for this date.</div>';
+      } else {
+        content.innerHTML = filtered.map((item) => {
+          const daysLabel = item.daysLeft < 0 ? `${Math.abs(item.daysLeft)} days overdue` : `${item.daysLeft} days left`;
+          return `
+            <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold">${item.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-bold text-slate-800 truncate">${item.name}</div>
+                  <div class="text-[10px] text-slate-500">${item.plan}</div>
+                </div>
+              </div>
+              <div class="mt-3 grid grid-cols-2 gap-2 text-[10px] text-slate-600">
+                <div class="bg-slate-50 rounded-lg p-2">
+                  <div class="font-semibold text-slate-500">Due date</div>
+                  <div class="mt-1 font-bold text-slate-800">${item.dueDateLabel}</div>
+                </div>
+                <div class="bg-slate-50 rounded-lg p-2">
+                  <div class="font-semibold text-slate-500">Amount</div>
+                  <div class="mt-1 font-bold text-slate-800">${AppUtils.formatCurrency(item.amount)}</div>
+                </div>
+              </div>
+              <div class="mt-3 flex items-center justify-between gap-2">
+                <span class="text-[10px] font-semibold text-slate-500">${daysLabel}</span>
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${item.daysLeft <= 2 ? 'bg-red-50 text-red-600 border-red-200' : item.daysLeft <= 5 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}">${item.statusText}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const backdrop = document.getElementById('calendar-drawer-backdrop');
+      const drawer = document.getElementById('calendar-drawer');
+      if (drawer) drawer.classList.remove('translate-x-full');
+      if (backdrop) {
+        backdrop.classList.remove('opacity-0', 'pointer-events-none');
+        backdrop.classList.add('opacity-100');
+      }
+    },
+
+    closeDrawer: function() {
+      const backdrop = document.getElementById('calendar-drawer-backdrop');
+      const drawer = document.getElementById('calendar-drawer');
+      if (drawer) drawer.classList.add('translate-x-full');
+      if (backdrop) {
+        backdrop.classList.add('opacity-0', 'pointer-events-none');
+        backdrop.classList.remove('opacity-100');
+      }
+    },
+
+    setupDrawerClose: function() {
+      const closeBtn = document.getElementById('calendar-drawer-close');
+      const backdrop = document.getElementById('calendar-drawer-backdrop');
+      const search = document.getElementById('calendar-drawer-search');
+      if (closeBtn) closeBtn.onclick = () => this.closeDrawer();
+      if (backdrop) backdrop.onclick = () => this.closeDrawer();
+      if (search) {
+        search.oninput = () => {
+          const title = document.getElementById('drawer-title')?.innerText || '';
+          const match = title.match(/^(\d+)\s+(\w+)\s+(\d{4})$/);
+          if (!match) return;
+          const [, day, monthName, year] = match;
+          const monthIndex = this.monthNames.indexOf(monthName);
+          if (monthIndex === -1) return;
+          this.openDrawer(`${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+        };
+      }
+    },
+
+    updateCurrentMonth: function(offset) {
+      this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + offset, 1);
+      this.selectedDate = this.currentDate.getDate();
+      this.loadCalendarData();
+    },
+
+    bindControls: function() {
+      const prev = document.getElementById('cal-prev-month');
+      const next = document.getElementById('cal-next-month');
+      const todayBtn = document.getElementById('cal-today-btn');
+      const search = document.getElementById('cal-search');
+      const yearSelect = document.getElementById('cal-year-select');
+
+      if (prev) prev.addEventListener('click', () => this.updateCurrentMonth(-1));
+      if (next) next.addEventListener('click', () => this.updateCurrentMonth(1));
+      if (todayBtn) {
+        todayBtn.addEventListener('click', () => {
+          this.currentDate = new Date(this.today.getFullYear(), this.today.getMonth(), 1);
+          this.selectedDate = this.today.getDate();
+          this.loadCalendarData();
+        });
+      }
+      if (search) {
+        search.addEventListener('input', (event) => {
+          this.lowercaseSearchTerm = event.target.value.trim().toLowerCase();
+          this.renderMemberList();
+        });
+      }
+      if (yearSelect) {
+        yearSelect.addEventListener('click', () => {
+          const entered = prompt('Select year', String(this.currentDate.getFullYear()));
+          const year = Number(entered);
+          if (!Number.isNaN(year)) {
+            this.currentDate = new Date(year, this.currentDate.getMonth(), 1);
+            this.loadCalendarData();
+          }
+        });
+      }
     }
+  };
 
-    // Init
-    loadCalendarData();
-
-  })();
+  CalendarModule.init();
 </script>
