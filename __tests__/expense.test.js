@@ -152,6 +152,31 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
       const totalKpi = document.getElementById('kpi-total-exp').innerText;
       expect(totalKpi).toBe(AppUtils.formatCurrency(60000));
     });
+
+    it('should safely render without throwing when dropdown options have missing name or unexpected structures', () => {
+      ExpensesApp.dropdowns = {
+        expenseCats: [
+          { id: 'CAT-1' },
+          { id: 'CAT-2', category: 'Maintenance' },
+          null
+        ]
+      };
+      ExpensesApp.allData = [
+        { expenseId: 'EXP-1', categoryId: 'CAT-1', amount: 500, date: '10-Jan-2026' },
+        { expenseId: 'EXP-2', categoryId: 'CAT-2', amount: 1200, date: '12-Jan-2026' }
+      ];
+      ExpensesApp.filteredData = ExpensesApp.allData;
+
+      expect(() => {
+        ExpensesApp.calculateKPIs();
+        ExpensesApp.renderCharts();
+        ExpensesApp.filterTable();
+      }).not.toThrow();
+
+      expect(ExpensesApp.getName('CAT-1')).toBe('CAT-1');
+      expect(ExpensesApp.getName('CAT-2')).toBe('Maintenance');
+      expect(ExpensesApp.getName('UNKNOWN')).toBe('UNKNOWN');
+    });
   });
 
   describe('Backend api_saveExpense', () => {

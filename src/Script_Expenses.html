@@ -35,11 +35,24 @@
            this.isDropdownsLoaded = true;
            this.checkAndRender();
         })
+        .withFailureHandler((err) => {
+           console.error("api_getGlobalDropdowns failed:", err);
+           this.dropdowns = this.dropdowns || {};
+           this.dropdowns.expenseCats = [];
+           this.isDropdownsLoaded = true;
+           this.checkAndRender();
+        })
         .api_getGlobalDropdowns();
         
       google.script.run
         .withSuccessHandler((res) => {
            this.onDataLoaded(res);
+           this.isExpensesLoaded = true;
+           this.checkAndRender();
+        })
+        .withFailureHandler((err) => {
+           console.error("api_getExpenses failed:", err);
+           this.onDataLoaded({ success: false, error: err.message || "Failed to load expenses." });
            this.isExpensesLoaded = true;
            this.checkAndRender();
         })
@@ -173,8 +186,8 @@
 
     getName: function(id) {
       if(!id || !this.dropdowns.expenseCats) return id || 'N/A';
-      const match = this.dropdowns.expenseCats.find(item => item.id === id);
-      return match ? match.name : id;
+      const match = this.dropdowns.expenseCats.find(item => item && item.id === id);
+      return match ? (match.name || match.category || match.label || match.title || id) : (id || 'N/A');
     },
 
     getColor: function(idx) { return this.colorMap[idx % this.colorMap.length]; },
@@ -185,13 +198,19 @@
            this.onDataLoaded(res);
            this.applyGlobalFilters();
         })
+        .withFailureHandler((err) => {
+           console.error("fetchData failed:", err);
+           this.onDataLoaded({ success: false, error: err.message || "Failed to load expenses." });
+        })
         .api_getExpenses();
     },
 
     onDataLoaded: function(response) {
-      if (!response.success) {
-        document.getElementById('desktop-expense-body').innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8">Failed to load.</td></tr>`;
-        return Toast.error("Failed to load expenses.");
+      if (!response || !response.success) {
+        document.getElementById('desktop-expense-body').innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8">Failed to load expenses.</td></tr>`;
+        const mc = document.getElementById('mobile-expense-container');
+        if (mc) mc.innerHTML = `<div class="bg-white p-6 text-center text-xs text-red-500 rounded-xl border border-red-200">Failed to load expenses.</div>`;
+        return Toast.error("Failed to load expenses: " + ((response && response.error) || ""));
       }
       
       this.allData = response.data || [];
@@ -284,28 +303,32 @@
     },
 
     applyGlobalFilters: function() {
-      const year = document.getElementById('exp-filter-year')?.value;
-      const mode = document.getElementById('exp-filter-mode')?.value;
-      if (!year || !mode) return;
-      
-      this.filteredData = (this.allData || []).filter(exp => {
-        if(!exp.date) return false;
+      try {
+        const year = document.getElementById('exp-filter-year')?.value;
+        const mode = document.getElementById('exp-filter-mode')?.value;
+        if (!year || !mode) return;
         
-        const d = new Date(this.parseToISODate(exp.date));
-        if(isNaN(d)) return false;
-        
-        if (d.getFullYear().toString() !== year) return false;
-        
-        if (mode === 'Monthly') {
-           return this.selectedPeriods.includes(this.months[d.getMonth()]);
-        } else {
-           return this.selectedPeriods.includes(this.quarters[Math.floor(d.getMonth() / 3)]);
-        }
-      });
+        this.filteredData = (this.allData || []).filter(exp => {
+          if(!exp.date) return false;
+          
+          const d = new Date(this.parseToISODate(exp.date));
+          if(isNaN(d)) return false;
+          
+          if (d.getFullYear().toString() !== year) return false;
+          
+          if (mode === 'Monthly') {
+             return this.selectedPeriods.includes(this.months[d.getMonth()]);
+          } else {
+             return this.selectedPeriods.includes(this.quarters[Math.floor(d.getMonth() / 3)]);
+          }
+        });
 
-      this.calculateKPIs();
-      this.renderCharts();
-      this.filterTable(); 
+        this.calculateKPIs();
+        this.renderCharts();
+        this.filterTable(); 
+      } catch (err) {
+        console.error("Error in applyGlobalFilters:", err);
+      }
     },
 
     calculateKPIs: function() {
@@ -348,8 +371,12 @@
       }
 
       // Also account for any direct expense categorized as staff/salary in EXPENSES
-      if (this.dropdowns.expenseCats) {
-        const staffCat = this.dropdowns.expenseCats.find(c => c.name.toLowerCase().includes('staff') || c.name.toLowerCase().includes('trainer') || c.name.toLowerCase().includes('salary'));
+      if (Array.isArray(this.dropdowns.expenseCats)) {
+        const staffCat = this.dropdowns.expenseCats.find(c => {
+          if (!c) return false;
+          const n = String(c.name || c.category || c.label || '').toLowerCase();
+          return n.includes('staff') || n.includes('trainer') || n.includes('salary');
+        });
         if (staffCat && catSums[staffCat.id]) {
           staffTotal += catSums[staffCat.id];
         }
@@ -402,7 +429,7 @@
              if(trendDataMap[key] !== undefined) trendDataMap[key] += amt;
          }
 
-         const cName = this.getName(exp.categoryId);
+         const cName = String(this.getName(exp.categoryId) || 'N/A');
          catSums[cName] = (catSums[cName] || 0) + amt;
 
          if (cName.toLowerCase().includes('misc') || cName.toLowerCase().includes('other')) {
@@ -467,21 +494,26 @@
       const bColors = bLabels.map((l, i) => this.getColor(i));
       const totalAmt = bSeries.reduce((a,b)=>a+b, 0);
 
-      const breakOpts = {
-        series: bSeries,
-        labels: bLabels,
-        chart: { type: 'donut', height: '100%' },
-        colors: bColors.length ? bColors : ['#e2e8f0'],
-        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
-        legend: { position: 'right', fontSize: '10px', offsetY: 20 },
-        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
-        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
-      };
-
       document.getElementById("chart-expense-breakdown").innerHTML = "";
       if(this.chartInstances.breakdown) this.chartInstances.breakdown.destroy();
-      this.chartInstances.breakdown = new ApexCharts(document.querySelector("#chart-expense-breakdown"), breakOpts);
-      this.chartInstances.breakdown.render();
+
+      if (bSeries.length === 0) {
+        document.getElementById("chart-expense-breakdown").innerHTML = '<div class="h-full flex items-center justify-center text-xs text-slate-400">No expenses recorded</div>';
+      } else {
+        const breakOpts = {
+          series: bSeries,
+          labels: bLabels,
+          chart: { type: 'donut', height: '100%' },
+          colors: bColors.length ? bColors : ['#e2e8f0'],
+          plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
+          legend: { position: 'right', fontSize: '10px', offsetY: 20 },
+          dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w?.globals?.seriesTotals?.[opts.seriesIndex] || val || 0); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
+          tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
+        };
+
+        this.chartInstances.breakdown = new ApexCharts(document.querySelector("#chart-expense-breakdown"), breakOpts);
+        this.chartInstances.breakdown.render();
+      }
 
       // 3. Smart Misc Breakdown (Collapses if Empty)
       const mLabels = Object.keys(miscSums);
@@ -500,7 +532,7 @@
             chart: { type: 'pie', height: '100%' },
             colors: mColors,
             legend: { position: 'bottom', fontSize: '10px' },
-            dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
+            dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w?.globals?.seriesTotals?.[opts.seriesIndex] || val || 0); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
             tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
           };
           
@@ -577,8 +609,8 @@
             valA = this.parseAmount(a.amount);
             valB = this.parseAmount(b.amount);
          } else if (this.sortColumn === 'category') {
-            valA = this.getName(a.categoryId).toLowerCase();
-            valB = this.getName(b.categoryId).toLowerCase();
+            valA = String(this.getName(a.categoryId) || '').toLowerCase();
+            valB = String(this.getName(b.categoryId) || '').toLowerCase();
          }
          
          if (valA < valB) return this.sortAsc ? -1 : 1;
@@ -595,8 +627,8 @@
       let dHtml = ''; let mHtml = '';
 
       this.tableData.forEach((exp, index) => {
-        let cName = this.getName(exp.categoryId);
-        const cIdx = this.dropdowns.expenseCats ? this.dropdowns.expenseCats.findIndex(c => c.id === exp.categoryId) : index;
+        let cName = String(this.getName(exp.categoryId) || 'N/A');
+        const cIdx = this.dropdowns.expenseCats ? this.dropdowns.expenseCats.findIndex(c => c && c.id === exp.categoryId) : index;
         const color = this.getColor(cIdx > -1 ? cIdx : index);
         
         // Append Misc info for desktop table
@@ -658,7 +690,7 @@
 
     checkMiscCategory: function() {
        const select = document.getElementById('exp-category');
-       const name = select.options[select.selectedIndex]?.text.toLowerCase() || '';
+       const name = select && select.selectedIndex >= 0 && select.options[select.selectedIndex] ? select.options[select.selectedIndex].text.toLowerCase() : '';
        const miscContainer = document.getElementById('misc-field-container');
        const miscInput = document.getElementById('exp-what-misc');
        

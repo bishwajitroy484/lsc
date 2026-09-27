@@ -39,20 +39,24 @@ function api_getExpenses() {
       }
     };
 
-    salaries.forEach(t => {
-      const status = String(t.paymentStatus || '').toLowerCase();
-      if (status.includes('fail') || status.includes('pending') || status.includes('action')) return;
+    try {
+      salaries.forEach(t => {
+        const status = String(t.paymentStatus || '').toLowerCase();
+        if (status.includes('fail') || status.includes('pending') || status.includes('action')) return;
 
-      let totalAmt = Number(String(t.amount || 0).replace(/[^0-9.-]+/g, ""));
-      if (!totalAmt || isNaN(totalAmt)) return;
+        let totalAmt = Number(String(t.amount || 0).replace(/[^0-9.-]+/g, ""));
+        if (!totalAmt || isNaN(totalAmt)) return;
 
-      distributeDailyProration(t.startDate || t.paidDate, t.endDate || t.paidDate, t.paidDate, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
-        ensureYear(cYear);
-        staffMetrics[cYear].totalCost += intervalAmt;
-        staffMetrics[cYear].monthly[cMonth] += intervalAmt;
-        staffMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += intervalAmt;
+        distributeDailyProration(t.startDate || t.paidDate, t.endDate || t.paidDate, t.paidDate, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
+          ensureYear(cYear);
+          staffMetrics[cYear].totalCost += intervalAmt;
+          staffMetrics[cYear].monthly[cMonth] += intervalAmt;
+          staffMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += intervalAmt;
+        });
       });
-    });
+    } catch (salErr) {
+      console.error("Salary proration error in api_getExpenses:", salErr);
+    }
 
     return {
       success: true,
