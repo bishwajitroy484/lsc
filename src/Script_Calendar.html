@@ -52,7 +52,9 @@
         const next = new Date(item.nextDueDate);
         const itemMonth = next.getMonth();
         const itemYear = next.getFullYear();
-        return `${itemYear}-${String(itemMonth + 1).padStart(2, '0')}` === monthKey;
+        const matchesSelectedMonth = `${itemYear}-${String(itemMonth + 1).padStart(2, '0')}` === monthKey;
+        const isDueSoonOrOverdue = Number.isFinite(item.daysLeft) && item.daysLeft <= 10;
+        return matchesSelectedMonth || isDueSoonOrOverdue;
       });
 
       if (!this.lowercaseSearchTerm) return monthItems;
