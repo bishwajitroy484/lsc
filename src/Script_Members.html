@@ -495,25 +495,11 @@
            this.calculateEffectiveCoverage(member);
            this.updateDetailHeader(member);
 
-           let startYear = member.joinDate ? new Date(member.joinDate).getFullYear() : new Date().getFullYear();
-           if (isNaN(startYear)) startYear = new Date().getFullYear();
-           
-           const currentYear = new Date().getFullYear();
-           this.currentMemberPayments.forEach(p => {
-               const py = new Date(p.paidDate).getFullYear();
-               if(py < startYear) startYear = py;
+           AppUtils.loadAvailableYears(() => {
+             AppUtils.populateYearSelect('filter-ltv');
+             this.renderPaymentHistory();
+             this.renderChart();
            });
-           
-           const sel = document.getElementById('filter-ltv');
-           let opts = '';
-           for(let y = currentYear; y >= startYear; y--) {
-               opts += `<option value="${y}">${y}</option>`;
-           }
-           sel.innerHTML = opts;
-           sel.value = currentYear; 
-           
-           this.renderPaymentHistory();
-           this.renderChart();
         })
         .api_getMemberPayments(member.memberId);
 

@@ -1,5 +1,10 @@
 <script>
   const AppUtils = {
+    availableYears: [],
+    availableYearsLoaded: false,
+    availableYearsLoading: false,
+    availableYearsCallbacks: [],
+
     formatCurrency: function(val) {
       if (val === null || val === undefined || val === '') return '₹0';
       const clean = typeof val === 'number' ? val : Number(String(val).replace(/[^0-9.-]+/g, ''));
@@ -93,6 +98,62 @@
       return `${y}-${m}-${day}`;
     },
 
+    loadAvailableYears: function(callback) {
+      if (this.availableYearsLoaded) {
+        if (callback) callback(this.availableYears);
+        return;
+      }
+      if (callback) this.availableYearsCallbacks.push(callback);
+      if (this.availableYearsLoading) return;
+
+      this.availableYearsLoading = true;
+      google.script.run
+        .withSuccessHandler((response) => {
+          if (!response || !response.success || !Array.isArray(response.data)) {
+            console.error('api_getAvailableYears failed:', response?.error || 'Invalid response');
+            this.availableYears = [String(new Date().getFullYear())];
+          } else {
+            const years = response.data
+              .map(year => String(year))
+              .filter(year => /^\d{4}$/.test(year));
+            years.push(String(new Date().getFullYear()));
+            this.availableYears = Array.from(new Set(years)).sort((a, b) => Number(b) - Number(a));
+          }
+
+          this.availableYearsLoaded = true;
+          this.availableYearsLoading = false;
+          const callbacks = this.availableYearsCallbacks.splice(0);
+          callbacks.forEach(onLoaded => onLoaded(this.availableYears));
+        })
+        .withFailureHandler((error) => {
+          console.error('api_getAvailableYears failed:', error);
+          this.availableYears = [String(new Date().getFullYear())];
+          this.availableYearsLoaded = true;
+          this.availableYearsLoading = false;
+          const callbacks = this.availableYearsCallbacks.splice(0);
+          callbacks.forEach(onLoaded => onLoaded(this.availableYears));
+        })
+        .api_getAvailableYears();
+    },
+
+    populateYearSelect: function(elementId, preferredYear) {
+      const select = document.getElementById(elementId);
+      if (!select) return;
+
+      const currentValue = preferredYear === undefined
+        ? (select.value || String(new Date().getFullYear()))
+        : String(preferredYear);
+      select.innerHTML = this.availableYears
+        .map(year => `<option value="${year}">${year}</option>`)
+        .join('');
+
+      if (this.availableYears.includes(currentValue)) {
+        select.value = currentValue;
+      } else {
+        select.value = this.availableYears[0] || '';
+      }
+    },
+
     safeSetText: function(id, text) {
       const el = document.getElementById(id);
       if (el) el.innerText = text !== undefined && text !== null ? text : '';
@@ -173,6 +234,8 @@
     currentView: '',
     
     init: function() {
+      AppUtils.loadAvailableYears();
+
       // 1. Inject static layout components from templates
       this.injectTemplate('tpl-comp-sidebar', 'desktop-nav-container');
       this.injectTemplate('tpl-comp-bottom-nav', 'mobile-nav-container');

@@ -7,6 +7,7 @@
     
     isDropdownsLoaded: false,
     isStaffLoaded: false,
+    isYearsLoaded: false,
     
     months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     quarters: ['Q1', 'Q2', 'Q3', 'Q4'],
@@ -29,7 +30,14 @@
     init: function() {
       this.isDropdownsLoaded = false;
       this.isStaffLoaded = false;
+      this.isYearsLoaded = false;
       this.selectedPeriods = [...this.months];
+
+      AppUtils.loadAvailableYears(() => {
+        AppUtils.populateYearSelect('staff-filter-year');
+        this.isYearsLoaded = true;
+        this.checkAndRender();
+      });
       
       this.renderCheckboxes();
       this.updateMultiSelectLabel();
@@ -62,7 +70,7 @@
     },
 
     checkAndRender: function() {
-      if (this.isDropdownsLoaded && this.isStaffLoaded) {
+      if (this.isDropdownsLoaded && this.isStaffLoaded && this.isYearsLoaded) {
           this.applyGlobalFilters();
       }
     },
@@ -240,34 +248,6 @@
       this.allPayments = response.data.payments || []; // Store all actual payments globally
       this.chartMetrics = response.chartMetrics || {};
       
-      const yearSelect = document.getElementById('staff-filter-year');
-      if (yearSelect) {
-          let years = new Set();
-          
-          this.allData.forEach(stf => {
-            if(stf.joinDate) {
-              const d = new Date(this.parseToISODate(stf.joinDate));
-              if(!isNaN(d)) years.add(d.getFullYear().toString());
-            }
-          });
-          
-          // Also include years where payments were made
-          this.allPayments.forEach(p => {
-             if(p.paidDate) {
-                const d = new Date(this.parseToISODate(p.paidDate));
-                if(!isNaN(d)) years.add(d.getFullYear().toString());
-             }
-          });
-          
-          const currentYear = new Date().getFullYear().toString();
-          if(years.size === 0) years.add(currentYear); 
-          
-          let yearsArray = Array.from(years).sort((a,b) => b - a);
-          let yearHtml = '';
-          yearsArray.forEach(y => { yearHtml += `<option value="${y}">${y}</option>`; });
-          yearSelect.innerHTML = yearHtml;
-          yearSelect.value = yearsArray.includes(currentYear) ? currentYear : yearsArray[0];
-      }
     },
 
     handleModeSwitch: function() {
