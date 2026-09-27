@@ -23,6 +23,17 @@
       this.isDropdownsLoaded = false;
       this.isExpensesLoaded = false;
       this.selectedPeriods = [...this.months];
+
+      const yearSelect = document.getElementById('exp-filter-year');
+      if (yearSelect && yearSelect.options.length === 0) {
+        const curY = new Date().getFullYear();
+        yearSelect.innerHTML = `
+          <option value="${curY}">${curY}</option>
+          <option value="${curY - 1}">${curY - 1}</option>
+          <option value="${curY - 2}">${curY - 2}</option>
+        `;
+        yearSelect.value = curY.toString();
+      }
       
       this.renderCheckboxes();
       this.updateMultiSelectLabel();
@@ -148,13 +159,25 @@
       const mc = document.getElementById('mobile-expense-container');
       if(mc) mc.innerHTML = `<div class="p-4 bg-white rounded-xl shadow-sm"><div class="h-10 w-full shimmer rounded"></div></div>`;
       
-      if(this.chartInstances.trend) this.chartInstances.trend.destroy();
-      if(this.chartInstances.breakdown) this.chartInstances.breakdown.destroy();
-      if(this.chartInstances.misc) this.chartInstances.misc.destroy();
+      if(this.chartInstances.trend) {
+        try { this.chartInstances.trend.destroy(); } catch(e){}
+        this.chartInstances.trend = null;
+      }
+      if(this.chartInstances.breakdown) {
+        try { this.chartInstances.breakdown.destroy(); } catch(e){}
+        this.chartInstances.breakdown = null;
+      }
+      if(this.chartInstances.misc) {
+        try { this.chartInstances.misc.destroy(); } catch(e){}
+        this.chartInstances.misc = null;
+      }
       
-      document.getElementById('chart-expense-trend').innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
-      document.getElementById('chart-expense-breakdown').innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
-      document.getElementById('chart-expense-misc').innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
+      const trChart = document.getElementById('chart-expense-trend');
+      if (trChart) trChart.innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
+      const brChart = document.getElementById('chart-expense-breakdown');
+      if (brChart) brChart.innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
+      const msChart = document.getElementById('chart-expense-misc');
+      if (msChart) msChart.innerHTML = `<div class="w-full h-full shimmer opacity-40 rounded-lg"></div>`;
     },
 
     parseAmount: AppUtils.parseAmount,
@@ -185,9 +208,10 @@
     },
 
     getName: function(id) {
-      if(!id || !this.dropdowns.expenseCats) return id || 'N/A';
+      if(!id) return 'N/A';
+      if(!this.dropdowns || !Array.isArray(this.dropdowns.expenseCats)) return String(id);
       const match = this.dropdowns.expenseCats.find(item => item && item.id === id);
-      return match ? (match.name || match.category || match.label || match.title || id) : (id || 'N/A');
+      return match ? (match.name || match.category || match.label || match.title || String(id)) : String(id);
     },
 
     getColor: function(idx) { return this.colorMap[idx % this.colorMap.length]; },
@@ -207,10 +231,18 @@
 
     onDataLoaded: function(response) {
       if (!response || !response.success) {
-        document.getElementById('desktop-expense-body').innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8">Failed to load expenses.</td></tr>`;
+        const errMsg = (response && response.error) || "Failed to load expenses.";
+        const tb = document.getElementById('desktop-expense-body');
+        if (tb) tb.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8">${errMsg}</td></tr>`;
         const mc = document.getElementById('mobile-expense-container');
-        if (mc) mc.innerHTML = `<div class="bg-white p-6 text-center text-xs text-red-500 rounded-xl border border-red-200">Failed to load expenses.</div>`;
-        return Toast.error("Failed to load expenses: " + ((response && response.error) || ""));
+        if (mc) mc.innerHTML = `<div class="bg-white p-6 text-center text-xs text-red-500 rounded-xl border border-red-200">${errMsg}</div>`;
+        const trChart = document.getElementById('chart-expense-trend');
+        if (trChart) trChart.innerHTML = `<div class="h-full flex items-center justify-center text-xs text-red-400">${errMsg}</div>`;
+        const brChart = document.getElementById('chart-expense-breakdown');
+        if (brChart) brChart.innerHTML = `<div class="h-full flex items-center justify-center text-xs text-red-400">${errMsg}</div>`;
+        const msChart = document.getElementById('chart-expense-misc');
+        if (msChart) msChart.innerHTML = `<div class="h-full flex items-center justify-center text-xs text-red-400">${errMsg}</div>`;
+        return Toast.error("Failed to load expenses: " + errMsg);
       }
       
       this.allData = response.data || [];
@@ -218,33 +250,35 @@
       this.staffMetrics = response.staffMetrics || {};
       
       const yearSelect = document.getElementById('exp-filter-year');
-      let years = new Set();
-      
-      this.allData.forEach(exp => {
-        if(exp.date) {
-          const d = new Date(this.parseToISODate(exp.date));
-          if(!isNaN(d)) years.add(d.getFullYear().toString());
-        }
-      });
-
-      if (this.staffMetrics) {
-        Object.keys(this.staffMetrics).forEach(y => {
-          if (this.staffMetrics[y] && this.staffMetrics[y].totalCost > 0) {
-            years.add(y.toString());
+      if (yearSelect) {
+        let years = new Set();
+        
+        this.allData.forEach(exp => {
+          if(exp.date) {
+            const d = new Date(this.parseToISODate(exp.date));
+            if(!isNaN(d)) years.add(d.getFullYear().toString());
           }
         });
-      }
-      
-      const currentYear = new Date().getFullYear().toString();
-      if(years.size === 0) years.add(currentYear); 
-      
-      let yearsArray = Array.from(years).sort((a,b) => b - a);
-      let yearHtml = '';
-      yearsArray.forEach(y => { yearHtml += `<option value="${y}">${y}</option>`; });
-      yearSelect.innerHTML = yearHtml;
 
-      if(yearsArray.includes(currentYear)) { yearSelect.value = currentYear; } 
-      else { yearSelect.value = yearsArray[0]; }
+        if (this.staffMetrics) {
+          Object.keys(this.staffMetrics).forEach(y => {
+            if (this.staffMetrics[y] && this.staffMetrics[y].totalCost > 0) {
+              years.add(y.toString());
+            }
+          });
+        }
+        
+        const currentYear = new Date().getFullYear().toString();
+        if(years.size === 0) years.add(currentYear); 
+        
+        let yearsArray = Array.from(years).sort((a,b) => b - a);
+        let yearHtml = '';
+        yearsArray.forEach(y => { yearHtml += `<option value="${y}">${y}</option>`; });
+        yearSelect.innerHTML = yearHtml;
+
+        if(yearsArray.includes(currentYear)) { yearSelect.value = currentYear; } 
+        else { yearSelect.value = yearsArray[0]; }
+      }
     },
 
     handleModeSwitch: function() {
@@ -304,10 +338,16 @@
 
     applyGlobalFilters: function() {
       try {
-        const year = document.getElementById('exp-filter-year')?.value;
-        const mode = document.getElementById('exp-filter-mode')?.value;
-        if (!year || !mode) return;
+        const yearSelect = document.getElementById('exp-filter-year');
+        const modeSelect = document.getElementById('exp-filter-mode');
+        const currentYearStr = new Date().getFullYear().toString();
+        const year = (yearSelect && yearSelect.value) ? yearSelect.value : currentYearStr;
+        const mode = (modeSelect && modeSelect.value) ? modeSelect.value : 'Monthly';
         
+        if (yearSelect && !yearSelect.value) {
+          yearSelect.value = year;
+        }
+
         this.filteredData = (this.allData || []).filter(exp => {
           if(!exp.date) return false;
           
@@ -332,214 +372,252 @@
     },
 
     calculateKPIs: function() {
-      let total = 0;
-      let catSums = {};
-      
-      (this.filteredData || []).forEach(exp => {
-        const amt = this.parseAmount(exp.amount);
-        total += amt;
-        catSums[exp.categoryId] = (catSums[exp.categoryId] || 0) + amt;
-      });
-
-      // Dynamic Title and Average Calculation
-      const mode = document.getElementById('exp-filter-mode')?.value || 'Monthly';
-      const isMonthly = mode === 'Monthly';
-      const avgTitle = document.getElementById('kpi-avg-title');
-      if (avgTitle) {
-          avgTitle.innerText = isMonthly ? 'MONTHLY AVG' : 'QUARTERLY AVG';
-      }
-
-      // Calculate Staff Cost for the selected year and selected periods from staffMetrics
-      const year = document.getElementById('exp-filter-year')?.value;
-      let staffTotal = 0;
-      const yearStaffMetrics = (this.staffMetrics && year) ? this.staffMetrics[year] : null;
-
-      if (yearStaffMetrics) {
-        this.selectedPeriods.forEach(p => {
-          if (isMonthly) {
-            const mIdx = this.months.indexOf(p);
-            if (mIdx !== -1 && yearStaffMetrics.monthly[mIdx]) {
-              staffTotal += yearStaffMetrics.monthly[mIdx];
-            }
-          } else {
-            const qIdx = this.quarters.indexOf(p);
-            if (qIdx !== -1 && yearStaffMetrics.quarterly[qIdx]) {
-              staffTotal += yearStaffMetrics.quarterly[qIdx];
-            }
+      try {
+        let total = 0;
+        let catSums = {};
+        
+        (this.filteredData || []).forEach(exp => {
+          const amt = this.parseAmount(exp.amount);
+          total += amt;
+          if (exp.categoryId) {
+            catSums[exp.categoryId] = (catSums[exp.categoryId] || 0) + amt;
           }
         });
-      }
 
-      // Also account for any direct expense categorized as staff/salary in EXPENSES
-      if (Array.isArray(this.dropdowns.expenseCats)) {
-        const staffCat = this.dropdowns.expenseCats.find(c => {
-          if (!c) return false;
-          const n = String(c.name || c.category || c.label || '').toLowerCase();
-          return n.includes('staff') || n.includes('trainer') || n.includes('salary');
-        });
-        if (staffCat && catSums[staffCat.id]) {
-          staffTotal += catSums[staffCat.id];
+        // Dynamic Title and Average Calculation
+        const mode = document.getElementById('exp-filter-mode')?.value || 'Monthly';
+        const isMonthly = mode === 'Monthly';
+        const avgTitle = document.getElementById('kpi-avg-title');
+        if (avgTitle) {
+            avgTitle.innerText = isMonthly ? 'MONTHLY AVG' : 'QUARTERLY AVG';
         }
+
+        // Calculate Staff Cost for the selected year and selected periods from staffMetrics
+        const year = document.getElementById('exp-filter-year')?.value || new Date().getFullYear().toString();
+        let staffTotal = 0;
+        const yearStaffMetrics = (this.staffMetrics && year) ? this.staffMetrics[year] : null;
+
+        if (yearStaffMetrics && Array.isArray(this.selectedPeriods)) {
+          this.selectedPeriods.forEach(p => {
+            if (isMonthly) {
+              const mIdx = this.months.indexOf(p);
+              if (mIdx !== -1 && yearStaffMetrics.monthly && yearStaffMetrics.monthly[mIdx]) {
+                staffTotal += yearStaffMetrics.monthly[mIdx];
+              }
+            } else {
+              const qIdx = this.quarters.indexOf(p);
+              if (qIdx !== -1 && yearStaffMetrics.quarterly && yearStaffMetrics.quarterly[qIdx]) {
+                staffTotal += yearStaffMetrics.quarterly[qIdx];
+              }
+            }
+          });
+        }
+
+        // Also account for any direct expense categorized as staff/salary in EXPENSES
+        if (Array.isArray(this.dropdowns.expenseCats)) {
+          const staffCat = this.dropdowns.expenseCats.find(c => {
+            if (!c) return false;
+            const n = String(c.name || c.category || c.label || '').toLowerCase();
+            return n.includes('staff') || n.includes('trainer') || n.includes('salary');
+          });
+          if (staffCat && catSums[staffCat.id]) {
+            staffTotal += catSums[staffCat.id];
+          }
+        }
+
+        const elStaffExp = document.getElementById('kpi-staff-exp');
+        if (elStaffExp) elStaffExp.innerText = AppUtils.formatCurrency(staffTotal);
+
+        // Total Expenses includes General Expenses + Staff Cost
+        const grandTotal = total + staffTotal;
+        const elTotalExp = document.getElementById('kpi-total-exp');
+        if (elTotalExp) elTotalExp.innerText = AppUtils.formatCurrency(grandTotal);
+
+        // Top category (considering both general categories and Staff Cost)
+        let topCatName = '--';
+        let topAmt = 0;
+        for (const [catId, sum] of Object.entries(catSums)) {
+           if (sum > topAmt) {
+             topAmt = sum;
+             topCatName = this.getName(catId);
+           }
+        }
+        if (staffTotal > topAmt) {
+          topAmt = staffTotal;
+          topCatName = 'Staff Cost';
+        }
+        const elTopCat = document.getElementById('kpi-top-cat');
+        if (elTopCat) elTopCat.innerText = topCatName;
+        const elTopAmt = document.getElementById('kpi-top-cat-amt');
+        if (elTopAmt) elTopAmt.innerText = AppUtils.formatCurrency(topAmt);
+
+        const periodCount = (this.selectedPeriods && this.selectedPeriods.length) || 1;
+        const avg = grandTotal / periodCount;
+        const elAvgExp = document.getElementById('kpi-avg-exp');
+        if (elAvgExp) elAvgExp.innerText = AppUtils.formatCurrency(avg);
+      } catch (kpiErr) {
+        console.error("Error in calculateKPIs:", kpiErr);
       }
-
-      document.getElementById('kpi-staff-exp').innerText = AppUtils.formatCurrency(staffTotal);
-
-      // Total Expenses includes General Expenses + Staff Cost
-      const grandTotal = total + staffTotal;
-      document.getElementById('kpi-total-exp').innerText = AppUtils.formatCurrency(grandTotal);
-
-      // Top category (considering both general categories and Staff Cost)
-      let topCatName = '--';
-      let topAmt = 0;
-      for (const [catId, sum] of Object.entries(catSums)) {
-         if (sum > topAmt) {
-           topAmt = sum;
-           topCatName = this.getName(catId);
-         }
-      }
-      if (staffTotal > topAmt) {
-        topAmt = staffTotal;
-        topCatName = 'Staff Cost';
-      }
-      document.getElementById('kpi-top-cat').innerText = topCatName;
-      document.getElementById('kpi-top-cat-amt').innerText = AppUtils.formatCurrency(topAmt);
-
-      const periodCount = this.selectedPeriods.length || 1;
-      const avg = grandTotal / periodCount;
-      document.getElementById('kpi-avg-exp').innerText = AppUtils.formatCurrency(avg);
     },
 
     renderCharts: function() {
-      const mode = document.getElementById('exp-filter-mode').value;
-      const isMonthly = mode === 'Monthly';
-      const chartType = document.getElementById('chart-type-toggle').value; // Read dynamic chart type
-      
-      const trendDataMap = {};
-      this.selectedPeriods.forEach(p => trendDataMap[p] = 0);
+      try {
+        const mode = document.getElementById('exp-filter-mode')?.value || 'Monthly';
+        const isMonthly = mode === 'Monthly';
+        const chartType = document.getElementById('chart-type-toggle')?.value || 'bar';
+        
+        const trendDataMap = {};
+        if (Array.isArray(this.selectedPeriods)) {
+          this.selectedPeriods.forEach(p => trendDataMap[p] = 0);
+        }
 
-      let catSums = {};
-      let miscSums = {}; 
+        let catSums = {};
+        let miscSums = {}; 
 
-      (this.filteredData || []).forEach(exp => {
-         const amt = this.parseAmount(exp.amount);
-         const d = new Date(this.parseToISODate(exp.date));
-         if(!isNaN(d)) {
-             const expMonthIdx = d.getMonth();
-             const key = isMonthly ? this.months[expMonthIdx] : this.quarters[Math.floor(expMonthIdx / 3)];
-             if(trendDataMap[key] !== undefined) trendDataMap[key] += amt;
-         }
+        (this.filteredData || []).forEach(exp => {
+           const amt = this.parseAmount(exp.amount);
+           const d = new Date(this.parseToISODate(exp.date));
+           if(!isNaN(d)) {
+               const expMonthIdx = d.getMonth();
+               const key = isMonthly ? this.months[expMonthIdx] : this.quarters[Math.floor(expMonthIdx / 3)];
+               if(trendDataMap[key] !== undefined) trendDataMap[key] += amt;
+           }
 
-         const cName = String(this.getName(exp.categoryId) || 'N/A');
-         catSums[cName] = (catSums[cName] || 0) + amt;
+           const cName = String(this.getName(exp.categoryId) || 'N/A');
+           catSums[cName] = (catSums[cName] || 0) + amt;
 
-         if (cName.toLowerCase().includes('misc') || cName.toLowerCase().includes('other')) {
-             const label = exp.whatMisc ? exp.whatMisc : 'Unspecified';
-             miscSums[label] = (miscSums[label] || 0) + amt;
-         }
-      });
-
-      // Integrate Staff Cost into Trend and Category Breakdown
-      const year = document.getElementById('exp-filter-year')?.value;
-      const yearStaffMetrics = (this.staffMetrics && year) ? this.staffMetrics[year] : null;
-      let staffTotal = 0;
-
-      if (yearStaffMetrics) {
-        this.selectedPeriods.forEach(p => {
-          let sAmt = 0;
-          if (isMonthly) {
-            const mIdx = this.months.indexOf(p);
-            if (mIdx !== -1 && yearStaffMetrics.monthly[mIdx]) sAmt = yearStaffMetrics.monthly[mIdx];
-          } else {
-            const qIdx = this.quarters.indexOf(p);
-            if (qIdx !== -1 && yearStaffMetrics.quarterly[qIdx]) sAmt = yearStaffMetrics.quarterly[qIdx];
-          }
-          if (trendDataMap[p] !== undefined) trendDataMap[p] += sAmt;
-          staffTotal += sAmt;
+           if (cName.toLowerCase().includes('misc') || cName.toLowerCase().includes('other')) {
+               const label = exp.whatMisc ? exp.whatMisc : 'Unspecified';
+               miscSums[label] = (miscSums[label] || 0) + amt;
+           }
         });
-      }
 
-      if (staffTotal > 0) {
-        catSums['Staff Cost'] = (catSums['Staff Cost'] || 0) + staffTotal;
-      }
+        // Integrate Staff Cost into Trend and Category Breakdown
+        const year = document.getElementById('exp-filter-year')?.value || new Date().getFullYear().toString();
+        const yearStaffMetrics = (this.staffMetrics && year) ? this.staffMetrics[year] : null;
+        let staffTotal = 0;
 
-      // 1. Trend Chart (Dynamic Type + Data Points)
-      const trendOpts = {
-        series: [{ name: 'Expenses', data: Object.values(trendDataMap) }],
-        chart: { type: chartType, height: '100%', toolbar: { show: false } },
-        plotOptions: { bar: { borderRadius: 4, columnWidth: '40%' } },
-        stroke: { curve: 'smooth', width: chartType === 'bar' ? 0 : 3 },
-        markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
-        dataLabels: { 
-          enabled: true, 
-          formatter: function (val) { return val ? AppUtils.formatCurrency(val) : ""; },
-          style: { fontSize: '9px', colors: ['#475569'] },
-          background: { enabled: false },
-          offsetY: chartType === 'bar' ? -10 : -20
-        },
-        xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '9px', colors: '#64748b' } } },
-        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
-        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
-        colors: ['#3b82f6'],
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
-      };
+        if (yearStaffMetrics && Array.isArray(this.selectedPeriods)) {
+          this.selectedPeriods.forEach(p => {
+            let sAmt = 0;
+            if (isMonthly) {
+              const mIdx = this.months.indexOf(p);
+              if (mIdx !== -1 && yearStaffMetrics.monthly && yearStaffMetrics.monthly[mIdx]) sAmt = yearStaffMetrics.monthly[mIdx];
+            } else {
+              const qIdx = this.quarters.indexOf(p);
+              if (qIdx !== -1 && yearStaffMetrics.quarterly && yearStaffMetrics.quarterly[qIdx]) sAmt = yearStaffMetrics.quarterly[qIdx];
+            }
+            if (trendDataMap[p] !== undefined) trendDataMap[p] += sAmt;
+            staffTotal += sAmt;
+          });
+        }
 
-      document.getElementById("chart-expense-trend").innerHTML = "";
-      if(this.chartInstances.trend) this.chartInstances.trend.destroy();
-      this.chartInstances.trend = new ApexCharts(document.querySelector("#chart-expense-trend"), trendOpts);
-      this.chartInstances.trend.render();
+        if (staffTotal > 0) {
+          catSums['Staff Cost'] = (catSums['Staff Cost'] || 0) + staffTotal;
+        }
 
-      // 2. Category Breakdown Chart (Data Points Enabled)
-      const bLabels = Object.keys(catSums);
-      const bSeries = Object.values(catSums);
-      const bColors = bLabels.map((l, i) => this.getColor(i));
-      const totalAmt = bSeries.reduce((a,b)=>a+b, 0);
+        // 1. Trend Chart
+        const trendEl = document.getElementById("chart-expense-trend");
+        if (trendEl) {
+          if (this.chartInstances.trend) {
+            try { this.chartInstances.trend.destroy(); } catch (e) {}
+            this.chartInstances.trend = null;
+          }
+          trendEl.innerHTML = "";
 
-      document.getElementById("chart-expense-breakdown").innerHTML = "";
-      if(this.chartInstances.breakdown) this.chartInstances.breakdown.destroy();
-
-      if (bSeries.length === 0) {
-        document.getElementById("chart-expense-breakdown").innerHTML = '<div class="h-full flex items-center justify-center text-xs text-slate-400">No expenses recorded</div>';
-      } else {
-        const breakOpts = {
-          series: bSeries,
-          labels: bLabels,
-          chart: { type: 'donut', height: '100%' },
-          colors: bColors.length ? bColors : ['#e2e8f0'],
-          plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
-          legend: { position: 'right', fontSize: '10px', offsetY: 20 },
-          dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w?.globals?.seriesTotals?.[opts.seriesIndex] || val || 0); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
-          tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
-        };
-
-        this.chartInstances.breakdown = new ApexCharts(document.querySelector("#chart-expense-breakdown"), breakOpts);
-        this.chartInstances.breakdown.render();
-      }
-
-      // 3. Smart Misc Breakdown (Collapses if Empty)
-      const mLabels = Object.keys(miscSums);
-      const mSeries = Object.values(miscSums);
-      const mColors = mLabels.map((l, i) => this.getColor(i + 3)); 
-
-      const miscWrapper = document.getElementById("chart-misc-wrapper");
-      
-      if (mSeries.length === 0) {
-          miscWrapper.classList.add('hidden'); // Collapse entire card
-      } else {
-          miscWrapper.classList.remove('hidden'); // Show card
-          const miscOpts = {
-            series: mSeries,
-            labels: mLabels,
-            chart: { type: 'pie', height: '100%' },
-            colors: mColors,
-            legend: { position: 'bottom', fontSize: '10px' },
-            dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w?.globals?.seriesTotals?.[opts.seriesIndex] || val || 0); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
-            tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
+          const trendOpts = {
+            series: [{ name: 'Expenses', data: Object.values(trendDataMap) }],
+            chart: { type: chartType, height: '100%', toolbar: { show: false } },
+            plotOptions: { bar: { borderRadius: 4, columnWidth: '40%' } },
+            stroke: { curve: 'smooth', width: chartType === 'bar' ? 0 : 3 },
+            markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
+            dataLabels: { 
+              enabled: true, 
+              formatter: function (val) { return val ? AppUtils.formatCurrency(val) : ""; },
+              style: { fontSize: '9px', colors: ['#475569'] },
+              background: { enabled: false },
+              offsetY: chartType === 'bar' ? -10 : -20
+            },
+            xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '9px', colors: '#64748b' } } },
+            yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+            tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
+            colors: ['#3b82f6'],
+            grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
           };
-          
-          document.getElementById("chart-expense-misc").innerHTML = "";
-          if(this.chartInstances.misc) this.chartInstances.misc.destroy();
-          this.chartInstances.misc = new ApexCharts(document.querySelector("#chart-expense-misc"), miscOpts);
-          this.chartInstances.misc.render();
+
+          this.chartInstances.trend = new ApexCharts(trendEl, trendOpts);
+          this.chartInstances.trend.render();
+        }
+
+        // 2. Category Breakdown Chart
+        const bLabels = Object.keys(catSums);
+        const bSeries = Object.values(catSums);
+        const bColors = bLabels.map((l, i) => this.getColor(i));
+        const totalAmt = bSeries.reduce((a,b)=>a+b, 0);
+
+        const breakdownEl = document.getElementById("chart-expense-breakdown");
+        if (breakdownEl) {
+          if (this.chartInstances.breakdown) {
+            try { this.chartInstances.breakdown.destroy(); } catch (e) {}
+            this.chartInstances.breakdown = null;
+          }
+          breakdownEl.innerHTML = "";
+
+          if (bSeries.length === 0 || totalAmt <= 0) {
+            breakdownEl.innerHTML = '<div class="h-full flex items-center justify-center text-xs text-slate-400">No expenses recorded</div>';
+          } else {
+            const breakOpts = {
+              series: bSeries,
+              labels: bLabels,
+              chart: { type: 'donut', height: '100%' },
+              colors: bColors.length ? bColors : ['#e2e8f0'],
+              plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
+              legend: { position: 'right', fontSize: '10px', offsetY: 20 },
+              dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w?.globals?.seriesTotals?.[opts.seriesIndex] || val || 0); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
+              tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
+            };
+
+            this.chartInstances.breakdown = new ApexCharts(breakdownEl, breakOpts);
+            this.chartInstances.breakdown.render();
+          }
+        }
+
+        // 3. Smart Misc Breakdown (Collapses if Empty or zero)
+        const mLabels = Object.keys(miscSums);
+        const mSeries = Object.values(miscSums);
+        const mColors = mLabels.map((l, i) => this.getColor(i + 3)); 
+        const mTotal = mSeries.reduce((a,b)=>a+b, 0);
+
+        const miscWrapper = document.getElementById("chart-misc-wrapper");
+        const miscEl = document.getElementById("chart-expense-misc");
+        
+        if (mSeries.length === 0 || mTotal <= 0) {
+            if (miscWrapper) miscWrapper.classList.add('hidden');
+        } else {
+            if (miscWrapper) miscWrapper.classList.remove('hidden');
+            if (miscEl) {
+              if (this.chartInstances.misc) {
+                try { this.chartInstances.misc.destroy(); } catch (e) {}
+                this.chartInstances.misc = null;
+              }
+              miscEl.innerHTML = "";
+
+              const miscOpts = {
+                series: mSeries,
+                labels: mLabels,
+                chart: { type: 'pie', height: '100%' },
+                colors: mColors,
+                legend: { position: 'bottom', fontSize: '10px' },
+                dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w?.globals?.seriesTotals?.[opts.seriesIndex] || val || 0); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
+                tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
+              };
+              
+              this.chartInstances.misc = new ApexCharts(miscEl, miscOpts);
+              this.chartInstances.misc.render();
+            }
+        }
+      } catch (chartErr) {
+        console.error("Error in renderCharts:", chartErr);
       }
     },
 

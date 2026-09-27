@@ -15,9 +15,9 @@ function api_getExpenses() {
         'SETTINGS': DB.read('SETTINGS') || []
       };
     }
-    const expenses = dbData['EXPENSES'] || [];
-    const salaries = dbData['SALARY'] || [];
-    const settingsRows = dbData['SETTINGS'] || [];
+    const expenses = (dbData && Array.isArray(dbData['EXPENSES'])) ? dbData['EXPENSES'] : [];
+    const salaries = (dbData && Array.isArray(dbData['SALARY'])) ? dbData['SALARY'] : [];
+    const settingsRows = (dbData && Array.isArray(dbData['SETTINGS'])) ? dbData['SETTINGS'] : [];
 
     let accrualMode = 'anchor';
     const accSetting = settingsRows.find(s => {
