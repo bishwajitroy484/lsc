@@ -202,23 +202,31 @@
       this.populateSelect('pay-mode', modes);
       this.populateSelect('pay-status', payStatuses, null, 'Select Status...');
       
-      this.populateSelect('filter-status', statuses, null, 'All Status', true);
+      this.populateFilterStatus(statuses);
       this.populateSelect('filter-batch', batches, null, 'All Batches', true);
       this.populateSelect('filter-plan', plans, null, 'All Memberships', true);
     },
 
-    setStatusFilter: function(statusName) {
-      document.querySelectorAll('.mob-filter-btn').forEach(btn => {
-        btn.classList.remove('bg-brand-primary', 'text-white');
-        btn.classList.add('bg-slate-50', 'text-slate-600');
-      });
-      const btn = document.getElementById('mob-filter-' + statusName);
-      if(btn) { 
-        btn.classList.remove('bg-slate-50', 'text-slate-600'); 
-        btn.classList.add('bg-brand-primary', 'text-white'); 
+    populateFilterStatus: function(statuses) {
+      const el = document.getElementById('filter-status');
+      if (!el) return;
+      const currentVal = el.value || 'All';
+      let html = `<option value="All">All Status</option>`;
+      html += `<option value="Active">Active</option>`;
+      html += `<option value="Due Soon">Due Soon</option>`;
+      html += `<option value="Overdue">Overdue</option>`;
+      if (Array.isArray(statuses)) {
+        statuses.forEach(opt => {
+          const name = opt.name || opt.id;
+          if (name && name.toLowerCase() !== 'active') {
+            html += `<option value="${opt.id}">${name}</option>`;
+          }
+        });
       }
-      this.currentFilter = statusName;
-      this.applyFilters();
+      el.innerHTML = html;
+      if (Array.from(el.options).some(o => o.value === currentVal)) {
+        el.value = currentVal;
+      }
     },
 
     applyFilters: function() {
@@ -230,18 +238,19 @@
         const sName = this.getName('status', m.status);
         const dueInfo = this.getDueInfo(m.dueDate);
         
-        let matchMobileStatus = false;
-        if (this.currentFilter === 'All') {
-            matchMobileStatus = true;
-        } else if (this.currentFilter === 'Active') {
-            matchMobileStatus = (sName.toLowerCase() === 'active');
-        } else if (this.currentFilter === 'Due Soon') {
-            matchMobileStatus = (dueInfo.days >= 0 && dueInfo.days <= 5);
-        } else if (this.currentFilter === 'Overdue') {
-            matchMobileStatus = (dueInfo.days < 0);
+        let matchStatus = true;
+        if (fStatus === 'All') {
+          matchStatus = true;
+        } else if (fStatus === 'Active') {
+          matchStatus = (sName.toLowerCase() === 'active');
+        } else if (fStatus === 'Due Soon') {
+          matchStatus = (dueInfo.days >= 0 && dueInfo.days <= 5);
+        } else if (fStatus === 'Overdue') {
+          matchStatus = (dueInfo.days < 0);
+        } else {
+          matchStatus = (m.status === fStatus || sName.toLowerCase() === fStatus.toLowerCase() || (this.dropdowns.status && this.getName('status', fStatus) === sName));
         }
         
-        let matchDeskStatus = fStatus === 'All' || m.status === fStatus;
         let matchBatch = fBatch === 'All' || m.batchId === fBatch;
         let matchPlan = fPlan === 'All' || m.membershipId === fPlan;
         
@@ -250,7 +259,7 @@
                           (m.phone && m.phone.includes(this.searchQuery)) ||
                           (m.memberId && m.memberId.toLowerCase().includes(this.searchQuery));
 
-        return matchMobileStatus && matchDeskStatus && matchBatch && matchPlan && matchSearch;
+        return matchStatus && matchBatch && matchPlan && matchSearch;
       });
       this.render();
     },
@@ -303,14 +312,14 @@
     },
 
     setMobileFilter: function(statusName) {
-      document.querySelectorAll('.mob-filter-btn').forEach(btn => {
-        btn.classList.remove('bg-brand-primary', 'text-white');
-        btn.classList.add('bg-slate-50', 'text-slate-600');
-      });
-      const btn = document.getElementById('mob-filter-' + statusName);
-      if(btn) { btn.classList.remove('bg-slate-50', 'text-slate-600'); btn.classList.add('bg-brand-primary', 'text-white'); }
+      const el = document.getElementById('filter-status');
+      if (el) el.value = statusName;
       this.currentFilter = statusName;
       this.applyFilters();
+    },
+
+    setStatusFilter: function(statusName) {
+      this.setMobileFilter(statusName);
     },
 
     render: function() {

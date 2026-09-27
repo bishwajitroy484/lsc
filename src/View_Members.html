@@ -12,7 +12,12 @@
             and keep your gym growing.</p>
         </div>
       </div>
-      <button onclick="MembersApp.openModal()" class="h-9 md:h-10 px-3 md:px-4 bg-brand-primary text-white rounded-lg flex items-center justify-center gap-2 shadow-sm hover:bg-blue-700 transition-colors">
+      <!-- Mobile: Circular Add (+) button only -->
+      <button onclick="MembersApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors shrink-0">
+        <span class="material-symbols-rounded text-[18px]">add</span>
+      </button>
+      <!-- Desktop: Add Member Button -->
+      <button onclick="MembersApp.openModal()" class="hidden md:flex shrink-0 h-9 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-blue-700 transition-colors">
         <span class="material-symbols-rounded text-[18px]">add</span><span class="font-semibold text-sm">Add Member</span>
       </button>
     </header>
@@ -25,30 +30,27 @@
         <input type="text" id="member-search" onkeyup="MembersApp.search(this.value)" placeholder="Search by name, phone or member ID..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-brand-primary focus:bg-white transition-colors">
       </div>
 
-      <!-- Dropdown Filters (Visible on Mobile & Desktop) -->
-      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar w-full md:w-auto">
-        <!-- Status Dropdown (Hidden on Mobile because Pills are used, Visible on Desktop) -->
-        <select id="filter-status" onchange="MembersApp.applyFilters()" class="hidden md:block appearance-none bg-white pl-3 pr-7 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] shrink-0">
+      <!-- Dropdown Filters (3 Selectors staying on one single row on mobile) -->
+      <div class="grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 w-full md:w-auto">
+        <!-- Status Dropdown -->
+        <select id="filter-status" onchange="MembersApp.applyFilters()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 md:py-2 md:pl-3 md:pr-7 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center] shrink-0">
           <option value="All">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Due Soon">Due Soon</option>
+          <option value="Overdue">Overdue</option>
         </select>
 
-        <!-- Batch & Plan Dropdowns -->
-        <select id="filter-batch" onchange="MembersApp.applyFilters()" class="appearance-none bg-white pl-3 pr-7 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] flex-1 md:flex-none min-w-[120px]">
+        <!-- Batch Dropdown -->
+        <select id="filter-batch" onchange="MembersApp.applyFilters()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 md:py-2 md:pl-3 md:pr-7 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
           <option value="All">All Batches</option>
         </select>
-        <select id="filter-plan" onchange="MembersApp.applyFilters()" class="appearance-none bg-white pl-3 pr-7 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] flex-1 md:flex-none min-w-[120px]">
+
+        <!-- Plan Dropdown -->
+        <select id="filter-plan" onchange="MembersApp.applyFilters()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 md:py-2 md:pl-3 md:pr-7 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
           <option value="All">All Memberships</option>
         </select>
       </div>
 
-    </div>
-
-    <div
-      class="md:hidden bg-white px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 border-b border-slate-50">
-      <button onclick="MembersApp.setMobileFilter('All')" id="mob-filter-All" class="mob-filter-btn px-4 py-1.5 bg-brand-primary text-white text-xs font-semibold rounded-full whitespace-nowrap">All</button>
-      <button onclick="MembersApp.setMobileFilter('Active')" id="mob-filter-Active" class="mob-filter-btn px-4 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium rounded-full whitespace-nowrap">Active</button>
-      <button onclick="MembersApp.setMobileFilter('Due Soon')" id="mob-filter-Due Soon" class="mob-filter-btn px-4 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium rounded-full whitespace-nowrap">Due Soon</button>
-      <button onclick="MembersApp.setMobileFilter('Overdue')" id="mob-filter-Overdue" class="mob-filter-btn px-4 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium rounded-full whitespace-nowrap">Overdue</button>
     </div>
 
     <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 pb-24 md:pb-6">
