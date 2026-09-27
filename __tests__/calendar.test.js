@@ -25,12 +25,14 @@ function loadCalendarApi() {
         MEMBERS: [
           { memberId: 'MEM-1', fullName: 'Alice Johnson', membershipId: 'PLAN-1', joinDate: '2024-01-10', membershipAmount: '2500' },
           { memberId: 'MEM-2', fullName: 'Bob Smith', membershipId: 'PLAN-2', joinDate: '2024-06-01', membershipAmount: '7000' },
-          { memberId: 'MEM-3', fullName: 'Charlie Brown', membershipId: 'PLAN-1', joinDate: '2024-03-02', membershipAmount: '3500' }
+          { memberId: 'MEM-3', fullName: 'Charlie Brown', membershipId: 'PLAN-1', joinDate: '2024-03-02', membershipAmount: '3500' },
+          { memberId: 'MEM-4', fullName: 'Dana White', membershipId: 'PLAN-1', joinDate: '2024-01-15', membershipAmount: '2800' }
         ],
         PAYMENTS: [
           { memberId: 'MEM-1', paymentStatus: 'Paid', endDate: '2024-09-05', amount: 2500 },
           { memberId: 'MEM-2', paymentStatus: 'Paid', endDate: '2024-09-10', amount: 7000 },
-          { memberId: 'MEM-3', paymentStatus: 'Paid', endDate: '2024-09-15', amount: 3500 }
+          { memberId: 'MEM-3', paymentStatus: 'Paid', endDate: '2024-09-15', amount: 3500 },
+          { memberId: 'MEM-4', paymentStatus: 'Paid', endDate: '2024-08-20', amount: 2800 }
         ]
       })
     },
@@ -51,6 +53,16 @@ describe('Calendar Module', () => {
     expect(Object.keys(response.data.dateBuckets).length).toBeGreaterThan(0);
     expect(response.data.monthMembers[0].name).toBeDefined();
     expect(response.data.monthMembers[0].daysLeft).toBeDefined();
+  });
+
+  test('api_getCalendarData includes overdue members whose due dates belong to the selected month or remain relevant', () => {
+    const calendarApi = loadCalendarApi();
+    const response = calendarApi.api_getCalendarData(8, 2024);
+
+    expect(response.success).toBe(true);
+    const overdueEntries = response.data.monthMembers.filter((member) => member.daysLeft < 0);
+    expect(overdueEntries.length).toBeGreaterThanOrEqual(1);
+    expect(overdueEntries.some((member) => member.memberId === 'MEM-4')).toBe(true);
   });
 
   test('CalendarModule initializes without throwing and renders month data from the API response', () => {
