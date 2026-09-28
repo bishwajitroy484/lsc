@@ -44,3 +44,14 @@ The Settings module provides a responsive, device-compatible interface organized
 - **General Config:** Configures gym identity (gym name, owner email, logo URL/ID with live preview), financial and operating policies (revenue recognition method with explanatory summaries, and renewal alert buffer days), database persistence details (Google Spreadsheet ID and Google Drive storage folder ID with one-click copy and open actions), and automated notifications (ENABLE_NOTIFICATION toggle to enable/disable scheduled email alerts with a configuration modal previewing future scope dispatch rules, recipient email, and trigger frequencies).
 - **Dropdown Options:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
 
+## Mock Data Generator
+
+The backend includes a dedicated mock data generator (`src/MockDataGenerator.gs`) that cleans and generates synchronized, realistic mock data spanning from 1-Jan-2025 to the present date for development and testing.
+
+- **Data scope:** Populates `MEMBERS`, `PAYMENTS`, `STAFF`, `SALARY`, and `EXPENSES` with comprehensive test scenarios while preserving `SETTINGS` and `DROP_DOWN` configurations.
+- **Member renewal scenarios:** Covers upcoming renewals (due in 2 days, due in 10 days, due today), overdue members (overdue by 5, 15, and 35 days), active members with comfortable runways, and inactive/left members with exit dates.
+- **Batch and plan variety:** Incorporates adult and kids morning/evening batches across monthly, quarterly, annual, ad-hoc, and trial memberships.
+- **Staff and payroll:** Covers multiple gym roles (Head Coach, Personal Trainers, Kids Coach, Nutritionist, Front Desk, Housekeeping, and resigned staff), monthly salary disbursements, festive and performance bonuses, and pending salary cycles for Action Needed indicators.
+- **Operational expenses:** Generates chronological recurring facility lease/rent, seasonal electricity and power utilities, cleaning and hygiene supplies, equipment servicing, broadband/software, marketing campaigns, and miscellaneous expenses with item details.
+- **Clean and re-run safety:** Wipes existing data rows (rows 2+) across the target sheets and batch-inserts the new dataset in seconds, preserving row 1 headers and formula columns marked with `*`.
+
