@@ -422,24 +422,51 @@
       window.AppCharts.batch.render();
     }
 
-    // 3. Actual vs Expected Net-In-Hand (connectNulls: true added)
+    // 3. Net-In-Hand actuals transition into the payment-based forecast.
     const elPred = document.querySelector("#chart-prediction");
     if(elPred) {
-      const predType = document.getElementById('toggle-pred')?.value || 'line';
+      const prediction = data.charts.prediction || {};
       window.AppChartConfigs.pred = {
         series: [
-          { name: 'Actual Net-In-Hand', data: data.charts.prediction.actual },
-          { name: 'Expected Forecast', data: data.charts.prediction.expected }
+          { name: 'Actual', data: prediction.actual || [] },
+          { name: 'Predicted', data: prediction.expected || [] }
         ],
-        chart: { type: predType, height: '100%', toolbar: commonToolbar, zoom: { enabled: true } },
-        stroke: { width: predType === 'area' ? 2 : 3, curve: 'smooth', dashArray: [0, 5], connectNulls: true },
-        xaxis: commonXAxis,
+        chart: {
+          type: 'area',
+          height: '100%',
+          toolbar: commonToolbar,
+          zoom: { enabled: true },
+          animations: { enabled: true, speed: 350, dynamicAnimation: { speed: 300 } }
+        },
+        stroke: { width: 2, curve: 'smooth', dashArray: [0, 5], connectNulls: true },
+        xaxis: { ...commonXAxis, categories: prediction.categories || data.charts.categories || [] },
         yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
-        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
-        colors: ['#3b82f6', '#831843'], 
-        markers: { size: 4 },
-        legend: { position: 'bottom', horizontalAlign: 'center', offsetY: 5, show: true, fontSize: '10px' },
-        dataLabels: { ...dlOptions, offsetY: -10 },
+        tooltip: {
+          y: {
+            formatter: (val) => AppUtils.formatCurrency(val),
+            title: { formatter: (seriesName) => seriesName }
+          }
+        },
+        colors: ['#3b82f6', '#10b981'],
+        markers: {
+          size: 4,
+          discrete: prediction.transitionIndex >= 0 ? [{
+            seriesIndex: 1,
+            dataPointIndex: prediction.transitionIndex,
+            fillColor: '#3b82f6',
+            strokeColor: '#3b82f6',
+            size: 5
+          }] : []
+        },
+        legend: { show: false },
+        fill: { opacity: [0.12, 0] },
+        dataLabels: {
+          ...dlOptions,
+          offsetY: -10,
+          formatter: (val, opts) => opts.seriesIndex === 1 && opts.dataPointIndex === prediction.transitionIndex
+            ? ''
+            : (val ? AppUtils.formatCurrency(val) : '')
+        },
         grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
       };
       elPred.innerHTML = ''; 

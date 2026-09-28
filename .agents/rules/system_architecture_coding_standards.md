@@ -79,4 +79,5 @@ These standards describe the current Project LSC implementation. Preserve establ
 - For accrual and revenue-recognition reports, use the established daily-proration logic rather than dividing annual amounts into equal monthly amounts.
 - Use UTC-based calendar-day arithmetic. Treat start and end dates as inclusive, and test month boundaries, year boundaries, leap days, and single-day periods when changing proration behavior.
 - Follow the configured accrual mode and existing calculation helpers. Do not make a broad claim of GAAP compliance unless the accounting treatment has been verified for the specific report.
+- Dashboard actual net-in-hand uses recognized collections less recognized operating expenses. Its forecast is computed from the same batched member, payment, expense, salary, and settings data: expected dues follow active members' next due dates and plan frequency, while expected expenses use trailing-12-month expense and paid-salary averages. Apply the configured recognition mode to both actuals and forecast collections.
 - If the correct accounting treatment or date interpretation is unclear, ask for clarification rather than inventing a policy.

@@ -24,3 +24,7 @@ The Calendar year selector is a dropdown populated from years found in member, p
 ## Payment insights and dashboard collections
 
 Member Payment Insights, Dashboard collected-revenue KPIs, and collection charts count only payments with a Paid or Completed status. Overdue, unpaid, pending, and failed payments remain visible in payment history where applicable, but are not counted as collected revenue or member earnings. The same status handling applies whether a payment status is stored as its display label or as a dropdown ID.
+
+## Dashboard Net-In-Hand forecast
+
+The Dashboard Net-In-Hand Prediction chart always uses an area chart, showing recognized actual collection less actual expenses through the current period, followed by an estimated trend for future periods. Forecast collections are based on active members' next payment due dates, membership frequency, and expected membership amount; overdue members and ad-hoc or trial plans are not counted as upcoming payments. Forecast expenses use the trailing 12 completed months of recorded operating expenses and paid staff salaries. Both actuals and forecasts respect the configured Anchor (cash) or Split (accrual) revenue-recognition mode and the selected year and period filters. A green dotted line and Forecast label identify projected values; tooltips distinguish actual from predicted points.
