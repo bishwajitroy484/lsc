@@ -324,6 +324,28 @@ function api_saveGeneralSettings(settingsArray) {
         throw new Error("No settings provided. Save aborted to prevent data loss.");
     }
 
+    var uploadedLogoId = null;
+    var uploadedLogoUrl = null;
+
+    // Check if a logo image upload is provided (key === 'LOGO_ID' with base64Image)
+    for (var i = 0; i < settingsArray.length; i++) {
+      var item = settingsArray[i];
+      if (item && item.key === 'LOGO_ID' && item.base64Image) {
+        if (typeof api_uploadImageToDrive === 'function') {
+          var uploadRes = api_uploadImageToDrive(item.base64Image, item.imageName || ('Gym_Logo_' + new Date().getTime()));
+          if (uploadRes && uploadRes.success) {
+            uploadedLogoId = uploadRes.fileId;
+            uploadedLogoUrl = uploadRes.url;
+            item.value = uploadRes.fileId || uploadRes.url;
+          } else {
+            throw new Error("Failed to upload logo to Google Drive: " + ((uploadRes && uploadRes.error) || "Unknown error"));
+          }
+        }
+        delete item.base64Image;
+        delete item.imageName;
+      }
+    }
+
     // Clear everything from Row 2 down safely
     const lastRow = sheet.getLastRow();
     if (lastRow > 1) {
@@ -334,7 +356,12 @@ function api_saveGeneralSettings(settingsArray) {
     const writeData = settingsArray.map(s => [s.key || '', s.value || '']);
     sheet.getRange(2, 1, writeData.length, 2).setValues(writeData);
     
-    return { success: true, message: "General Settings saved successfully." };
+    return { 
+      success: true, 
+      message: "General Settings saved successfully.",
+      logoId: uploadedLogoId,
+      logoUrl: uploadedLogoUrl
+    };
   } catch (error) {
     return { success: false, error: error.toString() };
   }

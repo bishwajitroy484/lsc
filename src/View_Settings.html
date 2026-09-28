@@ -107,27 +107,35 @@
               </div>
             </div>
 
-            <!-- Logo URL / ID with Live Preview -->
+            <!-- App / Gym Logo Upload with Live Preview & LSC Fallback -->
             <div class="pt-2 border-t border-slate-100">
-              <label for="gen-LOGO_ID" class="block text-xs font-semibold text-slate-700 mb-1.5">Logo URL or Google Drive File ID</label>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Gym Logo</label>
               <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <!-- Upload Input Container -->
                 <div class="relative flex-1">
-                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">image</span>
-                  <input type="text" id="gen-LOGO_ID" oninput="SettingsApp.updateLogoPreview()" placeholder="https://... or Google Drive File ID" class="w-full pl-9 pr-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-mono text-slate-700 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">upload_file</span>
+                  <input type="file" id="setting-logo-file" accept="image/*" onchange="SettingsApp.onLogoFileSelected(this)" class="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none shadow-xs file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer text-slate-600">
+                  <input type="hidden" id="gen-LOGO_ID">
                 </div>
+
                 <!-- Live Preview Tile -->
-                <div class="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl shrink-0">
-                  <div class="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
-                    <img id="logo-preview-img" src="" alt="Logo Preview" class="w-full h-full object-contain hidden" />
-                    <span id="logo-preview-placeholder" class="material-symbols-rounded text-slate-300 text-[20px]">photo</span>
+                <div class="flex items-center gap-3 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl shrink-0">
+                  <div id="logo-preview-box" class="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center overflow-hidden shrink-0 shadow-xs border border-slate-200 relative">
+                    <img id="logo-preview-img" src="" alt="Logo Preview" class="w-full h-full object-contain p-0.5 hidden" />
+                    <div id="logo-preview-fallback" class="w-full h-full flex items-center justify-center font-black text-white text-[13px] tracking-widest uppercase select-none">
+                      LSC
+                    </div>
                   </div>
-                  <div class="text-left">
+                  <div class="text-left flex-1 min-w-[120px]">
                     <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Live Preview</span>
-                    <span id="logo-preview-status" class="text-[11px] font-medium text-slate-600">Default Avatar</span>
+                    <span id="logo-preview-status" class="text-[11px] font-medium text-slate-600">LSC Fallback Badge</span>
                   </div>
+                  <button type="button" id="btn-clear-logo" onclick="SettingsApp.clearLogo()" class="text-xs text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-200/50 transition-colors hidden" title="Remove custom logo and revert to LSC fallback">
+                    <span class="material-symbols-rounded text-[18px]">delete</span>
+                  </button>
                 </div>
               </div>
-              <p class="text-[10px] text-slate-400 mt-1">Accepts any public image HTTPS URL or Google Drive file ID.</p>
+              <p class="text-[10px] text-slate-400 mt-1">Upload a PNG, JPEG, or WebP image. Automatically uploaded to Google Drive on save and reflected across the app. If omitted or fails to load, displays LSC fallback nicely.</p>
             </div>
           </div>
         </div>
