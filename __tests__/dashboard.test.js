@@ -278,4 +278,14 @@ describe('Dashboard Module', () => {
     expect(metrics.expectedNetArr).toEqual([8000, 600, -300]);
     expect(metrics.transitionIndex).toBe(0);
   });
+
+  test('keeps the Net-In-Hand chart fixed as an area chart without a chart type selector', () => {
+    const view = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
+    const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
+    const predictionConfig = script.slice(script.indexOf('// 3. Net-In-Hand'), script.indexOf('// 4. Collection Trend'));
+
+    expect(view).not.toContain('toggle-pred');
+    expect(predictionConfig).toContain("type: 'area'");
+    expect(predictionConfig).toContain("fill: { opacity: [0.12, 0] }");
+  });
 });
