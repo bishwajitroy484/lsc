@@ -27,6 +27,7 @@ function loadDashboardApi() {
         ],
         PAYMENTS: [
           { memberId: 'MEM-1', paymentStatus: 'Paid', startDate: '2024-01-05', endDate: '2024-01-31', amount: 2500 },
+          { memberId: 'MEM-1', paymentStatus: 'STATUS-OVERDUE', startDate: '2024-01-05', endDate: '2024-01-31', amount: 1500 },
           { memberId: 'MEM-2', paymentStatus: 'Paid', startDate: '2024-02-10', endDate: '2024-02-28', amount: 4000 },
           { memberId: 'MEM-2', paymentStatus: 'Unpaid', startDate: '2024-03-01', endDate: '2024-03-31', amount: 4000 }
         ],
@@ -57,6 +58,7 @@ function loadDashboardApi() {
       data: {
         options: {
           membership: [{ id: 'PLAN-1', name: 'Monthly' }, { id: 'PLAN-2', name: 'Quarterly' }, { id: 'PLAN-3', name: 'Trial' }],
+          paymentstatus: [{ id: 'STATUS-OVERDUE', name: 'Overdue' }],
           batch: [{ id: 'B-1', name: 'Morning' }],
           status: [{ id: 'ACT', name: 'Active' }],
           expenseCats: [{ id: 'CAT-1', name: 'Rent' }, { id: 'CAT-2', name: 'Utilities' }]
@@ -86,6 +88,9 @@ describe('Dashboard Module', () => {
     expect(response.data.charts).toHaveProperty('categories');
     expect(response.data.charts).toHaveProperty('revenue');
     expect(response.data.charts).toHaveProperty('expenses');
+    expect(response.data.kpis.membersCollected).toBe(6500);
+    expect(response.data.charts.revenue).toEqual([2500, 4000]);
+    expect(response.data.charts.collectionTrend.collected).toEqual([2500, 4000]);
   });
 
   test('api_getAvailableYears includes years present in application data and sorts them newest first', () => {
