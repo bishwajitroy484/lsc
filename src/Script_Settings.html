@@ -52,6 +52,8 @@
          if (btnDrop) { 
            btnDrop.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + inactiveClass; 
          }
+         const headerSaveBtn = document.getElementById('btn-save-general-header');
+         if (headerSaveBtn) headerSaveBtn.classList.remove('hidden');
       } else {
          if (paneGen) { paneGen.classList.add('hidden'); paneGen.classList.remove('flex'); }
          if (paneDrop) { paneDrop.classList.remove('hidden'); paneDrop.classList.add('flex'); }
@@ -61,6 +63,8 @@
          if (btnDrop) { 
            btnDrop.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + activeClass; 
          }
+         const headerSaveBtn = document.getElementById('btn-save-general-header');
+         if (headerSaveBtn) headerSaveBtn.classList.add('hidden');
       }
     },
 
@@ -266,11 +270,31 @@
     },
 
     saveGeneralSettings: function() {
-       const btn = document.getElementById('btn-save-general');
-       if(btn) { 
-         btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[18px]">progress_activity</span><span>Saving Settings...</span>'; 
-         btn.disabled = true; 
-       }
+       const saveBtns = [
+         document.getElementById('btn-save-general'),
+         document.getElementById('btn-save-general-mobile'),
+         document.getElementById('btn-save-general-header')
+       ].filter(Boolean);
+
+       saveBtns.forEach(btn => {
+         btn.disabled = true;
+         if (btn.id === 'btn-save-general-header') {
+           btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px]">progress_activity</span><span>Saving...</span>';
+         } else {
+           btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[18px]">progress_activity</span><span>Saving Settings...</span>';
+         }
+       });
+
+       const restoreButtons = () => {
+         saveBtns.forEach(btn => {
+           btn.disabled = false;
+           if (btn.id === 'btn-save-general-header') {
+             btn.innerHTML = '<span class="material-symbols-rounded text-[16px]">save</span><span>Save</span>';
+           } else {
+             btn.innerHTML = '<span class="material-symbols-rounded text-[18px]">save</span><span>Save All Settings</span>';
+           }
+         });
+       };
 
        const payload = [];
 
@@ -297,10 +321,7 @@
 
        google.script.run
         .withSuccessHandler((res) => {
-           if(btn) { 
-             btn.innerHTML = '<span class="material-symbols-rounded text-[18px]">save</span><span>Save All Settings</span>'; 
-             btn.disabled = false; 
-           }
+           restoreButtons();
            if(res && res.success) {
                this.showToast(res.message || "Settings saved successfully!", false);
                this.generalSettingsData = payload; // Update local cache
@@ -309,6 +330,10 @@
                const err = (res && res.error) ? res.error : "Failed to save settings.";
                this.showToast(err, true);
            }
+        })
+        .withFailureHandler((err) => {
+           restoreButtons();
+           this.showToast((err && err.message) ? err.message : "Failed to save settings.", true);
         })
         .api_saveGeneralSettings(payload);
     },

@@ -350,9 +350,11 @@ describe('Settings Module', () => {
       expect(viewHtml).toContain('id="gen-LOGO_ID"');
       expect(viewHtml).toContain('id="gen-ENABLE_NOTIFICATION"');
 
-      // Fixed bottom action bar for general settings
+      // Fixed bottom action bar for general settings (desktop/tablet) & mobile actions
       expect(viewHtml).toContain('id="general-bottom-bar"');
       expect(viewHtml).toContain('id="btn-save-general"');
+      expect(viewHtml).toContain('id="btn-save-general-mobile"');
+      expect(viewHtml).toContain('id="btn-save-general-header"');
 
       // Custom key addition option is removed
       expect(viewHtml).not.toContain('Add Custom Key');
