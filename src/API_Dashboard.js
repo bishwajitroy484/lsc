@@ -95,7 +95,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
           businessExpenses: (chartMetrics.totalOperatingExpenses - chartMetrics.staffCost) || 0,
           staffCost: chartMetrics.staffCost || 0,
           totalOperatingExpenses: chartMetrics.totalOperatingExpenses || 0,
-          netInHand: (chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0,
+          netInHand: chartMetrics.actualNet != null ? chartMetrics.actualNet : ((chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0),
           remainingForecastNet: chartMetrics.remainingForecastNet || 0,
           projectedNet: chartMetrics.projectedNet != null ? chartMetrics.projectedNet : ((chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0)
         },

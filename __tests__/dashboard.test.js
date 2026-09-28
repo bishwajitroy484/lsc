@@ -445,4 +445,11 @@ describe('Dashboard Module', () => {
     expect(metrics.remainingForecastNet).toBe(25500);
     expect(metrics.projectedNet).toBe(115500);
   });
+
+  test('kpis.netInHand matches charts.prediction.actualNet for elapsed periods', () => {
+    const dashboardApi = loadDashboardApi();
+    const res = dashboardApi.api_getDashboardMetrics('2024', 'Monthly', ['Jan', 'Feb']);
+    expect(res.success).toBe(true);
+    expect(res.data.kpis.netInHand).toBe(res.data.charts.prediction.actualNet);
+  });
 });
