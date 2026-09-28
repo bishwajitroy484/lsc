@@ -145,4 +145,98 @@ describe('Members Module', () => {
     expect(response.success).toBe(true);
     expect(response.data[0].dueDate).toBe('10-Jan-2024');
   });
+
+  describe('MembersApp Frontend Lazy Loading', () => {
+    let MembersApp;
+    let AppUtils;
+
+    beforeAll(() => {
+      const globalStateHtml = fs.readFileSync(path.join(__dirname, '../src/Global_State.html'), 'utf8');
+      const appUtilsMatch = globalStateHtml.match(/const AppUtils = ({[\s\S]*?\n  };)/);
+      AppUtils = new Function(`return ${appUtilsMatch[1]};`)();
+      global.AppUtils = AppUtils;
+
+      const membersHtml = fs.readFileSync(path.join(__dirname, '../src/Script_Members.html'), 'utf8');
+      const membersAppMatch = membersHtml.match(/var MembersApp = ({[\s\S]*?\n  };)/);
+      if (!membersAppMatch) throw new Error("Could not extract MembersApp from Script_Members.html");
+
+      const mockElements = {};
+      const getMockElement = (id) => {
+        if (!mockElements[id]) {
+          mockElements[id] = {
+            id: id || '',
+            innerHTML: '',
+            innerText: '',
+            value: '',
+            classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() },
+            options: [],
+            selectedIndex: 0,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            insertAdjacentHTML: jest.fn(),
+            appendChild: jest.fn((el) => {
+              if (el && el.id) mockElements[el.id] = el;
+            }),
+            remove: jest.fn()
+          };
+        }
+        return mockElements[id];
+      };
+
+      global.document = {
+        getElementById: jest.fn((id) => getMockElement(id)),
+        querySelector: jest.fn(() => ({})),
+        addEventListener: jest.fn(),
+        createElement: jest.fn((tag) => ({
+          tagName: tag,
+          id: '',
+          className: '',
+          innerHTML: '',
+          remove: jest.fn()
+        }))
+      };
+
+      const createMembersApp = new Function('AppUtils', `return ${membersAppMatch[1]};`);
+      MembersApp = createMembersApp(AppUtils);
+      MembersApp.dropdowns = {
+        membership: [{ id: 'PLAN-1', name: 'Quarterly', frequency: 'QUARTERLY' }],
+        batch: [{ id: 'BATCH-1', name: 'Morning', groups: 'Adult' }],
+        status: [{ id: 'Active', name: 'Active' }]
+      };
+    });
+
+    it('should paginate filteredData in chunks of 50 and load remainder on loadMore', () => {
+      jest.useFakeTimers();
+      const records = [];
+      for (let i = 1; i <= 140; i++) {
+        records.push({
+          memberId: 'MEM-' + i,
+          fullName: 'Member ' + i,
+          membershipId: 'PLAN-1',
+          batchId: 'BATCH-1',
+          joinDate: '2026-01-10',
+          dueDate: '2026-04-10',
+          status: 'Active',
+          notes: ''
+        });
+      }
+      MembersApp.filteredData = records;
+      MembersApp.render();
+
+      expect(MembersApp.pageSize).toBe(50);
+      expect(MembersApp.renderedCount).toBe(50);
+
+      MembersApp.loadMore();
+      jest.advanceTimersByTime(200);
+
+      expect(MembersApp.renderedCount).toBe(100);
+
+      MembersApp.loadMore();
+      jest.advanceTimersByTime(200);
+
+      expect(MembersApp.renderedCount).toBe(140);
+      jest.useRealTimers();
+    });
+  });
 });
+

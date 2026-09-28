@@ -20,6 +20,11 @@
     expenseToDelete: null,
     colorMap: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#64748b'],
 
+    pageSize: 50,
+    renderedCount: 0,
+    isLoadingMore: false,
+    scrollListenerBound: false,
+
     init: function() {
       this.isDropdownsLoaded = false;
       this.isExpensesLoaded = false;
@@ -399,7 +404,7 @@
         catSums['Staff Cost'] = (catSums['Staff Cost'] || 0) + staffTotal;
       }
 
-      // 1. Trend Chart (Dynamic Type + Data Points)
+      // 1. Trend Chart (Dynamic Type + Consistent Data Labels)
       const trendOpts = {
         series: [{ name: 'Expenses', data: Object.values(trendDataMap) }],
         chart: { type: chartType, height: '100%', toolbar: { show: false } },
@@ -409,15 +414,15 @@
         dataLabels: { 
           enabled: true, 
           formatter: function (val) { return val ? AppUtils.formatCurrency(val) : ""; },
-          style: { fontSize: '9px', colors: ['#475569'] },
-          background: { enabled: false },
-          offsetY: chartType === 'bar' ? -10 : -20
+          style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
+          background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 },
+          offsetY: chartType === 'bar' ? -8 : -14
         },
-        xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '9px', colors: '#64748b' } } },
-        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '11px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#3b82f6'],
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 24, right: 10, left: 10, bottom: 4 } }
       };
 
       document.getElementById("chart-expense-trend").innerHTML = "";
@@ -425,7 +430,7 @@
       this.chartInstances.trend = new ApexCharts(document.querySelector("#chart-expense-trend"), trendOpts);
       this.chartInstances.trend.render();
 
-      // 2. Category Breakdown Chart (Data Points Enabled)
+      // 2. Category Breakdown Chart (Consistent Data Labels)
       const bLabels = Object.keys(catSums);
       const bSeries = Object.values(catSums);
       const bColors = bLabels.map((l, i) => this.getColor(i));
@@ -436,9 +441,9 @@
         labels: bLabels,
         chart: { type: 'donut', height: '100%' },
         colors: bColors.length ? bColors : ['#e2e8f0'],
-        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
-        legend: { position: 'right', fontSize: '10px', offsetY: 20 },
-        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
+        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '14px', fontWeight: 600, formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
+        legend: { position: 'right', fontSize: '11px', offsetY: 20 },
+        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 }, dropShadow: { enabled: false } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
       };
 
@@ -463,8 +468,8 @@
             labels: mLabels,
             chart: { type: 'pie', height: '100%' },
             colors: mColors,
-            legend: { position: 'bottom', fontSize: '10px' },
-            dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
+            legend: { position: 'bottom', fontSize: '11px' },
+            dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 }, dropShadow: { enabled: false } },
             tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
           };
           
@@ -527,6 +532,74 @@
       this.renderTable();
     },
 
+    buildDesktopRowHtml: function(exp, index) {
+      let cName = String(this.getName(exp.categoryId) || 'N/A');
+      const cIdx = this.dropdowns.expenseCats ? this.dropdowns.expenseCats.findIndex(c => c.id === exp.categoryId) : index;
+      const color = this.getColor(cIdx > -1 ? cIdx : index);
+      
+      if ((cName.toLowerCase().includes('misc') || cName.toLowerCase().includes('other')) && exp.whatMisc) {
+          cName += ` (${exp.whatMisc})`;
+      }
+
+      const dateStr = this.formatDateDDMMMYYYY(exp.date) || 'N/A';
+      const cleanAmt = this.parseAmount(exp.amount);
+      const amtStr = cleanAmt > 0 ? AppUtils.formatCurrency(cleanAmt) : '₹0';
+      
+      const creator = exp.createdBy ? exp.createdBy.split('@')[0] : 'Admin';
+      const safeDesc = exp.description || '--';
+      const fileId = exp.receiptFileId || exp.receiptUrl || '';
+      let rcptHtml = fileId ? `<a href="https://drive.google.com/file/d/${fileId}/view?usp=sharing" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1" title="View Receipt"><span class="material-symbols-rounded text-[13px] align-middle">receipt_long</span></a>` : '';
+
+      return `
+        <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <td class="px-4 py-3 font-medium text-slate-700 text-xs">${dateStr}</td>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${color}"></span><span class="font-semibold text-slate-800 text-xs truncate max-w-[140px]">${cName}</span></div>
+          </td>
+          <td class="px-4 py-3 text-slate-700 text-xs">${safeDesc}</td>
+          <td class="px-4 py-3 font-bold text-slate-800 text-xs md:text-sm">${amtStr}${rcptHtml}</td>
+          <td class="px-4 py-3 text-slate-500 capitalize text-xs">${creator}</td>
+          <td class="px-4 py-3 text-right">
+            <button onclick="ExpensesApp.openModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded"><span class="material-symbols-rounded text-[17px]">edit</span></button>
+            <button onclick="ExpensesApp.openDeleteModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[17px]">delete</span></button>
+          </td>
+        </tr>
+      `;
+    },
+
+    buildMobileCardHtml: function(exp, index) {
+      let cName = String(this.getName(exp.categoryId) || 'N/A');
+      const cIdx = this.dropdowns.expenseCats ? this.dropdowns.expenseCats.findIndex(c => c.id === exp.categoryId) : index;
+      const color = this.getColor(cIdx > -1 ? cIdx : index);
+      
+      const dateStr = this.formatDateDDMMMYYYY(exp.date) || 'N/A';
+      const cleanAmt = this.parseAmount(exp.amount);
+      const amtStr = cleanAmt > 0 ? AppUtils.formatCurrency(cleanAmt) : '₹0';
+      const fileId = exp.receiptFileId || exp.receiptUrl || '';
+      let rcptHtml = fileId ? `<a href="https://drive.google.com/file/d/${fileId}/view?usp=sharing" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1" title="View Receipt"><span class="material-symbols-rounded text-[13px] align-middle">receipt_long</span></a>` : '';
+
+      return `
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 relative">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-start gap-2">
+              <span class="w-2.5 h-2.5 rounded-full shrink-0 mt-1" style="background-color: ${color}"></span>
+              <div>
+                <span class="text-sm font-bold text-slate-800 leading-tight">${cName} ${exp.description ? `<span class="font-medium text-slate-500 text-xs block sm:inline">(${exp.description})</span>` : ''}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button onclick="ExpensesApp.openModalByIndex(${index})" class="text-slate-400 hover:text-brand-primary"><span class="material-symbols-rounded text-[18px]">edit</span></button>
+              <button onclick="ExpensesApp.openDeleteModalByIndex(${index})" class="text-slate-400 hover:text-red-500"><span class="material-symbols-rounded text-[18px]">delete</span></button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between mt-1 pt-2 border-t border-slate-100">
+            <span class="text-xs font-medium text-slate-500">${dateStr}</span>
+            <span class="text-sm font-bold text-slate-800">${amtStr}${rcptHtml}</span>
+          </div>
+        </div>
+      `;
+    },
+
     renderTable: function() {
       const tBody = document.getElementById('desktop-expense-body');
       const mContainer = document.getElementById('mobile-expense-container');
@@ -550,75 +623,89 @@
          return 0;
       });
 
+      this.renderedCount = 0;
+      this.isLoadingMore = false;
+
       if (this.tableData.length === 0) {
         tBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 px-4 text-slate-500 text-xs font-medium">No expenses match your criteria.</td></tr>`;
         mContainer.innerHTML = `<div class="bg-white p-6 text-center text-xs text-slate-500 rounded-xl border border-slate-200">No records found.</div>`;
         return;
       }
 
-      let dHtml = ''; let mHtml = '';
+      const initialBatch = this.tableData.slice(0, this.pageSize);
+      tBody.innerHTML = initialBatch.map((exp, i) => this.buildDesktopRowHtml(exp, i)).join('');
+      mContainer.innerHTML = initialBatch.map((exp, i) => this.buildMobileCardHtml(exp, i)).join('');
+      this.renderedCount = initialBatch.length;
 
-      this.tableData.forEach((exp, index) => {
-        let cName = String(this.getName(exp.categoryId) || 'N/A');
-        const cIdx = this.dropdowns.expenseCats ? this.dropdowns.expenseCats.findIndex(c => c.id === exp.categoryId) : index;
-        const color = this.getColor(cIdx > -1 ? cIdx : index);
-        
-        // Append Misc info for desktop table
-        if ((cName.toLowerCase().includes('misc') || cName.toLowerCase().includes('other')) && exp.whatMisc) {
-            cName += ` (${exp.whatMisc})`;
+      this.initScrollListener();
+    },
+
+    loadMore: function() {
+      if (this.isLoadingMore || this.renderedCount >= this.tableData.length) return;
+      this.isLoadingMore = true;
+
+      const tBody = document.getElementById('desktop-expense-body');
+      const mContainer = document.getElementById('mobile-expense-container');
+      if (!tBody || !mContainer) { this.isLoadingMore = false; return; }
+
+      // Show shimmer placeholders at bottom without clearing top rows
+      const dShim = document.createElement('tr');
+      dShim.id = 'exp-lazy-shimmer-desktop';
+      dShim.className = 'lazy-loading-row';
+      dShim.innerHTML = `<td colspan="6" class="px-4 py-3"><div class="space-y-2 py-1"><div class="h-5 w-full shimmer rounded"></div><div class="h-5 w-4/5 shimmer rounded"></div></div></td>`;
+      tBody.appendChild(dShim);
+
+      const mShim = document.createElement('div');
+      mShim.id = 'exp-lazy-shimmer-mobile';
+      mShim.innerHTML = `<div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2"><div class="h-4 w-3/4 shimmer rounded"></div><div class="h-3 w-1/2 shimmer rounded mt-2"></div></div>`;
+      mContainer.appendChild(mShim);
+
+      setTimeout(() => {
+        const dShimEl = document.getElementById('exp-lazy-shimmer-desktop');
+        if (dShimEl) dShimEl.remove();
+        const mShimEl = document.getElementById('exp-lazy-shimmer-mobile');
+        if (mShimEl) mShimEl.remove();
+
+        const startIdx = this.renderedCount;
+        const nextBatch = this.tableData.slice(startIdx, startIdx + this.pageSize);
+        if (nextBatch.length > 0) {
+          const dHtml = nextBatch.map((exp, i) => this.buildDesktopRowHtml(exp, startIdx + i)).join('');
+          const mHtml = nextBatch.map((exp, i) => this.buildMobileCardHtml(exp, startIdx + i)).join('');
+          tBody.insertAdjacentHTML('beforeend', dHtml);
+          mContainer.insertAdjacentHTML('beforeend', mHtml);
+          this.renderedCount += nextBatch.length;
         }
+        this.isLoadingMore = false;
+      }, 160);
+    },
 
-        const dateStr = this.formatDateDDMMMYYYY(exp.date) || 'N/A';
-        const cleanAmt = this.parseAmount(exp.amount);
-        const amtStr = cleanAmt > 0 ? AppUtils.formatCurrency(cleanAmt) : '₹0';
-        
-        const creator = exp.createdBy ? exp.createdBy.split('@')[0] : 'Admin';
-        const safeDesc = exp.description || '--';
-        // Use receiptFileId (the Drive file ID stored from upload)
-        const fileId = exp.receiptFileId || exp.receiptUrl || '';
-        let rcptHtml = fileId ? `<a href="https://drive.google.com/file/d/${fileId}/view?usp=sharing" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1" title="View Receipt"><span class="material-symbols-rounded text-[12px] align-middle">receipt_long</span></a>` : '';
+    initScrollListener: function() {
+      if (this.scrollListenerBound) return;
+      this.scrollListenerBound = true;
 
-        dHtml += `
-          <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-            <td class="px-4 py-3 font-medium text-slate-600">${dateStr}</td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color}"></span><span class="font-semibold text-slate-700 truncate max-w-[140px]">${cName}</span></div>
-            </td>
-            <td class="px-4 py-3 text-slate-800">${safeDesc}</td>
-            <td class="px-4 py-3 font-bold text-slate-800">${amtStr}${rcptHtml}</td>
-            <td class="px-4 py-3 text-slate-500 capitalize">${creator}</td>
-            <td class="px-4 py-3 text-right">
-              <button onclick="ExpensesApp.openModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded"><span class="material-symbols-rounded text-[16px]">edit</span></button>
-              <button onclick="ExpensesApp.openDeleteModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[16px]">delete</span></button>
-            </td>
-          </tr>
-        `;
+      const handleScroll = () => {
+        if (this.isLoadingMore || this.renderedCount >= this.tableData.length) return;
+        const dContainer = document.getElementById('expenses-table-container');
+        const mContainer = document.getElementById('mobile-expense-container');
+        const appRoot = document.getElementById('app-root');
 
-        // Mobile Card
-        mHtml += `
-          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 relative">
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex items-start gap-2">
-                <span class="w-2 h-2 rounded-full shrink-0 mt-1.5" style="background-color: ${color}"></span>
-                <div>
-                  <span class="text-sm font-bold text-slate-700 leading-tight">${cName} ${exp.description ? `<span class="font-medium text-slate-500 text-xs block sm:inline">(${exp.description})</span>` : ''}</span>
-                </div>
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                <button onclick="ExpensesApp.openModalByIndex(${index})" class="text-slate-400 hover:text-brand-primary"><span class="material-symbols-rounded text-[18px]">edit</span></button>
-                <button onclick="ExpensesApp.openDeleteModalByIndex(${index})" class="text-slate-400 hover:text-red-500"><span class="material-symbols-rounded text-[18px]">delete</span></button>
-              </div>
-            </div>
-            <div class="flex items-center justify-between mt-1 pt-2 border-t border-slate-100">
-              <span class="text-xs font-medium text-slate-500">${dateStr}</span>
-              <span class="text-sm font-bold text-slate-800">${amtStr}${rcptHtml}</span>
-            </div>
-          </div>
-        `;
-      });
+        const checkNearBottom = (el) => el && (el.scrollTop + el.clientHeight >= el.scrollHeight - 100);
 
-      tBody.innerHTML = dHtml;
-      mContainer.innerHTML = mHtml;
+        if (checkNearBottom(dContainer) || checkNearBottom(mContainer) || checkNearBottom(appRoot)) {
+          this.loadMore();
+        }
+      };
+
+      const debouncedScroll = AppUtils.debounce(handleScroll, 60);
+
+      const dContainer = document.getElementById('expenses-table-container');
+      if (dContainer && typeof dContainer.addEventListener === 'function') dContainer.addEventListener('scroll', debouncedScroll, { passive: true });
+
+      const mContainer = document.getElementById('mobile-expense-container');
+      if (mContainer && typeof mContainer.addEventListener === 'function') mContainer.addEventListener('scroll', debouncedScroll, { passive: true });
+
+      const appRoot = document.getElementById('app-root');
+      if (appRoot && typeof appRoot.addEventListener === 'function') appRoot.addEventListener('scroll', debouncedScroll, { passive: true });
     },
 
     // --- Index-based modal openers (safe for descriptions with special chars) ---

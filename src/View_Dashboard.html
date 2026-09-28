@@ -26,56 +26,56 @@
 
   
   <div class="px-4 md:px-5 grid grid-cols-2 lg:grid-cols-6 gap-3 md:gap-4 mb-4">
-    <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
+    <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
       <div class="flex items-center gap-2 mb-2">
-        <div class="w-6 h-6 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[14px]">group</span></div>
-        <p class="text-[10px] text-slate-500 font-medium whitespace-nowrap">Active Members</p>
+        <div class="w-6 h-6 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">group</span></div>
+        <p class="text-xs text-slate-500 font-semibold whitespace-nowrap">Active Members</p>
       </div>
-      <div class="h-6 flex items-center mb-1"><h2 id="kpi-active" class="text-lg font-bold text-slate-800 leading-none">--</h2></div>
-      <div id="kpi-active-segregation" class="flex flex-wrap gap-1 mt-auto border-t border-slate-100 pt-2 min-h-[24px]"></div>
+      <div class="h-7 flex items-center mb-1"><h2 id="kpi-active" class="text-xl md:text-2xl font-bold text-slate-800 leading-none">--</h2></div>
+      <div id="kpi-active-segregation" class="flex flex-wrap gap-1 mt-auto border-t border-slate-100 pt-2 min-h-[26px]"></div>
     </div>
     
-    <div class="bg-indigo-50 p-3 rounded-xl shadow-sm border border-indigo-100 flex flex-col justify-between">
+    <div class="bg-indigo-50 p-3.5 rounded-xl shadow-sm border border-indigo-100 flex flex-col justify-between">
       <div class="flex items-center gap-2 mb-2">
-        <div class="w-6 h-6 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[14px]">account_balance</span></div>
-        <p class="text-[10px] text-indigo-900/70 font-semibold whitespace-nowrap">Net-In Hand</p>
+        <div class="w-6 h-6 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance</span></div>
+        <p class="text-xs text-indigo-900/80 font-bold whitespace-nowrap">Net-In Hand</p>
       </div>
-      <div class="h-6 flex items-center"><h2 id="kpi-net" class="text-lg font-bold text-indigo-900 leading-none">--</h2></div>
+      <div class="h-7 flex items-center"><h2 id="kpi-net" class="text-xl md:text-2xl font-bold text-indigo-900 leading-none">--</h2></div>
     </div>
     
-    <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
+    <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
       <div class="flex items-center gap-2 mb-2">
-        <div class="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[14px]">account_balance_wallet</span></div>
-        <p class="text-[10px] text-slate-500 font-medium whitespace-nowrap">Total Fees collected</p>
+        <div class="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance_wallet</span></div>
+        <p class="text-xs text-slate-500 font-semibold whitespace-nowrap">Total Collected</p>
       </div>
-      <div class="h-6 flex items-center"><h2 id="kpi-collected" class="text-lg font-bold text-slate-800 leading-none">--</h2></div>
+      <div class="h-7 flex items-center"><h2 id="kpi-collected" class="text-xl md:text-2xl font-bold text-slate-800 leading-none">--</h2></div>
     </div>
     
-    <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
+    <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
       <div class="flex items-center gap-2 mb-2">
-        <div class="w-6 h-6 rounded bg-red-50 text-red-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[14px]">error</span></div>
-        <p class="text-[10px] text-slate-500 font-medium whitespace-nowrap">Overdue Amount</p>
+        <div class="w-6 h-6 rounded bg-red-50 text-red-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">error</span></div>
+        <p class="text-xs text-slate-500 font-semibold whitespace-nowrap">Overdue Amount</p>
       </div>
-      <div class="h-6 flex items-center"><h2 id="kpi-overdue" class="text-lg font-bold text-slate-800 leading-none">--</h2></div>
+      <div class="h-7 flex items-center"><h2 id="kpi-overdue" class="text-xl md:text-2xl font-bold text-slate-800 leading-none">--</h2></div>
     </div>
     
-    <div class="bg-slate-50 p-3 rounded-xl shadow-sm border border-slate-200 col-span-2 flex flex-col justify-between">
+    <div class="bg-slate-50 p-3.5 rounded-xl shadow-sm border border-slate-200 col-span-2 flex flex-col justify-between">
       <div class="flex items-center justify-between mb-2">
-        <h3 class="font-bold text-[11px] text-slate-800">Operating Expenses</h3>
+        <h3 class="font-bold text-xs md:text-sm text-slate-800">Operating Expenses</h3>
       </div>
       <div class="flex items-center justify-between mb-2">
-        <div class="flex items-center gap-1.5 md:gap-2">
-          <div class="w-6 h-6 rounded bg-red-100 text-red-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[14px]">domain</span></div>
-          <div><p class="text-[9px] text-slate-500 font-medium">Utilities</p><div class="h-4 flex items-center"><h4 id="kpi-bus-exp" class="font-bold text-xs text-slate-800">--</h4></div></div>
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded bg-red-100 text-red-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">domain</span></div>
+          <div><p class="text-xs text-slate-500 font-medium">Utilities</p><div class="h-5 flex items-center"><h4 id="kpi-bus-exp" class="font-bold text-xs md:text-sm text-slate-800">--</h4></div></div>
         </div>
-        <div class="text-slate-300 font-light text-sm">+</div>
-        <div class="flex items-center gap-1.5 md:gap-2">
-          <div class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[14px]">badge</span></div>
-          <div><p class="text-[9px] text-slate-500 font-medium">Staff</p><div class="h-4 flex items-center"><h4 id="kpi-staff-cost" class="font-bold text-xs text-slate-800">--</h4></div></div>
+        <div class="text-slate-300 font-light text-base">+</div>
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">badge</span></div>
+          <div><p class="text-xs text-slate-500 font-medium">Staff</p><div class="h-5 flex items-center"><h4 id="kpi-staff-cost" class="font-bold text-xs md:text-sm text-slate-800">--</h4></div></div>
         </div>
       </div>
       <div class="flex items-center justify-between border-t border-slate-200 pt-2 mt-auto">
-        <div class="flex items-baseline gap-2"><span class="text-[9px] text-slate-500 font-medium">Total:</span><div class="h-5 flex items-center"><h2 id="kpi-total-exp" class="text-sm font-bold text-slate-800 leading-none">--</h2></div></div>
+        <div class="flex items-baseline gap-2"><span class="text-xs text-slate-500 font-medium">Total:</span><div class="h-5 flex items-center"><h2 id="kpi-total-exp" class="text-sm md:text-base font-bold text-slate-800 leading-none">--</h2></div></div>
       </div>
     </div>
   </div>
@@ -197,15 +197,15 @@
           <input type="text" placeholder="Search..." onkeyup="DashboardTables.search('overdue', this.value)" class="w-full pl-7 pr-2 py-1 text-[10px] md:text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary shadow-sm bg-white">
         </div>
       </div>
-      <div id="table-container-overdue" class="max-h-[240px] overflow-y-auto no-scrollbar relative">
+      <div id="table-container-overdue" class="max-h-[260px] overflow-y-auto no-scrollbar relative">
         <table class="w-full text-left border-collapse">
           <thead class="sticky top-0 z-20 shadow-sm">
-            <tr class="text-[9px] uppercase text-slate-500 cursor-pointer select-none">
-              <th class="bg-white px-3 py-2.5 font-semibold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'name')"><div class="flex items-center">Member <span id="sort-overdue-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-semibold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'plan')"><div class="flex items-center">Plan <span id="sort-overdue-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-semibold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'amount')"><div class="flex items-center">Amount <span id="sort-overdue-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-semibold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'date')"><div class="flex items-center">Due Date <span id="sort-overdue-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-semibold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'days')"><div class="flex items-center justify-end">Days Overdue <span id="sort-overdue-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
+            <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider cursor-pointer select-none">
+              <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'name')"><div class="flex items-center">Member <span id="sort-overdue-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'plan')"><div class="flex items-center">Plan <span id="sort-overdue-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'amount')"><div class="flex items-center">Amount <span id="sort-overdue-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'date')"><div class="flex items-center">Due Date <span id="sort-overdue-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'days')"><div class="flex items-center justify-end">Days Overdue <span id="sort-overdue-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
             </tr>
           </thead>
           <tbody id="table-overdue" class="text-xs text-slate-700"></tbody>
@@ -218,18 +218,18 @@
         <h3 class="font-bold text-xs md:text-sm text-slate-800 flex items-center gap-1.5 whitespace-nowrap"><span class="material-symbols-rounded text-amber-500 text-[16px]">calendar_month</span> Upcoming</h3>
         <div class="relative w-[140px] sm:w-48 shrink-0">
           <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[14px]">search</span>
-          <input type="text" placeholder="Search..." onkeyup="DashboardTables.search('upcoming', this.value)" class="w-full pl-7 pr-2 py-1 text-[10px] md:text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary shadow-sm bg-white">
+          <input type="text" placeholder="Search..." onkeyup="DashboardTables.search('upcoming', this.value)" class="w-full pl-7 pr-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary shadow-sm bg-white">
         </div>
       </div>
-      <div id="table-container-upcoming" class="max-h-[240px] overflow-y-auto no-scrollbar relative">
+      <div id="table-container-upcoming" class="max-h-[260px] overflow-y-auto no-scrollbar relative">
         <table class="w-full text-left border-collapse">
           <thead class="sticky top-0 z-20 shadow-sm">
-            <tr class="text-[9px] uppercase text-slate-500 cursor-pointer select-none">
-              <th class="bg-white px-3 py-2.5 font-semibold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'name')"><div class="flex items-center">Member <span id="sort-upcoming-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-semibold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'plan')"><div class="flex items-center">Plan <span id="sort-upcoming-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-semibold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'amount')"><div class="flex items-center">Amount <span id="sort-upcoming-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-semibold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'date')"><div class="flex items-center">Due Date <span id="sort-upcoming-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-semibold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'days')"><div class="flex items-center justify-end">Days Left <span id="sort-upcoming-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
+            <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider cursor-pointer select-none">
+              <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'name')"><div class="flex items-center">Member <span id="sort-upcoming-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'plan')"><div class="flex items-center">Plan <span id="sort-upcoming-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'amount')"><div class="flex items-center">Amount <span id="sort-upcoming-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'date')"><div class="flex items-center">Due Date <span id="sort-upcoming-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'days')"><div class="flex items-center justify-end">Days Left <span id="sort-upcoming-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
             </tr>
           </thead>
           <tbody id="table-upcoming" class="text-xs text-slate-700"></tbody>

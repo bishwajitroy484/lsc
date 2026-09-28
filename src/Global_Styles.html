@@ -36,7 +36,7 @@
 
   .field-validation-error {
     color: #dc2626;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     line-height: 1.25;
     margin-top: 4px;
@@ -45,5 +45,65 @@
   .field-validation-invalid {
     border-color: #ef4444 !important;
     background-color: #fef2f2 !important;
+  }
+
+  /* ApexCharts Toolbar: Clean responsive positioning preventing chart data overlap */
+  .apexcharts-toolbar {
+    z-index: 10 !important;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+
+  @media (max-width: 640px) {
+    .apexcharts-toolbar {
+      top: 2px !important;
+      right: 4px !important;
+      transform: scale(0.82) !important;
+      transform-origin: top right !important;
+      background: rgba(255, 255, 255, 0.92) !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 6px !important;
+      padding: 2px 4px !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    }
+  }
+
+  /* Consistent legible ApexCharts Typography across all modules */
+  .apexcharts-tooltip {
+    font-size: 12px !important;
+    font-family: inherit !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    border-color: #e2e8f0 !important;
+  }
+  .apexcharts-tooltip-title {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    padding: 6px 10px !important;
+    background-color: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+  .apexcharts-tooltip-text {
+    font-size: 12px !important;
+    font-family: inherit !important;
+  }
+  .apexcharts-datalabel,
+  .apexcharts-data-labels text {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    font-family: inherit !important;
+  }
+  .apexcharts-xaxis-label text,
+  .apexcharts-yaxis-label text {
+    font-size: 11px !important;
+    font-family: inherit !important;
+  }
+  .apexcharts-legend-text {
+    font-size: 11px !important;
+    font-family: inherit !important;
+  }
+
+  /* Table Lazy Loading shimmer placeholder row */
+  .lazy-loading-row td {
+    padding: 0.75rem 1rem;
   }
 </style>
