@@ -286,6 +286,11 @@
       return match ? match.name : id;
     },
 
+    isPaidPayment: function(payment) {
+      const status = String(this.getName('paymentstatus', payment && payment.paymentStatus) || '').trim().toLowerCase();
+      return status === 'paid' || status === 'completed';
+    },
+
     fetchData: function(callback) {
       google.script.run
         .withSuccessHandler((res) => {
@@ -495,25 +500,11 @@
            this.calculateEffectiveCoverage(member);
            this.updateDetailHeader(member);
 
-           let startYear = member.joinDate ? new Date(member.joinDate).getFullYear() : new Date().getFullYear();
-           if (isNaN(startYear)) startYear = new Date().getFullYear();
-           
-           const currentYear = new Date().getFullYear();
-           this.currentMemberPayments.forEach(p => {
-               const py = new Date(p.paidDate).getFullYear();
-               if(py < startYear) startYear = py;
+           AppUtils.loadAvailableYears(() => {
+             AppUtils.populateYearSelect('filter-ltv');
+             this.renderPaymentHistory();
+             this.renderChart();
            });
-           
-           const sel = document.getElementById('filter-ltv');
-           let opts = '';
-           for(let y = currentYear; y >= startYear; y--) {
-               opts += `<option value="${y}">${y}</option>`;
-           }
-           sel.innerHTML = opts;
-           sel.value = currentYear; 
-           
-           this.renderPaymentHistory();
-           this.renderChart();
         })
         .api_getMemberPayments(member.memberId);
 
@@ -526,8 +517,7 @@
         
         if (this.currentMemberPayments && this.currentMemberPayments.length > 0) {
             const validPayments = this.currentMemberPayments.filter(p => {
-                const status = String(p.paymentStatus || '').toLowerCase();
-                return p.endDate && !status.includes('fail') && !status.includes('pending');
+                return p.endDate && this.isPaidPayment(p);
             });
             
             validPayments.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
@@ -557,8 +547,7 @@
         
         const isNonRecurring = planName.includes('TRIAL') || planName.includes('ADHOC') || planName.includes('AD-HOC');
         const validPaymentsCount = this.currentMemberPayments.filter(p => {
-            const stat = String(p.paymentStatus || '').toLowerCase();
-            return stat && !stat.includes('fail') && !stat.includes('pending');
+            return this.isPaidPayment(p);
         }).length;
 
         let dueStr = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'N/A';
@@ -639,8 +628,7 @@
           const planName = String(planMatch && planMatch.name ? planMatch.name : '').toUpperCase();
           
           const validPaymentsCount = this.currentMemberPayments.filter(p => {
-              const status = String(p.paymentStatus || '').toLowerCase();
-              return status && !status.includes('fail') && !status.includes('pending');
+              return this.isPaidPayment(p);
           }).length;
 
           const isNonRecurring = planName.includes('TRIAL') || planName.includes('ADHOC') || planName.includes('AD-HOC');
@@ -778,8 +766,7 @@
       document.getElementById('lbl-year-ltv').innerText = selectedYear;
 
       const allTimeAmount = this.currentMemberPayments.reduce((sum, p) => {
-        const stat = String(p.paymentStatus || '').toLowerCase();
-        if(stat.includes('fail') || stat.includes('pending') || stat.includes('overdue') || stat.includes('unpaid')) return sum;
+        if (!this.isPaidPayment(p)) return sum;
         return sum + Number(String(p.amount || 0).replace(/[^0-9.-]+/g,""));
       }, 0);
       
@@ -801,8 +788,7 @@
       }
       
       const yearPayments = this.currentMemberPayments.filter(p => {
-        const stat = String(p.paymentStatus || '').toLowerCase();
-        if(stat.includes('fail') || stat.includes('pending') || stat.includes('overdue') || stat.includes('unpaid')) return false;
+        if (!this.isPaidPayment(p)) return false;
         
         let sd = new Date(this.parseToISODate(p.startDate || p.paidDate));
         let ed = new Date(this.parseToISODate(p.endDate || p.paidDate));
@@ -942,12 +928,11 @@
 
     saveMember: async function(e) {
       e.preventDefault();
-      
+      if (!AppUtils.validateRequiredFields('member-form')) return;
+
       const planVal = document.getElementById('mem-plan').value;
-      if (planVal === 'All' || !planVal) return Toast.error("Please select a valid Membership Plan.");
-      
       const batchVal = document.getElementById('mem-batch').value;
-      if (batchVal === 'All' || !batchVal) return Toast.error("Please select a valid Batch.");
+      if (planVal === 'All' || batchVal === 'All') return Toast.error('Please select valid membership details.');
 
       const btn = document.getElementById('btn-save-member');
       btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px] mr-2">progress_activity</span> Saving...';
@@ -1040,6 +1025,17 @@
       document.getElementById('member-modal').classList.add('opacity-0', 'pointer-events-none');
       document.getElementById('member-modal-content').classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
       document.getElementById('member-form').reset();
+      AppUtils.clearValidationState('member-form');
+    },
+
+    toggleInitialPaymentFields: function() {
+      const enabled = document.getElementById('mem-record-pay')?.checked;
+      const fields = document.getElementById('mem-pay-fields');
+      ['mem-pay-mode', 'mem-pay-status'].forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.required = Boolean(enabled);
+      });
+      if (fields) fields.classList.toggle('hidden', !enabled);
     },
 
     onPlanOrBatchChange: function() {
@@ -1189,9 +1185,9 @@
 
     submitPayment: function(e) {
       e.preventDefault();
-      
+      if (!AppUtils.validateRequiredFields('payment-form')) return;
+
       const statusVal = document.getElementById('pay-status').value;
-      if (!statusVal) return Toast.error("Please select a valid Payment Status.");
 
       const btn = document.getElementById('btn-submit-payment');
       btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px] mr-2">progress_activity</span> Processing...';
@@ -1244,6 +1240,7 @@
       document.getElementById('payment-modal').classList.add('opacity-0', 'pointer-events-none');
       document.getElementById('payment-modal-content').classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
       document.getElementById('payment-form').reset();
+      AppUtils.clearValidationState('payment-form');
     },
     
     openDeleteModal: function(type, id, name) {

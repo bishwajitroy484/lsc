@@ -7,6 +7,7 @@
     
     isDropdownsLoaded: false,
     isExpensesLoaded: false,
+    isYearsLoaded: false,
     
     months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     quarters: ['Q1', 'Q2', 'Q3', 'Q4'],
@@ -22,18 +23,14 @@
     init: function() {
       this.isDropdownsLoaded = false;
       this.isExpensesLoaded = false;
+      this.isYearsLoaded = false;
       this.selectedPeriods = [...this.months];
 
-      // Pre-populate year selector so it is never blank
-      const yearSelect = document.getElementById('exp-filter-year');
-      if (yearSelect && yearSelect.options.length === 0) {
-        const curY = new Date().getFullYear();
-        yearSelect.innerHTML = `
-          <option value="${curY}" selected>${curY}</option>
-          <option value="${curY - 1}">${curY - 1}</option>
-          <option value="${curY - 2}">${curY - 2}</option>
-        `;
-      }
+      AppUtils.loadAvailableYears(() => {
+        AppUtils.populateYearSelect('exp-filter-year');
+        this.isYearsLoaded = true;
+        this.checkAndRender();
+      });
       
       this.renderCheckboxes();
       this.updateMultiSelectLabel();
@@ -79,7 +76,7 @@
     },
 
     checkAndRender: function() {
-      if (this.isDropdownsLoaded && this.isExpensesLoaded) {
+      if (this.isDropdownsLoaded && this.isExpensesLoaded && this.isYearsLoaded) {
           this.applyGlobalFilters();
       }
     },
@@ -189,39 +186,6 @@
       this.salaries = response.salaries || [];
       this.staffMetrics = response.staffMetrics || {};
       
-      // Dynamically update year selector to include years from data
-      const yearSelect = document.getElementById('exp-filter-year');
-      if (yearSelect) {
-        let years = new Set();
-        const currentYear = new Date().getFullYear().toString();
-        years.add(currentYear);
-        years.add((Number(currentYear) - 1).toString());
-        years.add((Number(currentYear) - 2).toString());
-        
-        this.allData.forEach(exp => {
-          if(exp.date) {
-            const d = new Date(this.parseToISODate(exp.date));
-            if(!isNaN(d)) years.add(d.getFullYear().toString());
-          }
-        });
-
-        if (this.staffMetrics) {
-          Object.keys(this.staffMetrics).forEach(y => {
-            if (this.staffMetrics[y] && this.staffMetrics[y].totalCost > 0) {
-              years.add(y.toString());
-            }
-          });
-        }
-        
-        const prevSelected = yearSelect.value || currentYear;
-        let yearsArray = Array.from(years).sort((a,b) => b - a);
-        let yearHtml = '';
-        yearsArray.forEach(y => { yearHtml += `<option value="${y}" ${y === prevSelected ? 'selected' : ''}>${y}</option>`; });
-        yearSelect.innerHTML = yearHtml;
-
-        if(yearsArray.includes(currentYear)) { yearSelect.value = currentYear; } 
-        else if(yearsArray.length > 0) { yearSelect.value = yearsArray[0]; }
-      }
     },
 
     handleModeSwitch: function() {
@@ -747,10 +711,12 @@
       if (previewCont && previewImg) { previewImg.src = ''; previewCont.classList.add('hidden'); }
       const hiddenFileId = document.getElementById('exp-receipt-file-id');
       if (hiddenFileId) hiddenFileId.value = '';
+      AppUtils.clearValidationState('expense-form');
     },
 
     saveExpense: async function(e) {
       e.preventDefault();
+      if (!AppUtils.validateRequiredFields('expense-form')) return;
       const btn = document.getElementById('btn-save-expense');
       btn.innerHTML = `<span class="material-symbols-rounded animate-spin text-[18px] mr-2">progress_activity</span> Saving...`;
       btn.disabled = true;

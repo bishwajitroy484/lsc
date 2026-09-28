@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { parseSafeDate, distributeDailyProration } = require('../src/Utils_DB');
 
-function loadDashboardApi() {
+function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = []) {
   const source = fs.readFileSync(path.join(__dirname, '../src/API_Dashboard.js'), 'utf8');
 
   return new Function(
@@ -15,7 +15,12 @@ function loadDashboardApi() {
     'distributeDailyProration',
     `
       ${source};
-      return { api_getDashboardMetrics };
+      return {
+        api_getDashboardMetrics,
+        calculateMonthlyExpenseAverages,
+        processOperations,
+        formatTimePeriods
+      };
     `
   )(
     {
@@ -27,12 +32,16 @@ function loadDashboardApi() {
         ],
         PAYMENTS: [
           { memberId: 'MEM-1', paymentStatus: 'Paid', startDate: '2024-01-05', endDate: '2024-01-31', amount: 2500 },
+          { memberId: 'MEM-1', paymentStatus: 'STATUS-OVERDUE', startDate: '2024-01-05', endDate: '2024-01-31', amount: 1500 },
           { memberId: 'MEM-2', paymentStatus: 'Paid', startDate: '2024-02-10', endDate: '2024-02-28', amount: 4000 },
           { memberId: 'MEM-2', paymentStatus: 'Unpaid', startDate: '2024-03-01', endDate: '2024-03-31', amount: 4000 }
         ],
         EXPENSES: [
           { categoryId: 'CAT-1', amount: 2500, date: '2024-01-15' },
-          { categoryId: 'CAT-2', amount: 1300, date: '2024-02-20' }
+          { categoryId: 'CAT-2', amount: 1300, date: '2024-02-20' },
+          { categoryId: 'CAT-1', amount: 900, date: '2024-03-15' },
+          { categoryId: 'CAT-3', amount: 200, date: '2024-03-20', whatMisc: 'Cleaning' },
+          ...additionalExpenses
         ],
         STAFF: [
           { staffId: 'STF-1', fullName: 'Coach A', status: 'Active', salary: 30000 },
@@ -47,7 +56,7 @@ function loadDashboardApi() {
           { key: 'batch', value: 'Morning' }
         ],
         SETTINGS: [
-          { key: 'Revenue_Recognition', value: 'anchor' }
+          { key: 'Revenue_Recognition', value: accrualMode }
         ]
       }))
     },
@@ -57,9 +66,10 @@ function loadDashboardApi() {
       data: {
         options: {
           membership: [{ id: 'PLAN-1', name: 'Monthly' }, { id: 'PLAN-2', name: 'Quarterly' }, { id: 'PLAN-3', name: 'Trial' }],
+          paymentstatus: [{ id: 'STATUS-OVERDUE', name: 'Overdue' }],
           batch: [{ id: 'B-1', name: 'Morning' }],
           status: [{ id: 'ACT', name: 'Active' }],
-          expenseCats: [{ id: 'CAT-1', name: 'Rent' }, { id: 'CAT-2', name: 'Utilities' }]
+          expenseCats: [{ id: 'CAT-1', name: 'Rent' }, { id: 'CAT-2', name: 'Utilities' }, { id: 'CAT-3', name: 'Misc' }]
         }
       }
     }),
@@ -81,12 +91,75 @@ describe('Dashboard Module', () => {
 
     expect(response.success).toBe(true);
     expect(response.data.userGreetingName).toBe('Alex');
-    expect(response.data.availableYears).toContain('2024');
     expect(response.data.kpis).toHaveProperty('activeMembers');
     expect(response.data.kpis).toHaveProperty('totalOperatingExpenses');
     expect(response.data.charts).toHaveProperty('categories');
     expect(response.data.charts).toHaveProperty('revenue');
     expect(response.data.charts).toHaveProperty('expenses');
+    expect(response.data.kpis.membersCollected).toBe(6500);
+    expect(response.data.charts.revenue).toEqual([2500, 4000]);
+    expect(response.data.charts.collectionTrend.collected).toEqual([2500, 4000]);
+    expect(response.data.charts.expenseBreakdown.labels).toEqual(['Rent', 'Utilities', 'Staff Cost']);
+    expect(response.data.charts.expenseBreakdown.series).toEqual([2500, 1300, 52000]);
+  });
+
+  test('expense breakdown follows selected months and quarters', () => {
+    const dashboardApi = loadDashboardApi();
+    const march = dashboardApi.api_getDashboardMetrics('2024', 'Monthly', ['Mar']);
+    const firstQuarter = dashboardApi.api_getDashboardMetrics('2024', 'Quarterly', ['Q1 (JFM)']);
+    const secondQuarter = dashboardApi.api_getDashboardMetrics('2024', 'Quarterly', ['Q2 (AMJ)']);
+
+    expect(march.data.charts.expenseBreakdown.labels).toEqual(['Rent', 'Misc']);
+    expect(march.data.charts.expenseBreakdown.series).toEqual([900, 200]);
+    expect(march.data.charts.expenseBreakdown.miscLabels).toEqual(['Cleaning']);
+    expect(march.data.charts.expenseBreakdown.miscSeries).toEqual([200]);
+    expect(firstQuarter.data.charts.expenseBreakdown.labels).toEqual(['Rent', 'Utilities', 'Misc', 'Staff Cost']);
+    expect(firstQuarter.data.charts.expenseBreakdown.series).toEqual([3400, 1300, 200, 52000]);
+    expect(secondQuarter.data.charts.expenseBreakdown.labels).toEqual([]);
+    expect(secondQuarter.data.charts.expenseBreakdown.series).toEqual([]);
+  });
+
+  test('expense breakdown allocates split-recognized costs across selected months', () => {
+    const dashboardApi = loadDashboardApi('split', [{
+      categoryId: 'CAT-4',
+      amount: 310,
+      startDate: '2024-01-31',
+      endDate: '2024-03-01'
+    }]);
+    const february = dashboardApi.api_getDashboardMetrics('2024', 'Monthly', ['Feb']);
+
+    expect(february.data.charts.expenseBreakdown.labels).toEqual(['Utilities', 'CAT-4']);
+    expect(february.data.charts.expenseBreakdown.series).toEqual([1300, 290]);
+  });
+
+  test('api_getAvailableYears includes years present in application data and sorts them newest first', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../src/API_Dashboard.js'), 'utf8');
+    const dashboardApi = new Function(
+      'DB',
+      'parseSafeDate',
+      `
+        ${source};
+        return { api_getAvailableYears };
+      `
+    )(
+      {
+        batchRead: jest.fn(() => ({
+          MEMBERS: [{ joinDate: '15-Jan-2026' }],
+          PAYMENTS: [{ startDate: '2027-02-01', endDate: '2027-02-28' }],
+          EXPENSES: [{ date: '2024-03-05' }],
+          STAFF: [{ joinDate: 'invalid-date' }],
+          SALARY: []
+        }))
+      },
+      parseSafeDate
+    );
+
+    const response = dashboardApi.api_getAvailableYears();
+
+    expect(response.success).toBe(true);
+    expect(response.data).toContain('2026');
+    expect(response.data).toContain('2027');
+    expect(response.data.indexOf('2027')).toBeLessThan(response.data.indexOf('2026'));
   });
 
   test('api_getDashboardMetrics safely handles empty or failed dropdown data without crashing', () => {
@@ -117,5 +190,136 @@ describe('Dashboard Module', () => {
     expect(response.success).toBe(true);
     expect(Array.isArray(response.data.charts.categories)).toBe(true);
     expect(response.data.kpis.activeMembers).toBeGreaterThanOrEqual(0);
+  });
+
+  test('forecasts quarterly collections from each active member next due date and expected amount', () => {
+    const dashboardApi = loadDashboardApi();
+    const members = [{
+      memberId: 'MEM-Q',
+      fullName: 'Quarterly Member',
+      membershipId: 'PLAN-Q',
+      membershipAmount: 3000,
+      joinDate: '2023-11-01',
+      status: 'Active'
+    }];
+    const payments = [{
+      memberId: 'MEM-Q',
+      paymentStatus: 'Paid',
+      amount: 3000,
+      endDate: '2024-01-31',
+      paidDate: '2024-01-01'
+    }];
+    const resolveName = (tab, field, value) => field === 'membershipId' ? 'Quarterly' : String(value || '');
+    const dropDowns = { membership: [{ id: 'PLAN-Q', name: 'Quarterly', frequency: 'Quarterly' }] };
+
+    const forecast = dashboardApi.processOperations(
+      members, [], payments, 2024, new Date(2024, 0, 15), resolveName, dropDowns, 'anchor'
+    );
+
+    expect(forecast.expectedCollectionArr[0]).toBe(0);
+    expect(forecast.expectedCollectionArr[1]).toBe(3000);
+    expect(forecast.expectedCollectionArr[2]).toBe(0);
+    expect(forecast.expectedCollectionArr[4]).toBe(3000);
+  });
+
+  test('split recognition prorates expected quarterly payments across their coverage months', () => {
+    const dashboardApi = loadDashboardApi();
+    const members = [{
+      memberId: 'MEM-Q',
+      membershipId: 'PLAN-Q',
+      membershipAmount: 3000,
+      joinDate: '2023-11-01',
+      status: 'Active'
+    }];
+    const payments = [{
+      memberId: 'MEM-Q',
+      paymentStatus: 'Paid',
+      amount: 3000,
+      endDate: '2024-01-31',
+      paidDate: '2024-01-01'
+    }];
+    const resolveName = (tab, field, value) => field === 'membershipId' ? 'Quarterly' : String(value || '');
+    const dropDowns = { membership: [{ id: 'PLAN-Q', name: 'Quarterly', frequency: 'Quarterly' }] };
+
+    const forecast = dashboardApi.processOperations(
+      members, [], payments, 2024, new Date(2024, 0, 15), resolveName, dropDowns, 'split'
+    );
+
+    expect(forecast.expectedCollectionArr[1]).toBeCloseTo(3000 * 29 / 90, 2);
+    expect(forecast.expectedCollectionArr[2]).toBeCloseTo(3000 * 31 / 90, 2);
+    expect(forecast.expectedCollectionArr[3]).toBeCloseTo(3000 * 30 / 90, 2);
+  });
+
+  test('does not forecast overdue or ad-hoc members as upcoming collections', () => {
+    const dashboardApi = loadDashboardApi();
+    const members = [
+      { memberId: 'MEM-LATE', membershipId: 'PLAN-Q', membershipAmount: 3000, joinDate: '2023-11-01', status: 'Active' },
+      { memberId: 'MEM-TRIAL', membershipId: 'PLAN-TRIAL', membershipAmount: 500, joinDate: '2024-01-01', status: 'Active' }
+    ];
+    const payments = [
+      { memberId: 'MEM-LATE', paymentStatus: 'Paid', amount: 3000, endDate: '2023-12-31' }
+    ];
+    const resolveName = (tab, field, value) => ({
+      'PLAN-Q': 'Quarterly',
+      'PLAN-TRIAL': 'Trial'
+    }[value] || String(value || ''));
+    const dropDowns = {
+      membership: [
+        { id: 'PLAN-Q', name: 'Quarterly', frequency: 'Quarterly' },
+        { id: 'PLAN-TRIAL', name: 'Trial', frequency: 'Ad-hoc' }
+      ]
+    };
+
+    const forecast = dashboardApi.processOperations(
+      members, [], payments, 2024, new Date(2024, 0, 15), resolveName, dropDowns, 'anchor'
+    );
+
+    expect(forecast.expectedCollectionArr.every(amount => amount === 0)).toBe(true);
+  });
+
+  test('uses the trailing twelve recognized months of operating and salary expenses', () => {
+    const dashboardApi = loadDashboardApi();
+    const averages = dashboardApi.calculateMonthlyExpenseAverages(
+      [{ amount: 1200, date: '2023-06-15', categoryId: 'CAT-1' }],
+      [
+        { amount: 24000, paymentStatus: 'Paid', startDate: '2023-01-01', endDate: '2023-12-31' },
+        { amount: 12000, paymentStatus: 'Pending', startDate: '2023-01-01', endDate: '2023-12-31' }
+      ],
+      (tab, field, value) => field === 'paymentStatus' ? value : 'Paid',
+      'anchor',
+      new Date(2024, 0, 15)
+    );
+
+    expect(averages.operating).toBe(100);
+    expect(averages.staff).toBe(2000);
+  });
+
+  test('keeps actual net values unchanged and forecasts expected net for future periods', () => {
+    const dashboardApi = loadDashboardApi();
+    const metrics = dashboardApi.formatTimePeriods(
+      { revArr: [10000, 0, 0, ...new Array(9).fill(0)], expArr: [2000, 0, 0, ...new Array(9).fill(0)], staffArr: new Array(12).fill(0) },
+      { overdueArr: new Array(12).fill(0), expectedCollectionArr: [0, 900, 0, ...new Array(9).fill(0)] },
+      'Monthly',
+      ['Jan', 'Feb', 'Mar'],
+      2024,
+      new Date(2024, 0, 15),
+      { operating: 200, staff: 100 },
+      null
+    );
+
+    expect(metrics.predictionLabels).toEqual(['Jan', 'Feb', 'Mar']);
+    expect(metrics.actualNetArr).toEqual([8000, null, null]);
+    expect(metrics.expectedNetArr).toEqual([8000, 600, -300]);
+    expect(metrics.transitionIndex).toBe(0);
+  });
+
+  test('keeps the Net-In-Hand chart fixed as an area chart without a chart type selector', () => {
+    const view = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
+    const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
+    const predictionConfig = script.slice(script.indexOf('// 3. Net-In-Hand'), script.indexOf('// 4. Collection Trend'));
+
+    expect(view).not.toContain('toggle-pred');
+    expect(predictionConfig).toContain("type: 'area'");
+    expect(predictionConfig).toContain("fill: { opacity: [0.12, 0] }");
   });
 });

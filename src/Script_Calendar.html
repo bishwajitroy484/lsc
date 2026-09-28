@@ -14,6 +14,9 @@
       this.currentDate = new Date(this.today.getFullYear(), this.today.getMonth(), 1);
       this.selectedDate = this.today.getDate();
       this.bindControls();
+      AppUtils.loadAvailableYears(() => {
+        AppUtils.populateYearSelect('cal-year-select', String(this.currentDate.getFullYear()));
+      });
       this.loadCalendarData();
     },
 
@@ -84,7 +87,7 @@
       const monthTitle = document.getElementById('cal-month-title');
       const yearSelect = document.getElementById('cal-year-select');
       if (monthTitle) monthTitle.innerText = this.formatMonthYear(this.currentDate);
-      if (yearSelect) yearSelect.innerHTML = `${this.currentDate.getFullYear()} <span class="material-symbols-rounded text-[14px]">expand_more</span>`;
+      if (yearSelect) yearSelect.value = String(this.currentDate.getFullYear());
 
       this.buildGrid();
       this.renderMemberList();
@@ -325,10 +328,9 @@
         });
       }
       if (yearSelect) {
-        yearSelect.addEventListener('click', () => {
-          const entered = prompt('Select year', String(this.currentDate.getFullYear()));
-          const year = Number(entered);
-          if (!Number.isNaN(year)) {
+        yearSelect.addEventListener('change', () => {
+          const year = Number(yearSelect.value);
+          if (Number.isInteger(year)) {
             this.currentDate = new Date(year, this.currentDate.getMonth(), 1);
             this.loadCalendarData();
           }
