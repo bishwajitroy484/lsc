@@ -493,6 +493,7 @@
 
     saveOption: function(e) {
       e.preventDefault();
+      if (!AppUtils.validateRequiredFields('option-form')) return;
       const btn = document.getElementById('btn-save-opt');
       if(btn) { btn.innerHTML = `Saving...`; btn.disabled = true; }
 
@@ -532,6 +533,7 @@
       const content = document.getElementById('option-modal-content');
       if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
       if(content) content.classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
+      AppUtils.clearValidationState('option-form');
     },
 
     openDeleteModal: function(id, name) {
@@ -653,8 +655,8 @@
       const div = document.createElement('div');
       div.className = 'flex gap-2 items-center schema-dynamic-col mt-2 w-full';
       div.innerHTML = `
-        <input type="text" placeholder="Key (e.g. rate)" value="${k}" required class="col-key flex-1 min-w-0 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">
-        <input type="text" placeholder="Label (e.g. Rate)" value="${l}" required class="col-label flex-1 min-w-0 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">
+        <div class="flex-1 min-w-0"><input type="text" placeholder="Key (e.g. rate)" value="${k}" required class="col-key w-full px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none"></div>
+        <div class="flex-1 min-w-0"><input type="text" placeholder="Label (e.g. Rate)" value="${l}" required class="col-label w-full px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none"></div>
         <button type="button" onclick="this.parentElement.remove()" class="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-red-500 bg-slate-100 rounded-lg transition-colors">
           <span class="material-symbols-rounded text-[18px]">delete</span>
         </button>
@@ -674,8 +676,8 @@
       const div = document.createElement('div');
       div.className = 'flex gap-2 items-center schema-dynamic-use mt-2 w-full';
       div.innerHTML = `
-        <select required onchange="SettingsApp.updateUsageCols(this)" class="use-tab flex-1 min-w-0 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">${tabOpts}</select>
-        <select required class="use-col flex-1 min-w-0 px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none"><option value="">Select Column...</option></select>
+        <div class="flex-1 min-w-0"><select required onchange="SettingsApp.updateUsageCols(this)" class="use-tab w-full px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">${tabOpts}</select></div>
+        <div class="flex-1 min-w-0"><select required class="use-col w-full px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none"><option value="">Select Column...</option></select></div>
         <button type="button" onclick="this.parentElement.remove()" class="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-red-500 bg-slate-100 rounded-lg transition-colors">
           <span class="material-symbols-rounded text-[18px]">delete</span>
         </button>
@@ -702,6 +704,7 @@
 
     saveSchema: function(e) {
       e.preventDefault();
+      if (!AppUtils.validateRequiredFields('schema-form')) return;
       const btn = document.getElementById('btn-save-schema');
       if(btn) { btn.innerHTML = `Saving...`; btn.disabled = true; }
       
@@ -755,6 +758,7 @@
       const content = document.getElementById('schema-modal-content');
       if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
       if(content) content.classList.add('scale-95', 'opacity-0');
+      AppUtils.clearValidationState('schema-form');
     }
   };
 
