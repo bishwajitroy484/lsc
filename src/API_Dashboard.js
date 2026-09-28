@@ -66,8 +66,15 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
 
     // 3. Pass the accrualMode into the financials processor
     const financialData = processFinancials(payments, expenses, salaries, targetYear, resolveName, accrualMode);
-    const operationalData = processOperations(members, staff, payments, targetYear, today, resolveName, dropDowns);
-    const chartMetrics = formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today);
+    const expenseAverages = calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrualMode, today);
+    const operationalData = processOperations(members, staff, payments, targetYear, today, resolveName, dropDowns, accrualMode);
+    let actualAnchor = null;
+    if (targetYear > today.getFullYear()) {
+      const currentYearFinancials = processFinancials(payments, expenses, salaries, today.getFullYear(), resolveName, accrualMode);
+      const currentMonth = today.getMonth();
+      actualAnchor = Number(((currentYearFinancials.revArr[currentMonth] || 0) - (currentYearFinancials.expArr[currentMonth] || 0)).toFixed(2));
+    }
+    const chartMetrics = formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today, expenseAverages, actualAnchor);
 
     // Dynamic Greeting Name Extraction based on Login Email
     const email = Session.getActiveUser().getEmail() || "User";
@@ -95,7 +102,12 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
           expenses: chartMetrics.filteredExp,
           batchLabels: operationalData.batchLabels,
           batchData: operationalData.batchData,
-          prediction: { actual: chartMetrics.actualNetArr, expected: chartMetrics.expectedNetArr },
+          prediction: {
+            categories: chartMetrics.predictionLabels,
+            actual: chartMetrics.actualNetArr,
+            expected: chartMetrics.expectedNetArr,
+            transitionIndex: chartMetrics.transitionIndex
+          },
           collectionTrend: { collected: chartMetrics.filteredRev, overdue: chartMetrics.filteredOverdue },
           expenseBreakdown: {
             series: financialData.expSeries,
@@ -249,7 +261,43 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
   return { revArr, expArr, staffArr, expLabels, expSeries, mLabels, mSeries };
 }
 
-function processOperations(members, staff, payments, targetYear, today, resolveName, dropDowns) {
+function calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrualMode, today) {
+  const monthStart = new Date(today.getFullYear(), today.getMonth() - 12, 1);
+  const operatingByMonth = new Array(12).fill(0);
+  const staffByMonth = new Array(12).fill(0);
+
+  const addToHistory = (startDate, endDate, fallbackDate, amount, target) => {
+    distributeDailyProration(startDate, endDate, fallbackDate, amount, accrualMode, (year, month, intervalAmount) => {
+      const monthIndex = (year - monthStart.getFullYear()) * 12 + month - monthStart.getMonth();
+      if (monthIndex >= 0 && monthIndex < 12) target[monthIndex] += intervalAmount;
+    });
+  };
+
+  expenses.forEach(expense => {
+    addToHistory(expense.startDate, expense.endDate, expense.date, parseAmt(expense.amount), operatingByMonth);
+  });
+  salaries.forEach(salary => {
+    if (!isSuccess(resolveName('SALARY', 'paymentStatus', salary.paymentStatus))) return;
+    addToHistory(salary.startDate, salary.endDate, salary.paidDate, parseAmt(salary.amount), staffByMonth);
+  });
+
+  return {
+    operating: operatingByMonth.reduce((total, amount) => total + amount, 0) / 12,
+    staff: staffByMonth.reduce((total, amount) => total + amount, 0) / 12
+  };
+}
+
+function addCalendarMonths(date, months) {
+  const result = new Date(date);
+  const day = result.getDate();
+  result.setDate(1);
+  result.setMonth(result.getMonth() + months);
+  const lastDay = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+  result.setDate(Math.min(day, lastDay));
+  return result;
+}
+
+function processOperations(members, staff, payments, targetYear, today, resolveName, dropDowns, accrualMode) {
   let activeCount = 0;
   let staffCount = 0;
   let batchCounts = {};
@@ -258,6 +306,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
   let snapOverdueAmt = 0; 
   let activeSegregation = {};
   let overdueArr = new Array(12).fill(0);
+  let expectedCollectionArr = new Array(12).fill(0);
 
   // Pre-map payments by member for high-speed dynamic due date calculation
   const paymentsByMember = {};
@@ -296,12 +345,18 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
     }
 
     const joinDate = parseSafeDate(m.joinDate);
-    if (!isNaN(joinDate) && amt > 0) {
+    let mPayments = paymentsByMember[m.memberId] || [];
+    if (amt > 0 || mPayments.length > 0) {
+       const planOption = (dropDowns.membership || dropDowns.Membership || []).find(option =>
+         String(option.id || option.value || option.code || '').trim() === String(m.membershipId || '').trim()
+       );
        const planName = resolveName('MEMBERS', 'membershipId', m.membershipId).toLowerCase();
+       const planFrequency = String(planOption && (planOption.frequency || planOption.Frequency) || '').toLowerCase();
+       const planDetails = `${planName} ${planFrequency}`;
        let freqMonths = 1;
-       if (planName.includes('year') || planName.includes('annual')) freqMonths = 12;
-       else if (planName.includes('half')) freqMonths = 6;
-       else if (planName.includes('quarter')) freqMonths = 3;
+       if (planDetails.includes('year') || planDetails.includes('annual')) freqMonths = 12;
+       else if (planDetails.includes('half')) freqMonths = 6;
+       else if (planDetails.includes('quarter')) freqMonths = 3;
 
        let exitDate = new Date(today.getTime());
        if (!isActive && m.exitDate) {
@@ -309,12 +364,11 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
            if (!isNaN(ed)) exitDate = ed;
        }
 
-       let mPayments = paymentsByMember[m.memberId] || [];
        let totalPaidByMember = mPayments.reduce((sum, p) => sum + parseAmt(p.amount), 0);
 
        // 1. Calculate precise NEXT DUE DATE perfectly synced with Members UI
        let actualNextDue = null;
-       const isAdHocOrTrial = planName.includes('ad-hoc') || planName.includes('adhoc') || planName.includes('trial');
+       const isAdHocOrTrial = planDetails.includes('ad-hoc') || planDetails.includes('adhoc') || planDetails.includes('trial');
        
        if (mPayments.length > 0) {
            if (!isAdHocOrTrial) {
@@ -337,6 +391,24 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
            }
        } else {
            if (!isNaN(joinDate)) actualNextDue = new Date(joinDate);
+       }
+
+       const latestPaymentAmount = mPayments.length ? parseAmt(mPayments[0].amount) : 0;
+       const expectedPaymentAmount = amt || latestPaymentAmount;
+       if (isActive && !isAdHocOrTrial && expectedPaymentAmount > 0 && actualNextDue && actualNextDue >= today) {
+           const firstDueDate = new Date(actualNextDue);
+           const targetYearEnd = new Date(targetYear, 11, 31, 23, 59, 59, 999);
+           let billingNumber = 0;
+           while (true) {
+               const dueDate = addCalendarMonths(firstDueDate, freqMonths * billingNumber);
+               if (dueDate > targetYearEnd) break;
+               const coverageEnd = addCalendarMonths(dueDate, freqMonths);
+               coverageEnd.setDate(coverageEnd.getDate() - 1);
+               distributeDailyProration(dueDate, coverageEnd, dueDate, expectedPaymentAmount, accrualMode, (year, month, intervalAmount) => {
+                   if (year === targetYear) expectedCollectionArr[month] += intervalAmount;
+               });
+               billingNumber++;
+           }
        }
 
        // 2. Simulate historical cycles to populate the Bar Chart accurately
@@ -412,16 +484,17 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
   const batchLabels = Object.keys(batchCounts);
   const batchData = safeNumArray(Object.values(batchCounts));
 
-  return { activeCount, staffCount, batchLabels, batchData, overdueList, upcomingList, snapOverdueAmt, activeSegregation, overdueArr };
+  return { activeCount, staffCount, batchLabels, batchData, overdueList, upcomingList, snapOverdueAmt, activeSegregation, overdueArr, expectedCollectionArr };
 }
 
-function formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today) {
+function formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today, expenseAverages, actualAnchor) {
   const isQuarterly = mode === 'Quarterly';
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const quarterLabels = ['Q1 (JFM)', 'Q2 (AMJ)', 'Q3 (JAS)', 'Q4 (OND)'];
   
   let totalSlots = isQuarterly ? 4 : 12;
   let finalLabels = []; let finalRev = []; let finalExp = []; let finalStaff = []; let finalOverdue = [];
+  let finalExpectedCollections = []; let finalExpectedExpenses = [];
 
   if (isQuarterly) {
     for(let i = 0; i < totalSlots; i++) {
@@ -430,6 +503,8 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
       finalExp.push((financialData.expArr[i*3]||0) + (financialData.expArr[i*3+1]||0) + (financialData.expArr[i*3+2]||0));
       finalStaff.push((financialData.staffArr[i*3]||0) + (financialData.staffArr[i*3+1]||0) + (financialData.staffArr[i*3+2]||0));
       finalOverdue.push((operationalData.overdueArr[i*3]||0) + (operationalData.overdueArr[i*3+1]||0) + (operationalData.overdueArr[i*3+2]||0));
+      finalExpectedCollections.push((operationalData.expectedCollectionArr[i*3]||0) + (operationalData.expectedCollectionArr[i*3+1]||0) + (operationalData.expectedCollectionArr[i*3+2]||0));
+      finalExpectedExpenses.push((expenseAverages.operating + expenseAverages.staff) * 3);
     }
   } else {
     for(let i = 0; i < totalSlots; i++) {
@@ -438,6 +513,8 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
       finalExp.push(financialData.expArr[i]||0);
       finalStaff.push(financialData.staffArr[i]||0);
       finalOverdue.push(operationalData.overdueArr[i]||0);
+      finalExpectedCollections.push(operationalData.expectedCollectionArr[i]||0);
+      finalExpectedExpenses.push(expenseAverages.operating + expenseAverages.staff);
     }
   }
 
@@ -455,44 +532,40 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
   const totalOperatingExpenses = filteredExp.reduce((a, b) => a + b, 0);
   const staffCost = filteredStaff.reduce((a, b) => a + b, 0);
 
-  let actualNetArr = [];
-  let expectedNetArr = [];
   const currentMIdx = today.getMonth();
   const currentQIdx = Math.floor(currentMIdx / 3);
   const elapsedBoundaryIdx = isQuarterly ? currentQIdx : currentMIdx;
+  const isFuturePeriod = index => targetYear > today.getFullYear() ||
+    (targetYear === today.getFullYear() && index > elapsedBoundaryIdx);
+  const selectedIndices = filteredLabels.map(label => finalLabels.indexOf(label));
+  const selectedForecastStart = selectedIndices.findIndex(index => isFuturePeriod(index));
+  let predictionLabels = filteredLabels.slice();
+  let predictionActual = selectedIndices.map(index => isFuturePeriod(index)
+    ? null
+    : Number(((finalRev[index] || 0) - (finalExp[index] || 0)).toFixed(2)));
+  let predictionExpected = selectedIndices.map(index => isFuturePeriod(index)
+    ? Number((finalExpectedCollections[index] - finalExpectedExpenses[index]).toFixed(2))
+    : null);
+  let transitionIndex = selectedIndices.indexOf(elapsedBoundaryIdx);
 
-  let elapsedRevSum = 0; 
-  let elapsedExpSum = 0;
-  let elapsedCount = 0;
-  
-  finalLabels.forEach((lbl, i) => {
-     if (targetYear < today.getFullYear() || i <= elapsedBoundaryIdx) {
-        elapsedRevSum += finalRev[i];
-        elapsedExpSum += finalExp[i];
-        elapsedCount++;
-     }
-  });
-  
-  // FIX 2: If there are NO active members left in the gym, projected future revenue drops to 0!
-  const avgPeriodRev = (elapsedCount > 0 && operationalData.activeCount > 0) ? (elapsedRevSum / elapsedCount) : 0;
-  const avgPeriodExp = elapsedCount > 0 ? (elapsedExpSum / elapsedCount) : 0;
-  const avgPeriodNet = Number((avgPeriodRev - avgPeriodExp).toFixed(2));
-
-  filteredLabels.forEach((lbl, finalIdx) => {
-     const originalIdx = finalLabels.indexOf(lbl);
-     const actualNet = Number((filteredRev[finalIdx] - filteredExp[finalIdx]).toFixed(2));
-     
-     if (targetYear === today.getFullYear() && originalIdx > elapsedBoundaryIdx) {
-        actualNetArr.push(null);
-        expectedNetArr.push(avgPeriodNet);
-     } else if (targetYear > today.getFullYear()) {
-        actualNetArr.push(null);
-        expectedNetArr.push(avgPeriodNet);
-     } else {
-        actualNetArr.push(actualNet || 0);
-        expectedNetArr.push(originalIdx === elapsedBoundaryIdx ? (actualNet || 0) : null);
-     }
-  });
+  if (selectedForecastStart >= 0) {
+    const needsAnchor = targetYear > today.getFullYear() || !selectedIndices.includes(elapsedBoundaryIdx);
+    if (needsAnchor) {
+      const insertionIndex = selectedForecastStart;
+      const anchorLabel = targetYear > today.getFullYear()
+        ? `${monthLabels[currentMIdx]} ${today.getFullYear()}`
+        : finalLabels[elapsedBoundaryIdx];
+      const anchorValue = targetYear > today.getFullYear()
+        ? Number((actualAnchor || 0).toFixed(2))
+        : Number(((finalRev[elapsedBoundaryIdx] || 0) - (finalExp[elapsedBoundaryIdx] || 0)).toFixed(2));
+      predictionLabels.splice(insertionIndex, 0, anchorLabel);
+      predictionActual.splice(insertionIndex, 0, anchorValue);
+      predictionExpected.splice(insertionIndex, 0, anchorValue);
+      transitionIndex = insertionIndex;
+    } else {
+      predictionExpected[transitionIndex] = predictionActual[transitionIndex];
+    }
+  }
 
   return {
     filteredLabels,
@@ -500,12 +573,18 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     filteredExp: safeNumArray(filteredExp),
     filteredStaff: safeNumArray(filteredStaff),
     filteredOverdue: safeNumArray(filteredOverdue),
-    actualNetArr: safeNumArray(actualNetArr),
-    expectedNetArr: safeNumArray(expectedNetArr),
+    actualNetArr: safeNullableNumArray(predictionActual),
+    expectedNetArr: safeNullableNumArray(predictionExpected),
+    predictionLabels,
+    transitionIndex,
     membersCollected,
     totalOperatingExpenses,
     staffCost
   };
+}
+
+function safeNullableNumArray(arr) {
+  return arr.map(value => value == null || isNaN(value) ? null : Number(Number(value).toFixed(2)));
 }
 
 function safeNumArray(arr) { 
