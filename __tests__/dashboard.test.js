@@ -354,4 +354,71 @@ describe('Dashboard Module', () => {
     // Dec combines recognized revenue from active payment (5200) + future expected renewal (5000)
     expect(metrics.expectedNetArr[11]).toBe(10200);
   });
+
+  test('calculateMonthlyExpenseAverages uses nominal monthly run rate of active staff members', () => {
+    const dashboardApi = loadDashboardApi();
+    const staff = [
+      { staffId: 'STF-1', fullName: 'Coach 1', status: 'Active', salary: 11500 },
+      { staffId: 'STF-2', fullName: 'Coach 2', status: 'Inactive', salary: 25000 },
+      { staffId: 'STF-3', fullName: 'Coach 3', status: 'Active', salary: '₹8,500' }
+    ];
+    const salaries = [
+      { amount: 50000, paymentStatus: 'Paid', startDate: '2023-01-01', endDate: '2023-12-31' }
+    ];
+    const averages = dashboardApi.calculateMonthlyExpenseAverages(
+      [],
+      salaries,
+      (tab, field, val) => val,
+      'anchor',
+      new Date(2024, 0, 15),
+      staff
+    );
+
+    // Active staff are Coach 1 (11500) and Coach 3 (8500) = 20000 run rate.
+    // Inactive Coach 2 (25000) is excluded.
+    expect(averages.staff).toBe(20000);
+  });
+
+  test('calculateMonthlyExpenseAverages falls back to trailing salary average when no active staff salaries are set', () => {
+    const dashboardApi = loadDashboardApi();
+    const staff = [
+      { staffId: 'STF-1', fullName: 'Volunteer Coach', status: 'Active', salary: 0 }
+    ];
+    const salaries = [
+      { amount: 24000, paymentStatus: 'Paid', startDate: '2023-01-01', endDate: '2023-12-31' }
+    ];
+    const averages = dashboardApi.calculateMonthlyExpenseAverages(
+      [],
+      salaries,
+      (tab, field, val) => val,
+      'anchor',
+      new Date(2024, 0, 15),
+      staff
+    );
+
+    expect(averages.staff).toBe(2000);
+  });
+
+  test('forecasts Net-In-Hand using nominal staff run rate in future periods', () => {
+    const dashboardApi = loadDashboardApi();
+    // 1 staff member at 11,500/month nominal run rate, no operating expenses
+    // 2 quarterly members paying 30,000 renewals in Nov and Dec, 0 in Oct
+    const metrics = dashboardApi.formatTimePeriods(
+      { revArr: new Array(12).fill(0), expArr: new Array(12).fill(0), staffArr: new Array(12).fill(0) },
+      { overdueArr: new Array(12).fill(0), expectedCollectionArr: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30000, 30000] },
+      'Monthly',
+      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      2026,
+      new Date(2026, 8, 28), // 28-Sep-2026 (Month 8 = Sep)
+      { operating: 0, staff: 11500 },
+      null
+    );
+
+    // Oct (index 9): 0 collection - 11,500 staff = -11,500
+    expect(metrics.expectedNetArr[9]).toBe(-11500);
+    // Nov (index 10): 30,000 collection - 11,500 staff = 18,500
+    expect(metrics.expectedNetArr[10]).toBe(18500);
+    // Dec (index 11): 30,000 collection - 11,500 staff = 18,500
+    expect(metrics.expectedNetArr[11]).toBe(18500);
+  });
 });

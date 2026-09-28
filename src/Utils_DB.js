@@ -4,7 +4,7 @@
  * Safely ignores and preserves formula-driven columns marked with a '*' in the header.
  */
 
-const SPREADSHEET_ID = "1Vev8UEoNi1M4a1aWX3bp0zJ8xUjd-gmXSrTorEXDXD0";
+const SPREADSHEET_ID = "1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI";
 
 const DB = {
 
@@ -41,17 +41,17 @@ const DB = {
     return records;
   },
 
-   /**
-   * Fetches multiple sheets in a single network batch call for high performance.
-   * @param {string[]} sheetNames Array of sheet titles to fetch.
-   * @returns {Object} An object mapping sheet names to arrays of record objects.
-   */
+  /**
+  * Fetches multiple sheets in a single network batch call for high performance.
+  * @param {string[]} sheetNames Array of sheet titles to fetch.
+  * @returns {Object} An object mapping sheet names to arrays of record objects.
+  */
   batchRead: function (sheetNames) {
     const ranges = sheetNames.map(name => `${name}!A1:AZ`);
     const response = Sheets.Spreadsheets.Values.batchGet(SPREADSHEET_ID, { ranges: ranges });
     const valueRanges = response.valueRanges || [];
     const result = {};
-    
+
     sheetNames.forEach((sheetName, idx) => {
       const values = valueRanges[idx] ? valueRanges[idx].values : [];
       if (!values || values.length < 2) {
@@ -76,7 +76,7 @@ const DB = {
       }
       result[sheetName] = records;
     });
-    
+
     return result;
   },
 
@@ -460,7 +460,7 @@ function api_uploadImageToDrive(base64Data, filename) {
     // Assuming you have the DB utility from your architecture
     const settingsRows = DB.read('SETTINGS') || [];
     let driveId = '';
-    
+
     const driveSetting = settingsRows.find(s => {
       const k = String(s.key || s.setting || s.Name || '').toLowerCase();
       return k === 'drive_id' || k === 'drive id';
@@ -477,12 +477,12 @@ function api_uploadImageToDrive(base64Data, filename) {
     // 2. Parse and decode the Base64 string
     let data = base64Data;
     let contentType = 'image/png'; // Fallback default
-    
+
     if (data.indexOf('data:') === 0) {
       const parts = data.split(',');
       const match = parts[0].match(/:(.*?);/);
       if (match && match.length > 1) contentType = match[1];
-      data = parts[1]; 
+      data = parts[1];
     }
 
     const decodedData = Utilities.base64Decode(data);
@@ -500,11 +500,11 @@ function api_uploadImageToDrive(base64Data, filename) {
     const fileId = file.getId();
     const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
 
-    return { 
-      success: true, 
-      url: directUrl, 
-      fileId: fileId, 
-      message: "Image uploaded successfully." 
+    return {
+      success: true,
+      url: directUrl,
+      fileId: fileId,
+      message: "Image uploaded successfully."
     };
 
   } catch (error) {

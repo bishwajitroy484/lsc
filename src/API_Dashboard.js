@@ -66,7 +66,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
 
     // 3. Pass the accrualMode into the financials processor
     const financialData = processFinancials(payments, expenses, salaries, targetYear, resolveName, accrualMode);
-    const expenseAverages = calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrualMode, today);
+    const expenseAverages = calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrualMode, today, staff);
     const operationalData = processOperations(members, staff, payments, targetYear, today, resolveName, dropDowns, accrualMode);
     let actualAnchor = null;
     if (targetYear > today.getFullYear()) {
@@ -296,7 +296,7 @@ function formatExpenseBreakdown(financialData, mode, periods) {
   };
 }
 
-function calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrualMode, today) {
+function calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrualMode, today, staff = []) {
   const monthStart = new Date(today.getFullYear(), today.getMonth() - 12, 1);
   const operatingByMonth = new Array(12).fill(0);
   const staffByMonth = new Array(12).fill(0);
@@ -316,9 +316,25 @@ function calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrua
     addToHistory(salary.startDate, salary.endDate, salary.paidDate, parseAmt(salary.amount), staffByMonth);
   });
 
+  let staffRunRate = 0;
+  let activeStaffFound = false;
+  if (Array.isArray(staff) && staff.length > 0) {
+    staff.forEach(s => {
+      const sStatus = resolveName ? resolveName('STAFF', 'status', s.status) : s.status;
+      const sName = String(sStatus || '').trim().toLowerCase();
+      const isActive = !sName.includes('inactive') && !sName.includes('in-active') && !sName.includes('exit') && !sName.includes('left');
+      if (isActive) {
+        activeStaffFound = true;
+        staffRunRate += parseAmt(s.salary);
+      }
+    });
+  }
+
+  const trailingStaffAvg = staffByMonth.reduce((total, amount) => total + amount, 0) / 12;
+
   return {
     operating: operatingByMonth.reduce((total, amount) => total + amount, 0) / 12,
-    staff: staffByMonth.reduce((total, amount) => total + amount, 0) / 12
+    staff: (activeStaffFound && staffRunRate > 0) ? staffRunRate : trailingStaffAvg
   };
 }
 
