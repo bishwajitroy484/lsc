@@ -75,6 +75,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
       actualAnchor = Number(((currentYearFinancials.revArr[currentMonth] || 0) - (currentYearFinancials.expArr[currentMonth] || 0)).toFixed(2));
     }
     const chartMetrics = formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today, expenseAverages, actualAnchor);
+    const expenseBreakdown = formatExpenseBreakdown(financialData, mode, periods);
 
     // Dynamic Greeting Name Extraction based on Login Email
     const email = Session.getActiveUser().getEmail() || "User";
@@ -110,11 +111,11 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
           },
           collectionTrend: { collected: chartMetrics.filteredRev, overdue: chartMetrics.filteredOverdue },
           expenseBreakdown: {
-            series: financialData.expSeries,
-            labels: financialData.expLabels,
+            series: expenseBreakdown.series,
+            labels: expenseBreakdown.labels,
             total: chartMetrics.totalOperatingExpenses || 0,
-            miscSeries: financialData.mSeries,
-            miscLabels: financialData.mLabels
+            miscSeries: expenseBreakdown.miscSeries,
+            miscLabels: expenseBreakdown.miscLabels
           },
           staffTrend: chartMetrics.filteredStaff
         },
@@ -198,8 +199,8 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
   let revArr = new Array(12).fill(0);
   let expArr = new Array(12).fill(0);
   let staffArr = new Array(12).fill(0);    
-  let catBreakdown = {};
-  let miscBreakdown = {};
+  let catBreakdownByMonth = {};
+  let miscBreakdownByMonth = {};
 
   // SMART ENGINE: Daily Proration Accrual Logic (GAAP Compliant)
   const distributeAmount = (sDateStr, eDateStr, fallbackDateStr, totalAmt, targetArr) => {
@@ -208,6 +209,10 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
         targetArr[cMonth] += intervalAmt;
       }
     });
+  };
+  const addBreakdownAmount = (breakdown, label, startDate, endDate, fallbackDate, amount) => {
+    if (!breakdown[label]) breakdown[label] = new Array(12).fill(0);
+    distributeAmount(startDate, endDate, fallbackDate, amount, breakdown[label]);
   };
 
   payments.forEach(p => {
@@ -220,17 +225,13 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
     // Expenses usually just have a 'date', but if they have coverage dates, we can split them too!
     distributeAmount(e.startDate, e.endDate, e.date, amt, expArr);
     
-    // For the Breakdown Donut Chart (Total counts mapped to target year by start date)
-    const d = parseSafeDate(e.startDate || e.date);
-    if (!isNaN(d) && d.getFullYear() === targetYear) {
-      let cName = resolveName('EXPENSES', 'categoryId', e.categoryId);
-      catBreakdown[cName] = (catBreakdown[cName] || 0) + amt;
-      
-      const cLower = String(cName).toLowerCase();
-      if (cLower.includes('misc') || cLower.includes('other') || (e.whatMisc && String(e.whatMisc).trim() !== '')) {
-        const detailLabel = (e.whatMisc && String(e.whatMisc).trim() !== '') ? String(e.whatMisc).trim() : 'Misc Expense';
-        miscBreakdown[detailLabel] = (miscBreakdown[detailLabel] || 0) + amt;
-      }
+    const cName = resolveName('EXPENSES', 'categoryId', e.categoryId);
+    addBreakdownAmount(catBreakdownByMonth, cName, e.startDate, e.endDate, e.date, amt);
+
+    const cLower = String(cName).toLowerCase();
+    if (cLower.includes('misc') || cLower.includes('other') || (e.whatMisc && String(e.whatMisc).trim() !== '')) {
+      const detailLabel = (e.whatMisc && String(e.whatMisc).trim() !== '') ? String(e.whatMisc).trim() : 'Misc Expense';
+      addBreakdownAmount(miscBreakdownByMonth, detailLabel, e.startDate, e.endDate, e.date, amt);
     }
   });
 
@@ -247,18 +248,52 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
         expArr[i] += tempArr[i];
     }
 
-    const d = parseSafeDate(s.startDate || s.paidDate);
-    if (!isNaN(d) && d.getFullYear() === targetYear) {
-      catBreakdown['Staff Cost'] = (catBreakdown['Staff Cost'] || 0) + amt;
+    addBreakdownAmount(catBreakdownByMonth, 'Staff Cost', s.startDate, s.endDate, s.paidDate, amt);
+  });
+
+  return { revArr, expArr, staffArr, catBreakdownByMonth, miscBreakdownByMonth };
+}
+
+function formatExpenseBreakdown(financialData, mode, periods) {
+  const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const quarterLabels = ['Q1 (JFM)', 'Q2 (AMJ)', 'Q3 (JAS)', 'Q4 (OND)'];
+  const isQuarterly = mode === 'Quarterly';
+  const availablePeriods = isQuarterly ? quarterLabels : monthLabels;
+  const activePeriods = periods && periods.length > 0 ? periods : availablePeriods;
+  const selectedMonths = [];
+
+  availablePeriods.forEach((period, periodIndex) => {
+    if (!activePeriods.includes(period) && !activePeriods.includes(period.split(' ')[0])) return;
+    if (isQuarterly) {
+      selectedMonths.push(periodIndex * 3, periodIndex * 3 + 1, periodIndex * 3 + 2);
+    } else {
+      selectedMonths.push(periodIndex);
     }
   });
 
-  const expLabels = Object.keys(catBreakdown);
-  const expSeries = safeNumArray(Object.values(catBreakdown));
-  const mLabels = Object.keys(miscBreakdown);
-  const mSeries = safeNumArray(Object.values(miscBreakdown));
+  const aggregateByPeriod = breakdownByMonth => {
+    const labels = [];
+    const series = [];
+    Object.keys(breakdownByMonth).forEach(label => {
+      const total = safeNumArray([
+        selectedMonths.reduce((sum, monthIndex) => sum + (breakdownByMonth[label][monthIndex] || 0), 0)
+      ])[0];
+      if (total !== 0) {
+        labels.push(label);
+        series.push(total);
+      }
+    });
+    return { labels, series };
+  };
 
-  return { revArr, expArr, staffArr, expLabels, expSeries, mLabels, mSeries };
+  const categories = aggregateByPeriod(financialData.catBreakdownByMonth);
+  const misc = aggregateByPeriod(financialData.miscBreakdownByMonth);
+  return {
+    labels: categories.labels,
+    series: categories.series,
+    miscLabels: misc.labels,
+    miscSeries: misc.series
+  };
 }
 
 function calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrualMode, today) {

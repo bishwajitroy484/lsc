@@ -28,3 +28,7 @@ Member Payment Insights, Dashboard collected-revenue KPIs, and collection charts
 ## Dashboard Net-In-Hand forecast
 
 The Dashboard Net-In-Hand Prediction chart always uses an area chart, showing recognized actual collection less actual expenses through the current period, followed by an estimated trend for future periods. Forecast collections are based on active members' next payment due dates, membership frequency, and expected membership amount; overdue members and ad-hoc or trial plans are not counted as upcoming payments. Forecast expenses use the trailing 12 completed months of recorded operating expenses and paid staff salaries. Both actuals and forecasts respect the configured Anchor (cash) or Split (accrual) revenue-recognition mode and the selected year and period filters. A green dotted line and Forecast label identify projected values; tooltips distinguish actual from predicted points.
+
+## Dashboard period filters
+
+The Dashboard year, monthly/quarterly mode, and selected months or quarters filter the KPI totals and charts. Expense Breakdown follows those same selected periods, grouping recognized operating expenses and paid staff costs by category; misc expense details use the same period selection.

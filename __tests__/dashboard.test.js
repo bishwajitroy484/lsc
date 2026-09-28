@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { parseSafeDate, distributeDailyProration } = require('../src/Utils_DB');
 
-function loadDashboardApi() {
+function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = []) {
   const source = fs.readFileSync(path.join(__dirname, '../src/API_Dashboard.js'), 'utf8');
 
   return new Function(
@@ -38,7 +38,10 @@ function loadDashboardApi() {
         ],
         EXPENSES: [
           { categoryId: 'CAT-1', amount: 2500, date: '2024-01-15' },
-          { categoryId: 'CAT-2', amount: 1300, date: '2024-02-20' }
+          { categoryId: 'CAT-2', amount: 1300, date: '2024-02-20' },
+          { categoryId: 'CAT-1', amount: 900, date: '2024-03-15' },
+          { categoryId: 'CAT-3', amount: 200, date: '2024-03-20', whatMisc: 'Cleaning' },
+          ...additionalExpenses
         ],
         STAFF: [
           { staffId: 'STF-1', fullName: 'Coach A', status: 'Active', salary: 30000 },
@@ -53,7 +56,7 @@ function loadDashboardApi() {
           { key: 'batch', value: 'Morning' }
         ],
         SETTINGS: [
-          { key: 'Revenue_Recognition', value: 'anchor' }
+          { key: 'Revenue_Recognition', value: accrualMode }
         ]
       }))
     },
@@ -66,7 +69,7 @@ function loadDashboardApi() {
           paymentstatus: [{ id: 'STATUS-OVERDUE', name: 'Overdue' }],
           batch: [{ id: 'B-1', name: 'Morning' }],
           status: [{ id: 'ACT', name: 'Active' }],
-          expenseCats: [{ id: 'CAT-1', name: 'Rent' }, { id: 'CAT-2', name: 'Utilities' }]
+          expenseCats: [{ id: 'CAT-1', name: 'Rent' }, { id: 'CAT-2', name: 'Utilities' }, { id: 'CAT-3', name: 'Misc' }]
         }
       }
     }),
@@ -96,6 +99,37 @@ describe('Dashboard Module', () => {
     expect(response.data.kpis.membersCollected).toBe(6500);
     expect(response.data.charts.revenue).toEqual([2500, 4000]);
     expect(response.data.charts.collectionTrend.collected).toEqual([2500, 4000]);
+    expect(response.data.charts.expenseBreakdown.labels).toEqual(['Rent', 'Utilities', 'Staff Cost']);
+    expect(response.data.charts.expenseBreakdown.series).toEqual([2500, 1300, 52000]);
+  });
+
+  test('expense breakdown follows selected months and quarters', () => {
+    const dashboardApi = loadDashboardApi();
+    const march = dashboardApi.api_getDashboardMetrics('2024', 'Monthly', ['Mar']);
+    const firstQuarter = dashboardApi.api_getDashboardMetrics('2024', 'Quarterly', ['Q1 (JFM)']);
+    const secondQuarter = dashboardApi.api_getDashboardMetrics('2024', 'Quarterly', ['Q2 (AMJ)']);
+
+    expect(march.data.charts.expenseBreakdown.labels).toEqual(['Rent', 'Misc']);
+    expect(march.data.charts.expenseBreakdown.series).toEqual([900, 200]);
+    expect(march.data.charts.expenseBreakdown.miscLabels).toEqual(['Cleaning']);
+    expect(march.data.charts.expenseBreakdown.miscSeries).toEqual([200]);
+    expect(firstQuarter.data.charts.expenseBreakdown.labels).toEqual(['Rent', 'Utilities', 'Misc', 'Staff Cost']);
+    expect(firstQuarter.data.charts.expenseBreakdown.series).toEqual([3400, 1300, 200, 52000]);
+    expect(secondQuarter.data.charts.expenseBreakdown.labels).toEqual([]);
+    expect(secondQuarter.data.charts.expenseBreakdown.series).toEqual([]);
+  });
+
+  test('expense breakdown allocates split-recognized costs across selected months', () => {
+    const dashboardApi = loadDashboardApi('split', [{
+      categoryId: 'CAT-4',
+      amount: 310,
+      startDate: '2024-01-31',
+      endDate: '2024-03-01'
+    }]);
+    const february = dashboardApi.api_getDashboardMetrics('2024', 'Monthly', ['Feb']);
+
+    expect(february.data.charts.expenseBreakdown.labels).toEqual(['Utilities', 'CAT-4']);
+    expect(february.data.charts.expenseBreakdown.series).toEqual([1300, 290]);
   });
 
   test('api_getAvailableYears includes years present in application data and sorts them newest first', () => {
