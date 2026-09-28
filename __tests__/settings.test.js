@@ -137,12 +137,11 @@ describe('Settings Module', () => {
     expect(viewHtml).toContain('id="gen-SPREADSHEET_ID"');
     expect(viewHtml).toContain('id="gen-DRIVE_ID"');
     expect(viewHtml).toContain('id="gen-LOGO_ID"');
-    expect(viewHtml).toContain('id="gen-NOTIFICATION_ENABLED"');
-    expect(viewHtml).toContain('id="gen-NOTIFICATION_EMAIL"');
-    expect(viewHtml).toContain('id="gen-NOTIFICATION_FREQUENCY"');
+    expect(viewHtml).toContain('id="gen-ENABLE_NOTIFICATION"');
 
-    // Custom key addition option is removed
+    // Custom key addition and card removed
     expect(viewHtml).not.toContain('Add Custom Key');
+    expect(viewHtml).not.toContain('id="custom-settings-card"');
 
     // Desktop and mobile responsive containers
     expect(viewHtml).toContain('id="options-tbody"');
