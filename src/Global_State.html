@@ -231,14 +231,14 @@
       form.querySelectorAll('[required]').forEach(field => {
         if (field.dataset.validationBound) return;
         field.dataset.validationBound = 'true';
+        const container = field.closest('.relative') || field;
         const clearError = () => {
           const value = typeof field.value === 'string' ? field.value.trim() : field.value;
           if (value && (!field.checkValidity || field.checkValidity())) {
             field.classList.remove('field-validation-invalid');
             field.removeAttribute('aria-invalid');
-            const container = field.closest('.relative') || field;
-            container.nextElementSibling?.removeAttribute('data-validation-error');
-            container.nextElementSibling?.remove();
+            const message = container.nextElementSibling;
+            if (message && message.hasAttribute('data-validation-error')) message.remove();
           }
         };
         field.addEventListener('input', clearError);
