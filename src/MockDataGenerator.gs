@@ -9,9 +9,9 @@
  *           and monthly disbursements, keeping staff expenses in proportion with gym size.
  *  - MEMBER PRICING:
  *      * Adult Membership: ₹30,000 Quarterly (₹10,000/mo)
- *      * Kids Membership: ₹15,000 Quarterly (₹5,000/mo)
- *      * Ad-Hoc: ₹4,000 (Adults) / ₹2,000 (Kids)
- *      * Trial: ₹1,500 (1-week trial)
+ *      * Kids Membership: ₹25,000 Quarterly (~₹8,333/mo)
+ *      * Ad-Hoc: ₹5,000 (Adults) / ₹3,500 (Kids)
+ *      * Trial: ₹2,000 (1-week trial)
  *  - NET-IN-HAND: Collections (~₹180k-₹210k/mo) comfortably exceed total operating & staff costs
  *                 (~₹105k-₹115k/mo), ensuring a strong, realistic positive Net-In-Hand trend.
  *  - RENEWAL CASES:
@@ -240,10 +240,10 @@ function buildMembersAndPayments(today, cfg) {
   var nowIso = new Date().toISOString();
 
   var ADULT_FEE = 30000;
-  var KIDS_FEE = 15000;
-  var ADULT_ADHOC = 4000;
-  var KIDS_ADHOC = 2000;
-  var TRIAL_FEE = 1500;
+  var KIDS_FEE = 25000;
+  var ADULT_ADHOC = 5000;
+  var KIDS_ADHOC = 3500;
+  var TRIAL_FEE = 2000;
 
   function addPayment(memberId, amount, paidDate, startDate, endDate, mode, status, notes) {
     payments.push({

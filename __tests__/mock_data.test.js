@@ -75,7 +75,17 @@ describe('Mock Data Generator', () => {
       const kidsQuarterly = members.filter(m => m.batchId.toLowerCase().includes('kid') && !m.membershipId.toLowerCase().includes('adhoc') && !m.membershipId.toLowerCase().includes('trial'));
       expect(kidsQuarterly.length).toBeGreaterThanOrEqual(4);
       kidsQuarterly.forEach(m => {
-        expect(m.membershipAmount).toBe(15000);
+        expect(m.membershipAmount).toBe(25000);
+      });
+
+      // Verify each member's quarterly payment amount matches their membershipAmount exactly
+      const payments = datasets.payments;
+      const quarterlyMembers = members.filter(m => !m.membershipId.toLowerCase().includes('adhoc') && !m.membershipId.toLowerCase().includes('trial'));
+      quarterlyMembers.forEach(m => {
+        const memberPayments = payments.filter(p => p.memberId === m.memberId);
+        memberPayments.forEach(p => {
+          expect(Number(p.amount)).toBe(m.membershipAmount);
+        });
       });
 
       // Check Ad-hoc and Trial
@@ -84,7 +94,7 @@ describe('Mock Data Generator', () => {
 
       const trial = members.filter(m => m.membershipId.toLowerCase().includes('trial'));
       expect(trial.length).toBeGreaterThanOrEqual(1);
-      expect(trial[0].membershipAmount).toBe(1500);
+      expect(trial[0].membershipAmount).toBe(2000);
     });
 
     test('collections exceed expenses ensuring a strong positive Net-In-Hand', () => {
