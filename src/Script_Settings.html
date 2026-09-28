@@ -44,8 +44,8 @@
       const inactiveClass = 'text-slate-600 hover:text-slate-900 font-medium';
       
       if (tabName === 'general') {
-         if (paneGen) paneGen.classList.remove('hidden');
-         if (paneDrop) paneDrop.classList.add('hidden');
+         if (paneGen) { paneGen.classList.remove('hidden'); paneGen.classList.add('flex'); }
+         if (paneDrop) { paneDrop.classList.add('hidden'); paneDrop.classList.remove('flex'); }
          if (btnGen) { 
            btnGen.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + activeClass; 
          }
@@ -53,7 +53,7 @@
            btnDrop.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + inactiveClass; 
          }
       } else {
-         if (paneGen) paneGen.classList.add('hidden');
+         if (paneGen) { paneGen.classList.add('hidden'); paneGen.classList.remove('flex'); }
          if (paneDrop) { paneDrop.classList.remove('hidden'); paneDrop.classList.add('flex'); }
          if (btnGen) { 
            btnGen.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + inactiveClass; 
