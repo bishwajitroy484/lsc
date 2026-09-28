@@ -26,8 +26,27 @@
  * Note: SETTINGS and DROP_DOWN tabs are strictly preserved and never wiped.
  */
 
-var MOCK_SPREADSHEET_ID = (typeof SPREADSHEET_ID !== 'undefined') ? SPREADSHEET_ID : "1Vev8UEoNi1M4a1aWX3bp0zJ8xUjd-gmXSrTorEXDXD0";
+var DEV_SPREADSHEET_ID = "1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI";
+var DEV_SCRIPT_ID = "18gsDCFSfqq7XOVgVAjhctSgyeW7pjyA_QlAwbRvOtHyXgybOQkX_BPgp";
+var PROD_SCRIPT_ID = "1z0FR65RqWh25HtPpnc68MNUx_obdbHmE5ejRHRwXpwLIS6a56xxjXpJf";
 
+/**
+ * Strict Environment Safeguard.
+ * Prevents mock data generator from ever running on the Production Apps Script instance
+ * or targeting any spreadsheet other than the authorized Dev Spreadsheet ID.
+ */
+function assertDevEnvironment() {
+  if (typeof ScriptApp !== 'undefined' && ScriptApp.getScriptId) {
+    var currentScriptId = ScriptApp.getScriptId();
+    if (currentScriptId === PROD_SCRIPT_ID) {
+      throw new Error("SECURITY VIOLATION: Mock data generation is strictly blocked on the Production Apps Script environment (Script ID: " + currentScriptId + "). It is only permitted on the Dev instance.");
+    }
+  }
+
+  if (DEV_SPREADSHEET_ID !== "1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI") {
+    throw new Error("SECURITY VIOLATION: Target spreadsheet must be Dev Spreadsheet (ID: 1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI).");
+  }
+}
 var DEFAULT_SHEET_HEADERS = {
   MEMBERS: [
     'memberId', 'fullName', 'phone', 'email', 'gender', 'dob',
@@ -117,22 +136,75 @@ function fetchOrCreateDropdownConfig() {
     expenseCats: []
   };
 
-  if (typeof api_getGlobalDropdowns === 'function') {
+  // 1. Try reading directly from Dev Spreadsheet's DROP_DOWN tab
+  if (typeof Sheets !== 'undefined' && Sheets.Spreadsheets && Sheets.Spreadsheets.Values) {
     try {
-      var res = api_getGlobalDropdowns();
-      if (res && res.success && res.data && res.data.options) {
-        var opts = res.data.options;
-        dropdowns.membership = opts.membership || opts.Membership || [];
-        dropdowns.batch = opts.batch || opts.Batch || [];
-        dropdowns.status = opts.status || opts.Status || [];
-        dropdowns.paymentmode = opts.paymentmode || opts.payment_mode || [];
-        dropdowns.paymentstatus = opts.paymentstatus || opts.payment_status || opts.status || [];
-        dropdowns.role = opts.role || opts.roles || opts.staffrole || [];
-        dropdowns.credittype = opts.credittype || opts.credit_type || opts.credit_type_options || [];
-        dropdowns.expenseCats = opts.expensecategory || opts.expense_category || opts.expense || opts.categories || [];
+      var metaRes = Sheets.Spreadsheets.Values.get(DEV_SPREADSHEET_ID, "'DROP_DOWN'!A:G");
+      var metaValues = metaRes ? metaRes.values : null;
+      if (metaValues && metaValues.length >= 2) {
+        var schemas = [];
+        for (var i = 1; i < metaValues.length; i++) {
+          var row = metaValues[i];
+          if (row[0] && String(row[0]).trim() !== '') {
+            schemas.push({
+              key: String(row[0]).trim().toLowerCase(),
+              columns: row[3] ? JSON.parse(row[3]) : [],
+              startCol: Number(row[5]),
+              numCols: Number(row[6])
+            });
+          }
+        }
+        if (schemas.length > 0) {
+          var ranges = schemas.map(function(sch) {
+            var startLetter = mockColToLetter(sch.startCol);
+            var endLetter = mockColToLetter(sch.startCol + sch.numCols - 1);
+            return "'DROP_DOWN'!" + startLetter + "3:" + endLetter + "200";
+          });
+          var dataRes = Sheets.Spreadsheets.Values.batchGet(DEV_SPREADSHEET_ID, { ranges: ranges });
+          if (dataRes && dataRes.valueRanges) {
+            dataRes.valueRanges.forEach(function(vr, idx) {
+              var sch = schemas[idx];
+              var list = [];
+              if (vr.values) {
+                vr.values.forEach(function(r) {
+                  if (r[0] && String(r[0]).trim() !== '') {
+                    var obj = {};
+                    sch.columns.forEach(function(col, colIdx) {
+                      obj[col.key] = r[colIdx] !== undefined ? r[colIdx] : '';
+                    });
+                    list.push(obj);
+                  }
+                });
+              }
+              dropdowns[sch.key] = list;
+            });
+          }
+        }
       }
     } catch (e) {
-      console.warn("Could not load dynamic dropdowns; using built-in defaults: " + e.message);
+      console.warn("Could not read DROP_DOWN via Sheets API from Dev Sheet: " + e.message);
+    }
+  }
+
+  // 2. Fallback to api_getGlobalDropdowns if direct Dev read was empty
+  if (Object.keys(dropdowns).every(function(k) { return !dropdowns[k] || dropdowns[k].length === 0; })) {
+    if (typeof api_getGlobalDropdowns === 'function') {
+      try {
+        var res = api_getGlobalDropdowns();
+        if (res && res.success && res.data && res.data.options) {
+          var opts = res.data.options;
+          dropdowns.membership = opts.membership || opts.Membership || [];
+          dropdowns.batch = opts.batch || opts.Batch || [];
+          dropdowns.status = opts.status || opts.Status || [];
+          dropdowns.paymentmode = opts.paymentmode || opts.payment_mode || [];
+          dropdowns.paymentstatus = opts.paymentstatus || opts.payment_status || opts.status || [];
+          dropdowns.role = opts.role || opts.roles || opts.staffrole || [];
+          dropdowns.credittype = opts.credittype || opts.credit_type || opts.credit_type_options || [];
+          dropdowns.expenseCats = opts.expensecategory || opts.expense_category || opts.expense || opts.categories || [];
+        }
+      } catch (e) {
+        console.warn("Could not load dynamic dropdowns; using built-in defaults: " + e.message);
+      }
     }
   }
 
@@ -985,7 +1057,7 @@ function buildExpenses(today, cfg) {
 function clearSheetData(sheetName) {
   if (typeof Sheets !== 'undefined' && Sheets.Spreadsheets && Sheets.Spreadsheets.Values) {
     try {
-      Sheets.Spreadsheets.Values.clear({}, MOCK_SPREADSHEET_ID, "'" + sheetName + "'!A2:ZZ");
+      Sheets.Spreadsheets.Values.clear({}, DEV_SPREADSHEET_ID, "'" + sheetName + "'!A2:ZZ");
       return;
     } catch (e) {
       console.warn("Advanced Sheets clear failed for " + sheetName + ": " + e.message);
@@ -994,7 +1066,7 @@ function clearSheetData(sheetName) {
 
   if (typeof SpreadsheetApp !== 'undefined') {
     try {
-      var ss = SpreadsheetApp.openById(MOCK_SPREADSHEET_ID);
+      var ss = SpreadsheetApp.openById(DEV_SPREADSHEET_ID);
       var sheet = ss.getSheetByName(sheetName);
       if (sheet && sheet.getLastRow() > 1) {
         var lastRow = sheet.getLastRow();
@@ -1012,7 +1084,7 @@ function getOrInitHeaders(sheetName, defaultHeaders) {
 
   if (typeof Sheets !== 'undefined' && Sheets.Spreadsheets && Sheets.Spreadsheets.Values) {
     try {
-      var res = Sheets.Spreadsheets.Values.get(MOCK_SPREADSHEET_ID, "'" + sheetName + "'!1:1");
+      var res = Sheets.Spreadsheets.Values.get(DEV_SPREADSHEET_ID, "'" + sheetName + "'!1:1");
       if (res && res.values && res.values[0] && res.values[0].length > 0) {
         headers = res.values[0];
       }
@@ -1023,7 +1095,7 @@ function getOrInitHeaders(sheetName, defaultHeaders) {
 
   if (headers.length === 0 && typeof SpreadsheetApp !== 'undefined') {
     try {
-      var ss = SpreadsheetApp.openById(MOCK_SPREADSHEET_ID);
+      var ss = SpreadsheetApp.openById(DEV_SPREADSHEET_ID);
       var sheet = ss.getSheetByName(sheetName);
       if (sheet && sheet.getLastColumn() > 0) {
         headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -1040,7 +1112,7 @@ function getOrInitHeaders(sheetName, defaultHeaders) {
         var endCol = mockColToLetter(defaultHeaders.length);
         Sheets.Spreadsheets.Values.update(
           { values: [defaultHeaders] },
-          MOCK_SPREADSHEET_ID,
+          DEV_SPREADSHEET_ID,
           "'" + sheetName + "'!A1:" + endCol + "1",
           { valueInputOption: 'USER_ENTERED' }
         );
@@ -1049,7 +1121,7 @@ function getOrInitHeaders(sheetName, defaultHeaders) {
       }
     } else if (typeof SpreadsheetApp !== 'undefined') {
       try {
-        var ss2 = SpreadsheetApp.openById(MOCK_SPREADSHEET_ID);
+        var ss2 = SpreadsheetApp.openById(DEV_SPREADSHEET_ID);
         var sheet2 = ss2.getSheetByName(sheetName);
         if (sheet2) {
           sheet2.getRange(1, 1, 1, defaultHeaders.length).setValues([defaultHeaders]);
@@ -1087,7 +1159,7 @@ function batchWriteSheetData(sheetName, headers, rows) {
     try {
       Sheets.Spreadsheets.Values.update(
         { values: rows },
-        MOCK_SPREADSHEET_ID,
+        DEV_SPREADSHEET_ID,
         rangeStr,
         { valueInputOption: 'USER_ENTERED' }
       );
@@ -1099,7 +1171,7 @@ function batchWriteSheetData(sheetName, headers, rows) {
 
   if (typeof SpreadsheetApp !== 'undefined') {
     try {
-      var ss = SpreadsheetApp.openById(MOCK_SPREADSHEET_ID);
+      var ss = SpreadsheetApp.openById(DEV_SPREADSHEET_ID);
       var sheet = ss.getSheetByName(sheetName);
       if (sheet) {
         sheet.getRange(2, 1, numRows, numCols).setValues(rows);
@@ -1133,9 +1205,11 @@ function generateAllMockDatasets(customToday) {
 }
 
 function generateMockData() {
+  assertDevEnvironment();
+
   var startTime = new Date().getTime();
   var logPrefix = "[MockDataGenerator]";
-  console.log(logPrefix + " Starting mock data generation from 1-Jan-2025 till date...");
+  console.log(logPrefix + " Starting mock data generation for Dev environment (" + DEV_SPREADSHEET_ID + ") from 1-Jan-2025 till date...");
 
   var today = new Date();
   var targetSheets = ['MEMBERS', 'PAYMENTS', 'STAFF', 'SALARY', 'EXPENSES'];
@@ -1147,7 +1221,7 @@ function generateMockData() {
   });
 
   // Step 2: Build fresh synchronized relational datasets
-  console.log(logPrefix + " Step 2/3: Generating meaningful records with 2 staff and ₹30k/₹15k quarterly pricing...");
+  console.log(logPrefix + " Step 2/3: Generating meaningful records with 2 staff and ₹30k/₹25k quarterly pricing...");
   var datasets = generateAllMockDatasets(today);
 
   // Step 3: Batch insert generated datasets into sheets
@@ -1171,19 +1245,21 @@ function generateMockData() {
   });
 
   var durationSec = ((new Date().getTime() - startTime) / 1000).toFixed(2);
-  var summaryMsg = "Mock data generated successfully in " + durationSec + "s. Stats: " + JSON.stringify(stats);
+  var summaryMsg = "Mock data generated successfully on Dev (" + DEV_SPREADSHEET_ID + ") in " + durationSec + "s. Stats: " + JSON.stringify(stats);
   console.log(logPrefix + " " + summaryMsg);
 
   return {
     success: true,
     message: summaryMsg,
     stats: stats,
-    durationSeconds: Number(durationSec)
+    durationSeconds: Number(durationSec),
+    devSpreadsheetId: DEV_SPREADSHEET_ID
   };
 }
 
 function api_generateMockData() {
   try {
+    assertDevEnvironment();
     return generateMockData();
   } catch (err) {
     console.error("api_generateMockData error: " + err.toString());
@@ -1203,6 +1279,10 @@ if (typeof module !== 'undefined' && module.exports) {
     mockColToLetter: mockColToLetter,
     mapRecordsToSheetRows: mapRecordsToSheetRows,
     DEFAULT_SHEET_HEADERS: DEFAULT_SHEET_HEADERS,
-    fetchOrCreateDropdownConfig: fetchOrCreateDropdownConfig
+    fetchOrCreateDropdownConfig: fetchOrCreateDropdownConfig,
+    assertDevEnvironment: assertDevEnvironment,
+    DEV_SPREADSHEET_ID: DEV_SPREADSHEET_ID,
+    PROD_SCRIPT_ID: PROD_SCRIPT_ID,
+    DEV_SCRIPT_ID: DEV_SCRIPT_ID
   };
 }

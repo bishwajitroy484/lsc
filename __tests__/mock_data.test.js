@@ -260,12 +260,22 @@ describe('Mock Data Generator', () => {
       delete global.Session;
     });
 
-    test('generateMockData cleans target sheets and writes all 5 tables in batch', () => {
+    test('generateMockData targets Dev spreadsheet ID and writes all 5 tables in batch', () => {
       const result = generateMockData();
 
       expect(result.success).toBe(true);
-      expect(global.Sheets.Spreadsheets.Values.clear).toHaveBeenCalledTimes(5);
-      expect(global.Sheets.Spreadsheets.Values.update).toHaveBeenCalledTimes(5);
+      expect(result.devSpreadsheetId).toBe('1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI');
+      expect(global.Sheets.Spreadsheets.Values.clear).toHaveBeenCalledWith(
+        {},
+        '1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI',
+        expect.any(String)
+      );
+      expect(global.Sheets.Spreadsheets.Values.update).toHaveBeenCalledWith(
+        expect.any(Object),
+        '1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI',
+        expect.any(String),
+        expect.any(Object)
+      );
       expect(result.stats.MEMBERS).toBeGreaterThan(15);
       expect(result.stats.PAYMENTS).toBeGreaterThan(50);
       expect(result.stats.STAFF).toBe(2);
@@ -277,6 +287,34 @@ describe('Mock Data Generator', () => {
       const res = api_generateMockData();
       expect(res.success).toBe(true);
       expect(res.stats).toBeDefined();
+    });
+
+    test('assertDevEnvironment throws error when executed on Production Apps Script instance', () => {
+      const { assertDevEnvironment, PROD_SCRIPT_ID } = require('../src/MockDataGenerator.gs');
+
+      global.ScriptApp = {
+        getScriptId: () => PROD_SCRIPT_ID
+      };
+
+      expect(() => {
+        assertDevEnvironment();
+      }).toThrow(/SECURITY VIOLATION.*Production/);
+
+      delete global.ScriptApp;
+    });
+
+    test('api_generateMockData safely blocks execution and returns error on Production instance', () => {
+      const { PROD_SCRIPT_ID } = require('../src/MockDataGenerator.gs');
+
+      global.ScriptApp = {
+        getScriptId: () => PROD_SCRIPT_ID
+      };
+
+      const res = api_generateMockData();
+      expect(res.success).toBe(false);
+      expect(res.error).toMatch(/SECURITY VIOLATION/);
+
+      delete global.ScriptApp;
     });
   });
 });
