@@ -326,6 +326,9 @@
 
     window.DashboardData = response.data || {};
     const data = response.data;
+    if (data.currencyFormat) {
+      AppUtils.currencyFormat = data.currencyFormat;
+    }
 
     if (!isRebuild) {
       DashboardState.updateLabel(); 

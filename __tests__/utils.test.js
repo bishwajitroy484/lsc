@@ -139,7 +139,28 @@ describe('Client Shared Utilities (AppUtils in Global_State.html)', () => {
     }
   });
 
-  test('formatCurrency correctly formats values as compact INR (e.g. ₹1, ₹1k, ₹1.5k, ₹1M)', () => {
+  test('formatCurrency correctly formats values in Indian number system by default', () => {
+    AppUtils.currencyFormat = 'Indian';
+    expect(AppUtils.formatCurrency(0)).toBe('₹0');
+    expect(AppUtils.formatCurrency(1)).toBe('₹1');
+    expect(AppUtils.formatCurrency(10)).toBe('₹10');
+    expect(AppUtils.formatCurrency(100)).toBe('₹100');
+    expect(AppUtils.formatCurrency(1000)).toBe('₹1,000');
+    expect(AppUtils.formatCurrency(10000)).toBe('₹10,000');
+    expect(AppUtils.formatCurrency(25000)).toBe('₹25,000');
+    expect(AppUtils.formatCurrency(80500)).toBe('₹80,500');
+    expect(AppUtils.formatCurrency(100000)).toBe('₹1Lakhs');
+    expect(AppUtils.formatCurrency(130000)).toBe('₹1.3Lakhs');
+    expect(AppUtils.formatCurrency(135000)).toBe('₹1.35Lakhs');
+    expect(AppUtils.formatCurrency(10000000)).toBe('₹1Crore');
+    expect(AppUtils.formatCurrency(12000000)).toBe('₹1.2Crore');
+    expect(AppUtils.formatCurrency(-11500)).toBe('-₹11,500');
+    expect(AppUtils.formatCurrency(-130000)).toBe('-₹1.3Lakhs');
+    expect(AppUtils.formatCurrency(null)).toBe('₹0');
+  });
+
+  test('formatCurrency correctly formats values as standard compact metric when configured', () => {
+    AppUtils.currencyFormat = 'Standard';
     expect(AppUtils.formatCurrency(0)).toBe('₹0');
     expect(AppUtils.formatCurrency(1)).toBe('₹1');
     expect(AppUtils.formatCurrency(500)).toBe('₹500');
@@ -153,6 +174,8 @@ describe('Client Shared Utilities (AppUtils in Global_State.html)', () => {
     expect(AppUtils.formatCurrency(1200000)).toBe('₹1.2M');
     expect(AppUtils.formatCurrency(-5000)).toBe('-₹5k');
     expect(AppUtils.formatCurrency(null)).toBe('₹0');
+    // Reset back to Indian
+    AppUtils.currencyFormat = 'Indian';
   });
 
   test('parseAmount safely cleans formatted amount strings', () => {

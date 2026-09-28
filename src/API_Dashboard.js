@@ -58,6 +58,15 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
         accrualMode = String(accSetting.value || accSetting.Value || '').toLowerCase();
     }
 
+    let currencyFormat = 'Indian';
+    const currSetting = settingsRows.find(s => {
+        const k = String(s.key || s.setting || s.Name || '').toLowerCase();
+        return k === 'currency_format' || k === 'currency format' || k === 'currency_style';
+    });
+    if (currSetting && currSetting.value) {
+        currencyFormat = String(currSetting.value).trim();
+    }
+
     const globalDataRes = api_getGlobalDropdowns && api_getGlobalDropdowns();
     const dropDowns = (globalDataRes && globalDataRes.success && globalDataRes.data && globalDataRes.data.options)
       ? globalDataRes.data.options
@@ -85,6 +94,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
     return {
       success: true,
       data: {
+        currencyFormat: currencyFormat,
         userGreetingName: formattedName,
         kpis: {
           activeMembers: operationalData.activeCount || 0,
