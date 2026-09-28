@@ -191,4 +191,160 @@ describe('Client Shared Utilities (AppUtils in Global_State.html)', () => {
       done();
     }, 100);
   });
+
+  describe('required-field validation', () => {
+    const originalDocument = global.document;
+    const originalToast = global.Toast;
+
+    afterEach(() => {
+      if (originalDocument === undefined) delete global.document;
+      else global.document = originalDocument;
+      if (originalToast === undefined) delete global.Toast;
+      else global.Toast = originalToast;
+    });
+
+    function createField({ id, value = '', required = true, valid, tagName = 'INPUT', hidden = false, disabled = false, relative = true, nextSibling = null }) {
+      const classes = new Set();
+      const listeners = {};
+      const container = {
+        nextElementSibling: nextSibling,
+        insertAdjacentElement(position, message) {
+          if (position !== 'afterend') throw new Error(`Unexpected insertion position: ${position}`);
+          message.container = this;
+          message.nextElementSibling = this.nextElementSibling;
+          this.nextElementSibling = message;
+        }
+      };
+      const field = {
+        id,
+        value,
+        required,
+        disabled,
+        tagName,
+        validity: { valid: valid === undefined ? Boolean(value) : valid },
+        dataset: {},
+        nextElementSibling: nextSibling,
+        classList: {
+          add: name => classes.add(name),
+          remove: name => classes.delete(name),
+          contains: name => classes.has(name)
+        },
+        closest(selector) {
+          if (selector === '.hidden') return hidden ? {} : null;
+          if (selector === '.relative') return relative ? container : null;
+          return null;
+        },
+        setAttribute: jest.fn(),
+        removeAttribute: jest.fn(),
+        checkValidity: () => field.validity.valid,
+        addEventListener(event, listener) {
+          listeners[event] = listener;
+        },
+        insertAdjacentElement(position, message) {
+          if (position !== 'afterend') throw new Error(`Unexpected insertion position: ${position}`);
+          message.container = this;
+          message.nextElementSibling = this.nextElementSibling;
+          this.nextElementSibling = message;
+        },
+        scrollIntoView: jest.fn(),
+        dispatch(event) {
+          listeners[event]();
+        },
+        container
+      };
+      return field;
+    }
+
+    function createForm(fields) {
+      const errors = [];
+      const form = {
+        querySelectorAll(selector) {
+          if (selector === '[required]') return fields.filter(field => field.required);
+          if (selector === '.field-validation-invalid') return fields.filter(field => field.classList.contains('field-validation-invalid'));
+          if (selector === '[data-validation-error]') return errors.filter(error => error.hasAttribute('data-validation-error'));
+          throw new Error(`Unexpected selector: ${selector}`);
+        }
+      };
+      global.document = {
+        createElement: jest.fn(() => {
+          const attributes = new Set();
+          const message = {
+            dataset: {},
+            setAttribute: (name) => attributes.add(name),
+            hasAttribute: name => attributes.has(name) || (name === 'data-validation-error' && message.dataset.validationError === 'true'),
+            removeAttribute: name => {
+              attributes.delete(name);
+              if (name === 'data-validation-error') delete message.dataset.validationError;
+            },
+            remove() {
+              if (this.container.nextElementSibling === this) {
+                this.container.nextElementSibling = this.nextElementSibling;
+              }
+              const errorIndex = errors.indexOf(this);
+              if (errorIndex !== -1) errors.splice(errorIndex, 1);
+            }
+          };
+          errors.push(message);
+          return message;
+        })
+      };
+      return form;
+    }
+
+    beforeEach(() => {
+      global.Toast = { error: jest.fn() };
+    });
+
+    test('highlights every missing or invalid required field and skips hidden fields', () => {
+      const missingText = createField({ id: 'name', value: '' });
+      const invalidSelect = createField({ id: 'category', value: 'All', tagName: 'SELECT' });
+      const hiddenField = createField({ id: 'conditional', value: '', hidden: true });
+      const form = createForm([missingText, invalidSelect, hiddenField]);
+
+      expect(AppUtils.validateRequiredFields(form)).toBe(false);
+      expect(missingText.classList.contains('field-validation-invalid')).toBe(true);
+      expect(invalidSelect.classList.contains('field-validation-invalid')).toBe(true);
+      expect(hiddenField.classList.contains('field-validation-invalid')).toBe(false);
+      expect(form.querySelectorAll('[data-validation-error]')).toHaveLength(2);
+      expect(form.querySelectorAll('[data-validation-error]').map(error => error.textContent)).toEqual([
+        'This field is required.',
+        'This field is required.'
+      ]);
+      expect(missingText.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+      expect(global.Toast.error).toHaveBeenCalledWith('Please complete the highlighted fields.');
+    });
+
+    test('clears only the corrected field error without removing its neighboring element', () => {
+      const neighbor = { id: 'following-element' };
+      const field = createField({ id: 'name', value: '', valid: false, relative: false, nextSibling: neighbor });
+      const form = createForm([field]);
+
+      expect(AppUtils.validateRequiredFields(form)).toBe(false);
+      expect(field.nextElementSibling.hasAttribute('data-validation-error')).toBe(true);
+      field.value = 'Completed';
+      field.validity.valid = true;
+      field.dispatch('input');
+
+      expect(field.classList.contains('field-validation-invalid')).toBe(false);
+      expect(field.nextElementSibling).toBe(neighbor);
+      expect(form.querySelectorAll('[data-validation-error]')).toHaveLength(0);
+    });
+
+    test('all add/edit modal forms route Save through the shared validator', () => {
+      const forms = [
+        ['src/Script_Members.html', 'member-form'],
+        ['src/Script_Members.html', 'payment-form'],
+        ['src/Script_Staff.html', 'staff-form'],
+        ['src/Script_Staff.html', 'txn-form'],
+        ['src/Script_Expenses.html', 'expense-form'],
+        ['src/Script_Settings.html', 'schema-form'],
+        ['src/Script_Settings.html', 'option-form']
+      ];
+
+      forms.forEach(([file, formId]) => {
+        const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+        expect(source).toContain(`AppUtils.validateRequiredFields('${formId}')`);
+      });
+    });
+  });
 });
