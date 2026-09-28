@@ -46,12 +46,65 @@ describe('Mock Data Generator', () => {
       datasets = generateAllMockDatasets(fixedToday);
     });
 
-    test('generates non-empty arrays for all 5 core entities', () => {
-      expect(datasets.members.length).toBeGreaterThan(15);
-      expect(datasets.payments.length).toBeGreaterThan(50);
-      expect(datasets.staff.length).toBeGreaterThanOrEqual(6);
-      expect(datasets.salary.length).toBeGreaterThan(50);
-      expect(datasets.expenses.length).toBeGreaterThan(30);
+    test('generates exactly 2 staff members', () => {
+      expect(datasets.staff.length).toBe(2);
+      expect(datasets.staff[0].fullName).toBe('Rajesh Kumar');
+      expect(datasets.staff[0].salary).toBe(35000);
+      expect(datasets.staff[1].fullName).toBe('Sneha Kulkarni');
+      expect(datasets.staff[1].salary).toBe(25000);
+
+      // Verify monthly payroll for the 2 staff
+      expect(datasets.salary.length).toBeGreaterThan(40);
+      const bonusRecords = datasets.salary.filter(s => String(s.creditType).toLowerCase().includes('bonus'));
+      expect(bonusRecords.length).toBeGreaterThanOrEqual(2);
+
+      // Verify pending cycle exists for action needed
+      const pendingSalary = datasets.salary.filter(s => String(s.paymentStatus).toLowerCase().includes('pending'));
+      expect(pendingSalary.length).toBeGreaterThan(0);
+    });
+
+    test('member fees are 30000 Quarterly for Adults and 15000 Quarterly for Kids', () => {
+      const members = datasets.members;
+
+      const adultQuarterly = members.filter(m => m.batchId.toLowerCase().includes('adult') && !m.membershipId.toLowerCase().includes('adhoc') && !m.membershipId.toLowerCase().includes('trial'));
+      expect(adultQuarterly.length).toBeGreaterThanOrEqual(8);
+      adultQuarterly.forEach(m => {
+        expect(m.membershipAmount).toBe(30000);
+      });
+
+      const kidsQuarterly = members.filter(m => m.batchId.toLowerCase().includes('kid') && !m.membershipId.toLowerCase().includes('adhoc') && !m.membershipId.toLowerCase().includes('trial'));
+      expect(kidsQuarterly.length).toBeGreaterThanOrEqual(4);
+      kidsQuarterly.forEach(m => {
+        expect(m.membershipAmount).toBe(15000);
+      });
+
+      // Check Ad-hoc and Trial
+      const adhoc = members.filter(m => m.membershipId.toLowerCase().includes('adhoc') || m.membershipId.toLowerCase().includes('ad-hoc'));
+      expect(adhoc.length).toBeGreaterThanOrEqual(1);
+
+      const trial = members.filter(m => m.membershipId.toLowerCase().includes('trial'));
+      expect(trial.length).toBeGreaterThanOrEqual(1);
+      expect(trial[0].membershipAmount).toBe(1500);
+    });
+
+    test('collections exceed expenses ensuring a strong positive Net-In-Hand', () => {
+      const totalCollections = datasets.payments
+        .filter(p => String(p.paymentStatus).toLowerCase().includes('paid'))
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      const totalStaffCost = datasets.salary
+        .filter(s => String(s.paymentStatus).toLowerCase().includes('paid'))
+        .reduce((sum, s) => sum + Number(s.amount), 0);
+
+      const totalOperatingExp = datasets.expenses
+        .reduce((sum, e) => sum + Number(e.amount), 0);
+
+      const totalExpenses = totalStaffCost + totalOperatingExp;
+      const netInHand = totalCollections - totalExpenses;
+
+      // Net-In-Hand must be strongly positive!
+      expect(netInHand).toBeGreaterThan(500000);
+      expect(totalCollections).toBeGreaterThan(totalExpenses);
     });
 
     test('all dates start on or after 01-Jan-2025', () => {
@@ -87,7 +140,7 @@ describe('Mock Data Generator', () => {
       });
     });
 
-    test('covers Member due, overdue, 2 days left, and 10 days left renewal scenarios', () => {
+    test('covers Member due in 2 days, 10 days, due today, and overdue scenarios', () => {
       const members = datasets.members;
       const payments = datasets.payments;
 
@@ -97,7 +150,6 @@ describe('Mock Data Generator', () => {
         paymentsByMember[p.memberId].push(p);
       });
 
-      // Calculate next due date for each member matching API_Members logic
       const dueInfo = members.map(m => {
         const mPay = (paymentsByMember[m.memberId] || [])
           .filter(p => String(p.paymentStatus).toLowerCase().includes('paid'))
@@ -128,7 +180,7 @@ describe('Mock Data Generator', () => {
       expect(overdueList.length).toBeGreaterThan(0);
     });
 
-    test('covers both Kids batches and Adult batches', () => {
+    test('covers both Kids batches and Adult batches across morning and evening', () => {
       const members = datasets.members;
       const kidsMembers = members.filter(m => m.batchId.toLowerCase().includes('kid') || m.notes.toLowerCase().includes('kid'));
       const adultMembers = members.filter(m => m.batchId.toLowerCase().includes('adult') || !m.notes.toLowerCase().includes('kid'));
@@ -137,49 +189,15 @@ describe('Mock Data Generator', () => {
       expect(adultMembers.length).toBeGreaterThanOrEqual(10);
     });
 
-    test('covers diverse membership plans: Monthly, Quarterly, Annual, Ad-Hoc, Trial', () => {
-      const planIds = datasets.members.map(m => m.membershipId.toLowerCase());
-      expect(planIds.some(p => p.includes('month'))).toBe(true);
-      expect(planIds.some(p => p.includes('quarter'))).toBe(true);
-      expect(planIds.some(p => p.includes('annual') || p.includes('year'))).toBe(true);
-      expect(planIds.some(p => p.includes('adhoc') || p.includes('ad-hoc'))).toBe(true);
-      expect(planIds.some(p => p.includes('trial'))).toBe(true);
-    });
-
     test('covers Active members and Inactive (Left) members with exit dates', () => {
-      const activeMembers = datasets.members.filter(m => m.status === 'SAT-1' || m.status.toLowerCase().includes('active'));
+      const activeMembers = datasets.members.filter(m => m.status.toLowerCase().includes('active') && !m.status.toLowerCase().includes('inactive'));
       const leftMembers = datasets.members.filter(m => m.exitDate && m.exitDate.trim() !== '');
 
       expect(activeMembers.length).toBeGreaterThan(10);
       expect(leftMembers.length).toBeGreaterThanOrEqual(3);
-    });
-
-    test('covers Staff diverse roles, Inactive staff, and monthly payroll', () => {
-      const staff = datasets.staff;
-      const salary = datasets.salary;
-
-      expect(staff.length).toBeGreaterThanOrEqual(6);
-
-      // Check roles
-      const roles = staff.map(s => s.role.toLowerCase());
-      expect(roles.some(r => r.includes('head'))).toBe(true);
-      expect(roles.some(r => r.includes('trainer'))).toBe(true);
-      expect(roles.some(r => r.includes('kid'))).toBe(true);
-      expect(roles.some(r => r.includes('nutrition'))).toBe(true);
-      expect(roles.some(r => r.includes('desk'))).toBe(true);
-      expect(roles.some(r => r.includes('clean') || r.includes('house'))).toBe(true);
-
-      // Check Ex-staff (left)
-      const leftStaff = staff.find(s => s.exitDate && s.exitDate.trim() !== '');
-      expect(leftStaff).toBeDefined();
-
-      // Check Bonus records in Salary
-      const bonusRecords = salary.filter(s => String(s.creditType).toLowerCase().includes('bonus'));
-      expect(bonusRecords.length).toBeGreaterThanOrEqual(5);
-
-      // Check Pending salary records for Action Needed
-      const pendingSalary = salary.filter(s => String(s.paymentStatus).toLowerCase().includes('pending'));
-      expect(pendingSalary.length).toBeGreaterThan(0);
+      leftMembers.forEach(m => {
+        expect(m.status.toLowerCase()).toContain('inactive');
+      });
     });
 
     test('covers diverse chronological expenses including Rent, Utilities, and Misc with whatMisc', () => {
@@ -240,8 +258,8 @@ describe('Mock Data Generator', () => {
       expect(global.Sheets.Spreadsheets.Values.update).toHaveBeenCalledTimes(5);
       expect(result.stats.MEMBERS).toBeGreaterThan(15);
       expect(result.stats.PAYMENTS).toBeGreaterThan(50);
-      expect(result.stats.STAFF).toBeGreaterThanOrEqual(6);
-      expect(result.stats.SALARY).toBeGreaterThan(50);
+      expect(result.stats.STAFF).toBe(2);
+      expect(result.stats.SALARY).toBeGreaterThan(40);
       expect(result.stats.EXPENSES).toBeGreaterThan(30);
     });
 
