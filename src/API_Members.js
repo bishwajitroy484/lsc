@@ -26,6 +26,9 @@ function api_getMembers() {
     const plans = (globalData && globalData.success && globalData.data && globalData.data.options && globalData.data.options.membership)
       ? globalData.data.options.membership
       : [];
+    const paymentStatuses = (globalData && globalData.success && globalData.data && globalData.data.options)
+      ? globalData.data.options.paymentstatus || globalData.data.options.status || []
+      : [];
 
     const paymentsByMember = {};
     payments.forEach(p => {
@@ -42,10 +45,7 @@ function api_getMembers() {
     const enrichedMembers = members.map(m => {
       let mPayments = paymentsByMember[m.memberId] || [];
 
-      mPayments = mPayments.filter(p => {
-        const status = (p.paymentStatus || '').toLowerCase();
-        return !status.includes('fail') && !status.includes('pending');
-      });
+      mPayments = mPayments.filter(p => isPaidPaymentStatus(p.paymentStatus, paymentStatuses));
 
       mPayments.sort((a, b) => new Date(b.endDate || b.paidDate || 0) - new Date(a.endDate || a.paidDate || 0));
       const latestPayment = mPayments.length > 0 ? mPayments[0] : null;
@@ -179,6 +179,10 @@ function api_getMemberPayments(memberId) {
     const dbData = DB.batchRead(['PAYMENTS', 'SETTINGS']);
     const allPayments = dbData['PAYMENTS'] || [];
     const settingsRows = dbData['SETTINGS'] || [];
+    const globalData = api_getGlobalDropdowns && api_getGlobalDropdowns();
+    const paymentStatuses = (globalData && globalData.success && globalData.data && globalData.data.options)
+      ? globalData.data.options.paymentstatus || globalData.data.options.status || []
+      : [];
 
     let accrualMode = 'anchor';
     const accSetting = settingsRows.find(s => {
@@ -198,8 +202,7 @@ function api_getMemberPayments(memberId) {
     };
 
     memberPayments.forEach(p => {
-      const status = String(p.paymentStatus || '').toLowerCase();
-      if (status.includes('fail') || status.includes('pending') || status.includes('overdue') || status.includes('unpaid')) return;
+      if (!isPaidPaymentStatus(p.paymentStatus, paymentStatuses)) return;
       let totalAmt = Number(String(p.amount || 0).replace(/[^0-9.-]+/g, ""));
       if (!totalAmt) return;
 
@@ -215,6 +218,19 @@ function api_getMemberPayments(memberId) {
   } catch (error) {
     return { success: false, error: error.toString() };
   }
+}
+
+function isPaidPaymentStatus(status, paymentStatuses) {
+  const rawStatus = String(status || '').trim();
+  const matchingOption = (paymentStatuses || []).find(option => {
+    const optionId = String(option.id || option.value || option.code || '').trim();
+    const optionName = String(option.name || option.label || '').trim();
+    return optionId === rawStatus || optionName.toLowerCase() === rawStatus.toLowerCase();
+  });
+  const statusName = String(matchingOption ? (matchingOption.name || matchingOption.label || matchingOption.id) : rawStatus)
+    .trim()
+    .toLowerCase();
+  return statusName === 'paid' || statusName === 'completed';
 }
 
 function api_recordPayment(paymentData) {

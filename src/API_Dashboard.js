@@ -199,7 +199,7 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
   };
 
   payments.forEach(p => {
-    if (!isSuccess(p.paymentStatus)) return;
+    if (!isSuccess(resolveName('PAYMENTS', 'paymentStatus', p.paymentStatus))) return;
     distributeAmount(p.startDate, p.endDate, p.paidDate, parseAmt(p.amount), revArr);
   });
 
@@ -223,7 +223,7 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
   });
 
   salaries.forEach(s => {
-    if (!isSuccess(s.paymentStatus)) return;
+    if (!isSuccess(resolveName('SALARY', 'paymentStatus', s.paymentStatus))) return;
     const amt = parseAmt(s.amount);
     
     let tempArr = new Array(12).fill(0);
@@ -262,7 +262,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
   // Pre-map payments by member for high-speed dynamic due date calculation
   const paymentsByMember = {};
   payments.forEach(p => {
-    if (isSuccess(p.paymentStatus)) {
+    if (isSuccess(resolveName('PAYMENTS', 'paymentStatus', p.paymentStatus))) {
       if (!paymentsByMember[p.memberId]) paymentsByMember[p.memberId] = [];
       paymentsByMember[p.memberId].push(p);
     }
@@ -513,4 +513,7 @@ function safeNumArray(arr) {
 }
 
 function parseAmt(val) { return Number(String(val).replace(/[^0-9.-]+/g, "")) || 0; }
-function isSuccess(statusStr) { const s = (String(statusStr) || '').toLowerCase(); return !s.includes('fail') && !s.includes('pending'); }
+function isSuccess(statusStr) {
+  const status = String(statusStr || '').trim().toLowerCase();
+  return status === 'paid' || status === 'completed';
+}
