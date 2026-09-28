@@ -189,6 +189,68 @@
       const content = document.getElementById(contentId);
       if (backdrop) backdrop.classList.add(...hideClasses);
       if (content) content.classList.add(...transformClasses);
+    },
+
+    clearValidationState: function(formOrId) {
+      const form = typeof formOrId === 'string' ? document.getElementById(formOrId) : formOrId;
+      if (!form) return;
+      form.querySelectorAll('[data-validation-error]').forEach(error => error.remove());
+      form.querySelectorAll('.field-validation-invalid').forEach(field => {
+        field.classList.remove('field-validation-invalid');
+        field.removeAttribute('aria-invalid');
+      });
+    },
+
+    validateRequiredFields: function(formOrId) {
+      const form = typeof formOrId === 'string' ? document.getElementById(formOrId) : formOrId;
+      if (!form) return false;
+
+      this.clearValidationState(form);
+      const fields = Array.from(form.querySelectorAll('[required]'))
+        .filter(field => !field.disabled && !field.closest('.hidden'));
+      const invalidFields = fields.filter(field => {
+        const value = typeof field.value === 'string' ? field.value.trim() : field.value;
+        const isPlaceholder = field.tagName === 'SELECT' && (!value || value === 'All');
+        return isPlaceholder || (typeof field.checkValidity === 'function' && !field.checkValidity());
+      });
+
+      invalidFields.forEach(field => {
+        field.classList.add('field-validation-invalid');
+        field.setAttribute('aria-invalid', 'true');
+        const message = document.createElement('div');
+        message.className = 'field-validation-error';
+        message.dataset.validationError = 'true';
+        message.setAttribute('role', 'alert');
+        message.textContent = field.validity && !field.validity.valid && field.value
+          ? 'Please enter a valid value.'
+          : 'This field is required.';
+        const container = field.closest('.relative') || field;
+        container.insertAdjacentElement('afterend', message);
+      });
+
+      form.querySelectorAll('[required]').forEach(field => {
+        if (field.dataset.validationBound) return;
+        field.dataset.validationBound = 'true';
+        const clearError = () => {
+          const value = typeof field.value === 'string' ? field.value.trim() : field.value;
+          if (value && (!field.checkValidity || field.checkValidity())) {
+            field.classList.remove('field-validation-invalid');
+            field.removeAttribute('aria-invalid');
+            const container = field.closest('.relative') || field;
+            container.nextElementSibling?.removeAttribute('data-validation-error');
+            container.nextElementSibling?.remove();
+          }
+        };
+        field.addEventListener('input', clearError);
+        field.addEventListener('change', clearError);
+      });
+
+      if (invalidFields.length) {
+        invalidFields[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        Toast.error('Please complete the highlighted fields.');
+        return false;
+      }
+      return true;
     }
   };
 

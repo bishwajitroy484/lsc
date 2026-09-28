@@ -928,12 +928,11 @@
 
     saveMember: async function(e) {
       e.preventDefault();
-      
+      if (!AppUtils.validateRequiredFields('member-form')) return;
+
       const planVal = document.getElementById('mem-plan').value;
-      if (planVal === 'All' || !planVal) return Toast.error("Please select a valid Membership Plan.");
-      
       const batchVal = document.getElementById('mem-batch').value;
-      if (batchVal === 'All' || !batchVal) return Toast.error("Please select a valid Batch.");
+      if (planVal === 'All' || batchVal === 'All') return Toast.error('Please select valid membership details.');
 
       const btn = document.getElementById('btn-save-member');
       btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px] mr-2">progress_activity</span> Saving...';
@@ -1026,6 +1025,17 @@
       document.getElementById('member-modal').classList.add('opacity-0', 'pointer-events-none');
       document.getElementById('member-modal-content').classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
       document.getElementById('member-form').reset();
+      AppUtils.clearValidationState('member-form');
+    },
+
+    toggleInitialPaymentFields: function() {
+      const enabled = document.getElementById('mem-record-pay')?.checked;
+      const fields = document.getElementById('mem-pay-fields');
+      ['mem-pay-mode', 'mem-pay-status'].forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.required = Boolean(enabled);
+      });
+      if (fields) fields.classList.toggle('hidden', !enabled);
     },
 
     onPlanOrBatchChange: function() {
@@ -1175,9 +1185,9 @@
 
     submitPayment: function(e) {
       e.preventDefault();
-      
+      if (!AppUtils.validateRequiredFields('payment-form')) return;
+
       const statusVal = document.getElementById('pay-status').value;
-      if (!statusVal) return Toast.error("Please select a valid Payment Status.");
 
       const btn = document.getElementById('btn-submit-payment');
       btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px] mr-2">progress_activity</span> Processing...';
@@ -1230,6 +1240,7 @@
       document.getElementById('payment-modal').classList.add('opacity-0', 'pointer-events-none');
       document.getElementById('payment-modal-content').classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
       document.getElementById('payment-form').reset();
+      AppUtils.clearValidationState('payment-form');
     },
     
     openDeleteModal: function(type, id, name) {
