@@ -13,16 +13,17 @@
     isEditingSchema: false, 
     
     // Core known settings mapped directly to UI Inputs
-    coreKeys: ['GYM_NAME', 'LOGO_ID', 'Revenue_Recognition', 'OWNER_EMAIL', 'SPREADSHEET_ID', 'REMINDER_BUFFER'],
+    coreKeys: ['GYM_NAME', 'LOGO_ID', 'Revenue_Recognition', 'OWNER_EMAIL', 'SPREADSHEET_ID', 'DRIVE_ID', 'REMINDER_BUFFER', 'ENABLE_NOTIFICATION'],
 
     safeSetText: AppUtils.safeSetText,
     safeSetValue: AppUtils.safeSetValue,
 
     showToast: function(msg, isError = false) {
-      if (isError) {
-        Toast.error(msg);
+      if (typeof Toast !== 'undefined') {
+        if (isError) Toast.error(msg);
+        else Toast.success(msg);
       } else {
-        Toast.success(msg);
+        alert(msg);
       }
     },
 
@@ -39,19 +40,31 @@
       const btnGen = document.getElementById('tab-btn-general');
       const btnDrop = document.getElementById('tab-btn-dropdowns');
       
-      const activeClass = 'bg-blue-50 text-brand-primary font-bold';
-      const inactiveClass = 'text-slate-600 hover:bg-slate-50 font-medium';
+      const activeClass = 'bg-white text-brand-primary font-bold shadow-xs';
+      const inactiveClass = 'text-slate-600 hover:text-slate-900 font-medium';
       
       if (tabName === 'general') {
-         if (paneGen) paneGen.classList.remove('hidden');
-         if (paneDrop) paneDrop.classList.add('hidden');
-         if (btnGen) { btnGen.className = `flex-1 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ${activeClass}`; }
-         if (btnDrop) { btnDrop.className = `flex-1 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ${inactiveClass}`; }
+         if (paneGen) { paneGen.classList.remove('hidden'); paneGen.classList.add('flex'); }
+         if (paneDrop) { paneDrop.classList.add('hidden'); paneDrop.classList.remove('flex'); }
+         if (btnGen) { 
+           btnGen.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + activeClass; 
+         }
+         if (btnDrop) { 
+           btnDrop.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + inactiveClass; 
+         }
+         const headerSaveBtn = document.getElementById('btn-save-general-header');
+         if (headerSaveBtn) headerSaveBtn.classList.remove('hidden');
       } else {
-         if (paneGen) paneGen.classList.add('hidden');
+         if (paneGen) { paneGen.classList.add('hidden'); paneGen.classList.remove('flex'); }
          if (paneDrop) { paneDrop.classList.remove('hidden'); paneDrop.classList.add('flex'); }
-         if (btnGen) { btnGen.className = `flex-1 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ${inactiveClass}`; }
-         if (btnDrop) { btnDrop.className = `flex-1 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap ${activeClass}`; }
+         if (btnGen) { 
+           btnGen.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + inactiveClass; 
+         }
+         if (btnDrop) { 
+           btnDrop.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + activeClass; 
+         }
+         const headerSaveBtn = document.getElementById('btn-save-general-header');
+         if (headerSaveBtn) headerSaveBtn.classList.add('hidden');
       }
     },
 
@@ -65,8 +78,8 @@
 
       google.script.run
         .withSuccessHandler((res) => {
-           if(res.success) {
-               this.generalSettingsData = res.data;
+           if(res && res.success) {
+               this.generalSettingsData = res.data || [];
                this.renderGeneralSettings();
            } else {
                this.showToast("Failed to load General Settings.", true);
@@ -82,122 +95,283 @@
        if (shimmer) shimmer.classList.add('hidden');
        if (content) content.classList.remove('hidden');
 
-       // Clear form first
+       // Clear core inputs first
        this.coreKeys.forEach(k => {
            const el = document.getElementById('gen-' + k);
-           if(el) el.value = '';
+           if(el) {
+             if (el.type === 'checkbox') el.checked = false;
+             else el.value = '';
+           }
        });
-       
-       // Clear any previously injected custom fields in the core grid
-       document.querySelectorAll('.custom-setting-row').forEach(el => el.remove());
-
-       const customPairs = [];
 
        (this.generalSettingsData || []).forEach(item => {
            if (!item || !item.key || String(item.key).trim() === '') return; 
 
            const kLower = String(item.key).trim().toLowerCase();
-           let isCore = false;
 
            this.coreKeys.forEach(core => {
-               if(core.toLowerCase() === kLower) {
+               if (core.toLowerCase() === kLower || (core === 'ENABLE_NOTIFICATION' && kLower === 'notification_enabled')) {
                    const el = document.getElementById('gen-' + core);
-                   if (el) el.value = item.value || '';
-                   isCore = true;
+                   if (el) {
+                     if (el.type === 'checkbox' || core === 'ENABLE_NOTIFICATION') {
+                       const v = String(item.value || '').trim().toUpperCase();
+                       el.checked = (v === 'YES' || v === 'Y' || v === 'TRUE' || v === '1' || v === 'ENABLED');
+                     } else {
+                       el.value = item.value || '';
+                     }
+                   }
                }
            });
-
-           if (!isCore) {
-               customPairs.push(item);
-           }
        });
 
-       // Re-inject custom keys directly into the main grid
-       customPairs.forEach(p => this.addCustomSettingRow('core-settings-grid', p.key, p.value));
+       // Update live preview helpers and notifications
+       this.updateLogoPreview();
+       this.updateRevenueExplanation();
+       this.toggleNotificationView();
+       this.updateNotificationSummary();
     },
 
-    // Updated to accept container ID and match typography
-    addCustomSettingRow: function(containerId, k = '', v = '') {
-      const container = document.getElementById(containerId);
-      if(!container) return;
+    updateLogoPreview: function() {
+      const logoInput = document.getElementById('gen-LOGO_ID');
+      const imgEl = document.getElementById('logo-preview-img');
+      const placeholderEl = document.getElementById('logo-preview-placeholder');
+      const statusEl = document.getElementById('logo-preview-status');
+      if (!logoInput || !imgEl || !placeholderEl) return;
 
-      const div = document.createElement('div');
-      div.className = 'md:col-span-2 flex gap-2 items-center custom-setting-row';
-      div.innerHTML = `
-        <div class="flex-1">
-           <input type="text" placeholder="CUSTOM_KEY" value="${k}" class="cs-key w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:border-brand-primary outline-none shadow-sm uppercase transition-colors">
-        </div>
-        <div class="flex-1">
-           <input type="text" placeholder="Value" value="${v}" class="cs-val w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm transition-colors">
-        </div>
-        <button type="button" onclick="this.parentElement.remove()" class="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-red-500 bg-slate-50 hover:bg-red-50 border border-slate-200 rounded-lg transition-colors">
-          <span class="material-symbols-rounded text-[16px]">delete</span>
-        </button>
-      `;
-      container.appendChild(div);
+      const val = (logoInput.value || '').trim();
+      if (!val) {
+        imgEl.classList.add('hidden');
+        placeholderEl.classList.remove('hidden');
+        if (statusEl) statusEl.textContent = 'Default Avatar';
+        return;
+      }
+
+      let url = val;
+      // Convert standalone Google Drive ID to direct link
+      if (/^[a-zA-Z0-9_-]{25,}$/.test(val) && !val.startsWith('http')) {
+        url = 'https://drive.google.com/uc?export=view&id=' + val;
+      }
+
+      imgEl.src = url;
+      imgEl.onload = () => {
+        imgEl.classList.remove('hidden');
+        placeholderEl.classList.add('hidden');
+        if (statusEl) statusEl.textContent = 'Valid Image';
+      };
+      imgEl.onerror = () => {
+        imgEl.classList.add('hidden');
+        placeholderEl.classList.remove('hidden');
+        if (statusEl) statusEl.textContent = 'Invalid / Blocked';
+      };
+    },
+
+    updateRevenueExplanation: function() {
+      const sel = document.getElementById('gen-Revenue_Recognition');
+      const textEl = document.getElementById('revenue-rec-text');
+      if (!sel || !textEl) return;
+
+      if (sel.value === 'Split') {
+        textEl.textContent = 'Split (Accrual Basis) prorates recurring membership revenue evenly across subscription days for accounting accuracy.';
+      } else {
+        textEl.textContent = 'Anchor (Cash Basis) recognizes 100% of payment revenue immediately on the collection date for real cash-in-hand tracking.';
+      }
+    },
+
+    copySpreadsheetId: function() {
+      const input = document.getElementById('gen-SPREADSHEET_ID');
+      if (!input || !input.value) return;
+      navigator.clipboard.writeText(input.value.trim()).then(() => {
+        this.showToast("Spreadsheet ID copied to clipboard!");
+      }).catch(() => {
+        this.showToast("Copied: " + input.value.trim());
+      });
+    },
+
+    openSpreadsheetUrl: function() {
+      const input = document.getElementById('gen-SPREADSHEET_ID');
+      if (!input || !input.value) return;
+      const id = encodeURIComponent(input.value.trim());
+      window.open('https://docs.google.com/spreadsheets/d/' + id + '/edit', '_blank');
+    },
+
+    copyDriveId: function() {
+      const input = document.getElementById('gen-DRIVE_ID');
+      if (!input || !input.value) return;
+      navigator.clipboard.writeText(input.value.trim()).then(() => {
+        this.showToast("Drive Folder ID copied to clipboard!");
+      }).catch(() => {
+        this.showToast("Copied: " + input.value.trim());
+      });
+    },
+
+    openDriveUrl: function() {
+      const input = document.getElementById('gen-DRIVE_ID');
+      if (!input || !input.value) return;
+      const id = encodeURIComponent(input.value.trim());
+      window.open('https://drive.google.com/drive/folders/' + id, '_blank');
+    },
+
+    toggleNotificationView: function() {
+      const toggle = document.getElementById('gen-ENABLE_NOTIFICATION');
+      const configArea = document.getElementById('notification-config-area');
+      const statusBadge = document.getElementById('notification-status-badge');
+      if (!toggle) return;
+
+      const isEnabled = toggle.checked;
+      if (configArea) {
+        if (isEnabled) configArea.classList.remove('hidden');
+        else configArea.classList.add('hidden');
+      }
+
+      if (statusBadge) {
+        if (isEnabled) {
+          statusBadge.className = 'text-[10px] font-semibold tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200';
+          statusBadge.textContent = 'Enabled';
+        } else {
+          statusBadge.className = 'text-[10px] font-semibold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded';
+          statusBadge.textContent = 'Disabled';
+        }
+      }
+      this.updateNotificationSummary();
+    },
+
+    updateNotificationSummary: function() {
+      const ownerEmailInput = document.getElementById('gen-OWNER_EMAIL');
+      const summaryEmail = document.getElementById('notification-summary-email');
+      const targetEmail = document.getElementById('notif-target-email');
+
+      const ownerVal = (ownerEmailInput && ownerEmailInput.value.trim()) ? ownerEmailInput.value.trim() : 'Owner / Admin Email';
+
+      if (summaryEmail) summaryEmail.textContent = ownerVal;
+      if (targetEmail) targetEmail.textContent = ownerVal;
+    },
+
+    openNotificationModal: function() {
+      this.updateNotificationSummary();
+      const modal = document.getElementById('notification-modal');
+      const content = document.getElementById('notification-modal-content');
+      if (!modal || !content) return;
+
+      modal.classList.remove('pointer-events-none', 'opacity-0');
+      modal.classList.add('opacity-100');
+      content.classList.remove('scale-95', 'opacity-0');
+      content.classList.add('scale-100', 'opacity-100');
+    },
+
+    closeNotificationModal: function() {
+      const modal = document.getElementById('notification-modal');
+      const content = document.getElementById('notification-modal-content');
+      if (!modal || !content) return;
+
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modal.classList.remove('opacity-100');
+      content.classList.add('scale-95', 'opacity-0');
+      content.classList.remove('scale-100', 'opacity-100');
     },
 
     saveGeneralSettings: function() {
-       const btn = document.getElementById('btn-save-general');
-       if(btn) { btn.innerHTML = `<span class="material-symbols-rounded animate-spin text-[18px]">progress_activity</span> Saving...`; btn.disabled = true; }
+       const saveBtns = [
+         document.getElementById('btn-save-general'),
+         document.getElementById('btn-save-general-mobile'),
+         document.getElementById('btn-save-general-header')
+       ].filter(Boolean);
+
+       saveBtns.forEach(btn => {
+         btn.disabled = true;
+         if (btn.id === 'btn-save-general-header') {
+           btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px]">progress_activity</span><span>Saving...</span>';
+         } else {
+           btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[18px]">progress_activity</span><span>Saving Settings...</span>';
+         }
+       });
+
+       const restoreButtons = () => {
+         saveBtns.forEach(btn => {
+           btn.disabled = false;
+           if (btn.id === 'btn-save-general-header') {
+             btn.innerHTML = '<span class="material-symbols-rounded text-[16px]">save</span><span>Save</span>';
+           } else {
+             btn.innerHTML = '<span class="material-symbols-rounded text-[18px]">save</span><span>Save All Settings</span>';
+           }
+         });
+       };
 
        const payload = [];
 
        // Collect Core Keys
        this.coreKeys.forEach(k => {
            const el = document.getElementById('gen-' + k);
-           if (el && el.value.trim() !== '') {
+           if (!el) return;
+           if (el.type === 'checkbox' || k === 'ENABLE_NOTIFICATION') {
+               payload.push({ key: k, value: el.checked ? 'YES' : 'NO' });
+           } else if (el.value && el.value.trim() !== '') {
                payload.push({ key: k, value: el.value.trim() });
            }
        });
 
-       // Collect Custom Keys
-       document.querySelectorAll('.custom-setting-row').forEach(row => {
-           const kEl = row.querySelector('.cs-key');
-           const vEl = row.querySelector('.cs-val');
-           if (kEl && vEl && kEl.value.trim() !== '') {
-               payload.push({ key: kEl.value.trim(), value: vEl.value.trim() });
+       // Preserve any non-core legacy rows from the sheet to prevent data loss
+       (this.generalSettingsData || []).forEach(item => {
+           if (!item || !item.key) return;
+           const kLower = String(item.key).trim().toLowerCase();
+           const isCore = this.coreKeys.some(c => c.toLowerCase() === kLower || (c === 'ENABLE_NOTIFICATION' && kLower === 'notification_enabled'));
+           if (!isCore) {
+               payload.push({ key: item.key, value: item.value || '' });
            }
        });
 
        google.script.run
         .withSuccessHandler((res) => {
-           if(btn) { btn.innerHTML = `<span class="material-symbols-rounded text-[18px]">save</span> Save Settings`; btn.disabled = false; }
-           if(res.success) {
-               this.showToast(res.message, false);
+           restoreButtons();
+           if(res && res.success) {
+               this.showToast(res.message || "Settings saved successfully!", false);
                this.generalSettingsData = payload; // Update local cache
+               this.updateLogoPreview();
            } else {
-               this.showToast(res.error, true);
+               const err = (res && res.error) ? res.error : "Failed to save settings.";
+               this.showToast(err, true);
            }
+        })
+        .withFailureHandler((err) => {
+           restoreButtons();
+           this.showToast((err && err.message) ? err.message : "Failed to save settings.", true);
         })
         .api_saveGeneralSettings(payload);
     },
 
-    // --- DROPDOWNS LOGIC (Unchanged functionality) ---
+    // --- DROPDOWNS LOGIC ---
     showShimmer: function() {
       const tbody = document.getElementById('options-tbody');
       const thead = document.getElementById('dynamic-thead-row');
       const dskList = document.getElementById('desktop-cat-list');
+      const mobileCards = document.getElementById('options-mobile-cards');
       const optContent = document.getElementById('options-content-area');
       const emptyState = document.getElementById('options-empty-state');
       
       if(emptyState) emptyState.classList.add('hidden');
       if(optContent) optContent.classList.remove('hidden');
 
-      if(thead) thead.innerHTML = `<th class="px-4 py-3"><div class="h-4 bg-slate-200 shimmer rounded w-24"></div></th>`;
+      if(thead) thead.innerHTML = '<th class="px-4 py-3"><div class="h-4 bg-slate-200 shimmer rounded w-24"></div></th>';
       
       if(tbody) {
         let shm = '';
         for(let i=0; i<4; i++) {
-          shm += `<tr><td colspan="10" class="px-4 py-3 border-b border-slate-50"><div class="h-10 bg-slate-100 shimmer rounded-lg w-full"></div></td></tr>`;
+          shm += '<tr><td colspan="10" class="px-4 py-3 border-b border-slate-50"><div class="h-9 bg-slate-100 shimmer rounded-lg w-full"></div></td></tr>';
         }
         tbody.innerHTML = shm;
+      }
+
+      if(mobileCards) {
+        let mobShm = '';
+        for(let i=0; i<3; i++) {
+          mobShm += '<div class="bg-white border border-slate-200 rounded-xl p-4 shimmer h-24 w-full"></div>';
+        }
+        mobileCards.innerHTML = mobShm;
       }
       
       if(dskList) {
         let dskShm = '';
-        for(let i=0; i<5; i++) {
-          dskShm += `<div class="p-3 mb-2 h-14 bg-slate-100 shimmer rounded-xl w-full"></div>`;
+        for(let i=0; i<4; i++) {
+          dskShm += '<div class="p-3 mb-2 h-14 bg-slate-100 shimmer rounded-xl w-full"></div>';
         }
         dskList.innerHTML = dskShm;
       }
@@ -207,7 +381,7 @@
       this.showShimmer();
 
       google.script.run
-        .withSuccessHandler((res) => { if(res.success && Object.keys(res.data).length > 0) this.sheetStructure = res.data; })
+        .withSuccessHandler((res) => { if(res && res.success && Object.keys(res.data || {}).length > 0) this.sheetStructure = res.data; })
         .api_getSheetStructure();
 
       if (Object.keys(this.sheetStructure).length === 0) {
@@ -280,37 +454,68 @@
     },
 
     renderCategoryLists: function() {
+      // Update Category Badge count
+      const badge = document.getElementById('cat-count-badge');
+      if (badge) badge.textContent = this.schemas.length;
+
+      // Mobile Select Dropdown
       const mobSelect = document.getElementById('mobile-cat-select');
       if (mobSelect) {
-        let mobHtml = '<option value="">Select a dropdown...</option>';
+        let mobHtml = '<option value="">Select a Category...</option>';
         this.schemas.forEach(s => {
           const count = (this.allDropdowns[s.key] || []).length;
-          mobHtml += `<option value="${s.key}">${s.name} (${count})</option>`;
+          mobHtml += '<option value="' + s.key + '">' + s.name + ' (' + count + ')</option>';
         });
         mobSelect.innerHTML = mobHtml;
         if(this.activeSchema) mobSelect.value = this.activeSchema.key;
       }
 
+      // Mobile Quick-Pill Chips
+      const mobChips = document.getElementById('mobile-cat-chips');
+      if (mobChips) {
+        let chipsHtml = '';
+        this.schemas.forEach(s => {
+          const count = (this.allDropdowns[s.key] || []).length;
+          const isActive = this.activeSchema && this.activeSchema.key === s.key;
+          const chipClass = isActive
+            ? 'bg-brand-primary text-white font-bold border-brand-primary'
+            : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200 font-medium';
+          chipsHtml += 
+            '<button type="button" onclick="SettingsApp.selectCategory(\'' + s.key + '\')" class="px-3 py-1 rounded-full text-xs border whitespace-nowrap shrink-0 transition-colors flex items-center gap-1.5 ' + chipClass + '">' +
+              '<span>' + s.name + '</span>' +
+              '<span class="text-[10px] ' + (isActive ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-600') + ' px-1.5 py-0.2 rounded-full font-bold">' + count + '</span>' +
+            '</button>';
+        });
+        mobChips.innerHTML = chipsHtml;
+      }
+
+      // Desktop List
       const dskList = document.getElementById('desktop-cat-list');
       if (dskList) {
         let dskHtml = '';
         this.schemas.forEach(s => {
           const count = (this.allDropdowns[s.key] || []).length;
           const isActive = this.activeSchema && this.activeSchema.key === s.key;
-          const activeClass = isActive ? 'bg-blue-50 border-blue-100' : 'bg-transparent border-transparent hover:bg-slate-50';
+          const activeClass = isActive 
+            ? 'bg-blue-50/80 border-brand-primary/30 text-brand-primary shadow-xs' 
+            : 'bg-white border-transparent hover:bg-slate-50 text-slate-700';
           
-          dskHtml += `
-            <button onclick="SettingsApp.selectCategory('${s.key}')" class="w-full flex items-center justify-between p-3 rounded-xl border transition-all ${activeClass}">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[18px]">list</span></div>
-                <div class="text-left"><h4 class="text-sm font-bold text-slate-800 leading-tight">${s.name}</h4></div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">${count}</span>
-                <span class="material-symbols-rounded text-[16px] text-slate-300">chevron_right</span>
-              </div>
-            </button>
-          `;
+          dskHtml += 
+            '<button type="button" onclick="SettingsApp.selectCategory(\'' + s.key + '\')" class="w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left group cursor-pointer ' + activeClass + '">' +
+              '<div class="flex items-center gap-3 min-w-0">' +
+                '<div class="w-8 h-8 rounded-lg ' + (isActive ? 'bg-brand-primary text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200') + ' flex items-center justify-center shrink-0 transition-colors">' +
+                  '<span class="material-symbols-rounded text-[18px]">list_alt</span>' +
+                '</div>' +
+                '<div class="min-w-0">' +
+                  '<h4 class="text-xs font-bold truncate leading-tight">' + s.name + '</h4>' +
+                  '<span class="text-[10px] font-mono font-semibold uppercase ' + (isActive ? 'text-blue-600' : 'text-slate-400') + '">' + s.prefix + '</span>' +
+                '</div>' +
+              '</div>' +
+              '<div class="flex items-center gap-1.5 shrink-0">' +
+                '<span class="text-[10px] font-bold ' + (isActive ? 'bg-brand-primary/10 text-brand-primary' : 'bg-slate-100 text-slate-500') + ' px-2 py-0.5 rounded-full">' + count + '</span>' +
+                '<span class="material-symbols-rounded text-[16px] ' + (isActive ? 'text-brand-primary' : 'text-slate-300 group-hover:text-slate-500') + ' transition-colors">chevron_right</span>' +
+              '</div>' +
+            '</button>';
         });
         dskList.innerHTML = dskHtml;
       }
@@ -336,19 +541,23 @@
       const optContent = document.getElementById('options-content-area');
       if (optContent) optContent.classList.remove('hidden');
       
-      this.safeSetText('opt-header-title', this.activeSchema.name);
-      this.safeSetText('opt-header-prefix', this.activeSchema.prefix);
+      this.safeSetText('opt-header-title', this.activeSchema ? this.activeSchema.name : '');
+      this.safeSetText('opt-header-prefix', this.activeSchema ? this.activeSchema.prefix : '');
 
       const usagesContainer = document.getElementById('opt-header-usages');
       let usagesHtml = '';
-      if(this.activeSchema.usages && this.activeSchema.usages.length > 0) {
+      if(this.activeSchema && this.activeSchema.usages && this.activeSchema.usages.length > 0) {
          this.activeSchema.usages.forEach(u => {
-            usagesHtml += `<div class="flex items-center gap-1.5 px-2 py-1 bg-slate-100 rounded-md border border-slate-200"><span class="material-symbols-rounded text-[12px] text-slate-400">link</span><span class="text-[9px] font-bold text-slate-600 uppercase tracking-wide">${u.tab} &rarr; ${u.column}</span></div>`;
+            usagesHtml += 
+              '<div class="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200 text-slate-600">' +
+                '<span class="material-symbols-rounded text-[12px] text-slate-400">link</span>' +
+                '<span class="text-[9px] font-bold uppercase tracking-wider">' + u.tab + ' &rarr; ' + u.column + '</span>' +
+              '</div>';
          });
       } else {
-         usagesHtml = `<span class="text-[10px] text-slate-400 italic">No linked modules.</span>`;
+         usagesHtml = '<span class="text-[10px] text-slate-400 italic">No linked database columns.</span>';
       }
-      usagesContainer.innerHTML = usagesHtml;
+      if (usagesContainer) usagesContainer.innerHTML = usagesHtml;
 
       const mSel = document.getElementById('mobile-cat-select');
       if(mSel && mSel.value !== key) mSel.value = key;
@@ -358,63 +567,128 @@
     },
 
     buildDynamicTable: function() {
+      if (!this.activeSchema) return;
+
       const thead = document.getElementById('dynamic-thead-row');
       const tbody = document.getElementById('options-tbody');
+      const mobCards = document.getElementById('options-mobile-cards');
       
-      let headHtml = ``;
+      // 1. Build Desktop Table Header
+      let headHtml = '';
       this.activeSchema.columns.forEach(col => {
          if(col.key !== 'id') { 
-           headHtml += `<th class="px-3 md:px-4 py-3 whitespace-nowrap">${col.label}</th>`;
+           headHtml += '<th class="px-4 py-3 whitespace-nowrap">' + col.label + '</th>';
          }
       });
-      headHtml += `<th class="px-3 md:px-4 py-3 text-right">Order / Actions</th>`;
+      headHtml += '<th class="px-4 py-3 text-right">Order & Actions</th>';
       if(thead) thead.innerHTML = headHtml;
 
-      if (!tbody) return;
+      const totalLen = this.activeOptionsList.length;
 
-      if (this.activeOptionsList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${this.activeSchema.columns.length}" class="text-center py-8 text-sm font-medium text-slate-400">No options configured. Add one above.</td></tr>`;
+      // Handle Empty State
+      if (totalLen === 0) {
+        const emptyMsg = '<tr><td colspan="' + (this.activeSchema.columns.length + 1) + '" class="text-center py-12 text-xs font-semibold text-slate-400">No options configured yet. Click "Add Option" above to create one.</td></tr>';
+        if (tbody) tbody.innerHTML = emptyMsg;
+        if (mobCards) {
+          mobCards.innerHTML = 
+            '<div class="bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-xs">' +
+              '<span class="material-symbols-rounded text-slate-300 text-4xl mb-2">format_list_bulleted</span>' +
+              '<p class="text-xs font-bold text-slate-700">No Options Available</p>' +
+              '<p class="text-[11px] text-slate-400 mt-1 mb-4">Add your first option to populate this dropdown list.</p>' +
+              '<button type="button" onclick="SettingsApp.openOptionModal()" class="px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl shadow-xs">Add Option</button>' +
+            '</div>';
+        }
         return;
       }
 
+      // 2. Build Desktop Table Rows & Mobile Cards
       let bodyHtml = '';
-      const totalLen = this.activeOptionsList.length;
+      let cardsHtml = '';
 
       this.activeOptionsList.forEach((opt, index) => {
-        const optStr = JSON.stringify(opt).replace(/"/g, '&quot;');
+        const safeId = opt.id || '';
         
-        let rowHtml = `<tr class="border-b border-slate-50 hover:bg-slate-50/80 transition-colors bg-white group">`;
-        
+        // --- Desktop Row ---
+        let rowHtml = '<tr class="hover:bg-slate-50/90 transition-colors bg-white group">';
         this.activeSchema.columns.forEach(col => {
            if(col.key !== 'id') {
               const val = opt[col.key] || '--';
               const isName = col.key === 'name';
-              rowHtml += `<td class="px-3 md:px-4 py-3 ${isName ? 'font-semibold text-slate-800' : 'text-slate-500'}">${val}</td>`;
+              rowHtml += '<td class="px-4 py-3.5 ' + (isName ? 'font-bold text-slate-800' : 'text-slate-600') + '">' + val + '</td>';
            }
         });
 
         const btnUp = index > 0 
-           ? `<button onclick="SettingsApp.moveOption(${index}, -1)" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded transition-colors"><span class="material-symbols-rounded text-[18px]">arrow_upward</span></button>` 
-           : `<div class="w-7 h-7"></div>`;
+           ? '<button type="button" onclick="SettingsApp.moveOption(' + index + ', -1)" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center" title="Move Up"><span class="material-symbols-rounded text-[17px]">arrow_upward</span></button>' 
+           : '<div class="w-7 h-7"></div>';
            
         const btnDown = index < (totalLen - 1) 
-           ? `<button onclick="SettingsApp.moveOption(${index}, 1)" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded transition-colors"><span class="material-symbols-rounded text-[18px]">arrow_downward</span></button>` 
-           : `<div class="w-7 h-7"></div>`;
+           ? '<button type="button" onclick="SettingsApp.moveOption(' + index + ', 1)" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center" title="Move Down"><span class="material-symbols-rounded text-[17px]">arrow_downward</span></button>' 
+           : '<div class="w-7 h-7"></div>';
 
-        rowHtml += `
-            <td class="px-3 md:px-4 py-3 text-right whitespace-nowrap">
-               <div class="flex items-center justify-end gap-1">
-                 ${btnUp}
-                 ${btnDown}
-                 <div class="w-px h-4 bg-slate-200 mx-1"></div>
-                 <button onclick="SettingsApp.openOptionModal(${optStr})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">edit</span></button>
-                 <button onclick="SettingsApp.openDeleteModal('${opt.id}', '${opt.name}')" class="w-8 h-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">delete</span></button>
-               </div>
-            </td>
-          </tr>`;
+        rowHtml += 
+            '<td class="px-4 py-3.5 text-right whitespace-nowrap">' +
+               '<div class="flex items-center justify-end gap-1">' +
+                 btnUp +
+                 btnDown +
+                 '<div class="w-px h-4 bg-slate-200 mx-1"></div>' +
+                 '<button type="button" onclick="SettingsApp.openOptionModal(\'' + safeId + '\')" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-xl transition-colors cursor-pointer flex items-center justify-center" title="Edit"><span class="material-symbols-rounded text-[18px]">edit</span></button>' +
+                 '<button type="button" onclick="SettingsApp.openDeleteModal(\'' + safeId + '\')" class="w-8 h-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer flex items-center justify-center" title="Delete"><span class="material-symbols-rounded text-[18px]">delete</span></button>' +
+               '</div>' +
+            '</td>' +
+          '</tr>';
         bodyHtml += rowHtml;
+
+        // --- Mobile Responsive Card ---
+        let attributesHtml = '';
+        this.activeSchema.columns.forEach(col => {
+          if (col.key !== 'id' && col.key !== 'name') {
+            const val = opt[col.key] || '--';
+            attributesHtml += 
+              '<div class="flex items-center justify-between text-xs py-1 border-b border-slate-50 last:border-0">' +
+                '<span class="text-slate-400 font-medium">' + col.label + '</span>' +
+                '<span class="text-slate-700 font-semibold">' + val + '</span>' +
+              '</div>';
+          }
+        });
+
+        cardsHtml += 
+          '<div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">' +
+            '<div class="flex items-start justify-between gap-2">' +
+              '<div>' +
+                '<span class="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-primary bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">' + (opt.id || 'ITEM') + '</span>' +
+                '<h4 class="text-sm font-bold text-slate-800 mt-1">' + (opt.name || '--') + '</h4>' +
+              '</div>' +
+              '<div class="flex items-center gap-1 shrink-0">' +
+                '<button type="button" onclick="SettingsApp.openOptionModal(\'' + safeId + '\')" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-brand-primary hover:bg-blue-50 rounded-xl border border-slate-200 transition-colors" title="Edit">' +
+                  '<span class="material-symbols-rounded text-[17px]">edit</span>' +
+                '</button>' +
+                '<button type="button" onclick="SettingsApp.openDeleteModal(\'' + safeId + '\')" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl border border-slate-200 transition-colors" title="Delete">' +
+                  '<span class="material-symbols-rounded text-[17px]">delete</span>' +
+                '</button>' +
+              '</div>' +
+            '</div>' +
+
+            (attributesHtml ? '<div class="bg-slate-50/70 rounded-xl p-2.5 space-y-0.5">' + attributesHtml + '</div>' : '') +
+
+            '<div class="flex items-center justify-between pt-2 border-t border-slate-100">' +
+              '<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Position #' + (index + 1) + '</span>' +
+              '<div class="flex items-center gap-1.5">' +
+                '<button type="button" onclick="SettingsApp.moveOption(' + index + ', -1)" ' + (index === 0 ? 'disabled' : '') + ' class="h-8 px-2.5 flex items-center gap-1 text-slate-600 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-30 disabled:pointer-events-none rounded-xl text-xs font-semibold transition-colors">' +
+                  '<span class="material-symbols-rounded text-[16px]">arrow_upward</span>' +
+                  '<span>Up</span>' +
+                '</button>' +
+                '<button type="button" onclick="SettingsApp.moveOption(' + index + ', 1)" ' + (index === totalLen - 1 ? 'disabled' : '') + ' class="h-8 px-2.5 flex items-center gap-1 text-slate-600 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-30 disabled:pointer-events-none rounded-xl text-xs font-semibold transition-colors">' +
+                  '<span class="material-symbols-rounded text-[16px]">arrow_downward</span>' +
+                  '<span>Down</span>' +
+                '</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
       });
-      tbody.innerHTML = bodyHtml;
+
+      if (tbody) tbody.innerHTML = bodyHtml;
+      if (mobCards) mobCards.innerHTML = cardsHtml;
     },
 
     moveOption: function(index, direction) {
@@ -429,11 +703,12 @@
     showSaveToolbar: function(show) {
       const tb = document.getElementById('save-order-toolbar');
       if(!tb) return;
-      if(show) tb.classList.remove('translate-y-full');
-      else tb.classList.add('translate-y-full');
+      if(show) tb.classList.remove('translate-y-32');
+      else tb.classList.add('translate-y-32');
     },
 
     discardOrder: function() {
+      if (!this.activeSchema) return;
       this.activeOptionsList = [...(this.allDropdowns[this.activeSchema.key] || [])];
       this.hasUnsavedOrder = false;
       this.showSaveToolbar(false);
@@ -441,27 +716,34 @@
     },
 
     saveOrder: function() {
+      if (!this.activeSchema) return;
       const btn = document.getElementById('btn-save-order');
-      if(btn) { btn.innerHTML = `Saving...`; btn.disabled = true; }
+      if(btn) { btn.innerHTML = 'Saving...'; btn.disabled = true; }
 
       google.script.run
         .withSuccessHandler((res) => {
-           if(btn) { btn.innerHTML = `Save Order`; btn.disabled = false; }
-           if(res.success) {
-              this.showToast("Order saved to sheet.", false);
+           if(btn) { btn.innerHTML = 'Save Order'; btn.disabled = false; }
+           if(res && res.success) {
+              this.showToast("Order changes saved successfully!", false);
               this.hasUnsavedOrder = false;
               this.showSaveToolbar(false);
               this.allDropdowns[this.activeSchema.key] = [...this.activeOptionsList];
            } else { 
-              this.showToast(res.error, true); 
+              const err = (res && res.error) ? res.error : "Failed to save order.";
+              this.showToast(err, true); 
            }
         })
         .api_saveDropdownOptions(this.activeSchema.key, this.activeOptionsList);
     },
 
-    openOptionModal: function(opt = null) {
+    openOptionModal: function(optOrId = null) {
       if(!this.activeSchema) return;
-      if(opt && opt instanceof Event) opt = null;
+      let opt = null;
+      if (typeof optOrId === 'string' && optOrId) {
+        opt = this.activeOptionsList.find(o => o.id === optOrId) || null;
+      } else if (typeof optOrId === 'object' && optOrId && !(optOrId instanceof Event)) {
+        opt = optOrId;
+      }
 
       this.safeSetText('modal-opt-title', opt ? 'Edit Option' : 'Add Option');
       this.safeSetValue('dyn-opt-id', opt ? opt.id : '');
@@ -475,12 +757,11 @@
          const val = opt ? (opt[col.key] || '') : '';
          const required = col.key === 'name' ? 'required' : '';
          
-         formHtml += `
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">${col.label} ${required ? '*' : ''}</label>
-            <input type="text" id="dyn-field-${col.key}" value="${val}" ${required} class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold focus:border-brand-primary outline-none focus:bg-white transition-colors">
-          </div>
-         `;
+         formHtml += 
+          '<div>' +
+            '<label for="dyn-field-' + col.key + '" class="block text-xs font-bold text-slate-700 mb-1.5">' + col.label + ' ' + (required ? '<span class="text-red-500">*</span>' : '') + '</label>' +
+            '<input type="text" id="dyn-field-' + col.key + '" value="' + val + '" ' + required + ' placeholder="Enter ' + col.label + '..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary outline-none transition-all">' +
+          '</div>';
       });
       
       if(container) container.innerHTML = formHtml;
@@ -488,20 +769,21 @@
       const backdrop = document.getElementById('option-modal');
       const content = document.getElementById('option-modal-content');
       if(backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
-      if(content) content.classList.remove('translate-y-full', 'md:translate-y-10', 'opacity-0');
+      if(content) content.classList.remove('scale-95', 'opacity-0');
     },
 
     saveOption: function(e) {
       e.preventDefault();
       if (!AppUtils.validateRequiredFields('option-form')) return;
       const btn = document.getElementById('btn-save-opt');
-      if(btn) { btn.innerHTML = `Saving...`; btn.disabled = true; }
+      if(btn) { btn.innerHTML = 'Saving...'; btn.disabled = true; }
 
       let payload = { id: document.getElementById('dyn-opt-id').value };
       
       this.activeSchema.columns.forEach(col => {
          if(col.key !== 'id') {
-            payload[col.key] = document.getElementById(`dyn-field-${col.key}`).value;
+            const field = document.getElementById('dyn-field-' + col.key);
+            payload[col.key] = field ? field.value : '';
          }
       });
 
@@ -509,20 +791,21 @@
          const idx = this.activeOptionsList.findIndex(o => o.id === payload.id);
          if(idx > -1) this.activeOptionsList[idx] = payload;
       } else {
-         payload.id = `${this.activeSchema.prefix}-${Math.floor(Math.random()*9000)+1000}`;
+         payload.id = this.activeSchema.prefix + '-' + (Math.floor(Math.random()*9000)+1000);
          this.activeOptionsList.push(payload);
       }
 
       google.script.run
         .withSuccessHandler((res) => {
-           if(btn) { btn.innerHTML = `Save Option`; btn.disabled = false; }
-           if(res.success) {
+           if(btn) { btn.innerHTML = 'Save Option'; btn.disabled = false; }
+           if(res && res.success) {
               this.allDropdowns[this.activeSchema.key] = [...this.activeOptionsList];
-              this.showToast(res.message, false);
+              this.showToast(res.message || "Option saved successfully.", false);
               this.closeOptionModal();
               this.selectCategory(this.activeSchema.key); 
            } else {
-              this.showToast(res.error, true);
+              const err = (res && res.error) ? res.error : "Failed to save option.";
+              this.showToast(err, true);
            }
         })
         .api_saveDropdownOptions(this.activeSchema.key, this.activeOptionsList);
@@ -532,13 +815,15 @@
       const backdrop = document.getElementById('option-modal');
       const content = document.getElementById('option-modal-content');
       if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
-      if(content) content.classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
+      if(content) content.classList.add('scale-95', 'opacity-0');
       AppUtils.clearValidationState('option-form');
     },
 
     openDeleteModal: function(id, name) {
       this.optionToDelete = id;
-      this.safeSetText('delete-opt-name', name || 'this option');
+      const opt = this.activeOptionsList.find(o => o.id === id);
+      const optName = name || (opt ? opt.name : '') || 'this option';
+      this.safeSetText('delete-opt-name', optName);
       const backdrop = document.getElementById('delete-opt-modal');
       const content = document.getElementById('delete-opt-content');
       if(backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
@@ -559,13 +844,14 @@
       google.script.run
         .withSuccessHandler((res) => {
           this.closeDeleteModal();
-          if(res.success) {
-            this.showToast("Option deleted.", false);
+          if(res && res.success) {
+            this.showToast("Option deleted successfully.", false);
             this.activeOptionsList = updatedList;
             this.allDropdowns[this.activeSchema.key] = [...this.activeOptionsList];
             this.selectCategory(this.activeSchema.key);
           } else { 
-            this.showToast(res.error, true); 
+            const err = (res && res.error) ? res.error : "Failed to delete option.";
+            this.showToast(err, true); 
           }
         })
         .api_saveDropdownOptions(this.activeSchema.key, updatedList);
@@ -576,9 +862,9 @@
       const form = document.getElementById('schema-form');
       if(form) form.reset();
       
-      this.safeSetText('schema-modal-title', 'Create Dropdown');
+      this.safeSetText('schema-modal-title', 'Create Dropdown Schema');
       const btn = document.getElementById('btn-save-schema');
-      if(btn) btn.innerText = 'Create Dropdown';
+      if(btn) btn.innerText = 'Save Schema';
       
       const prefixEl = document.getElementById('sch-prefix');
       if(prefixEl) {
@@ -588,10 +874,19 @@
 
       const colContainer = document.getElementById('schema-columns-container');
       if (colContainer) {
-          colContainer.innerHTML = `
-             <div class="flex gap-2"><div class="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-500 flex justify-between items-center"><span>ID (Auto-generated Key)</span> <span class="material-symbols-rounded text-[14px]">lock</span></div></div>
-             <div class="flex gap-2"><div class="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-500 flex justify-between items-center"><span>Name (Required Display Label)</span> <span class="material-symbols-rounded text-[14px]">lock</span></div></div>
-          `;
+          colContainer.innerHTML = 
+             '<div class="flex gap-2">' +
+               '<div class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 flex justify-between items-center">' +
+                 '<span>ID (Auto-generated Key)</span>' +
+                 '<span class="material-symbols-rounded text-[16px] text-slate-400">lock</span>' +
+               '</div>' +
+             '</div>' +
+             '<div class="flex gap-2">' +
+               '<div class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 flex justify-between items-center">' +
+                 '<span>Name (Required Display Label)</span>' +
+                 '<span class="material-symbols-rounded text-[16px] text-slate-400">lock</span>' +
+               '</div>' +
+             '</div>';
       }
       const usageContainer = document.getElementById('schema-usages-container');
       if(usageContainer) usageContainer.innerHTML = '';
@@ -608,9 +903,9 @@
       const form = document.getElementById('schema-form');
       if(form) form.reset();
       
-      this.safeSetText('schema-modal-title', 'Edit Dropdown Settings');
+      this.safeSetText('schema-modal-title', 'Edit Dropdown Schema');
       const btn = document.getElementById('btn-save-schema');
-      if(btn) btn.innerText = 'Update Dropdown';
+      if(btn) btn.innerText = 'Update Schema';
 
       this.safeSetValue('sch-name', this.activeSchema.name);
       const prefixEl = document.getElementById('sch-prefix');
@@ -622,10 +917,19 @@
 
       const colContainer = document.getElementById('schema-columns-container');
       if (colContainer) {
-          colContainer.innerHTML = `
-             <div class="flex gap-2"><div class="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-500 flex justify-between items-center"><span>ID (Auto-generated Key)</span> <span class="material-symbols-rounded text-[14px]">lock</span></div></div>
-             <div class="flex gap-2"><div class="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-500 flex justify-between items-center"><span>Name (Required Display Label)</span> <span class="material-symbols-rounded text-[14px]">lock</span></div></div>
-          `;
+          colContainer.innerHTML = 
+             '<div class="flex gap-2">' +
+               '<div class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 flex justify-between items-center">' +
+                 '<span>ID (Auto-generated Key)</span>' +
+                 '<span class="material-symbols-rounded text-[16px] text-slate-400">lock</span>' +
+               '</div>' +
+             '</div>' +
+             '<div class="flex gap-2">' +
+               '<div class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 flex justify-between items-center">' +
+                 '<span>Name (Required Display Label)</span>' +
+                 '<span class="material-symbols-rounded text-[16px] text-slate-400">lock</span>' +
+               '</div>' +
+             '</div>';
       }
       
       const usageContainer = document.getElementById('schema-usages-container');
@@ -653,14 +957,21 @@
       const k = typeof initKey === 'string' ? initKey : '';
       const l = typeof initLabel === 'string' ? initLabel : '';
       const div = document.createElement('div');
-      div.className = 'flex gap-2 items-center schema-dynamic-col mt-2 w-full';
-      div.innerHTML = `
-        <div class="flex-1 min-w-0"><input type="text" placeholder="Key (e.g. rate)" value="${k}" required class="col-key w-full px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none"></div>
-        <div class="flex-1 min-w-0"><input type="text" placeholder="Label (e.g. Rate)" value="${l}" required class="col-label w-full px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none"></div>
-        <button type="button" onclick="this.parentElement.remove()" class="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-red-500 bg-slate-100 rounded-lg transition-colors">
-          <span class="material-symbols-rounded text-[18px]">delete</span>
-        </button>
-      `;
+      div.className = 'flex flex-col sm:flex-row gap-2 items-stretch sm:items-center schema-dynamic-col p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 mt-2 w-full';
+      div.innerHTML = 
+        '<div class="flex-1 min-w-0">' +
+          '<input type="text" placeholder="Key (e.g. rate)" value="' + k + '" required class="col-key w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:border-brand-primary outline-none">' +
+        '</div>' +
+        '<div class="flex-1 min-w-0">' +
+          '<input type="text" placeholder="Label (e.g. Daily Rate)" value="' + l + '" required class="col-label w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:border-brand-primary outline-none">' +
+        '</div>' +
+        '<button type="button" class="schema-col-del w-8 h-8 self-end sm:self-center shrink-0 flex items-center justify-center text-slate-400 hover:text-red-500 bg-white hover:bg-red-50 border border-slate-200 rounded-lg transition-colors cursor-pointer" title="Delete Column">' +
+          '<span class="material-symbols-rounded text-[17px]">delete</span>' +
+        '</button>';
+
+      const delBtn = div.querySelector('.schema-col-del');
+      if (delBtn) delBtn.onclick = () => div.remove();
+
       document.getElementById('schema-columns-container').appendChild(div);
     },
 
@@ -670,23 +981,33 @@
       const tabs = Object.keys(this.sheetStructure);
       if (tabs.length === 0) return this.showToast("No sheet structure loaded.", true);
 
-      let tabOpts = `<option value="">Select Tab...</option>`;
-      tabs.forEach(tab => tabOpts += `<option value="${tab}">${tab}</option>`);
+      let tabOpts = '<option value="">Select Sheet Tab...</option>';
+      tabs.forEach(tab => tabOpts += '<option value="' + tab + '">' + tab + '</option>');
 
       const div = document.createElement('div');
-      div.className = 'flex gap-2 items-center schema-dynamic-use mt-2 w-full';
-      div.innerHTML = `
-        <div class="flex-1 min-w-0"><select required onchange="SettingsApp.updateUsageCols(this)" class="use-tab w-full px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">${tabOpts}</select></div>
-        <div class="flex-1 min-w-0"><select required class="use-col w-full px-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none"><option value="">Select Column...</option></select></div>
-        <button type="button" onclick="this.parentElement.remove()" class="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-red-500 bg-slate-100 rounded-lg transition-colors">
-          <span class="material-symbols-rounded text-[18px]">delete</span>
-        </button>
-      `;
+      div.className = 'flex flex-col sm:flex-row gap-2 items-stretch sm:items-center schema-dynamic-use p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 mt-2 w-full';
+      div.innerHTML = 
+        '<div class="flex-1 min-w-0">' +
+          '<select required class="use-tab w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:border-brand-primary outline-none">' + tabOpts + '</select>' +
+        '</div>' +
+        '<div class="flex-1 min-w-0">' +
+          '<select required class="use-col w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:border-brand-primary outline-none"><option value="">Select Column...</option></select>' +
+        '</div>' +
+        '<button type="button" class="schema-use-del w-8 h-8 self-end sm:self-center shrink-0 flex items-center justify-center text-slate-400 hover:text-red-500 bg-white hover:bg-red-50 border border-slate-200 rounded-lg transition-colors cursor-pointer" title="Delete Link">' +
+          '<span class="material-symbols-rounded text-[17px]">delete</span>' +
+        '</button>';
+
+      const tabSel = div.querySelector('.use-tab');
+      if (tabSel) tabSel.onchange = () => SettingsApp.updateUsageCols(tabSel);
+
+      const delBtn = div.querySelector('.schema-use-del');
+      if (delBtn) delBtn.onclick = () => div.remove();
+
       document.getElementById('schema-usages-container').appendChild(div);
 
-      if (t) {
-         const tabSel = div.querySelector('.use-tab');
-         if(tabSel) { tabSel.value = t; this.updateUsageCols(tabSel); }
+      if (t && tabSel) {
+         tabSel.value = t;
+         this.updateUsageCols(tabSel);
          const colSel = div.querySelector('.use-col');
          setTimeout(() => { if(colSel) colSel.value = c; }, 10);
       }
@@ -694,10 +1015,10 @@
 
     updateUsageCols: function(tabSelectEl) {
       const tabName = tabSelectEl.value;
-      const colSelectEl = tabSelectEl.parentElement.querySelector('.use-col');
-      let colOpts = `<option value="">Select Column...</option>`;
+      const colSelectEl = tabSelectEl.closest('.schema-dynamic-use').querySelector('.use-col');
+      let colOpts = '<option value="">Select Column...</option>';
       if (tabName && this.sheetStructure[tabName]) {
-         this.sheetStructure[tabName].forEach(c => colOpts += `<option value="${c}">${c}</option>`);
+         this.sheetStructure[tabName].forEach(c => colOpts += '<option value="' + c + '">' + c + '</option>');
       }
       if(colSelectEl) colSelectEl.innerHTML = colOpts;
     },
@@ -706,7 +1027,7 @@
       e.preventDefault();
       if (!AppUtils.validateRequiredFields('schema-form')) return;
       const btn = document.getElementById('btn-save-schema');
-      if(btn) { btn.innerHTML = `Saving...`; btn.disabled = true; }
+      if(btn) { btn.innerHTML = 'Saving...'; btn.disabled = true; }
       
       let key = '';
       if(this.isEditingSchema && this.activeSchema) {
@@ -730,24 +1051,29 @@
       document.querySelectorAll('.schema-dynamic-col').forEach(el => {
          const colKey = el.querySelector('.col-key');
          const colLabel = el.querySelector('.col-label');
-         if(colKey && colLabel) newSchema.columns.push({ key: colKey.value.replace(/\s+/g, ''), label: colLabel.value });
+         if(colKey && colLabel && colKey.value.trim() !== '') {
+            newSchema.columns.push({ key: colKey.value.replace(/\s+/g, ''), label: colLabel.value });
+         }
       });
 
       document.querySelectorAll('.schema-dynamic-use').forEach(el => {
          const useTab = el.querySelector('.use-tab');
          const useCol = el.querySelector('.use-col');
-         if(useTab && useCol) newSchema.usages.push({ tab: useTab.value, column: useCol.value });
+         if(useTab && useCol && useTab.value && useCol.value) {
+            newSchema.usages.push({ tab: useTab.value, column: useCol.value });
+         }
       });
 
       google.script.run
         .withSuccessHandler((res) => {
-           if(btn) { btn.innerHTML = `Update Dropdown`; btn.disabled = false; }
-           if(res.success) {
-              this.showToast(res.message, false);
+           if(btn) { btn.innerHTML = 'Save Schema'; btn.disabled = false; }
+           if(res && res.success) {
+              this.showToast(res.message || "Schema saved successfully.", false);
               this.closeSchemaModal();
               this.fetchData(); 
            } else {
-              this.showToast(res.error, true);
+              const err = (res && res.error) ? res.error : "Failed to save schema.";
+              this.showToast(err, true);
            }
         })
         .api_saveSchema(newSchema);

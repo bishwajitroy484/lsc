@@ -1,272 +1,687 @@
 <div class="bg-slate-50 h-full flex flex-col relative overflow-hidden">
   
-  <header class="bg-white px-4 md:px-6 py-4 flex items-center justify-between border-b border-slate-100 shrink-0 sticky top-0 z-20">
-    <div class="flex items-center gap-3">
-      <span onclick="window.location.hash='#dashboard'" class="material-symbols-rounded text-slate-600 cursor-pointer hover:bg-slate-100 rounded-full p-1 transition-colors">arrow_back</span>
-      <div>
-        <h1 class="text-xl font-bold text-slate-800 leading-tight">Settings</h1>
-        <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Manage your gym configuration and preferences.</p>
+  <!-- Top Application Header -->
+  <header class="bg-white px-4 md:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 shrink-0 sticky top-0 z-20 gap-3 shadow-xs">
+    <div class="flex items-center justify-between w-full sm:w-auto">
+      <div class="flex items-center gap-3">
+        <button type="button" onclick="window.location.hash='#dashboard'" class="w-9 h-9 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer" title="Back to Dashboard">
+          <span class="material-symbols-rounded text-[20px]">arrow_back</span>
+        </button>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg md:text-xl font-bold text-slate-800 leading-tight">Settings & Preferences</h1>
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>Active
+            </span>
+          </div>
+          <p class="text-[11px] md:text-xs text-slate-500 mt-0.5 hidden sm:block">Manage gym branding, operating policies, and dynamic dropdown options.</p>
+        </div>
       </div>
+
+      <!-- Quick Save Button for Mobile Header (General Tab) -->
+      <button type="button" id="btn-save-general-header" onclick="SettingsApp.saveGeneralSettings()" class="sm:hidden h-8 px-3 bg-brand-primary hover:bg-blue-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer shrink-0">
+        <span class="material-symbols-rounded text-[16px]">save</span>
+        <span>Save</span>
+      </button>
+    </div>
+
+    <!-- Segmented Navigation Pills -->
+    <div class="flex items-center bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 self-stretch sm:self-auto shrink-0">
+      <button id="tab-btn-general" type="button" onclick="SettingsApp.switchTab('general')" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 bg-white text-brand-primary rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap">
+        <span class="material-symbols-rounded text-[17px]">tune</span>
+        <span>General Config</span>
+      </button>
+      <button id="tab-btn-dropdowns" type="button" onclick="SettingsApp.switchTab('dropdowns')" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 text-slate-600 hover:text-slate-900 rounded-lg font-medium text-xs transition-all cursor-pointer whitespace-nowrap">
+        <span class="material-symbols-rounded text-[17px]">dataset</span>
+        <span>Dropdown Options</span>
+      </button>
     </div>
   </header>
 
-  <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+  <!-- Main Viewport Body -->
+  <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
     
-    
-    <div class="w-full md:w-64 bg-white border-b md:border-r md:border-b-0 border-slate-200 shrink-0 p-3 md:p-4 flex md:flex-col gap-2 overflow-x-auto no-scrollbar z-10">
-      <nav class="flex md:flex-col gap-2 w-full min-w-max md:min-w-0">
-        <button id="tab-btn-general" onclick="SettingsApp.switchTab('general')" class="flex-1 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 bg-blue-50 text-brand-primary rounded-lg font-bold text-sm transition-colors whitespace-nowrap">
-          <span class="material-symbols-rounded text-[18px]">storefront</span> General Info
-        </button>
-        <button id="tab-btn-dropdowns" onclick="SettingsApp.switchTab('dropdowns')" class="flex-1 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 rounded-lg font-medium text-sm transition-colors whitespace-nowrap">
-          <span class="material-symbols-rounded text-[18px]">format_list_bulleted</span> Dropdown Options
-        </button>
-      </nav>
-    </div>
-
-    
-    <div id="pane-general" class="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-6 pb-24">
+    <!-- ========================================== -->
+    <!-- TAB 1: GENERAL SETTINGS                    -->
+    <!-- ========================================== -->
+    <div id="pane-general" class="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
       
-      
-      <div id="general-shimmer" class="max-w-3xl mx-auto space-y-6 hidden">
-        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-5 space-y-5">
-           <div class="h-4 w-32 bg-slate-200 shimmer rounded"></div>
-           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><div class="h-3 w-20 bg-slate-200 shimmer rounded mb-2"></div><div class="h-9 w-full bg-slate-100 shimmer rounded-lg"></div></div>
-              <div><div class="h-3 w-20 bg-slate-200 shimmer rounded mb-2"></div><div class="h-9 w-full bg-slate-100 shimmer rounded-lg"></div></div>
-              <div><div class="h-3 w-20 bg-slate-200 shimmer rounded mb-2"></div><div class="h-9 w-full bg-slate-100 shimmer rounded-lg"></div></div>
-              <div><div class="h-3 w-20 bg-slate-200 shimmer rounded mb-2"></div><div class="h-9 w-full bg-slate-100 shimmer rounded-lg"></div></div>
-           </div>
+      <!-- Scrollable Settings Body -->
+      <div class="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 no-scrollbar pb-6">
+        
+        <!-- Skeleton Shimmer Loader -->
+        <div id="general-shimmer" class="max-w-4xl mx-auto space-y-4 md:space-y-6 hidden">
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-5 md:p-6 space-y-4 shadow-xs">
+          <div class="h-5 w-44 bg-slate-200 shimmer rounded-md mb-4"></div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><div class="h-3 w-24 bg-slate-200 shimmer rounded mb-2"></div><div class="h-10 w-full bg-slate-100 shimmer rounded-xl"></div></div>
+            <div><div class="h-3 w-24 bg-slate-200 shimmer rounded mb-2"></div><div class="h-10 w-full bg-slate-100 shimmer rounded-xl"></div></div>
+            <div><div class="h-3 w-24 bg-slate-200 shimmer rounded mb-2"></div><div class="h-10 w-full bg-slate-100 shimmer rounded-xl"></div></div>
+            <div><div class="h-3 w-24 bg-slate-200 shimmer rounded mb-2"></div><div class="h-10 w-full bg-slate-100 shimmer rounded-xl"></div></div>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-5 md:p-6 space-y-4 shadow-xs">
+          <div class="h-5 w-36 bg-slate-200 shimmer rounded-md mb-4"></div>
+          <div class="h-10 w-full bg-slate-100 shimmer rounded-xl"></div>
         </div>
       </div>
 
-      
-      <div id="general-content" class="max-w-3xl mx-auto space-y-4 md:space-y-6 hidden">
+      <!-- Real Form Content -->
+      <div id="general-content" class="max-w-4xl mx-auto space-y-5 md:space-y-6 hidden">
         
-        <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div class="px-4 md:px-5 py-3 md:py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <div>
-              <h3 class="font-bold text-sm text-slate-800">Core Settings</h3>
-              <p class="text-[10px] text-slate-500">Main configuration for your gym software.</p>
+        <!-- Section 1: Gym Profile & Branding -->
+        <div class="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300">
+          <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center shrink-0 border border-blue-100">
+                <span class="material-symbols-rounded text-[20px]">storefront</span>
+              </div>
+              <div>
+                <h3 class="font-bold text-sm text-slate-800 leading-tight">Gym Identity & Branding</h3>
+                <p class="text-[11px] text-slate-500">Public name, communications, and logo representation.</p>
+              </div>
             </div>
-            
-            <button type="button" onclick="SettingsApp.addCustomSettingRow('core-settings-grid')" class="h-8 px-3 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white rounded-lg flex items-center gap-1 transition-all text-[10px] font-bold tracking-wide uppercase shadow-sm">
-              <span class="material-symbols-rounded text-[14px]">add</span> Add
-            </button>
+            <span class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase bg-slate-100 px-2 py-0.5 rounded">Core</span>
           </div>
-          
-          <div class="p-4 md:p-5">
-            <div id="core-settings-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              
+
+          <div class="p-5 md:p-6 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Gym Name -->
               <div>
-                <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Gym / App Name</label>
-                <input type="text" id="gen-GYM_NAME" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm transition-colors">
-              </div>
-              
-              <div>
-                <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Owner Email</label>
-                <input type="email" id="gen-OWNER_EMAIL" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm transition-colors">
-              </div>
-              
-              <div>
-                <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Revenue Recognition</label>
+                <label for="gen-GYM_NAME" class="block text-xs font-semibold text-slate-700 mb-1.5">Gym / App Name <span class="text-red-500">*</span></label>
                 <div class="relative">
-                  <select id="gen-Revenue_Recognition" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none transition-colors">
+                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">fitness_center</span>
+                  <input type="text" id="gen-GYM_NAME" placeholder="e.g., Lakeside Fitness Club" class="w-full pl-9 pr-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">Displayed on dashboard, receipts, and headers.</p>
+              </div>
+
+              <!-- Owner Email -->
+              <div>
+                <label for="gen-OWNER_EMAIL" class="block text-xs font-semibold text-slate-700 mb-1.5">Owner / Admin Email <span class="text-red-500">*</span></label>
+                <div class="relative">
+                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">mail</span>
+                  <input type="email" id="gen-OWNER_EMAIL" placeholder="owner@gymdomain.com" class="w-full pl-9 pr-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">Primary administrative contact and notifications.</p>
+              </div>
+            </div>
+
+            <!-- Logo URL / ID with Live Preview -->
+            <div class="pt-2 border-t border-slate-100">
+              <label for="gen-LOGO_ID" class="block text-xs font-semibold text-slate-700 mb-1.5">Logo URL or Google Drive File ID</label>
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div class="relative flex-1">
+                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">image</span>
+                  <input type="text" id="gen-LOGO_ID" oninput="SettingsApp.updateLogoPreview()" placeholder="https://... or Google Drive File ID" class="w-full pl-9 pr-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-mono text-slate-700 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                </div>
+                <!-- Live Preview Tile -->
+                <div class="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl shrink-0">
+                  <div class="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                    <img id="logo-preview-img" src="" alt="Logo Preview" class="w-full h-full object-contain hidden" />
+                    <span id="logo-preview-placeholder" class="material-symbols-rounded text-slate-300 text-[20px]">photo</span>
+                  </div>
+                  <div class="text-left">
+                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Live Preview</span>
+                    <span id="logo-preview-status" class="text-[11px] font-medium text-slate-600">Default Avatar</span>
+                  </div>
+                </div>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1">Accepts any public image HTTPS URL or Google Drive file ID.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Financial & Operational Policies -->
+        <div class="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300">
+          <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                <span class="material-symbols-rounded text-[20px]">account_balance</span>
+              </div>
+              <div>
+                <h3 class="font-bold text-sm text-slate-800 leading-tight">Financial & Operating Policies</h3>
+                <p class="text-[11px] text-slate-500">Revenue calculation logic and automated reminder windows.</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-semibold tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Accounting</span>
+          </div>
+
+          <div class="p-5 md:p-6 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Revenue Recognition -->
+              <div>
+                <label for="gen-Revenue_Recognition" class="block text-xs font-semibold text-slate-700 mb-1.5">Revenue Recognition Method</label>
+                <div class="relative">
+                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">payments</span>
+                  <select id="gen-Revenue_Recognition" onchange="SettingsApp.updateRevenueExplanation()" class="w-full pl-9 pr-8 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none appearance-none cursor-pointer transition-all">
                     <option value="Anchor">Anchor (Cash Basis)</option>
                     <option value="Split">Split (Accrual Basis)</option>
                   </select>
-                  <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+                  <span class="material-symbols-rounded absolute right-2.5 top-2.5 text-[18px] text-slate-400 pointer-events-none">expand_more</span>
+                </div>
+                <div id="revenue-rec-explanation" class="mt-2 p-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
+                  <span class="material-symbols-rounded text-brand-primary text-[16px] shrink-0 mt-0.5">info</span>
+                  <span id="revenue-rec-text">Anchor recognizes the full transaction amount immediately on the payment date.</span>
                 </div>
               </div>
-              
+
+              <!-- Reminder Buffer Days -->
               <div>
-                <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Reminder Buffer (Days)</label>
-                <input type="number" id="gen-REMINDER_BUFFER" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm transition-colors">
-              </div>
-              
-              <div class="md:col-span-2">
-                <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Spreadsheet ID</label>
+                <label for="gen-REMINDER_BUFFER" class="block text-xs font-semibold text-slate-700 mb-1.5">Due Date Alert Window (Days)</label>
                 <div class="relative">
-                  <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">dataset</span>
-                  <input type="text" id="gen-SPREADSHEET_ID" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-500 focus:border-brand-primary outline-none shadow-sm transition-colors">
+                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">notifications_active</span>
+                  <input type="number" id="gen-REMINDER_BUFFER" min="0" max="60" placeholder="e.g., 7" class="w-full pl-9 pr-14 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                  <span class="absolute right-3 top-2.5 text-[11px] font-bold text-slate-400 uppercase pointer-events-none">Days</span>
                 </div>
+                <p class="text-[10px] text-slate-400 mt-1">Number of days before expiration when member status switches to "Due Soon".</p>
               </div>
-              
-              <div class="md:col-span-2">
-                <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Logo URL / ID</label>
-                <div class="relative">
-                  <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">image</span>
-                  <input type="text" id="gen-LOGO_ID" class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm transition-colors">
-                </div>
-              </div>
-              
             </div>
           </div>
         </div>
 
-        <div class="flex justify-end pt-2">
-          <button onclick="SettingsApp.saveGeneralSettings()" id="btn-save-general" class="px-5 py-2.5 bg-brand-primary text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 flex items-center gap-2">
-            <span class="material-symbols-rounded text-[16px]">save</span> Save Settings
+        <!-- Section 3: Database & Cloud Infrastructure -->
+        <div class="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300">
+          <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 border border-slate-200">
+                <span class="material-symbols-rounded text-[20px]">database</span>
+              </div>
+              <div>
+                <h3 class="font-bold text-sm text-slate-800 leading-tight">Database & Persistence</h3>
+                <p class="text-[11px] text-slate-500">Connected Google Sheets and Drive storage infrastructure.</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-semibold tracking-wider text-slate-600 bg-slate-100 px-2 py-0.5 rounded">Connected</span>
+          </div>
+
+          <div class="p-5 md:p-6 space-y-4">
+            <!-- Target Google Spreadsheet ID -->
+            <div>
+              <label for="gen-SPREADSHEET_ID" class="block text-xs font-semibold text-slate-700 mb-1">Target Google Spreadsheet ID</label>
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div class="relative flex-1">
+                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">dataset</span>
+                  <input type="text" id="gen-SPREADSHEET_ID" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-mono text-slate-600 focus:bg-white focus:border-brand-primary outline-none transition-all select-all">
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <button type="button" onclick="SettingsApp.copySpreadsheetId()" class="flex-1 sm:flex-none h-9 px-3 bg-white border border-slate-200 hover:bg-slate-50 active:bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer" title="Copy Spreadsheet ID">
+                    <span class="material-symbols-rounded text-[16px]">content_copy</span>
+                    <span>Copy</span>
+                  </button>
+                  <button type="button" onclick="SettingsApp.openSpreadsheetUrl()" class="flex-1 sm:flex-none h-9 px-3 bg-white border border-slate-200 hover:bg-slate-50 active:bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer" title="Open Google Sheet in new tab">
+                    <span class="material-symbols-rounded text-[16px]">open_in_new</span>
+                    <span>Open Sheet</span>
+                  </button>
+                </div>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1">The spreadsheet stores all members, staff, payments, expenses, and configuration tables.</p>
+            </div>
+
+            <!-- Target Google Drive Storage Folder ID (DRIVE_ID) -->
+            <div class="pt-3 border-t border-slate-100">
+              <label for="gen-DRIVE_ID" class="block text-xs font-semibold text-slate-700 mb-1">Google Drive Folder ID (DRIVE_ID)</label>
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div class="relative flex-1">
+                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">folder_shared</span>
+                  <input type="text" id="gen-DRIVE_ID" placeholder="e.g., 1A2b3C4d5E6f7G8h9I0j" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-mono text-slate-600 focus:bg-white focus:border-brand-primary outline-none transition-all select-all">
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <button type="button" onclick="SettingsApp.copyDriveId()" class="flex-1 sm:flex-none h-9 px-3 bg-white border border-slate-200 hover:bg-slate-50 active:bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer" title="Copy Drive Folder ID">
+                    <span class="material-symbols-rounded text-[16px]">content_copy</span>
+                    <span>Copy</span>
+                  </button>
+                  <button type="button" onclick="SettingsApp.openDriveUrl()" class="flex-1 sm:flex-none h-9 px-3 bg-white border border-slate-200 hover:bg-slate-50 active:bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer" title="Open Drive Folder in new tab">
+                    <span class="material-symbols-rounded text-[16px]">open_in_new</span>
+                    <span>Open Folder</span>
+                  </button>
+                </div>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1">Google Drive storage folder where member profile photos and document attachments are stored.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Automated Notifications & Alerts -->
+        <div class="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300">
+          <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+                <span class="material-symbols-rounded text-[20px]">notifications_active</span>
+              </div>
+              <div>
+                <h3 class="font-bold text-sm text-slate-800 leading-tight">Automated Notifications & Alerts</h3>
+                <p class="text-[11px] text-slate-500">Scheduled reminders for renewal due dates and payment digests.</p>
+              </div>
+            </div>
+            <span id="notification-status-badge" class="text-[10px] font-semibold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Disabled</span>
+          </div>
+
+          <div class="p-5 md:p-6 space-y-4">
+            <!-- Toggle Row -->
+            <div class="flex items-center justify-between gap-4 p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-xl">
+              <div>
+                <span class="text-xs font-bold text-slate-800 block">Enable Automated Notifications</span>
+                <span class="text-[11px] text-slate-500 block mt-0.5">Activate scheduled alerts for expiring memberships, renewal warnings, and overdue fee summaries.</span>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                <input type="checkbox" id="gen-ENABLE_NOTIFICATION" onchange="SettingsApp.toggleNotificationView()" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+              </label>
+            </div>
+
+            <!-- Future Configuration Trigger Area (Shown only when Enabled) -->
+            <div id="notification-config-area" class="hidden space-y-3 pt-1">
+              <div class="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-rounded text-indigo-600 text-[18px]">forward_to_inbox</span>
+                    <span class="text-xs font-bold text-indigo-950">Active Notification Dispatch Rules</span>
+                    <span class="text-[9px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">Future Scope</span>
+                  </div>
+                  <p class="text-[11px] text-indigo-800/80">
+                    Recipient: <strong id="notification-summary-email" class="text-indigo-950 font-semibold">Owner / Admin Email</strong> • 
+                    Frequency: <strong id="notification-summary-freq" class="text-indigo-950 font-semibold">Daily Morning Digest (08:00 AM)</strong>
+                  </p>
+                </div>
+                <button type="button" onclick="SettingsApp.openNotificationModal()" class="h-9 px-3.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold shadow-xs transition-colors shrink-0 cursor-pointer">
+                  <span class="material-symbols-rounded text-[17px]">settings</span>
+                  <span>View Notification Configuration</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+          <!-- Mobile In-Flow Save Button -->
+          <div class="md:hidden pt-3 pb-8">
+            <button type="button" onclick="SettingsApp.saveGeneralSettings()" id="btn-save-general-mobile" class="w-full py-3 bg-brand-primary hover:bg-blue-700 active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
+              <span class="material-symbols-rounded text-[18px]">save</span>
+              <span>Save All Settings</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Fixed Bottom Action Bar (Tablet & Desktop only) -->
+      <div id="general-bottom-bar" class="hidden md:flex bg-white/95 backdrop-blur-md border-t border-slate-200 px-6 md:px-8 py-3.5 items-center justify-between shrink-0 z-20 shadow-xs">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-xs text-slate-500 font-medium">Settings ready to save</span>
+        </div>
+        <button type="button" onclick="SettingsApp.saveGeneralSettings()" id="btn-save-general" class="px-6 py-2.5 bg-brand-primary hover:bg-blue-700 active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
+          <span class="material-symbols-rounded text-[18px]">save</span>
+          <span>Save All Settings</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: DROPDOWNS SETTINGS                  -->
+    <!-- ========================================== -->
+    <div id="pane-dropdowns" class="flex-1 flex flex-col lg:flex-row overflow-hidden bg-slate-50 hidden">
+      
+      <!-- Left Master List (Categories) -->
+      <div class="w-full lg:w-80 bg-white lg:border-r border-slate-200 flex flex-col shrink-0 relative z-10 shadow-xs">
+        
+        <!-- Category Pane Header -->
+        <div class="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-rounded text-slate-500 text-[18px]">folder_special</span>
+            <h3 class="font-bold text-sm text-slate-800">Categories</h3>
+            <span id="cat-count-badge" class="text-[10px] font-bold text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded-full">0</span>
+          </div>
+          <button type="button" onclick="SettingsApp.openSchemaModal()" class="h-7 px-2.5 bg-brand-primary text-white rounded-lg flex items-center gap-1 shadow-2xs hover:bg-blue-700 active:scale-95 transition-all text-xs font-bold cursor-pointer" title="Create New Dropdown">
+            <span class="material-symbols-rounded text-[15px]">add</span>
+            <span class="hidden sm:inline">New</span>
           </button>
         </div>
         
+        <!-- Mobile & Tablet Category Selector Bar -->
+        <div class="p-3 block lg:hidden border-b border-slate-100 bg-white space-y-2" id="mobile-cat-wrapper">
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+              <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">list_alt</span>
+              <select id="mobile-cat-select" onchange="SettingsApp.selectCategory(this.value)" class="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-primary appearance-none shadow-2xs"></select>
+              <span class="material-symbols-rounded absolute right-2.5 top-2.5 text-[18px] text-slate-400 pointer-events-none">expand_more</span>
+            </div>
+            <button type="button" onclick="SettingsApp.openSchemaModal()" class="h-9 px-3 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white rounded-xl flex items-center justify-center font-bold text-xs transition-colors shrink-0" title="New Category">
+              <span class="material-symbols-rounded text-[18px]">add</span>
+            </button>
+          </div>
+          <!-- Quick horizontal chip scroller for mobile -->
+          <div id="mobile-cat-chips" class="flex gap-1.5 overflow-x-auto no-scrollbar py-1"></div>
+        </div>
+
+        <!-- Desktop Category Sidebar List -->
+        <div id="desktop-cat-list" class="hidden lg:block flex-1 overflow-y-auto no-scrollbar p-3 space-y-1.5"></div>
+
+        <!-- Master Empty State (When no schemas exist) -->
+        <div id="master-empty-state" class="absolute inset-0 top-14 flex flex-col items-center justify-center bg-white z-10 p-6 text-center hidden">
+          <div class="w-14 h-14 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 mb-3 shadow-2xs">
+            <span class="material-symbols-rounded text-3xl text-brand-primary">account_tree</span>
+          </div>
+          <p class="text-sm font-bold text-slate-800">No Dropdowns Yet</p>
+          <p class="text-xs text-slate-400 max-w-[200px] mt-1 mb-4">Create your first schema to configure dropdown lists.</p>
+          <button type="button" onclick="SettingsApp.openSchemaModal()" class="px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl shadow-xs hover:bg-blue-700 transition-all cursor-pointer">
+            Create Dropdown
+          </button>
+        </div>
       </div>
-    </div>
 
-    
-    <div id="pane-dropdowns" class="flex-1 flex flex-col lg:flex-row overflow-hidden bg-slate-50 hidden">
-      
-      
-      <div class="w-full lg:w-1/3 lg:max-w-[320px] bg-white lg:border-r border-slate-200 flex flex-col shrink-0 relative">
-        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-           <h3 class="font-bold text-sm text-slate-800">Dropdowns</h3>
-           <button onclick="SettingsApp.openSchemaModal()" class="w-7 h-7 bg-brand-primary text-white rounded flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors">
-             <span class="material-symbols-rounded text-[16px]">add</span>
-           </button>
-        </div>
-        
-        <div class="p-4 block lg:hidden border-b border-slate-100 bg-white" id="mobile-cat-wrapper">
-           <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Select Dropdown</label>
-           <select id="mobile-cat-select" onchange="SettingsApp.selectCategory(this.value)" class="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-primary shadow-sm"></select>
-        </div>
-
-        <div id="desktop-cat-list" class="hidden lg:block flex-1 overflow-y-auto no-scrollbar p-2 space-y-1" style="display: none;"></div>
-
-        <div id="master-empty-state" class="absolute inset-0 top-14 flex flex-col items-center justify-center bg-white z-10 hidden">
-           <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-3"><span class="material-symbols-rounded text-3xl">account_tree</span></div>
-           <p class="text-sm font-bold text-slate-700">No Dropdowns</p>
-           <p class="text-xs text-slate-400 text-center px-4 mt-1 mb-4">Create your first dropdown to get started.</p>
-           <button onclick="SettingsApp.openSchemaModal()" class="px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-lg shadow-sm hover:bg-blue-700">Create Dropdown</button>
-        </div>
-      </div>
-
-      
+      <!-- Right Detail Pane (Options List & Config) -->
       <div id="detail-pane-wrapper" class="flex-1 flex flex-col bg-slate-50 overflow-hidden relative pb-20 md:pb-0">
         
-        <div id="options-empty-state" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10 hidden">
-          <span class="material-symbols-rounded text-6xl text-slate-200 mb-3">touch_app</span>
-          <p class="text-slate-500 font-medium text-sm">Select a dropdown category to configure.</p>
+        <!-- Options Unselected Empty State -->
+        <div id="options-empty-state" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10 p-6 text-center hidden">
+          <div class="w-16 h-16 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-300 mb-3 shadow-xs">
+            <span class="material-symbols-rounded text-3xl">touch_app</span>
+          </div>
+          <p class="text-slate-700 font-bold text-sm">Select a Dropdown Category</p>
+          <p class="text-xs text-slate-400 max-w-xs mt-1">Choose a category on the left to view, reorder, or edit its options.</p>
         </div>
 
-        <div id="options-content-area" class="flex-1 flex flex-col hidden h-full">
-          <div class="bg-white p-4 md:px-6 md:py-5 border-b border-slate-200 shrink-0 flex items-center justify-between shadow-sm z-10">
+        <!-- Options Content Area -->
+        <div id="options-content-area" class="flex-1 flex flex-col hidden h-full overflow-hidden">
+          
+          <!-- Category Header & Actions Toolbar -->
+          <div class="bg-white p-3.5 md:px-6 md:py-4 border-b border-slate-200 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs z-10">
             <div>
-              <div class="flex items-center gap-3 mb-1">
-                <h2 id="opt-header-title" class="text-lg font-bold text-slate-800">--</h2>
-                <span class="text-[10px] font-bold text-brand-primary bg-blue-50 px-2 py-0.5 rounded uppercase tracking-wide" id="opt-header-prefix">--</span>
+              <div class="flex items-center gap-2.5">
+                <h2 id="opt-header-title" class="text-base md:text-lg font-bold text-slate-800">--</h2>
+                <span class="text-[10px] font-bold text-brand-primary bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md uppercase tracking-wider" id="opt-header-prefix">--</span>
               </div>
-              <div id="opt-header-usages" class="flex flex-wrap gap-2 mt-2"></div>
+              <div id="opt-header-usages" class="flex flex-wrap gap-1.5 mt-1.5"></div>
             </div>
-            <div class="flex gap-2">
-              <button onclick="SettingsApp.editSchema()" class="w-9 h-9 border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm"><span class="material-symbols-rounded text-[18px]">settings</span></button>
-              <button onclick="SettingsApp.openOptionModal()" class="h-9 px-4 bg-brand-primary text-white rounded-lg flex items-center gap-1.5 shadow-sm hover:bg-blue-700 transition-colors text-xs font-bold">
-                <span class="material-symbols-rounded text-[16px]">add</span> Add
+            
+            <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
+              <button type="button" onclick="SettingsApp.editSchema()" class="h-9 px-3 border border-slate-200 hover:border-slate-300 text-slate-600 bg-white hover:bg-slate-50 active:bg-slate-100 rounded-xl flex items-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer" title="Configure Category Schema">
+                <span class="material-symbols-rounded text-[17px]">settings</span>
+                <span class="hidden sm:inline">Schema Settings</span>
+              </button>
+              
+              <button type="button" onclick="SettingsApp.openOptionModal()" class="h-9 px-4 bg-brand-primary text-white rounded-xl flex items-center gap-1.5 shadow-xs hover:bg-blue-700 active:scale-95 transition-all text-xs font-bold cursor-pointer">
+                <span class="material-symbols-rounded text-[17px]">add</span>
+                <span>Add Option</span>
               </button>
             </div>
           </div>
 
-          <div class="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar">
-            <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto">
-              <table class="w-full text-left border-collapse">
-                <thead class="bg-slate-50 border-b border-slate-100">
-                  <tr id="dynamic-thead-row" class="text-[10px] uppercase text-slate-500 font-bold"></tr>
-                </thead>
-                <tbody id="options-tbody" class="text-xs text-slate-700 bg-white"></tbody>
-              </table>
+          <!-- Options Container: Table for Tablet/Desktop, Cards for Mobile -->
+          <div class="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 no-scrollbar">
+            
+            <!-- Desktop / Tablet Table View (>= 768px) -->
+            <div class="hidden md:block bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead class="bg-slate-50/75 border-b border-slate-200/70">
+                    <tr id="dynamic-thead-row" class="text-[10px] uppercase text-slate-500 font-bold tracking-wider"></tr>
+                  </thead>
+                  <tbody id="options-tbody" class="text-xs text-slate-700 divide-y divide-slate-100 bg-white"></tbody>
+                </table>
+              </div>
             </div>
+
+            <!-- Mobile Interactive Cards View (< 768px) -->
+            <div id="options-mobile-cards" class="md:hidden flex flex-col gap-3">
+              <!-- Dynamically populated option cards -->
+            </div>
+
           </div>
           
-          <div id="save-order-toolbar" class="bg-slate-800 text-white p-4 flex items-center justify-between shrink-0 transform translate-y-full transition-transform duration-300 absolute bottom-0 left-0 right-0 z-20 pb-safe md:pb-4">
-             <span class="text-sm font-medium">Order changed.</span>
-             <div class="flex gap-2">
-                <button onclick="SettingsApp.discardOrder()" class="px-3 py-1.5 text-xs font-bold text-slate-300 hover:text-white transition-colors">Discard</button>
-                <button onclick="SettingsApp.saveOrder()" id="btn-save-order" class="px-4 py-1.5 bg-brand-primary text-white rounded-lg text-xs font-bold shadow-sm">Save Order</button>
-             </div>
+          <!-- Floating Save Order Toolbar (Fixed above mobile bottom-nav) -->
+          <div id="save-order-toolbar" class="bg-slate-900/95 backdrop-blur-md text-white p-3.5 md:p-4 rounded-2xl shadow-2xl flex items-center justify-between shrink-0 transform translate-y-32 transition-transform duration-300 fixed bottom-20 md:bottom-6 left-3 right-3 md:left-auto md:right-8 md:w-96 z-30 border border-slate-700">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-rounded text-amber-400 text-[20px]">swap_vert</span>
+              <div>
+                <span class="text-xs font-bold block leading-tight">Order Modified</span>
+                <span class="text-[10px] text-slate-400">Save changes to update sheet.</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="SettingsApp.discardOrder()" class="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer">Discard</button>
+              <button type="button" onclick="SettingsApp.saveOrder()" id="btn-save-order" class="px-4 py-1.5 bg-brand-primary text-white rounded-xl text-xs font-bold shadow-xs hover:bg-blue-600 transition-all cursor-pointer">Save Order</button>
+            </div>
           </div>
+
         </div>
       </div>
     </div>
   </div>
 
-  
-  <div id="schema-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[100] flex items-start md:items-center justify-center p-3 md:p-4 overflow-y-auto">
-    
-    <div id="schema-modal-content" class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 flex flex-col my-auto">
-      <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0">
-        <div>
-          <h2 id="schema-modal-title" class="text-base font-bold text-slate-800">Create Dropdown</h2>
-          <p class="text-[10px] text-slate-500">Define the structure and usage.</p>
+  <!-- ========================================== -->
+  <!-- MODALS                                     -->
+  <!-- ========================================== -->
+
+  <!-- 1. Schema Builder Modal -->
+  <div id="schema-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div id="schema-modal-content" class="bg-white w-full max-w-xl rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col my-auto border border-slate-200 overflow-hidden">
+      
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-50 text-brand-primary flex items-center justify-center shrink-0">
+            <span class="material-symbols-rounded text-[18px]">account_tree</span>
+          </div>
+          <div>
+            <h2 id="schema-modal-title" class="text-sm md:text-base font-bold text-slate-800">Create Dropdown Schema</h2>
+            <p class="text-[10px] text-slate-500">Define columns, key prefix, and linked modules.</p>
+          </div>
         </div>
-        <button onclick="SettingsApp.closeSchemaModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200"><span class="material-symbols-rounded text-lg">close</span></button>
+        <button type="button" onclick="SettingsApp.closeSchemaModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer">
+          <span class="material-symbols-rounded text-lg">close</span>
+        </button>
       </div>
-      <div class="p-4 md:p-5 overflow-y-auto no-scrollbar max-h-[75vh]">
+
+      <div class="p-4 sm:p-5 overflow-y-auto no-scrollbar max-h-[75vh]">
         <form id="schema-form" novalidate onsubmit="SettingsApp.saveSchema(event)" class="space-y-4">
-          <div class="grid grid-cols-3 gap-3">
-            <div class="col-span-2">
-              <label class="block text-[10px] font-bold text-slate-700 mb-1 uppercase">Dropdown Name *</label>
-              <input type="text" id="sch-name" placeholder="e.g., Membership Option" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold focus:border-brand-primary outline-none">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <label for="sch-name" class="block text-xs font-bold text-slate-700 mb-1">Dropdown Name *</label>
+              <input type="text" id="sch-name" placeholder="e.g., Membership Option" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold focus:bg-white focus:border-brand-primary outline-none transition-all">
             </div>
             <div>
-              <label class="block text-[10px] font-bold text-slate-700 mb-1 uppercase">ID Prefix *</label>
-              <input type="text" id="sch-prefix" placeholder="e.g., PLN" required maxlength="5" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold uppercase focus:border-brand-primary outline-none">
+              <label for="sch-prefix" class="block text-xs font-bold text-slate-700 mb-1">ID Prefix *</label>
+              <input type="text" id="sch-prefix" placeholder="e.g., PLN" required maxlength="6" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold uppercase focus:bg-white focus:border-brand-primary outline-none transition-all">
             </div>
           </div>
-          <div class="border border-slate-200 rounded-xl overflow-hidden">
-             <div class="bg-slate-50 px-3 py-2 flex items-center justify-between border-b border-slate-200">
-               <h4 class="text-xs font-bold text-slate-800">Attributes (Columns)</h4>
-               <button type="button" onclick="SettingsApp.addSchemaColumn()" class="text-[10px] font-bold text-brand-primary hover:text-blue-700 flex items-center gap-0.5"><span class="material-symbols-rounded text-[14px]">add</span> Add Attribute</button>
-             </div>
-             <div class="p-3 space-y-2" id="schema-columns-container">
-               <div class="flex gap-2"><div class="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-500 flex justify-between items-center"><span>ID (Auto-generated Key)</span> <span class="material-symbols-rounded text-[14px]">lock</span></div></div>
-               <div class="flex gap-2"><div class="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-500 flex justify-between items-center"><span>Name (Required Display Label)</span> <span class="material-symbols-rounded text-[14px]">lock</span></div></div>
-             </div>
+
+          <!-- Dynamic Attributes / Columns -->
+          <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+            <div class="bg-slate-50 px-4 py-2.5 flex items-center justify-between border-b border-slate-200">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-rounded text-slate-500 text-[16px]">view_column</span>
+                <h4 class="text-xs font-bold text-slate-800">Attributes (Columns)</h4>
+              </div>
+              <button type="button" onclick="SettingsApp.addSchemaColumn()" class="text-[11px] font-bold text-brand-primary hover:text-blue-700 flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-rounded text-[15px]">add</span> Add Attribute
+              </button>
+            </div>
+            <div class="p-3 space-y-2 bg-white" id="schema-columns-container">
+              <div class="flex gap-2">
+                <div class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 flex justify-between items-center">
+                  <span>ID (Auto-generated Key)</span>
+                  <span class="material-symbols-rounded text-[16px] text-slate-400">lock</span>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <div class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 flex justify-between items-center">
+                  <span>Name (Required Display Label)</span>
+                  <span class="material-symbols-rounded text-[16px] text-slate-400">lock</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="border border-slate-200 rounded-xl overflow-hidden">
-             <div class="bg-slate-50 px-3 py-2 flex items-center justify-between border-b border-slate-200">
-               <h4 class="text-xs font-bold text-slate-800">Linked Modules (Usage)</h4>
-               <button type="button" onclick="SettingsApp.addSchemaUsage()" class="text-[10px] font-bold text-brand-primary hover:text-blue-700 flex items-center gap-0.5"><span class="material-symbols-rounded text-[14px]">add</span> Add Link</button>
-             </div>
-             <div class="p-3 space-y-2" id="schema-usages-container"></div>
+
+          <!-- Linked Modules (Usages) -->
+          <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+            <div class="bg-slate-50 px-4 py-2.5 flex items-center justify-between border-b border-slate-200">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-rounded text-slate-500 text-[16px]">link</span>
+                <h4 class="text-xs font-bold text-slate-800">Linked Sheets & Columns (Usage)</h4>
+              </div>
+              <button type="button" onclick="SettingsApp.addSchemaUsage()" class="text-[11px] font-bold text-brand-primary hover:text-blue-700 flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-rounded text-[15px]">add</span> Add Link
+              </button>
+            </div>
+            <div class="p-3 space-y-2 bg-white" id="schema-usages-container"></div>
           </div>
+
           <div class="pt-2 flex gap-3 border-t border-slate-100">
-            <button type="button" onclick="SettingsApp.closeSchemaModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-200">Cancel</button>
-            <button type="submit" id="btn-save-schema" class="flex-1 px-4 py-2.5 bg-brand-primary text-white font-bold text-sm rounded-xl shadow-sm hover:bg-blue-700">Save Schema</button>
+            <button type="button" onclick="SettingsApp.closeSchemaModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm rounded-xl hover:bg-slate-200 transition-colors cursor-pointer">Cancel</button>
+            <button type="submit" id="btn-save-schema" class="flex-1 px-4 py-2.5 bg-brand-primary text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs hover:bg-blue-700 active:scale-98 transition-all cursor-pointer">Save Schema</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  
-  <div id="option-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[110] flex items-center justify-center p-4">
-    <div id="option-modal-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 flex flex-col">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-        <h2 id="modal-opt-title" class="text-lg font-bold text-slate-800">Add Option</h2>
-        <button onclick="SettingsApp.closeOptionModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200"><span class="material-symbols-rounded text-lg">close</span></button>
+  <!-- 2. Option Modal -->
+  <div id="option-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[110] flex items-center justify-center p-4">
+    <div id="option-modal-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col border border-slate-200 overflow-hidden">
+      
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+        <h2 id="modal-opt-title" class="text-base font-bold text-slate-800">Add Option</h2>
+        <button type="button" onclick="SettingsApp.closeOptionModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer">
+          <span class="material-symbols-rounded text-lg">close</span>
+        </button>
       </div>
-      <div class="p-6 overflow-y-auto no-scrollbar max-h-[70vh]">
-        <form id="option-form" novalidate onsubmit="SettingsApp.saveOption(event)" class="space-y-4">
+      
+      <div class="p-5 overflow-y-auto no-scrollbar max-h-[70vh]">
+        <form id="option-form" novalidate onsubmit="SettingsApp.saveOption(event)" class="space-y-3.5">
           <input type="hidden" id="dyn-opt-id">
-          <div id="dynamic-fields-container" class="space-y-4"></div>
-          <div class="pt-4 flex gap-3 mt-6 border-t border-slate-100">
-            <button type="button" onclick="SettingsApp.closeOptionModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-200">Cancel</button>
-            <button type="submit" id="btn-save-opt" class="flex-1 px-4 py-2.5 bg-brand-primary text-white font-bold text-sm rounded-xl shadow-sm hover:bg-blue-700">Save Option</button>
+          <div id="dynamic-fields-container" class="space-y-3"></div>
+          
+          <div class="pt-3 flex gap-2.5 mt-5 border-t border-slate-100">
+            <button type="button" onclick="SettingsApp.closeOptionModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors cursor-pointer">Cancel</button>
+            <button type="submit" id="btn-save-opt" class="flex-1 px-4 py-2.5 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-xs hover:bg-blue-700 active:scale-98 transition-all cursor-pointer">Save Option</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  
-  <div id="delete-opt-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[120] flex items-center justify-center p-4">
-    <div id="delete-opt-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 p-6 text-center">
-      <div class="w-16 h-16 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4"><span class="material-symbols-rounded text-3xl">delete_forever</span></div>
-      <h3 class="text-lg font-bold text-slate-800 mb-2">Delete Option?</h3>
-      <p class="text-sm text-slate-500 mb-6">Are you sure you want to delete <strong id="delete-opt-name" class="text-slate-700"></strong>? This action cannot be undone.</p>
-      <div class="flex gap-3">
-        <button onclick="SettingsApp.closeDeleteModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-200">Cancel</button>
-        <button onclick="SettingsApp.confirmDelete()" class="flex-1 px-4 py-2.5 bg-red-500 text-white font-bold text-sm rounded-xl hover:bg-red-600 shadow-sm">Delete</button>
+  <!-- 3. Delete Confirmation Modal -->
+  <div id="delete-opt-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[120] flex items-center justify-center p-4">
+    <div id="delete-opt-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 p-6 text-center border border-slate-200">
+      <div class="w-14 h-14 rounded-2xl bg-red-50 text-red-500 border border-red-100 flex items-center justify-center mx-auto mb-3.5">
+        <span class="material-symbols-rounded text-3xl">delete_forever</span>
       </div>
+      <h3 class="text-base font-bold text-slate-800 mb-1">Delete Option?</h3>
+      <p class="text-xs text-slate-500 mb-5 leading-relaxed">Are you sure you want to delete <strong id="delete-opt-name" class="text-slate-800"></strong>? This will remove it from future dropdown selections.</p>
+      
+      <div class="flex gap-2.5">
+        <button type="button" onclick="SettingsApp.closeDeleteModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors cursor-pointer">Cancel</button>
+        <button type="button" onclick="SettingsApp.confirmDelete()" class="flex-1 px-4 py-2.5 bg-red-500 text-white font-bold text-xs rounded-xl hover:bg-red-600 shadow-xs active:scale-98 transition-all cursor-pointer">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Notification Configuration Modal (Future Scope) -->
+  <div id="notification-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[130] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div id="notification-modal-content" class="bg-white w-full max-w-lg rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col my-auto border border-slate-200 overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+            <span class="material-symbols-rounded text-[18px]">notifications_active</span>
+          </div>
+          <div>
+            <h2 class="text-sm md:text-base font-bold text-slate-800">Notification Configuration</h2>
+            <p class="text-[10px] text-slate-500">Scheduled email triggers, target inboxes, and alert frequency.</p>
+          </div>
+        </div>
+        <button type="button" onclick="SettingsApp.closeNotificationModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer">
+          <span class="material-symbols-rounded text-lg">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-4 overflow-y-auto no-scrollbar max-h-[75vh]">
+        
+        <!-- Future Scope Notice Banner -->
+        <div class="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-xl flex items-start gap-3">
+          <span class="material-symbols-rounded text-brand-primary text-[20px] shrink-0 mt-0.5">info</span>
+          <div class="text-[11px] text-slate-600 leading-relaxed">
+            <span class="font-bold text-slate-800 block mb-0.5">Scheduled Background Triggers (Upcoming Feature)</span>
+            Automated Google Apps Script time-driven triggers and Gmail dispatch routines are scheduled for an upcoming release. You can specify the recipient email and preferred frequency now so they take effect upon deployment.
+          </div>
+        </div>
+
+        <!-- Target Email Card -->
+        <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-blue-50 text-brand-primary flex items-center justify-center shrink-0 border border-blue-100 mt-0.5">
+            <span class="material-symbols-rounded text-[18px]">mail</span>
+          </div>
+          <div class="flex-1">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Alert Email</span>
+            <span id="notif-target-email" class="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">--</span>
+            <p class="text-[10px] text-slate-400 mt-0.5">Notifications will be sent to the primary gym owner / administrator email.</p>
+          </div>
+        </div>
+
+        <!-- Trigger Frequency Card -->
+        <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100 mt-0.5">
+            <span class="material-symbols-rounded text-[18px]">schedule</span>
+          </div>
+          <div class="flex-1">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Trigger Frequency & Timing</span>
+            <span class="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">Daily Morning Digest (08:00 AM)</span>
+            <p class="text-[10px] text-slate-400 mt-0.5">Scheduled time-driven trigger evaluates active member records and sends a consolidated daily alert.</p>
+          </div>
+        </div>
+
+        <!-- Event Trigger Scope Cards -->
+        <div class="pt-2 border-t border-slate-100">
+          <label class="block text-xs font-bold text-slate-700 mb-2">Automated Event Rules Included</label>
+          <div class="space-y-2">
+            
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <span class="material-symbols-rounded text-amber-500 text-[18px]">alarm</span>
+                <div>
+                  <div class="text-xs font-bold text-slate-700">Upcoming Expirations ("Due Soon")</div>
+                  <div class="text-[10px] text-slate-400">Triggered for active members entering the configured alert buffer window.</div>
+                </div>
+              </div>
+              <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">Included</span>
+            </div>
+
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <span class="material-symbols-rounded text-red-500 text-[18px]">event_busy</span>
+                <div>
+                  <div class="text-xs font-bold text-slate-700">Expired Memberships</div>
+                  <div class="text-[10px] text-slate-400">Notifies when membership reaches end-date without renewal payment.</div>
+                </div>
+              </div>
+              <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">Included</span>
+            </div>
+
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <span class="material-symbols-rounded text-indigo-500 text-[18px]">account_balance_wallet</span>
+                <div>
+                  <div class="text-xs font-bold text-slate-700">Overdue Collections Summary</div>
+                  <div class="text-[10px] text-slate-400">Aggregated breakdown of members with pending or overdue fees.</div>
+                </div>
+              </div>
+              <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">Included</span>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end shrink-0">
+        <button type="button" onclick="SettingsApp.closeNotificationModal()" class="w-full sm:w-auto px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer">Close</button>
+      </div>
+
     </div>
   </div>
 
