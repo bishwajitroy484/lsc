@@ -421,4 +421,28 @@ describe('Dashboard Module', () => {
     // Dec (index 11): 30,000 collection - 11,500 staff = 18,500
     expect(metrics.expectedNetArr[11]).toBe(18500);
   });
+
+  test('calculates actualNet, remainingForecastNet, and projectedNet correctly in formatTimePeriods', () => {
+    const dashboardApi = loadDashboardApi();
+    // 9 elapsed months with 10k net each = 90k actual
+    // 3 future months: Oct (-11.5k), Nov (+18.5k), Dec (+18.5k) = +25.5k remaining forecast
+    const revArr = [...new Array(9).fill(20000), 0, 0, 0];
+    const expArr = [...new Array(9).fill(10000), 0, 0, 0];
+    const expectedCollectionArr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30000, 30000];
+
+    const metrics = dashboardApi.formatTimePeriods(
+      { revArr, expArr, staffArr: new Array(12).fill(0) },
+      { overdueArr: new Array(12).fill(0), expectedCollectionArr },
+      'Monthly',
+      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      2026,
+      new Date(2026, 8, 28), // 28-Sep-2026
+      { operating: 0, staff: 11500 },
+      null
+    );
+
+    expect(metrics.actualNet).toBe(90000);
+    expect(metrics.remainingForecastNet).toBe(25500);
+    expect(metrics.projectedNet).toBe(115500);
+  });
 });

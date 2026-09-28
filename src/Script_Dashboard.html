@@ -295,7 +295,7 @@
   };
 
   function toggleShimmer(isActive) {
-    const kpis = ['kpi-active', 'kpi-collected', 'kpi-overdue', 'kpi-bus-exp', 'kpi-staff-cost', 'kpi-total-exp', 'kpi-net', 'mini-staff-count', 'mini-staff-cost', 'mini-staff-avg'];
+    const kpis = ['kpi-active', 'kpi-collected', 'kpi-overdue', 'kpi-bus-exp', 'kpi-staff-cost', 'kpi-total-exp', 'kpi-net', 'kpi-net-forecast', 'mini-staff-count', 'mini-staff-cost', 'mini-staff-avg'];
     const chartIds = ['chart-batch', 'chart-rev-exp', 'chart-trend', 'chart-expense-breakdown', 'chart-prediction', 'chart-staff-trend'];
     const tables = ['table-overdue', 'table-upcoming'];
     
@@ -347,6 +347,22 @@
       safeSetText('kpi-staff-cost', formatCurrency(data.kpis.staffCost));
       safeSetText('kpi-total-exp', formatCurrency(data.kpis.totalOperatingExpenses));
       safeSetText('kpi-net', formatCurrency(data.kpis.netInHand));
+
+      const projNet = data.kpis.projectedNet != null ? data.kpis.projectedNet : data.kpis.netInHand;
+      safeSetText('kpi-net-forecast', formatCurrency(projNet));
+      const forecastEl = document.getElementById('kpi-net-forecast');
+      if (forecastEl) {
+        const rem = data.kpis.remainingForecastNet || 0;
+        forecastEl.title = `Actual: ${formatCurrency(data.kpis.netInHand)} | Remaining Forecast: ${rem >= 0 ? '+' : ''}${formatCurrency(rem)}`;
+      }
+
+      const predActual = (data.charts.prediction && data.charts.prediction.actualNet != null) ? data.charts.prediction.actualNet : data.kpis.netInHand;
+      const predRemaining = (data.charts.prediction && data.charts.prediction.remainingForecastNet != null) ? data.charts.prediction.remainingForecastNet : (data.kpis.remainingForecastNet || 0);
+      const predTotal = (data.charts.prediction && data.charts.prediction.projectedNet != null) ? data.charts.prediction.projectedNet : projNet;
+
+      safeSetText('pred-sum-actual', formatCurrency(predActual));
+      safeSetText('pred-sum-remaining', (predRemaining > 0 ? '+' : '') + formatCurrency(predRemaining));
+      safeSetText('pred-sum-total', formatCurrency(predTotal));
 
       if (data.kpis.activeSegregation) {
          const segContainer = document.getElementById('kpi-active-segregation');

@@ -95,7 +95,9 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
           businessExpenses: (chartMetrics.totalOperatingExpenses - chartMetrics.staffCost) || 0,
           staffCost: chartMetrics.staffCost || 0,
           totalOperatingExpenses: chartMetrics.totalOperatingExpenses || 0,
-          netInHand: (chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0
+          netInHand: (chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0,
+          remainingForecastNet: chartMetrics.remainingForecastNet || 0,
+          projectedNet: chartMetrics.projectedNet != null ? chartMetrics.projectedNet : ((chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0)
         },
         charts: {
           categories: chartMetrics.filteredLabels,
@@ -107,7 +109,10 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
             categories: chartMetrics.predictionLabels,
             actual: chartMetrics.actualNetArr,
             expected: chartMetrics.expectedNetArr,
-            transitionIndex: chartMetrics.transitionIndex
+            transitionIndex: chartMetrics.transitionIndex,
+            actualNet: chartMetrics.actualNet || 0,
+            remainingForecastNet: chartMetrics.remainingForecastNet || 0,
+            projectedNet: chartMetrics.projectedNet != null ? chartMetrics.projectedNet : ((chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0)
           },
           collectionTrend: { collected: chartMetrics.filteredRev, overdue: chartMetrics.filteredOverdue },
           expenseBreakdown: {
@@ -618,6 +623,20 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     }
   }
 
+  let actualNet = 0;
+  let remainingForecastNet = 0;
+  selectedIndices.forEach(index => {
+    if (isFuturePeriod(index)) {
+      remainingForecastNet += ((finalRev[index] || 0) + (finalExpectedCollections[index] || 0) - (finalExpectedExpenses[index] || 0));
+    } else {
+      actualNet += ((finalRev[index] || 0) - (finalExp[index] || 0));
+    }
+  });
+
+  actualNet = Number(actualNet.toFixed(2));
+  remainingForecastNet = Number(remainingForecastNet.toFixed(2));
+  const projectedNet = Number((actualNet + remainingForecastNet).toFixed(2));
+
   return {
     filteredLabels,
     filteredRev: safeNumArray(filteredRev),
@@ -630,7 +649,10 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     transitionIndex,
     membersCollected,
     totalOperatingExpenses,
-    staffCost
+    staffCost,
+    actualNet,
+    remainingForecastNet,
+    projectedNet
   };
 }
 

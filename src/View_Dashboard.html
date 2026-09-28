@@ -40,7 +40,11 @@
         <div class="w-6 h-6 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance</span></div>
         <p class="text-xs text-indigo-900/80 font-bold whitespace-nowrap">Net-In Hand</p>
       </div>
-      <div class="h-7 flex items-center"><h2 id="kpi-net" class="text-xl md:text-2xl font-bold text-indigo-900 leading-none">--</h2></div>
+      <div class="h-7 flex items-center mb-1"><h2 id="kpi-net" class="text-xl md:text-2xl font-bold text-indigo-900 leading-none">--</h2></div>
+      <div id="kpi-net-forecast-container" class="mt-auto border-t border-indigo-200/50 pt-2 min-h-[26px] flex items-center justify-between text-[11px]">
+        <span class="text-indigo-600/80 font-semibold text-[10px] uppercase tracking-wider">Projected</span>
+        <span id="kpi-net-forecast" class="font-bold text-indigo-950 bg-white/80 px-2 py-0.5 rounded border border-indigo-200/60 leading-none shadow-xs">--</span>
+      </div>
     </div>
     
     <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
@@ -109,7 +113,7 @@
     </div>
     
     <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full">
-      <div class="flex flex-row items-center justify-between mb-3 w-full flex-nowrap gap-1 shrink-0">
+      <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0">
         <div class="flex items-center gap-1.5 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Net-In-Hand Prediction</h3>
           <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-bold text-emerald-700 shrink-0" aria-label="Green dotted line indicates forecast">
@@ -119,6 +123,22 @@
         <div class="flex items-center gap-1 text-slate-400 shrink-0">
           <button onclick="window.toggleDataLabels('pred')" class="hover:text-brand-primary p-0.5 rounded transition-colors"><span class="material-symbols-rounded text-[16px]">label</span></button>
           <button onclick="window.openChartModal('Net-In-Hand Prediction', 'pred')" class="hidden md:flex hover:text-brand-primary p-0.5 rounded transition-colors"><span class="material-symbols-rounded text-[16px]">open_in_full</span></button>
+        </div>
+      </div>
+      <div id="pred-summary-bar" class="flex items-center justify-between gap-1 text-[10px] bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1 mb-2 shrink-0">
+        <div class="flex items-center gap-1 min-w-0">
+          <span class="text-slate-400 font-medium truncate">Actual:</span>
+          <span id="pred-sum-actual" class="font-bold text-slate-700">--</span>
+        </div>
+        <span class="text-slate-300">•</span>
+        <div class="flex items-center gap-1 min-w-0">
+          <span class="text-slate-400 font-medium truncate">Remaining:</span>
+          <span id="pred-sum-remaining" class="font-bold text-emerald-600">--</span>
+        </div>
+        <span class="text-slate-300">•</span>
+        <div class="flex items-center gap-1 min-w-0">
+          <span class="text-slate-400 font-medium truncate">Total:</span>
+          <span id="pred-sum-total" class="font-bold text-indigo-700">--</span>
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px]">
