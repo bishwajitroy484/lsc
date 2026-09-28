@@ -13,7 +13,7 @@
     isEditingSchema: false, 
     
     // Core known settings mapped directly to UI Inputs
-    coreKeys: ['GYM_NAME', 'LOGO_ID', 'Revenue_Recognition', 'OWNER_EMAIL', 'SPREADSHEET_ID', 'REMINDER_BUFFER'],
+    coreKeys: ['GYM_NAME', 'LOGO_ID', 'Revenue_Recognition', 'OWNER_EMAIL', 'SPREADSHEET_ID', 'DRIVE_ID', 'REMINDER_BUFFER', 'NOTIFICATION_ENABLED', 'NOTIFICATION_EMAIL', 'NOTIFICATION_FREQUENCY'],
 
     safeSetText: AppUtils.safeSetText,
     safeSetValue: AppUtils.safeSetValue,
@@ -94,7 +94,10 @@
        // Clear core inputs first
        this.coreKeys.forEach(k => {
            const el = document.getElementById('gen-' + k);
-           if(el) el.value = '';
+           if(el) {
+             if (el.type === 'checkbox') el.checked = false;
+             else el.value = '';
+           }
        });
        
        // Clear any previously injected custom fields
@@ -111,7 +114,14 @@
            this.coreKeys.forEach(core => {
                if(core.toLowerCase() === kLower) {
                    const el = document.getElementById('gen-' + core);
-                   if (el) el.value = item.value || '';
+                   if (el) {
+                     if (el.type === 'checkbox') {
+                       const v = String(item.value).toLowerCase();
+                       el.checked = (v === 'true' || v === '1' || v === 'yes' || v === 'enabled');
+                     } else {
+                       el.value = item.value || '';
+                     }
+                   }
                    isCore = true;
                }
            });
@@ -124,9 +134,20 @@
        // Re-inject custom keys directly into the custom grid container
        customPairs.forEach(p => this.addCustomSettingRow('core-settings-grid', p.key, p.value));
 
-       // Update live preview helpers
+       const customCard = document.getElementById('custom-settings-card');
+       if (customCard) {
+         if (customPairs.length === 0) {
+           customCard.classList.add('hidden');
+         } else {
+           customCard.classList.remove('hidden');
+         }
+       }
+
+       // Update live preview helpers and notifications
        this.updateLogoPreview();
        this.updateRevenueExplanation();
+       this.toggleNotificationView();
+       this.updateNotificationSummary();
        this.checkCustomSettingsEmpty();
     },
 
@@ -193,14 +214,102 @@
       window.open('https://docs.google.com/spreadsheets/d/' + id + '/edit', '_blank');
     },
 
-    checkCustomSettingsEmpty: function() {
-      const emptyEl = document.getElementById('custom-settings-empty');
-      const rows = document.querySelectorAll('.custom-setting-row');
-      if (emptyEl) {
-        if (rows.length === 0) {
-          emptyEl.classList.remove('hidden');
+    copyDriveId: function() {
+      const input = document.getElementById('gen-DRIVE_ID');
+      if (!input || !input.value) return;
+      navigator.clipboard.writeText(input.value.trim()).then(() => {
+        this.showToast("Drive Folder ID copied to clipboard!");
+      }).catch(() => {
+        this.showToast("Copied: " + input.value.trim());
+      });
+    },
+
+    openDriveUrl: function() {
+      const input = document.getElementById('gen-DRIVE_ID');
+      if (!input || !input.value) return;
+      const id = encodeURIComponent(input.value.trim());
+      window.open('https://drive.google.com/drive/folders/' + id, '_blank');
+    },
+
+    toggleNotificationView: function() {
+      const toggle = document.getElementById('gen-NOTIFICATION_ENABLED');
+      const configArea = document.getElementById('notification-config-area');
+      const statusBadge = document.getElementById('notification-status-badge');
+      if (!toggle) return;
+
+      const isEnabled = toggle.checked;
+      if (configArea) {
+        if (isEnabled) configArea.classList.remove('hidden');
+        else configArea.classList.add('hidden');
+      }
+
+      if (statusBadge) {
+        if (isEnabled) {
+          statusBadge.className = 'text-[10px] font-semibold tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200';
+          statusBadge.textContent = 'Enabled';
         } else {
-          emptyEl.classList.add('hidden');
+          statusBadge.className = 'text-[10px] font-semibold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded';
+          statusBadge.textContent = 'Disabled';
+        }
+      }
+      this.updateNotificationSummary();
+    },
+
+    updateNotificationSummary: function() {
+      const emailInput = document.getElementById('gen-NOTIFICATION_EMAIL');
+      const ownerEmailInput = document.getElementById('gen-OWNER_EMAIL');
+      const freqInput = document.getElementById('gen-NOTIFICATION_FREQUENCY');
+      const summaryEmail = document.getElementById('notification-summary-email');
+      const summaryFreq = document.getElementById('notification-summary-freq');
+      const fallbackEl = document.getElementById('notif-owner-email-fallback');
+
+      const ownerVal = (ownerEmailInput && ownerEmailInput.value.trim()) ? ownerEmailInput.value.trim() : 'None set';
+      if (fallbackEl) fallbackEl.textContent = ownerVal;
+
+      const targetEmail = (emailInput && emailInput.value.trim()) ? emailInput.value.trim() : (ownerVal !== 'None set' ? ownerVal : 'Owner / Admin Email');
+      const targetFreq = (freqInput && freqInput.value) ? freqInput.value : 'Daily Morning Digest (08:00 AM)';
+
+      if (summaryEmail) summaryEmail.textContent = targetEmail;
+      if (summaryFreq) summaryFreq.textContent = targetFreq;
+    },
+
+    openNotificationModal: function() {
+      this.updateNotificationSummary();
+      const modal = document.getElementById('notification-modal');
+      const content = document.getElementById('notification-modal-content');
+      if (!modal || !content) return;
+
+      modal.classList.remove('pointer-events-none', 'opacity-0');
+      modal.classList.add('opacity-100');
+      content.classList.remove('scale-95', 'opacity-0');
+      content.classList.add('scale-100', 'opacity-100');
+    },
+
+    closeNotificationModal: function() {
+      const modal = document.getElementById('notification-modal');
+      const content = document.getElementById('notification-modal-content');
+      if (!modal || !content) return;
+
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modal.classList.remove('opacity-100');
+      content.classList.add('scale-95', 'opacity-0');
+      content.classList.remove('scale-100', 'opacity-100');
+      this.updateNotificationSummary();
+    },
+
+    saveNotificationConfigFromModal: function() {
+      this.closeNotificationModal();
+      this.saveGeneralSettings();
+    },
+
+    checkCustomSettingsEmpty: function() {
+      const card = document.getElementById('custom-settings-card');
+      const rows = document.querySelectorAll('.custom-setting-row');
+      if (card) {
+        if (rows.length === 0) {
+          card.classList.add('hidden');
+        } else {
+          card.classList.remove('hidden');
         }
       }
     },
@@ -249,7 +358,10 @@
        // Collect Core Keys
        this.coreKeys.forEach(k => {
            const el = document.getElementById('gen-' + k);
-           if (el && el.value.trim() !== '') {
+           if (!el) return;
+           if (el.type === 'checkbox') {
+               payload.push({ key: k, value: el.checked ? 'true' : 'false' });
+           } else if (el.value && el.value.trim() !== '') {
                payload.push({ key: k, value: el.value.trim() });
            }
        });

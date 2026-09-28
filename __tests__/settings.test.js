@@ -135,7 +135,14 @@ describe('Settings Module', () => {
     expect(viewHtml).toContain('id="gen-Revenue_Recognition"');
     expect(viewHtml).toContain('id="gen-REMINDER_BUFFER"');
     expect(viewHtml).toContain('id="gen-SPREADSHEET_ID"');
+    expect(viewHtml).toContain('id="gen-DRIVE_ID"');
     expect(viewHtml).toContain('id="gen-LOGO_ID"');
+    expect(viewHtml).toContain('id="gen-NOTIFICATION_ENABLED"');
+    expect(viewHtml).toContain('id="gen-NOTIFICATION_EMAIL"');
+    expect(viewHtml).toContain('id="gen-NOTIFICATION_FREQUENCY"');
+
+    // Custom key addition option is removed
+    expect(viewHtml).not.toContain('Add Custom Key');
 
     // Desktop and mobile responsive containers
     expect(viewHtml).toContain('id="options-tbody"');
@@ -146,6 +153,7 @@ describe('Settings Module', () => {
     expect(viewHtml).toContain('id="schema-modal"');
     expect(viewHtml).toContain('id="option-modal"');
     expect(viewHtml).toContain('id="delete-opt-modal"');
+    expect(viewHtml).toContain('id="notification-modal"');
   });
 });
 
