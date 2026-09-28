@@ -322,4 +322,36 @@ describe('Dashboard Module', () => {
     expect(predictionConfig).toContain("type: 'area'");
     expect(predictionConfig).toContain("fill: { opacity: [0.12, 0] }");
   });
+
+  test('reflects recognized future revenue from split payments in Net-In-Hand Prediction', () => {
+    const dashboardApi = loadDashboardApi();
+    const revArr = [0, 0, 0, 0, 0, 5200, 10000, 10000, 9700, 10100, 9800, 5200];
+    const expArr = new Array(12).fill(0);
+    const expectedCollectionArr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5000];
+
+    const metrics = dashboardApi.formatTimePeriods(
+      { revArr, expArr, staffArr: new Array(12).fill(0) },
+      { overdueArr: new Array(12).fill(0), expectedCollectionArr },
+      'Monthly',
+      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      2026,
+      new Date(2026, 8, 28), // 28-Sep-2026 (Month 8 = Sep)
+      { operating: 0, staff: 0 },
+      null
+    );
+
+    // Sep (index 8) is current month (transitionIndex)
+    expect(metrics.transitionIndex).toBe(8);
+    expect(metrics.actualNetArr[8]).toBe(9700);
+    expect(metrics.actualNetArr[9]).toBeNull(); // Oct
+    expect(metrics.actualNetArr[10]).toBeNull(); // Nov
+    expect(metrics.actualNetArr[11]).toBeNull(); // Dec
+
+    // Future periods Oct and Nov must reflect recognized revenue and NOT drop to 0
+    expect(metrics.expectedNetArr[8]).toBe(9700);
+    expect(metrics.expectedNetArr[9]).toBe(10100);
+    expect(metrics.expectedNetArr[10]).toBe(9800);
+    // Dec combines recognized revenue from active payment (5200) + future expected renewal (5000)
+    expect(metrics.expectedNetArr[11]).toBe(10200);
+  });
 });

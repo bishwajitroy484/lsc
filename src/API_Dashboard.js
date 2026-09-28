@@ -579,7 +579,7 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     ? null
     : Number(((finalRev[index] || 0) - (finalExp[index] || 0)).toFixed(2)));
   let predictionExpected = selectedIndices.map(index => isFuturePeriod(index)
-    ? Number((finalExpectedCollections[index] - finalExpectedExpenses[index]).toFixed(2))
+    ? Number(((finalRev[index] || 0) + (finalExpectedCollections[index] || 0) - (finalExpectedExpenses[index] || 0)).toFixed(2))
     : null);
   let transitionIndex = selectedIndices.indexOf(elapsedBoundaryIdx);
 
