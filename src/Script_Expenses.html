@@ -711,10 +711,12 @@
       if (previewCont && previewImg) { previewImg.src = ''; previewCont.classList.add('hidden'); }
       const hiddenFileId = document.getElementById('exp-receipt-file-id');
       if (hiddenFileId) hiddenFileId.value = '';
+      AppUtils.clearValidationState('expense-form');
     },
 
     saveExpense: async function(e) {
       e.preventDefault();
+      if (!AppUtils.validateRequiredFields('expense-form')) return;
       const btn = document.getElementById('btn-save-expense');
       btn.innerHTML = `<span class="material-symbols-rounded animate-spin text-[18px] mr-2">progress_activity</span> Saving...`;
       btn.disabled = true;

@@ -1151,10 +1151,12 @@
       if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
       if(content) content.classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
       if(form) form.reset();
+      AppUtils.clearValidationState('staff-form');
     },
 
     saveStaff: function(e) {
       e.preventDefault();
+      if (!AppUtils.validateRequiredFields('staff-form')) return;
       const btn = document.getElementById('btn-save-staff');
       if(btn) {
          btn.innerHTML = `<span class="material-symbols-rounded animate-spin text-[18px] mr-2">progress_activity</span> Saving...`;
@@ -1278,10 +1280,12 @@
       if(backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
       if(content) content.classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
       if(form) form.reset();
+      AppUtils.clearValidationState('txn-form');
     },
 
     saveTransaction: function(e) {
       e.preventDefault();
+      if (!AppUtils.validateRequiredFields('txn-form')) return;
       const btn = document.getElementById('btn-save-txn');
       if(btn) {
          btn.innerHTML = `<span class="material-symbols-rounded animate-spin text-[18px] mr-2">progress_activity</span> Saving...`;

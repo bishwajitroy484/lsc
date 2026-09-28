@@ -241,7 +241,7 @@
         <button onclick="StaffApp.closeModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200 transition-colors"><span class="material-symbols-rounded text-lg">close</span></button>
       </div>
       
-      <form id="staff-form" onsubmit="StaffApp.saveStaff(event)" class="flex-1 flex flex-col overflow-hidden">
+      <form id="staff-form" novalidate onsubmit="StaffApp.saveStaff(event)" class="flex-1 flex flex-col overflow-hidden">
         <div class="flex-1 overflow-y-auto p-5 md:p-6 no-scrollbar">
           <input type="hidden" id="stf-id">
           
@@ -307,7 +307,7 @@
         <button onclick="StaffApp.closeTransactionModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200"><span class="material-symbols-rounded text-lg">close</span></button>
       </div>
       
-      <form id="txn-form" onsubmit="StaffApp.saveTransaction(event)" class="flex-1 flex flex-col overflow-hidden">
+      <form id="txn-form" novalidate onsubmit="StaffApp.saveTransaction(event)" class="flex-1 flex flex-col overflow-hidden">
         <div class="p-5 overflow-y-auto flex-1 no-scrollbar space-y-4">
           <input type="hidden" id="txn-id">
           
