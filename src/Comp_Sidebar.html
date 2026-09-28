@@ -7,13 +7,16 @@
 
   
   <div class="px-5 mb-8 flex items-center gap-3 whitespace-nowrap shrink-0">
-    <div class="w-10 h-10 rounded bg-brand-primary flex items-center justify-center shrink-0">
-      <span class="material-symbols-rounded text-white text-xl">fitness_center</span>
+    <div id="sidebar-logo-container" class="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center shrink-0 overflow-hidden relative shadow-sm border border-slate-700/60">
+      <img id="sidebar-logo-img" src="" alt="Gym Logo" class="w-full h-full object-contain p-0.5 hidden" />
+      <div id="sidebar-logo-fallback" class="w-full h-full flex items-center justify-center font-black text-white text-[13px] tracking-widest uppercase select-none">
+        LSC
+      </div>
     </div>
     
     <div class="sidebar-text transition-opacity duration-200 hidden">
-      <h2 class="font-bold text-lg leading-tight text-white">FitTogether</h2>
-      <p class="text-[10px] text-slate-400">Stronger People, Stronger Business</p>
+      <h2 id="sidebar-gym-title" class="font-bold text-lg leading-tight text-white">LSC Gym</h2>
+      <p id="sidebar-gym-subtitle" class="text-[10px] text-slate-400">Stronger People, Stronger Business</p>
     </div>
   </div>
 

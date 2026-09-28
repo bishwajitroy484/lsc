@@ -134,10 +134,10 @@
         </div>
       </div>
       
-      <div class="hidden md:block overflow-y-auto no-scrollbar max-h-[340px]">
+      <div id="staff-table-container" class="hidden md:block overflow-y-auto no-scrollbar max-h-[460px]">
         <table class="w-full text-left border-collapse min-w-[750px]">
           <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
-            <tr class="text-[10px] uppercase text-slate-500 font-bold select-none">
+            <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider select-none">
               <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('name')">Name <span id="sort-icon-name" class="material-symbols-rounded text-[14px]">arrow_downward</span></th>
               <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('role')">Role <span id="sort-icon-role" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
               <th class="px-4 py-3">Phone</th>
@@ -151,7 +151,7 @@
         </table>
       </div>
 
-      <div id="mobile-staff-container" class="md:hidden flex flex-col bg-slate-50 p-3 gap-3 overflow-y-auto no-scrollbar max-h-[420px]"></div>
+      <div id="mobile-staff-container" class="md:hidden flex flex-col bg-slate-50 p-3 gap-3 overflow-y-auto no-scrollbar max-h-[460px]"></div>
     </div>
   </div>
 

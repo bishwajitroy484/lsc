@@ -23,6 +23,11 @@
     
     colorMap: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#64748b'],
 
+    pageSize: 50,
+    renderedCount: 0,
+    isLoadingMore: false,
+    scrollListenerBound: false,
+
     safeSetText: AppUtils.safeSetText,
     safeSetValue: AppUtils.safeSetValue,
     safeSetClass: AppUtils.safeSetClass,
@@ -662,15 +667,15 @@
         dataLabels: { 
           enabled: true, 
           formatter: function (val) { return val ? AppUtils.formatCurrency(val) : ""; },
-          style: { fontSize: '9px', colors: ['#475569'] },
-          background: { enabled: false },
-          offsetY: chartType === 'bar' ? -10 : -20
+          style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
+          background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 },
+          offsetY: chartType === 'bar' ? -8 : -14
         },
-        xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '9px', colors: '#64748b' } } },
-        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '11px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#3b82f6'],
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 24, right: 10, left: 10, bottom: 4 } }
       };
 
       const trendEl = document.querySelector("#chart-staff-trend");
@@ -691,9 +696,9 @@
         labels: bLabels,
         chart: { type: 'donut', height: '100%' },
         colors: bColors.length ? bColors : ['#e2e8f0'],
-        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
-        legend: { position: 'right', fontSize: '10px', offsetY: 20 },
-        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '8px' }, dropShadow: { enabled: false } },
+        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '14px', fontWeight: 600, formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
+        legend: { position: 'right', fontSize: '11px', offsetY: 20 },
+        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 }, dropShadow: { enabled: false } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
       };
 
@@ -775,6 +780,121 @@
       this.renderTable();
     },
 
+    buildDesktopRowHtml: function(stf, index) {
+      const initials = stf.fullName ? stf.fullName.substring(0, 2).toUpperCase() : 'NA';
+      const dateStr = this.formatDateDDMMMYYYY(stf.joinDate);
+      const cleanAmt = this.parseAmount(stf.salary);
+      const amtStr = cleanAmt > 0 ? AppUtils.formatCurrency(cleanAmt) : '₹0';
+      
+      const rName = this.getName('role', stf.role);
+      const sName = this.getName('status', stf.status);
+      let sClass = sName === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100';
+      const stfJson = JSON.stringify(stf).replace(/"/g, '&quot;');
+
+      const cycleInfo = this.getStaffCycles(stf);
+      const pendingCycles = cycleInfo.pendingCycles;
+      const hasActionNeeded = pendingCycles.length > 0;
+      
+      let monthCycleHtml = '';
+      if (hasActionNeeded) {
+        const countBadge = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>${pendingCycles.length} Due</span>`;
+        const pendingMonths = pendingCycles.map(c => c.monthLabel).join(', ');
+        monthCycleHtml = `
+          <div class="flex items-center gap-1.5 flex-wrap">
+            ${countBadge}
+            <span class="text-xs font-semibold text-slate-800">${pendingMonths}</span>
+          </div>
+          <div class="text-[11px] text-slate-500 mt-0.5">Joined ${dateStr}</div>`;
+      } else {
+        const lastPaidMonth = cycleInfo.paidCycles.length > 0 ? cycleInfo.paidCycles[cycleInfo.paidCycles.length - 1].monthLabel : null;
+        const statusText = lastPaidMonth ? `Through ${lastPaidMonth}` : 'Up to date';
+        monthCycleHtml = `
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide"><span class="material-symbols-rounded text-[13px]">check_circle</span>Paid</span>
+            <span class="text-xs text-slate-600 font-medium">${statusText}</span>
+          </div>
+          <div class="text-[11px] text-slate-500 mt-0.5">Joined ${dateStr}</div>`;
+      }
+
+      const payButtonHtml = hasActionNeeded 
+        ? `<button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${stf.staffId}')" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-bold rounded-lg inline-flex items-center gap-1 shadow-sm transition-colors mr-1" title="Pay pending salary"><span class="material-symbols-rounded text-[14px]">payments</span>Pay</button>` 
+        : '';
+
+      return `
+        <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onclick="StaffApp.openDetails(${stfJson})">
+          <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${hasActionNeeded ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'} flex items-center justify-center text-[11px] font-bold shrink-0">${initials}</div><div><div class="font-bold text-slate-800 text-xs md:text-sm hover:text-brand-primary transition-colors">${stf.fullName}</div></div></div></td>
+          <td class="px-4 py-3 text-slate-700 text-xs font-medium">${rName}</td>
+          <td class="px-4 py-3 text-slate-600 text-xs">${stf.phone}</td>
+          <td class="px-4 py-3 whitespace-nowrap"><span class="font-bold text-slate-800 text-xs md:text-sm">${amtStr}</span> <span class="text-xs text-slate-400 font-normal">/ mo</span></td>
+          <td class="px-4 py-3">${monthCycleHtml}</td>
+          <td class="px-4 py-3"><span class="text-xs font-bold px-2 py-0.5 rounded border ${sClass}">${sName}</span></td>
+          <td class="px-4 py-3 text-right whitespace-nowrap">
+            ${payButtonHtml}
+            <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">edit</span></button>
+            <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">delete</span></button>
+          </td>
+        </tr>`;
+    },
+
+    buildMobileCardHtml: function(stf, index) {
+      const initials = stf.fullName ? stf.fullName.substring(0, 2).toUpperCase() : 'NA';
+      const dateStr = this.formatDateDDMMMYYYY(stf.joinDate);
+      const cleanAmt = this.parseAmount(stf.salary);
+      const amtStr = cleanAmt > 0 ? AppUtils.formatCurrency(cleanAmt) : '₹0';
+      
+      const rName = this.getName('role', stf.role);
+      const sName = this.getName('status', stf.status);
+      let sClass = sName === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100';
+      const stfJson = JSON.stringify(stf).replace(/"/g, '&quot;');
+
+      const cycleInfo = this.getStaffCycles(stf);
+      const pendingCycles = cycleInfo.pendingCycles;
+      const hasActionNeeded = pendingCycles.length > 0;
+
+      return `
+        <div class="bg-white p-4 rounded-xl border ${hasActionNeeded ? 'border-amber-200 shadow-sm' : 'border-slate-200 shadow-sm'} flex flex-col gap-3 relative cursor-pointer" onclick="StaffApp.openDetails(${stfJson})">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full ${hasActionNeeded ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'} flex items-center justify-center font-bold text-xs shrink-0">${initials}</div>
+              <div>
+                <h3 class="font-bold text-sm text-slate-800">${stf.fullName}</h3>
+                <p class="text-[11px] font-medium text-slate-500">${rName}</p>
+              </div>
+            </div>
+            <div class="flex flex-col items-end gap-1">
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border ${sClass}">${sName}</span>
+              ${hasActionNeeded 
+                ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>${pendingCycles.length} Due</span>`
+                : `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1"><span class="material-symbols-rounded text-[11px]">check</span>Paid</span>`
+              }
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
+            <div>
+              <p class="text-slate-400 text-[11px] mb-0.5">Salary / Month</p>
+              <p class="font-bold text-slate-700">${amtStr} <span class="text-[10px] font-normal text-slate-400">/ mo</span></p>
+            </div>
+            <div>
+              <p class="text-slate-400 text-[11px] mb-0.5">Month / Cycle</p>
+              ${hasActionNeeded 
+                ? `<p class="font-bold text-amber-700 text-xs">${pendingCycles.map(c => c.monthLabel).join(', ')}</p>`
+                : `<p class="font-semibold text-slate-700 text-xs">${cycleInfo.paidCycles.length > 0 ? cycleInfo.paidCycles[cycleInfo.paidCycles.length - 1].monthLabel : 'Up to date'}</p>`
+              }
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-50 pt-2">
+            <span>Joined ${dateStr}</span>
+            <div class="flex items-center gap-1.5">
+              ${hasActionNeeded ? `<button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${stf.staffId}')" class="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold rounded flex items-center gap-1 hover:bg-amber-100"><span class="material-symbols-rounded text-[13px]">payments</span>Pay</button>` : ''}
+              <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="p-1 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[16px]">edit</span></button>
+              <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="p-1 text-slate-400 hover:text-red-500 rounded"><span class="material-symbols-rounded text-[16px]">delete</span></button>
+            </div>
+          </div>
+        </div>`;
+    },
+
     renderTable: function() {
       const tBody = document.getElementById('desktop-staff-body');
       const mContainer = document.getElementById('mobile-staff-container');
@@ -801,115 +921,89 @@
          return 0;
       });
 
+      this.renderedCount = 0;
+      this.isLoadingMore = false;
+
       if (this.tableData.length === 0) {
         tBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 px-4 text-slate-500 text-xs font-medium">No staff match your criteria.</td></tr>`;
         mContainer.innerHTML = `<div class="bg-white p-6 text-center text-xs text-slate-500 rounded-xl border border-slate-200">No records found.</div>`;
         return;
       }
 
-      let dHtml = ''; let mHtml = '';
+      const initialBatch = this.tableData.slice(0, this.pageSize);
+      tBody.innerHTML = initialBatch.map((stf, i) => this.buildDesktopRowHtml(stf, i)).join('');
+      mContainer.innerHTML = initialBatch.map((stf, i) => this.buildMobileCardHtml(stf, i)).join('');
+      this.renderedCount = initialBatch.length;
 
-      this.tableData.forEach((stf, index) => {
-        const initials = stf.fullName ? stf.fullName.substring(0, 2).toUpperCase() : 'NA';
-        const dateStr = this.formatDateDDMMMYYYY(stf.joinDate);
-        const cleanAmt = this.parseAmount(stf.salary);
-        const amtStr = cleanAmt > 0 ? AppUtils.formatCurrency(cleanAmt) : '₹0';
-        
-        const rName = this.getName('role', stf.role);
-        const sName = this.getName('status', stf.status);
-        let sClass = sName === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100';
-        const stfJson = JSON.stringify(stf).replace(/"/g, '&quot;');
+      this.initScrollListener();
+    },
 
-        const cycleInfo = this.getStaffCycles(stf);
-        const pendingCycles = cycleInfo.pendingCycles;
-        const hasActionNeeded = pendingCycles.length > 0;
-        
-        let monthCycleHtml = '';
-        if (hasActionNeeded) {
-          const countBadge = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>${pendingCycles.length} Due</span>`;
-          const pendingMonths = pendingCycles.map(c => c.monthLabel).join(', ');
-          monthCycleHtml = `
-            <div class="flex items-center gap-1.5 flex-wrap">
-              ${countBadge}
-              <span class="text-xs font-semibold text-slate-800">${pendingMonths}</span>
-            </div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Joined ${dateStr}</div>`;
-        } else {
-          const lastPaidMonth = cycleInfo.paidCycles.length > 0 ? cycleInfo.paidCycles[cycleInfo.paidCycles.length - 1].monthLabel : null;
-          const statusText = lastPaidMonth ? `Through ${lastPaidMonth}` : 'Up to date';
-          monthCycleHtml = `
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide"><span class="material-symbols-rounded text-[11px]">check_circle</span>Paid</span>
-              <span class="text-xs text-slate-600 font-medium">${statusText}</span>
-            </div>
-            <div class="text-[10px] text-slate-400 mt-0.5">Joined ${dateStr}</div>`;
+    loadMore: function() {
+      if (this.isLoadingMore || this.renderedCount >= this.tableData.length) return;
+      this.isLoadingMore = true;
+
+      const tBody = document.getElementById('desktop-staff-body');
+      const mContainer = document.getElementById('mobile-staff-container');
+      if (!tBody || !mContainer) { this.isLoadingMore = false; return; }
+
+      // Show shimmer placeholder at bottom without clearing top rows
+      const dShim = document.createElement('tr');
+      dShim.id = 'stf-lazy-shimmer-desktop';
+      dShim.className = 'lazy-loading-row';
+      dShim.innerHTML = `<td colspan="7" class="px-4 py-3"><div class="space-y-2 py-1"><div class="h-5 w-full shimmer rounded"></div><div class="h-5 w-4/5 shimmer rounded"></div></div></td>`;
+      tBody.appendChild(dShim);
+
+      const mShim = document.createElement('div');
+      mShim.id = 'stf-lazy-shimmer-mobile';
+      mShim.innerHTML = `<div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3"><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full shimmer shrink-0"></div><div class="space-y-2 flex-1"><div class="h-3.5 w-32 shimmer rounded"></div><div class="h-2.5 w-20 shimmer rounded"></div></div></div></div>`;
+      mContainer.appendChild(mShim);
+
+      setTimeout(() => {
+        const dShimEl = document.getElementById('stf-lazy-shimmer-desktop');
+        if (dShimEl) dShimEl.remove();
+        const mShimEl = document.getElementById('stf-lazy-shimmer-mobile');
+        if (mShimEl) mShimEl.remove();
+
+        const startIdx = this.renderedCount;
+        const nextBatch = this.tableData.slice(startIdx, startIdx + this.pageSize);
+        if (nextBatch.length > 0) {
+          const dHtml = nextBatch.map((stf, i) => this.buildDesktopRowHtml(stf, startIdx + i)).join('');
+          const mHtml = nextBatch.map((stf, i) => this.buildMobileCardHtml(stf, startIdx + i)).join('');
+          tBody.insertAdjacentHTML('beforeend', dHtml);
+          mContainer.insertAdjacentHTML('beforeend', mHtml);
+          this.renderedCount += nextBatch.length;
         }
+        this.isLoadingMore = false;
+      }, 160);
+    },
 
-        const payButtonHtml = hasActionNeeded 
-          ? `<button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${stf.staffId}')" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-bold rounded-lg inline-flex items-center gap-1 shadow-sm transition-colors mr-1" title="Pay pending salary"><span class="material-symbols-rounded text-[14px]">payments</span>Pay</button>` 
-          : '';
+    initScrollListener: function() {
+      if (this.scrollListenerBound) return;
+      this.scrollListenerBound = true;
 
-        dHtml += `
-          <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onclick="StaffApp.openDetails(${stfJson})">
-            <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${hasActionNeeded ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'} flex items-center justify-center text-[10px] font-bold shrink-0">${initials}</div><div><div class="font-bold text-slate-800 text-xs hover:text-brand-primary transition-colors">${stf.fullName}</div></div></div></td>
-            <td class="px-4 py-3 text-slate-600 text-xs font-medium">${rName}</td>
-            <td class="px-4 py-3 text-slate-600 text-xs">${stf.phone}</td>
-            <td class="px-4 py-3 whitespace-nowrap"><span class="font-bold text-slate-800 text-xs">${amtStr}</span> <span class="text-[10px] text-slate-400 font-normal">/ mo</span></td>
-            <td class="px-4 py-3">${monthCycleHtml}</td>
-            <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass}">${sName}</span></td>
-            <td class="px-4 py-3 text-right whitespace-nowrap">
-              ${payButtonHtml}
-              <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[16px]">edit</span></button>
-              <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[16px]">delete</span></button>
-            </td>
-          </tr>`;
+      const handleScroll = () => {
+        if (this.isLoadingMore || this.renderedCount >= this.tableData.length) return;
+        const dContainer = document.getElementById('staff-table-container');
+        const mContainer = document.getElementById('mobile-staff-container');
+        const appRoot = document.getElementById('app-root');
 
-        mHtml += `
-          <div class="bg-white p-4 rounded-xl border ${hasActionNeeded ? 'border-amber-200 shadow-sm' : 'border-slate-200 shadow-sm'} flex flex-col gap-3 relative cursor-pointer" onclick="StaffApp.openDetails(${stfJson})">
-            <div class="flex items-start justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full ${hasActionNeeded ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'} flex items-center justify-center font-bold text-xs shrink-0">${initials}</div>
-                <div>
-                  <h3 class="font-bold text-sm text-slate-800">${stf.fullName}</h3>
-                  <p class="text-[10px] font-medium text-slate-500">${rName}</p>
-                </div>
-              </div>
-              <div class="flex flex-col items-end gap-1">
-                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${sClass}">${sName}</span>
-                ${hasActionNeeded 
-                  ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>${pendingCycles.length} Due</span>`
-                  : `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1"><span class="material-symbols-rounded text-[10px]">check</span>Paid</span>`
-                }
-              </div>
-            </div>
+        const checkNearBottom = (el) => el && (el.scrollTop + el.clientHeight >= el.scrollHeight - 100);
 
-            <div class="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
-              <div>
-                <p class="text-slate-400 text-[10px] mb-0.5">Salary / Month</p>
-                <p class="font-bold text-slate-700">${amtStr} <span class="text-[9px] font-normal text-slate-400">/ mo</span></p>
-              </div>
-              <div>
-                <p class="text-slate-400 text-[10px] mb-0.5">Month / Cycle</p>
-                ${hasActionNeeded 
-                  ? `<p class="font-bold text-amber-700 text-xs">${pendingCycles.map(c => c.monthLabel).join(', ')}</p>`
-                  : `<p class="font-semibold text-slate-700 text-xs">${cycleInfo.paidCycles.length > 0 ? cycleInfo.paidCycles[cycleInfo.paidCycles.length - 1].monthLabel : 'Up to date'}</p>`
-                }
-              </div>
-            </div>
+        if (checkNearBottom(dContainer) || checkNearBottom(mContainer) || checkNearBottom(appRoot)) {
+          this.loadMore();
+        }
+      };
 
-            <div class="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-50 pt-2">
-              <span>Joined ${dateStr}</span>
-              <div class="flex items-center gap-1.5">
-                ${hasActionNeeded ? `<button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${stf.staffId}')" class="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold rounded flex items-center gap-1 hover:bg-amber-100"><span class="material-symbols-rounded text-[13px]">payments</span>Pay</button>` : ''}
-                <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="p-1 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[15px]">edit</span></button>
-                <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="p-1 text-slate-400 hover:text-red-500 rounded"><span class="material-symbols-rounded text-[15px]">delete</span></button>
-              </div>
-            </div>
-          </div>`;
-      });
+      const debouncedScroll = AppUtils.debounce(handleScroll, 60);
 
-      tBody.innerHTML = dHtml;
-      mContainer.innerHTML = mHtml;
+      const dContainer = document.getElementById('staff-table-container');
+      if (dContainer && typeof dContainer.addEventListener === 'function') dContainer.addEventListener('scroll', debouncedScroll, { passive: true });
+
+      const mContainer = document.getElementById('mobile-staff-container');
+      if (mContainer && typeof mContainer.addEventListener === 'function') mContainer.addEventListener('scroll', debouncedScroll, { passive: true });
+
+      const appRoot = document.getElementById('app-root');
+      if (appRoot && typeof appRoot.addEventListener === 'function') appRoot.addEventListener('scroll', debouncedScroll, { passive: true });
     },
 
     switchTab: function(tabName) {

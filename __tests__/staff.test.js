@@ -4,6 +4,7 @@ const path = require('path');
 describe('Staff Module - Action Needed & Salary Cycle Calculations', () => {
   let StaffApp;
   let AppUtils;
+  let getMockElement;
 
   beforeAll(() => {
     // 1. Load AppUtils
@@ -20,13 +21,40 @@ describe('Staff Module - Action Needed & Salary Cycle Calculations', () => {
     if (!staffAppMatch) throw new Error("Could not extract StaffApp from Script_Staff.html");
 
     // Provide mock DOM environment if not present
+    const mockElements = {};
+    getMockElement = (id) => {
+      if (!mockElements[id]) {
+        mockElements[id] = {
+          id: id || '',
+          innerHTML: '',
+          innerText: '',
+          value: '',
+          classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() },
+          options: [],
+          selectedIndex: 0,
+          scrollIntoView: jest.fn(),
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+          insertAdjacentHTML: jest.fn(),
+          appendChild: jest.fn((el) => {
+            if (el && el.id) mockElements[el.id] = el;
+          }),
+          remove: jest.fn()
+        };
+      }
+      return mockElements[id];
+    };
+
     global.document = {
-      getElementById: jest.fn(() => ({
+      getElementById: jest.fn((id) => getMockElement(id)),
+      querySelector: jest.fn(() => ({})),
+      addEventListener: jest.fn(),
+      createElement: jest.fn((tag) => ({
+        tagName: tag,
+        id: '',
+        className: '',
         innerHTML: '',
-        innerText: '',
-        value: '',
-        classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() },
-        scrollIntoView: jest.fn()
+        remove: jest.fn()
       }))
     };
     global.google = {
@@ -347,28 +375,28 @@ describe('Staff Module - Action Needed & Salary Cycle Calculations', () => {
     });
 
     test('collapsible notes wrapper toggles based on note content', () => {
-      const mockClassList = { remove: jest.fn(), add: jest.fn() };
-      global.document.getElementById = jest.fn((id) => {
-        if (id === 'stf-notes-wrapper' || id === 'txn-notes-wrapper') {
-          return { classList: mockClassList };
-        }
-        return {
-          innerHTML: '',
-          innerText: '',
-          value: '',
-          classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() }
-        };
-      });
+      const origGetElementById = global.document.getElementById;
+      try {
+        const mockClassList = { remove: jest.fn(), add: jest.fn() };
+        global.document.getElementById = jest.fn((id) => {
+          if (id === 'stf-notes-wrapper' || id === 'txn-notes-wrapper') {
+            return { classList: mockClassList };
+          }
+          return getMockElement(id);
+        });
 
-      // When opening modal with notes
-      StaffApp.openModal({ staffId: 'STF-1', fullName: 'John', notes: 'Great trainer' });
-      expect(mockClassList.remove).toHaveBeenCalledWith('hidden');
+        // When opening modal with notes
+        StaffApp.openModal({ staffId: 'STF-1', fullName: 'John', notes: 'Great trainer' });
+        expect(mockClassList.remove).toHaveBeenCalledWith('hidden');
 
-      // When opening modal without notes
-      mockClassList.remove.mockClear();
-      mockClassList.add.mockClear();
-      StaffApp.openModal({ staffId: 'STF-2', fullName: 'Jane', notes: '' });
-      expect(mockClassList.add).toHaveBeenCalledWith('hidden');
+        // When opening modal without notes
+        mockClassList.remove.mockClear();
+        mockClassList.add.mockClear();
+        StaffApp.openModal({ staffId: 'STF-2', fullName: 'Jane', notes: '' });
+        expect(mockClassList.add).toHaveBeenCalledWith('hidden');
+      } finally {
+        global.document.getElementById = origGetElementById;
+      }
     });
 
     test('adjusted amount payment for joining month marks cycle paid without duplicate pending cycle', () => {
@@ -413,6 +441,39 @@ describe('Staff Module - Action Needed & Salary Cycle Calculations', () => {
 
       // Total pending cycles should be exactly 4 (Jun, Jul, Aug, Sep)
       expect(afterCycles.pendingCycles.length).toBe(4);
+    });
+  });
+
+  describe('StaffApp Lazy Loading', () => {
+    it('should render the first 50 records and load remaining on loadMore', () => {
+      jest.useFakeTimers();
+      const records = [];
+      for (let i = 1; i <= 135; i++) {
+        records.push({
+          staffId: 'STF-' + i,
+          fullName: 'Coach ' + i,
+          role: 'ROL-1',
+          salary: 30000,
+          status: 'SAT-1',
+          joinDate: '01-Jan-2024'
+        });
+      }
+      StaffApp.tableData = records;
+      StaffApp.renderTable();
+
+      expect(StaffApp.pageSize).toBe(50);
+      expect(StaffApp.renderedCount).toBe(50);
+
+      StaffApp.loadMore();
+      jest.advanceTimersByTime(200);
+
+      expect(StaffApp.renderedCount).toBe(100);
+
+      StaffApp.loadMore();
+      jest.advanceTimersByTime(200);
+
+      expect(StaffApp.renderedCount).toBe(135);
+      jest.useRealTimers();
     });
   });
 });

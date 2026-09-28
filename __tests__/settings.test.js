@@ -64,12 +64,19 @@ function createSettingsApi(overrides = {}) {
     return result;
   };
 
+  const mockUploadImage = overrides.api_uploadImageToDrive || jest.fn(() => ({
+    success: true,
+    fileId: 'DRIVE_FILE_LOGO_123',
+    url: 'https://drive.google.com/uc?export=view&id=DRIVE_FILE_LOGO_123'
+  }));
+
   const api = new Function(
     'DB',
     'SpreadsheetApp',
     'Sheets',
     'SPREADSHEET_ID',
     '_colToLetter',
+    'api_uploadImageToDrive',
     `
       ${source};
       return { 
@@ -86,10 +93,11 @@ function createSettingsApi(overrides = {}) {
     overrides.SpreadsheetApp || defaultSpreadsheetApp,
     overrides.Sheets || defaultSheets,
     'spreadsheet-id-123',
-    _colToLetter
+    _colToLetter,
+    mockUploadImage
   );
 
-  return { api, sheet: defaultSheet, sheetsService: defaultSheets.Spreadsheets, dummyRange };
+  return { api, sheet: defaultSheet, sheetsService: defaultSheets.Spreadsheets, dummyRange, mockUploadImage };
 }
 
 describe('Settings Module', () => {
@@ -124,6 +132,30 @@ describe('Settings Module', () => {
       const response = api.api_saveGeneralSettings([]);
       expect(response.success).toBe(false);
       expect(response.error).toContain('No settings provided');
+    });
+
+    test('api_saveGeneralSettings uploads base64 logo to Drive and persists fileId', () => {
+      const mockUpload = jest.fn(() => ({
+        success: true,
+        fileId: 'DRIVE_LOGO_999',
+        url: 'https://drive.google.com/uc?export=view&id=DRIVE_LOGO_999'
+      }));
+
+      const { api, mockUploadImage } = createSettingsApi({ api_uploadImageToDrive: mockUpload });
+      const payload = [
+        { key: 'GYM_NAME', value: 'LSC Fitness' },
+        { key: 'LOGO_ID', value: '', base64Image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', imageName: 'logo.png' }
+      ];
+
+      const response = api.api_saveGeneralSettings(payload);
+      expect(response.success).toBe(true);
+      expect(mockUpload).toHaveBeenCalledWith(
+        expect.stringContaining('data:image/png;base64,'),
+        'logo.png'
+      );
+      expect(response.logoId).toBe('DRIVE_LOGO_999');
+      expect(payload[1].value).toBe('DRIVE_LOGO_999');
+      expect(payload[1].base64Image).toBeUndefined();
     });
   });
 
@@ -370,6 +402,78 @@ describe('Settings Module', () => {
       expect(viewHtml).toContain('id="option-modal"');
       expect(viewHtml).toContain('id="delete-opt-modal"');
       expect(viewHtml).toContain('id="notification-modal"');
+    });
+  });
+
+  describe('Branding & Logo Management', () => {
+    let AppUtils;
+
+    beforeAll(() => {
+      const globalStateHtml = fs.readFileSync(path.join(__dirname, '../src/Global_State.html'), 'utf8');
+      const appUtilsMatch = globalStateHtml.match(/const AppUtils = ({[\s\S]*?\n  };)/);
+      AppUtils = new Function(`return ${appUtilsMatch[1]};`)();
+    });
+
+    test('AppUtils.getSafeImageUrl converts Drive ID to unblockable thumbnail URL', () => {
+      const driveId = '1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztH';
+      const result = AppUtils.getSafeImageUrl(driveId);
+      expect(result).toBe('https://drive.google.com/thumbnail?id=1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztH&sz=w200-h200');
+
+      const fullDriveUrl = 'https://drive.google.com/file/d/1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztH/view?usp=sharing';
+      expect(AppUtils.getSafeImageUrl(fullDriveUrl)).toBe('https://drive.google.com/thumbnail?id=1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztH&sz=w200-h200');
+
+      const dataUrl = 'data:image/png;base64,sample123';
+      expect(AppUtils.getSafeImageUrl(dataUrl)).toBe(dataUrl);
+
+      expect(AppUtils.getSafeImageUrl('')).toBe('');
+      expect(AppUtils.getSafeImageUrl(null)).toBe('');
+    });
+
+    test('AppUtils.applyAppBranding handles image loading and falls back to LSC text on error or empty', () => {
+      const mockImg = {
+        classList: { add: jest.fn(), remove: jest.fn() },
+        src: '',
+        onload: null,
+        onerror: null
+      };
+      const mockFallback = {
+        classList: { add: jest.fn(), remove: jest.fn() }
+      };
+      const mockTitle = { textContent: '' };
+
+      global.document = {
+        getElementById: jest.fn((id) => {
+          if (id === 'sidebar-logo-img') return mockImg;
+          if (id === 'sidebar-logo-fallback') return mockFallback;
+          if (id === 'sidebar-gym-title') return mockTitle;
+          return null;
+        })
+      };
+
+      // 1. With empty logo -> fallback shown
+      AppUtils.applyAppBranding('', 'LSC Gym');
+      expect(mockTitle.textContent).toBe('LSC Gym');
+      expect(mockImg.classList.add).toHaveBeenCalledWith('hidden');
+      expect(mockFallback.classList.remove).toHaveBeenCalledWith('hidden');
+
+      // 2. With valid logo -> triggers load handler
+      mockImg.classList.remove.mockClear();
+      mockFallback.classList.add.mockClear();
+      AppUtils.applyAppBranding('DRIVE_ID_12345678901234567890', 'FitTogether');
+      expect(mockTitle.textContent).toBe('FitTogether');
+      expect(mockImg.src).toContain('https://drive.google.com/thumbnail?id=DRIVE_ID_12345678901234567890');
+
+      // Simulate successful image load
+      mockImg.onload();
+      expect(mockImg.classList.remove).toHaveBeenCalledWith('hidden');
+      expect(mockFallback.classList.add).toHaveBeenCalledWith('hidden');
+
+      // Simulate image error -> falls back to LSC text
+      mockImg.classList.add.mockClear();
+      mockFallback.classList.remove.mockClear();
+      mockImg.onerror();
+      expect(mockImg.classList.add).toHaveBeenCalledWith('hidden');
+      expect(mockFallback.classList.remove).toHaveBeenCalledWith('hidden');
     });
   });
 });

@@ -12,6 +12,9 @@
     optionToDelete: null,
     isEditingSchema: false, 
     
+    logoBase64: null,
+    logoFileName: null,
+
     // Core known settings mapped directly to UI Inputs
     coreKeys: ['GYM_NAME', 'LOGO_ID', 'Revenue_Recognition', 'OWNER_EMAIL', 'SPREADSHEET_ID', 'DRIVE_ID', 'REMINDER_BUFFER', 'ENABLE_NOTIFICATION'],
 
@@ -131,38 +134,103 @@
        this.updateNotificationSummary();
     },
 
+    onLogoFileSelected: function(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      this.logoFileName = file.name;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target.result;
+        this.logoBase64 = base64;
+
+        const imgEl = document.getElementById('logo-preview-img');
+        const fallbackEl = document.getElementById('logo-preview-fallback');
+        const statusEl = document.getElementById('logo-preview-status');
+        const clearBtn = document.getElementById('btn-clear-logo');
+
+        if (imgEl && fallbackEl) {
+          imgEl.src = base64;
+          imgEl.classList.remove('hidden');
+          fallbackEl.classList.add('hidden');
+        }
+        if (statusEl) statusEl.textContent = 'New Logo Selected (Unsaved)';
+        if (clearBtn) clearBtn.classList.remove('hidden');
+
+        // Immediately reflect preview on sidebar logo
+        const sidebarImg = document.getElementById('sidebar-logo-img');
+        const sidebarFallback = document.getElementById('sidebar-logo-fallback');
+        if (sidebarImg && sidebarFallback) {
+          sidebarImg.src = base64;
+          sidebarImg.classList.remove('hidden');
+          sidebarFallback.classList.add('hidden');
+        }
+      };
+      reader.readAsDataURL(file);
+    },
+
+    clearLogo: function() {
+      this.logoBase64 = null;
+      this.logoFileName = null;
+      const fileInput = document.getElementById('setting-logo-file');
+      if (fileInput) fileInput.value = '';
+      const idInput = document.getElementById('gen-LOGO_ID');
+      if (idInput) idInput.value = '';
+
+      const imgEl = document.getElementById('logo-preview-img');
+      const fallbackEl = document.getElementById('logo-preview-fallback');
+      const statusEl = document.getElementById('logo-preview-status');
+      const clearBtn = document.getElementById('btn-clear-logo');
+
+      if (imgEl) {
+        imgEl.src = '';
+        imgEl.classList.add('hidden');
+      }
+      if (fallbackEl) fallbackEl.classList.remove('hidden');
+      if (statusEl) statusEl.textContent = 'LSC Fallback Badge';
+      if (clearBtn) clearBtn.classList.add('hidden');
+
+      // Revert sidebar logo to LSC fallback
+      const sidebarImg = document.getElementById('sidebar-logo-img');
+      const sidebarFallback = document.getElementById('sidebar-logo-fallback');
+      if (sidebarImg) {
+        sidebarImg.src = '';
+        sidebarImg.classList.add('hidden');
+      }
+      if (sidebarFallback) sidebarFallback.classList.remove('hidden');
+    },
+
     updateLogoPreview: function() {
       const logoInput = document.getElementById('gen-LOGO_ID');
       const imgEl = document.getElementById('logo-preview-img');
-      const placeholderEl = document.getElementById('logo-preview-placeholder');
+      const fallbackEl = document.getElementById('logo-preview-fallback');
       const statusEl = document.getElementById('logo-preview-status');
-      if (!logoInput || !imgEl || !placeholderEl) return;
+      const clearBtn = document.getElementById('btn-clear-logo');
+      if (!imgEl || !fallbackEl) return;
 
-      const val = (logoInput.value || '').trim();
-      if (!val) {
+      const val = (logoInput ? logoInput.value : '').trim();
+      if (!val && !this.logoBase64) {
+        imgEl.src = '';
         imgEl.classList.add('hidden');
-        placeholderEl.classList.remove('hidden');
-        if (statusEl) statusEl.textContent = 'Default Avatar';
+        fallbackEl.classList.remove('hidden');
+        if (statusEl) statusEl.textContent = 'LSC Fallback Badge';
+        if (clearBtn) clearBtn.classList.add('hidden');
         return;
       }
 
-      let url = val;
-      // Convert standalone Google Drive ID to direct link
-      if (/^[a-zA-Z0-9_-]{25,}$/.test(val) && !val.startsWith('http')) {
-        url = 'https://drive.google.com/uc?export=view&id=' + val;
-      }
-
-      imgEl.src = url;
+      const targetSrc = this.logoBase64 || AppUtils.getSafeImageUrl(val);
       imgEl.onload = () => {
         imgEl.classList.remove('hidden');
-        placeholderEl.classList.add('hidden');
-        if (statusEl) statusEl.textContent = 'Valid Image';
+        fallbackEl.classList.add('hidden');
+        if (statusEl) statusEl.textContent = this.logoBase64 ? 'New Logo Selected (Unsaved)' : 'Active Logo';
+        if (clearBtn) clearBtn.classList.remove('hidden');
       };
       imgEl.onerror = () => {
         imgEl.classList.add('hidden');
-        placeholderEl.classList.remove('hidden');
-        if (statusEl) statusEl.textContent = 'Invalid / Blocked';
+        fallbackEl.classList.remove('hidden');
+        if (statusEl) statusEl.textContent = 'Load Error (LSC Fallback)';
+        if (clearBtn) clearBtn.classList.remove('hidden');
       };
+      imgEl.src = targetSrc;
     },
 
     updateRevenueExplanation: function() {
@@ -304,6 +372,13 @@
            if (!el) return;
            if (el.type === 'checkbox' || k === 'ENABLE_NOTIFICATION') {
                payload.push({ key: k, value: el.checked ? 'YES' : 'NO' });
+           } else if (k === 'LOGO_ID') {
+               const logoObj = { key: 'LOGO_ID', value: el.value ? el.value.trim() : '' };
+               if (this.logoBase64) {
+                 logoObj.base64Image = this.logoBase64;
+                 logoObj.imageName = this.logoFileName || 'Gym_Logo.png';
+               }
+               payload.push(logoObj);
            } else if (el.value && el.value.trim() !== '') {
                payload.push({ key: k, value: el.value.trim() });
            }
@@ -325,7 +400,21 @@
            if(res && res.success) {
                this.showToast(res.message || "Settings saved successfully!", false);
                this.generalSettingsData = payload; // Update local cache
+               if (res.logoId) {
+                 const idEl = document.getElementById('gen-LOGO_ID');
+                 if (idEl) idEl.value = res.logoId;
+               }
+               this.logoBase64 = null;
+               this.logoFileName = null;
+               const fileInput = document.getElementById('setting-logo-file');
+               if (fileInput) fileInput.value = '';
                this.updateLogoPreview();
+
+               // Apply to global sidebar branding
+               const gymNameEl = document.getElementById('gen-GYM_NAME');
+               const currentGymName = gymNameEl ? gymNameEl.value : '';
+               const currentLogoId = (document.getElementById('gen-LOGO_ID') || {}).value || '';
+               AppUtils.applyAppBranding(currentLogoId, currentGymName);
            } else {
                const err = (res && res.error) ? res.error : "Failed to save settings.";
                this.showToast(err, true);

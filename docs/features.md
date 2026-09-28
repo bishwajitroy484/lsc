@@ -41,7 +41,7 @@ The Dashboard year, monthly/quarterly mode, and selected months or quarters filt
 
 The Settings module provides a responsive, device-compatible interface organized into two main tabs:
 
-- **General Config:** Configures gym identity (gym name, owner email, logo URL/ID with live preview), financial and operating policies (revenue recognition method with explanatory summaries, and renewal alert buffer days), database persistence details (Google Spreadsheet ID and Google Drive storage folder ID with one-click copy and open actions), and automated notifications (ENABLE_NOTIFICATION toggle to enable/disable scheduled email alerts with a configuration modal previewing future scope dispatch rules, recipient email, and trigger frequencies).
+- **General Config:** Configures gym identity (gym name, owner email, and gym logo with image file upload saved directly to Google Drive, live preview tile, and stylized "LSC" fallback badge), financial and operating policies (revenue recognition method with explanatory summaries, and renewal alert buffer days), database persistence details (Google Spreadsheet ID and Google Drive storage folder ID with one-click copy and open actions), and automated notifications (ENABLE_NOTIFICATION toggle to enable/disable scheduled email alerts with a configuration modal previewing future scope dispatch rules, recipient email, and trigger frequencies).
 - **Dropdown Options:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
 
 ## Mock Data Generator
@@ -54,4 +54,19 @@ The backend includes a dedicated mock data generator (`src/MockDataGenerator.gs`
 - **Staff and payroll:** Covers multiple gym roles (Head Coach, Personal Trainers, Kids Coach, Nutritionist, Front Desk, Housekeeping, and resigned staff), monthly salary disbursements, festive and performance bonuses, and pending salary cycles for Action Needed indicators.
 - **Operational expenses:** Generates chronological recurring facility lease/rent, seasonal electricity and power utilities, cleaning and hygiene supplies, equipment servicing, broadband/software, marketing campaigns, and miscellaneous expenses with item details.
 - **Clean and re-run safety:** Wipes existing data rows (rows 2+) across the target sheets and batch-inserts the new dataset in seconds, preserving row 1 headers and formula columns marked with `*`.
+
+## Lazy Loading and High-Performance Data Tables
+
+To deliver an instantaneous and smooth user experience across large record volumes, the Members, Staff, and Expenses modules use a progressive lazy loading rendering strategy:
+
+- **Batch Size:** Renders records in performant chunks of 50 items.
+- **Progressive Bottom Loading:** Scrolling down on both desktop table views and mobile card containers dynamically detects when the user nears the bottom, appends a lightweight shimmer/skeleton row or card placeholder, and seamlessly loads the next batch without clearing or re-rendering existing items at the top.
+- **Filtering & Search:** Instant debounced search and multi-criteria filters reset the viewport and immediately render the first 50 matching results.
+
+## Chart Styling and Mobile Toolbar Ergonomics
+
+All ApexCharts throughout the application (Dashboard, Expenses, Staff, and Members) follow unified visual and typographic standards:
+
+- **Consistent Data-Labels & Axes:** Data labels use styled badge containers (`11px font-size`, semi-bold weight, contrasting dark text `#0f172a`, and subtle rounded pill backgrounds `#ffffff` with 0.92 opacity). Axes and legend text are scaled to a readable `11px` to ensure effortless legibility across devices.
+- **Mobile Toolbar Ergonomics:** Toolbar buttons (zoom-in, zoom-out, pan/range, and reset) feature top clearance and scaled mobile padding on small screens (`max-width: 640px`) to prevent any visual overlap with peak chart data points and labels.
 

@@ -251,6 +251,80 @@
         return false;
       }
       return true;
+    },
+
+    getSafeImageUrl: function(rawStr) {
+      if (!rawStr) return '';
+      let str = String(rawStr).trim();
+      if (!str) return '';
+
+      // Direct data URL (e.g. FileReader preview)
+      if (str.startsWith('data:')) return str;
+
+      // Extract Google Drive ID if full URL passed
+      if (str.includes('drive.google.com')) {
+        const match = str.match(/id=([a-zA-Z0-9_-]+)/) || str.match(/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+          str = match[1];
+        }
+      }
+
+      // Convert pure Google Drive ID to thumbnail endpoint (unblockable by CORS/Drive redirect)
+      if (!str.includes('http') && !str.includes('/') && /^[a-zA-Z0-9_-]{20,}$/.test(str)) {
+        return 'https://drive.google.com/thumbnail?id=' + str + '&sz=w200-h200';
+      }
+
+      return str;
+    },
+
+    applyAppBranding: function(logoIdOrUrl, gymName) {
+      const logoImg = document.getElementById('sidebar-logo-img');
+      const logoFallback = document.getElementById('sidebar-logo-fallback');
+      const titleEl = document.getElementById('sidebar-gym-title');
+
+      if (titleEl && gymName) {
+        titleEl.textContent = gymName;
+      }
+
+      if (!logoImg || !logoFallback) return;
+
+      const safeUrl = this.getSafeImageUrl(logoIdOrUrl);
+      if (!safeUrl) {
+        logoImg.src = '';
+        logoImg.classList.add('hidden');
+        logoFallback.classList.remove('hidden');
+        return;
+      }
+
+      logoImg.onload = function() {
+        logoImg.classList.remove('hidden');
+        logoFallback.classList.add('hidden');
+      };
+      logoImg.onerror = function() {
+        logoImg.classList.add('hidden');
+        logoFallback.classList.remove('hidden');
+      };
+      logoImg.src = safeUrl;
+    },
+
+    loadAppBranding: function() {
+      if (typeof google !== 'undefined' && google.script && google.script.run && typeof google.script.run.api_getGeneralSettings === 'function') {
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (res && res.success && Array.isArray(res.data)) {
+              let logoVal = '';
+              let gymVal = '';
+              res.data.forEach(item => {
+                if (!item || !item.key) return;
+                const k = String(item.key).trim().toUpperCase();
+                if (k === 'LOGO_ID' || k === 'LOGO') logoVal = item.value || '';
+                if (k === 'GYM_NAME' || k === 'GYMNAME') gymVal = item.value || '';
+              });
+              this.applyAppBranding(logoVal, gymVal);
+            }
+          })
+          .api_getGeneralSettings();
+      }
     }
   };
 
@@ -301,6 +375,9 @@
       // 1. Inject static layout components from templates
       this.injectTemplate('tpl-comp-sidebar', 'desktop-nav-container');
       this.injectTemplate('tpl-comp-bottom-nav', 'mobile-nav-container');
+
+      // Load app branding into sidebar
+      AppUtils.loadAppBranding();
 
       // 2. Delegate click handler on .nav-btn for instant SPA navigation & highlighting
       document.addEventListener('click', (e) => {
