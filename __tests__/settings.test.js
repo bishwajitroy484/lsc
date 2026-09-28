@@ -114,4 +114,38 @@ describe('Settings Module', () => {
     expect(response.message).toContain('General Settings saved successfully');
     expect(sheet.getRange).toHaveBeenCalled();
   });
+
+  test('api_saveGeneralSettings aborts and returns an error if the payload is empty', () => {
+    const settingsApi = loadSettingsApi();
+    const response = settingsApi.api_saveGeneralSettings([]);
+    expect(response.success).toBe(false);
+    expect(response.error).toContain('No settings provided');
+  });
+
+  test('View_Settings.html includes responsive elements for desktop and mobile device compatibility', () => {
+    const viewHtml = fs.readFileSync(path.join(__dirname, '../src/View_Settings.html'), 'utf8');
+
+    // Tab buttons
+    expect(viewHtml).toContain('id="tab-btn-general"');
+    expect(viewHtml).toContain('id="tab-btn-dropdowns"');
+
+    // Core inputs
+    expect(viewHtml).toContain('id="gen-GYM_NAME"');
+    expect(viewHtml).toContain('id="gen-OWNER_EMAIL"');
+    expect(viewHtml).toContain('id="gen-Revenue_Recognition"');
+    expect(viewHtml).toContain('id="gen-REMINDER_BUFFER"');
+    expect(viewHtml).toContain('id="gen-SPREADSHEET_ID"');
+    expect(viewHtml).toContain('id="gen-LOGO_ID"');
+
+    // Desktop and mobile responsive containers
+    expect(viewHtml).toContain('id="options-tbody"');
+    expect(viewHtml).toContain('id="options-mobile-cards"');
+    expect(viewHtml).toContain('id="save-order-toolbar"');
+
+    // Modals
+    expect(viewHtml).toContain('id="schema-modal"');
+    expect(viewHtml).toContain('id="option-modal"');
+    expect(viewHtml).toContain('id="delete-opt-modal"');
+  });
 });
+

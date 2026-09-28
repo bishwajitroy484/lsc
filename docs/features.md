@@ -36,3 +36,11 @@ The Dashboard Net-In-Hand Prediction chart always uses an area chart, showing re
 ## Dashboard period filters
 
 The Dashboard year, monthly/quarterly mode, and selected months or quarters filter the KPI totals and charts. Expense Breakdown follows those same selected periods, grouping recognized operating expenses and paid staff costs by category; misc expense details use the same period selection.
+
+## Settings and dropdown configuration
+
+The Settings module provides a responsive, device-compatible interface organized into two main tabs:
+
+- **General Config:** Configures gym identity (gym name, owner email, logo URL/ID with live preview), financial and operating policies (revenue recognition method with explanatory summaries, and renewal alert buffer days), database persistence details (spreadsheet ID with copy and open actions), and custom key-value settings.
+- **Dropdown Options:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
+
