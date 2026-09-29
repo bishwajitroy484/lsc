@@ -74,3 +74,13 @@ All ApexCharts throughout the application (Dashboard, Expenses, Staff, and Membe
 - **Consistent Data-Labels & Axes:** Data labels use styled badge containers (`11px font-size`, semi-bold weight, contrasting dark text `#0f172a`, and subtle rounded pill backgrounds `#ffffff` with 0.92 opacity). Axes and legend text are scaled to a readable `11px` to ensure effortless legibility across devices.
 - **Mobile Toolbar Ergonomics:** Toolbar buttons (zoom-in, zoom-out, pan/range, and reset) feature top clearance and scaled mobile padding on small screens (`max-width: 640px`) to prevent any visual overlap with peak chart data points and labels.
 
+## Currency Numbering Styles and Chart Data Points
+
+The application provides configurable currency numbering styles under **Settings > General Config**, allowing users to tailor how amounts are displayed across all modules (KPIs, tables, summary bars, quick-view drawers, transaction modals, and tooltips):
+
+- **Indian System:** Formats amounts using standard Indian comma grouping and terminology (`₹10,000`, `₹1.3Lakhs`, `₹1.2Crore`).
+- **Standard Metric System:** Formats amounts using international compact metric notations (`₹10k`, `₹1.3M`, `₹1B`).
+- **Charts Data Points Exception:** To prevent visual clutter and overlapping labels on dense chart bars and points, chart data labels (`dataLabels`) plotted directly on ApexChart series always render using compact metric format (e.g. `₹30k`, `₹18.6k`), while chart tooltips, y-axis labels, KPI cards, and summary bars display the user-selected format.
+- **Client Caching & Persistence:** The selected format is persisted to Google Sheets and mirrored locally in browser storage (`localStorage`) so formatting applies immediately across all pages without layout shift or waiting for network round-trips.
+
+

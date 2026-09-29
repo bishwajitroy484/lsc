@@ -21,11 +21,21 @@ function api_getExpenses() {
 
     let accrualMode = 'anchor';
     const accSetting = settingsRows.find(s => {
-      const k = String(s.key || s.setting || s.Name || '').toLowerCase();
+      const k = String(s.key || s.Key || s.setting || s.Setting || s.Name || '').toLowerCase();
       return k === 'revenue_recognition' || k === 'revenue recognition';
     });
     if (accSetting) {
-      accrualMode = String(accSetting.value || accSetting.Value || '').toLowerCase();
+      accrualMode = String(accSetting.value !== undefined ? accSetting.value : (accSetting.Value || '')).toLowerCase();
+    }
+
+    let currencyFormat = 'Indian';
+    const currSetting = settingsRows.find(s => {
+      const k = String(s.key || s.Key || s.setting || s.Setting || s.Name || '').toLowerCase();
+      return k === 'currency_format' || k === 'currency format' || k === 'currency_style';
+    });
+    if (currSetting) {
+      const rawVal = currSetting.value !== undefined ? currSetting.value : currSetting.Value;
+      if (rawVal) currencyFormat = String(rawVal).trim();
     }
 
     const staffMetrics = {};
@@ -63,7 +73,8 @@ function api_getExpenses() {
       data: expenses,
       salaries: salaries,
       staffMetrics: staffMetrics,
-      accrualMode: accrualMode
+      accrualMode: accrualMode,
+      currencyFormat: currencyFormat
     };
   } catch (error) {
     return { success: false, error: error.toString() };

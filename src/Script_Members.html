@@ -313,6 +313,9 @@
         return Toast.error(response.error);
       }
       this.allData = response.data || [];
+      if (response.currencyFormat) {
+        AppUtils.setCurrencyFormat(response.currencyFormat);
+      }
     },
 
     _debouncedApplyFilters: null,
@@ -601,6 +604,9 @@
            if(res.success && res.data) {
              this.currentMemberPayments = res.data;
              this.chartMetrics = res.chartMetrics || {};
+             if (res.currencyFormat) {
+               AppUtils.setCurrencyFormat(res.currencyFormat);
+             }
            } else if (!res.success) {
              Toast.error("Failed to load payments: " + res.error);
            }
@@ -885,7 +891,7 @@
       let categories = [];
       let chartData = [];
 
-      const dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCurrency(val) : '', offsetY: -6, style: { fontSize: '11px', fontWeight: 600, colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 } };
+      const dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '', offsetY: -6, style: { fontSize: '11px', fontWeight: 600, colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 } };
 
       if (viewMode === 'quarterly') {
           categories = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];

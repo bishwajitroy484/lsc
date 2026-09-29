@@ -252,6 +252,9 @@
       this.allData = response.data.staff || [];
       this.allPayments = response.data.payments || []; // Store all actual payments globally
       this.chartMetrics = response.chartMetrics || {};
+      if (response.currencyFormat) {
+        AppUtils.setCurrencyFormat(response.currencyFormat);
+      }
       
     },
 
@@ -666,7 +669,7 @@
         markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
         dataLabels: { 
           enabled: true, 
-          formatter: function (val) { return val ? AppUtils.formatCurrency(val) : ""; },
+          formatter: function (val) { return val ? AppUtils.formatCompactCurrency(val) : ""; },
           style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
           background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 },
           offsetY: chartType === 'bar' ? -8 : -14
@@ -698,7 +701,7 @@
         colors: bColors.length ? bColors : ['#e2e8f0'],
         plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '14px', fontWeight: 600, formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
         legend: { position: 'right', fontSize: '11px', offsetY: 20 },
-        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 }, dropShadow: { enabled: false } },
+        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCompactCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 }, dropShadow: { enabled: false } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
       };
 

@@ -178,6 +178,29 @@ describe('Client Shared Utilities (AppUtils in Global_State.html)', () => {
     AppUtils.currencyFormat = 'Indian';
   });
 
+  test('formatCompactCurrency always formats values as compact metric for chart dataLabels', () => {
+    expect(AppUtils.formatCompactCurrency(0)).toBe('₹0');
+    expect(AppUtils.formatCompactCurrency(500)).toBe('₹500');
+    expect(AppUtils.formatCompactCurrency(1000)).toBe('₹1k');
+    expect(AppUtils.formatCompactCurrency(1540)).toBe('₹1.5k');
+    expect(AppUtils.formatCompactCurrency(18600)).toBe('₹18.6k');
+    expect(AppUtils.formatCompactCurrency(30000)).toBe('₹30k');
+    expect(AppUtils.formatCompactCurrency(60000)).toBe('₹60k');
+    expect(AppUtils.formatCompactCurrency(130000)).toBe('₹130k');
+    expect(AppUtils.formatCompactCurrency(1300000)).toBe('₹1.3M');
+    expect(AppUtils.formatCompactCurrency(-11500)).toBe('-₹11.5k');
+    expect(AppUtils.formatCompactCurrency(null)).toBe('₹0');
+  });
+
+  test('setCurrencyFormat updates active format', () => {
+    AppUtils.setCurrencyFormat('Standard');
+    expect(AppUtils.currencyFormat).toBe('Standard');
+    expect(AppUtils.formatCurrency(30000)).toBe('₹30k');
+    AppUtils.setCurrencyFormat('Indian');
+    expect(AppUtils.currencyFormat).toBe('Indian');
+    expect(AppUtils.formatCurrency(30000)).toBe('₹30,000');
+  });
+
   test('parseAmount safely cleans formatted amount strings', () => {
     expect(AppUtils.parseAmount('₹1,500')).toBe(1500);
     expect(AppUtils.parseAmount('12,345.50')).toBe(12345.5);

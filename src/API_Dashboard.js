@@ -51,20 +51,23 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
     // Looks for a row where Key/Setting is 'Revenue_Recognition' (Values: 'Anchor' or 'Split')
     let accrualMode = 'anchor'; 
     const accSetting = settingsRows.find(s => {
-        const k = String(s.key || s.setting || s.Name || '').toLowerCase();
+        const k = String(s.key || s.Key || s.setting || s.Setting || s.Name || '').toLowerCase();
         return k === 'revenue_recognition' || k === 'revenue recognition';
     });
     if (accSetting) {
-        accrualMode = String(accSetting.value || accSetting.Value || '').toLowerCase();
+        accrualMode = String(accSetting.value !== undefined ? accSetting.value : (accSetting.Value || '')).toLowerCase();
     }
 
     let currencyFormat = 'Indian';
     const currSetting = settingsRows.find(s => {
-        const k = String(s.key || s.setting || s.Name || '').toLowerCase();
+        const k = String(s.key || s.Key || s.setting || s.Setting || s.Name || '').toLowerCase();
         return k === 'currency_format' || k === 'currency format' || k === 'currency_style';
     });
-    if (currSetting && currSetting.value) {
-        currencyFormat = String(currSetting.value).trim();
+    if (currSetting) {
+        const rawVal = currSetting.value !== undefined ? currSetting.value : currSetting.Value;
+        if (rawVal) {
+            currencyFormat = String(rawVal).trim();
+        }
     }
 
     const globalDataRes = api_getGlobalDropdowns && api_getGlobalDropdowns();

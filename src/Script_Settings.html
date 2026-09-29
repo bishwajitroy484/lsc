@@ -108,24 +108,32 @@
        });
 
        (this.generalSettingsData || []).forEach(item => {
-           if (!item || !item.key || String(item.key).trim() === '') return; 
+           if (!item) return;
+           const rawKey = item.key || item.Key || item.setting || item.Setting || '';
+           if (!rawKey || String(rawKey).trim() === '') return; 
+           const rawVal = item.value !== undefined ? item.value : (item.Value !== undefined ? item.Value : '');
 
-           const kLower = String(item.key).trim().toLowerCase();
+           const kLower = String(rawKey).trim().toLowerCase();
 
            this.coreKeys.forEach(core => {
                if (core.toLowerCase() === kLower || (core === 'ENABLE_NOTIFICATION' && kLower === 'notification_enabled')) {
                    const el = document.getElementById('gen-' + core);
                    if (el) {
                      if (el.type === 'checkbox' || core === 'ENABLE_NOTIFICATION') {
-                       const v = String(item.value || '').trim().toUpperCase();
+                       const v = String(rawVal || '').trim().toUpperCase();
                        el.checked = (v === 'YES' || v === 'Y' || v === 'TRUE' || v === '1' || v === 'ENABLED');
                      } else {
-                       el.value = item.value || '';
+                       el.value = rawVal || '';
                      }
                    }
                }
            });
        });
+
+       const currSelect = document.getElementById('gen-CURRENCY_FORMAT');
+       if (currSelect && !currSelect.value && AppUtils.currencyFormat) {
+         currSelect.value = AppUtils.currencyFormat;
+       }
 
        // Update live preview helpers and notifications
        this.updateLogoPreview();
@@ -399,11 +407,14 @@
 
        // Preserve any non-core legacy rows from the sheet to prevent data loss
        (this.generalSettingsData || []).forEach(item => {
-           if (!item || !item.key) return;
-           const kLower = String(item.key).trim().toLowerCase();
+           if (!item) return;
+           const rawKey = item.key || item.Key || item.setting || item.Setting || '';
+           if (!rawKey) return;
+           const rawVal = item.value !== undefined ? item.value : (item.Value !== undefined ? item.Value : '');
+           const kLower = String(rawKey).trim().toLowerCase();
            const isCore = this.coreKeys.some(c => c.toLowerCase() === kLower || (c === 'ENABLE_NOTIFICATION' && kLower === 'notification_enabled'));
            if (!isCore) {
-               payload.push({ key: item.key, value: item.value || '' });
+               payload.push({ key: rawKey, value: rawVal || '' });
            }
        });
 
@@ -429,7 +440,7 @@
                const currentLogoId = (document.getElementById('gen-LOGO_ID') || {}).value || '';
                AppUtils.applyAppBranding(currentLogoId, currentGymName);
                const currentCurrency = (document.getElementById('gen-CURRENCY_FORMAT') || {}).value || 'Indian';
-               AppUtils.currencyFormat = currentCurrency;
+               AppUtils.setCurrencyFormat(currentCurrency);
            } else {
                const err = (res && res.error) ? res.error : "Failed to save settings.";
                this.showToast(err, true);

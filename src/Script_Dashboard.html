@@ -327,7 +327,7 @@
     window.DashboardData = response.data || {};
     const data = response.data;
     if (data.currencyFormat) {
-      AppUtils.currencyFormat = data.currencyFormat;
+      AppUtils.setCurrencyFormat(data.currencyFormat);
     }
 
     if (!isRebuild) {
@@ -401,7 +401,7 @@
     const commonToolbar = { show: true, tools: { download: false, selection: false, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true }, autoSelected: 'zoom' };
     const commonGrid = { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 28, right: 12, left: 10, bottom: 4 } };
     const commonXAxis = { categories: data.charts.categories || [], tickAmount: 'dataPoints', labels: { hideOverlappingLabels: false, rotate: -45, rotateAlways: false, style: { fontSize: '11px', colors: '#64748b' } } };
-    var dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCurrency(val) : '', offsetY: -6, style: { fontSize: '11px', fontWeight: 600, colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 } };
+    var dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '', offsetY: -6, style: { fontSize: '11px', fontWeight: 600, colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 } };
 
     // 1. Rev vs Exp
     const elRevExp = document.querySelector("#chart-rev-exp");
@@ -485,7 +485,7 @@
           offsetY: -10,
           formatter: (val, opts) => opts.seriesIndex === 1 && opts.dataPointIndex === prediction.transitionIndex
             ? ''
-            : (val ? AppUtils.formatCurrency(val) : '')
+            : (val ? AppUtils.formatCompactCurrency(val) : '')
         },
         grid: commonGrid
       };
@@ -539,7 +539,7 @@
         plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: DashboardState.isShowingMisc ? 'Total Misc' : 'Total', fontSize: '14px', fontWeight: 600, formatter: function(w) { const tot = w.globals.seriesTotals.reduce((a,b)=>a+b,0); return AppUtils.formatCurrency(tot); } } } } } },
         legend: { position: 'right', fontSize: '11px', offsetX: -10, offsetY: 20 },
         responsive: [{ breakpoint: 768, options: { legend: { position: 'bottom', offsetX: 0, offsetY: 0 } } }],
-        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 } },
+        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCompactCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
       };
       elExp.innerHTML = ''; 

@@ -1,10 +1,51 @@
 <script>
   const AppUtils = {
-    currencyFormat: 'Indian',
+    currencyFormat: (typeof localStorage !== 'undefined' && localStorage.getItem('LSC_CURRENCY_FORMAT')) || 'Indian',
     availableYears: [],
     availableYearsLoaded: false,
     availableYearsLoading: false,
     availableYearsCallbacks: [],
+
+    setCurrencyFormat: function(format) {
+      if (!format) return;
+      this.currencyFormat = String(format).trim();
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('LSC_CURRENCY_FORMAT', this.currencyFormat);
+        } catch (e) {
+          console.warn('Could not save currency format to localStorage', e);
+        }
+      }
+    },
+
+    formatCompactCurrency: function(val) {
+      if (val === null || val === undefined || val === '') return '₹0';
+      const clean = typeof val === 'number' ? val : Number(String(val).replace(/[^0-9.-]+/g, ''));
+      if (isNaN(clean)) return '₹0';
+      const sign = clean < 0 ? '-' : '';
+      const abs = Math.abs(clean);
+      let formatted;
+      let suffix = '';
+
+      if (abs >= 1e9) {
+        formatted = (abs / 1e9).toFixed(1);
+        suffix = 'B';
+      } else if (abs >= 1e6) {
+        formatted = (abs / 1e6).toFixed(1);
+        suffix = 'M';
+      } else if (abs >= 1e3) {
+        formatted = (abs / 1e3).toFixed(1);
+        suffix = 'k';
+      } else {
+        formatted = Number.isInteger(abs) ? abs.toString() : abs.toFixed(1);
+      }
+
+      if (formatted.endsWith('.0')) {
+        formatted = formatted.slice(0, -2);
+      }
+
+      return `${sign}₹${formatted}${suffix}`;
+    },
 
     formatCurrency: function(val, overrideStyle) {
       if (val === null || val === undefined || val === '') return '₹0';
@@ -338,12 +379,15 @@
               let logoVal = '';
               let gymVal = '';
               res.data.forEach(item => {
-                if (!item || !item.key) return;
-                const k = String(item.key).trim().toUpperCase();
-                if (k === 'LOGO_ID' || k === 'LOGO') logoVal = item.value || '';
-                if (k === 'GYM_NAME' || k === 'GYMNAME') gymVal = item.value || '';
+                if (!item) return;
+                const rawKey = item.key || item.Key || item.setting || item.Setting || '';
+                if (!rawKey) return;
+                const rawVal = item.value !== undefined ? item.value : (item.Value !== undefined ? item.Value : '');
+                const k = String(rawKey).trim().toUpperCase();
+                if (k === 'LOGO_ID' || k === 'LOGO') logoVal = rawVal || '';
+                if (k === 'GYM_NAME' || k === 'GYMNAME') gymVal = rawVal || '';
                 if (k === 'CURRENCY_FORMAT' || k === 'CURRENCY_STYLE') {
-                  this.currencyFormat = item.value || 'Indian';
+                  this.setCurrencyFormat(rawVal || 'Indian');
                 }
               });
               this.applyAppBranding(logoVal, gymVal);
