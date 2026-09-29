@@ -325,15 +325,16 @@
     }
 
     window.DashboardData = response.data || {};
-    const data = response.data;
-    if (data.currencyFormat) {
-      AppUtils.setCurrencyFormat(data.currencyFormat);
+    const data = response.data || {};
+    const incomingCurrencyFormat = data.currencyFormat || response.currencyFormat;
+    if (incomingCurrencyFormat) {
+      AppUtils.setCurrencyFormat(incomingCurrencyFormat);
     }
 
     if (!isRebuild) {
       DashboardState.updateLabel(); 
       
-      const formatCurrency = AppUtils.formatCurrency;
+      const formatCurrency = (val, style) => AppUtils.formatCurrency(val, style);
       
       const currentHour = new Date().getHours();
       let timeGreet = "Good Morning";

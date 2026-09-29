@@ -53,7 +53,7 @@
       if (isNaN(clean)) return '₹0';
       const sign = clean < 0 ? '-' : '';
       const abs = Math.abs(clean);
-      const style = overrideStyle || this.currencyFormat || 'Indian';
+      const style = overrideStyle || (this && this.currencyFormat) || (typeof AppUtils !== 'undefined' && AppUtils.currencyFormat) || (typeof globalThis !== 'undefined' && globalThis.AppUtils && globalThis.AppUtils.currencyFormat) || (typeof localStorage !== 'undefined' && localStorage.getItem('LSC_CURRENCY_FORMAT')) || 'Indian';
       const isIndian = !String(style).toLowerCase().includes('standard') && !String(style).toLowerCase().includes('western') && !String(style).toLowerCase().includes('metric');
 
       let formatted;

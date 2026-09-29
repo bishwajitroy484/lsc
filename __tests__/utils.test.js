@@ -136,6 +136,7 @@ describe('Client Shared Utilities (AppUtils in Global_State.html)', () => {
     if (match) {
       const fn = new Function(`return ${match[1]};`);
       AppUtils = fn();
+      globalThis.AppUtils = AppUtils;
     }
   });
 
@@ -199,6 +200,14 @@ describe('Client Shared Utilities (AppUtils in Global_State.html)', () => {
     AppUtils.setCurrencyFormat('Indian');
     expect(AppUtils.currencyFormat).toBe('Indian');
     expect(AppUtils.formatCurrency(30000)).toBe('₹30,000');
+  });
+
+  test('formatCurrency resolves currency format even when called unbound', () => {
+    AppUtils.setCurrencyFormat('Standard');
+    const unbound = AppUtils.formatCurrency;
+    expect(unbound(30000)).toBe('₹30k');
+    AppUtils.setCurrencyFormat('Indian');
+    expect(unbound(30000)).toBe('₹30,000');
   });
 
   test('parseAmount safely cleans formatted amount strings', () => {

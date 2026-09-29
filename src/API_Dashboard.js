@@ -96,6 +96,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
 
     return {
       success: true,
+      currencyFormat: currencyFormat,
       data: {
         currencyFormat: currencyFormat,
         userGreetingName: formattedName,
