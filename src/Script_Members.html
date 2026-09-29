@@ -16,6 +16,11 @@
     effectiveDueDate: null, 
     chartInstance: null,
 
+    pageSize: 50,
+    renderedCount: 0,
+    isLoadingMore: false,
+    scrollListenerBound: false,
+
     init: function() {
       this.isDropdownsLoaded = false;
       this.isMembersLoaded = false;
@@ -308,6 +313,9 @@
         return Toast.error(response.error);
       }
       this.allData = response.data || [];
+      if (response.currencyFormat) {
+        AppUtils.setCurrencyFormat(response.currencyFormat);
+      }
     },
 
     _debouncedApplyFilters: null,
@@ -330,10 +338,144 @@
       this.setMobileFilter(statusName);
     },
 
+    buildDesktopRowHtml: function(member) {
+      const sName = this.getName('status', member.status);
+      const sLower = String(sName).toLowerCase();
+      
+      let sClass = 'bg-slate-50 text-slate-600 border-slate-200';
+      if (sLower === 'active') sClass = 'bg-blue-50 text-brand-primary border-blue-200';
+      if (sLower.includes('in-active') || sLower.includes('inactive')) sClass = 'bg-red-50 text-red-600 border-red-200';
+
+      const planName = this.getName('membership', member.membershipId);
+      const batchName = this.getName('batch', member.batchId);
+      
+      const batches = this.dropdowns.batch || [];
+      const batchMatch = batches.find(b => b.id === member.batchId);
+      const groupName = batchMatch ? (batchMatch.groups || batchMatch.group || batchMatch.name || 'NA') : 'NA';
+      const groupBadgeColor = groupName.toLowerCase().includes('kid') ? 'text-amber-600' : 'text-brand-primary';
+      
+      const initials = member.fullName ? member.fullName.substring(0, 2).toUpperCase() : 'NA';
+      let avatarHtml = initials;
+      
+      if (member.profileImage) {
+        const imgSrcStr = this.getSafeAvatarUrl(member.profileImage);
+        avatarHtml = '<img src="' + imgSrcStr + '" class="w-full h-full rounded-full object-cover">';
+      }
+
+      const dobStr = member.dob ? member.dob : 'N/A';
+      const genderStr = member.gender || 'N/A';
+      const notesStr = member.notes ? (member.notes.length > 25 ? member.notes.substring(0, 25) + '...' : member.notes) : '--';
+      const phoneStr = member.phone || 'No Phone';
+      const joinStr = member.joinDate ? member.joinDate : '--';
+      
+      let dueStr = member.dueDate ? member.dueDate : 'N/A';
+      let dueInfo = this.getDueInfo(member.dueDate);
+      if (sLower.includes('inactive') || sLower.includes('in-active') || sLower.includes('exit')) {
+        dueStr = '--';
+        dueInfo = { text: 'Account Closed', class: 'bg-slate-100 text-slate-500 border-slate-200' };
+      }
+
+      const memberJson = JSON.stringify(member).replace(/"/g, '&quot;');
+
+      return `
+        <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer group" onclick="MembersApp.openDetails(${memberJson})">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[11px] font-bold shrink-0 shadow-sm border border-slate-200">
+                 ${avatarHtml}
+              </div>
+              <div>
+                <div class="font-bold text-slate-800 text-xs md:text-sm group-hover:text-brand-primary transition-colors">${member.fullName}</div>
+                <div class="text-[11px] text-slate-500 font-medium mt-0.5">📞 ${phoneStr} • ${member.memberId || '--'} • ${genderStr} • DOB: ${dobStr}</div>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3">
+             <div class="text-xs md:text-sm text-slate-800 font-bold">${planName}</div>
+             <div class="text-[11px] text-slate-500 font-medium mt-0.5">${batchName} <span class="font-bold uppercase tracking-wider ${groupBadgeColor}">(${groupName})</span></div>
+          </td>
+          <td class="px-4 py-3">
+             <div class="text-[11px] text-slate-500 font-medium mb-0.5">Joined: <span class="font-bold text-slate-700">${joinStr}</span></div>
+             <div class="text-[11px] text-slate-500 font-medium mb-1">Due: <span class="font-bold text-slate-700">${dueStr}</span></div>
+             <div><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${dueInfo.class} uppercase tracking-wider">${dueInfo.text}</span></div>
+          </td>
+          <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} uppercase tracking-wider">${sName}</span></td>
+          <td class="px-4 py-3 text-xs text-slate-600 max-w-[140px] truncate" title="${member.notes || ''}">${notesStr}</td>
+          <td class="px-4 py-3 text-right">
+            <button onclick="event.stopPropagation(); MembersApp.openModal(${memberJson})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-full transition-colors">
+               <span class="material-symbols-rounded text-[18px]">edit</span>
+            </button>
+          </td>
+        </tr>`;
+    },
+
+    buildMobileCardHtml: function(member) {
+      const sName = this.getName('status', member.status);
+      const sLower = String(sName).toLowerCase();
+      
+      let sClass = 'bg-slate-50 text-slate-600 border-slate-200';
+      if (sLower === 'active') sClass = 'bg-blue-50 text-brand-primary border-blue-200';
+      if (sLower.includes('in-active') || sLower.includes('inactive')) sClass = 'bg-red-50 text-red-600 border-red-200';
+
+      const planName = this.getName('membership', member.membershipId);
+      const batchName = this.getName('batch', member.batchId);
+      
+      const batches = this.dropdowns.batch || [];
+      const batchMatch = batches.find(b => b.id === member.batchId);
+      const groupName = batchMatch ? (batchMatch.groups || batchMatch.group || batchMatch.name || 'NA') : 'NA';
+      const groupBadgeColor = groupName.toLowerCase().includes('kid') ? 'text-amber-600' : 'text-brand-primary';
+      
+      const initials = member.fullName ? member.fullName.substring(0, 2).toUpperCase() : 'NA';
+      let avatarHtml = initials;
+      
+      if (member.profileImage) {
+        const imgSrcStr = this.getSafeAvatarUrl(member.profileImage);
+        avatarHtml = '<img src="' + imgSrcStr + '" class="w-full h-full rounded-full object-cover">';
+      }
+
+      const phoneStr = member.phone || 'No Phone';
+      const joinStr = member.joinDate ? member.joinDate : '--';
+      
+      let dueInfo = this.getDueInfo(member.dueDate);
+      if (sLower.includes('inactive') || sLower.includes('in-active') || sLower.includes('exit')) {
+        dueInfo = { text: 'Account Closed', class: 'bg-slate-100 text-slate-500 border-slate-200' };
+      }
+
+      const memberJson = JSON.stringify(member).replace(/"/g, '&quot;');
+
+      return `
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3 cursor-pointer" onclick="MembersApp.openDetails(${memberJson})">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0 shadow-sm border border-slate-200">
+                 ${avatarHtml}
+              </div>
+              <div>
+                 <h3 class="font-bold text-sm md:text-base text-slate-800">${member.fullName}</h3>
+                 <p class="text-[11px] font-medium text-slate-400">📞 ${phoneStr} • ${member.memberId || '--'}</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} uppercase">${sName}</span>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
+            <div><span class="text-slate-400">Plan:</span> <span class="font-bold text-slate-700">${planName}</span></div>
+            <div class="text-right"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${dueInfo.class} uppercase tracking-wider">${dueInfo.text}</span></div>
+            <div class="col-span-2 flex justify-between items-center">
+               <div><span class="text-slate-400">Batch:</span> <span class="font-bold text-slate-700">${batchName} <span class="${groupBadgeColor}">(${groupName})</span></span></div>
+               <div><span class="text-slate-400">Joined:</span> <span class="font-bold text-slate-700">${joinStr}</span></div>
+            </div>
+          </div>
+        </div>`;
+    },
+
     render: function() {
       const tBody = document.getElementById('desktop-table-body');
       const mContainer = document.getElementById('mobile-cards-container');
       if (!tBody || !mContainer) return;
+
+      this.renderedCount = 0;
+      this.isLoadingMore = false;
 
       if (this.filteredData.length === 0) {
         tBody.innerHTML = `<tr><td colspan="6" class="text-center py-12 px-4"><div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3"><span class="material-symbols-rounded text-3xl text-slate-300">search_off</span></div><h3 class="text-slate-700 font-bold text-sm">No Results Found</h3></td></tr>`;
@@ -341,107 +483,76 @@
         return;
       }
 
-      let dHtml = ''; let mHtml = '';
+      const initialBatch = this.filteredData.slice(0, this.pageSize);
+      tBody.innerHTML = initialBatch.map(m => this.buildDesktopRowHtml(m)).join('');
+      mContainer.innerHTML = initialBatch.map(m => this.buildMobileCardHtml(m)).join('');
+      this.renderedCount = initialBatch.length;
 
-      this.filteredData.forEach(member => {
-        const sName = this.getName('status', member.status);
-        const sLower = String(sName).toLowerCase();
-        
-        let sClass = 'bg-slate-50 text-slate-600 border-slate-200';
-        if (sLower === 'active') sClass = 'bg-blue-50 text-brand-primary border-blue-200';
-        if (sLower.includes('in-active') || sLower.includes('inactive')) sClass = 'bg-red-50 text-red-600 border-red-200';
+      this.initScrollListener();
+    },
 
-        const planName = this.getName('membership', member.membershipId);
-        const batchName = this.getName('batch', member.batchId);
-        
-        const batches = this.dropdowns.batch || [];
-        const batchMatch = batches.find(b => b.id === member.batchId);
-        const groupName = batchMatch ? (batchMatch.groups || batchMatch.group || batchMatch.name || 'NA') : 'NA';
-        const groupBadgeColor = groupName.toLowerCase().includes('kid') ? 'text-amber-600' : 'text-brand-primary';
-        
-        const initials = member.fullName ? member.fullName.substring(0, 2).toUpperCase() : 'NA';
-        let avatarHtml = initials;
-        
-       if (member.profileImage) {
-            const imgSrcStr = this.getSafeAvatarUrl(member.profileImage);
-            avatarHtml = '<img src="' + imgSrcStr + '" class="w-full h-full rounded-full object-cover">';
+    loadMore: function() {
+      if (this.isLoadingMore || this.renderedCount >= this.filteredData.length) return;
+      this.isLoadingMore = true;
+
+      const tBody = document.getElementById('desktop-table-body');
+      const mContainer = document.getElementById('mobile-cards-container');
+      if (!tBody || !mContainer) { this.isLoadingMore = false; return; }
+
+      // Append shimmer placeholders at bottom while keeping top rows intact
+      const dShim = document.createElement('tr');
+      dShim.id = 'members-lazy-shimmer-desktop';
+      dShim.className = 'lazy-loading-row';
+      dShim.innerHTML = `<td colspan="6" class="px-4 py-3"><div class="space-y-2 py-1"><div class="h-6 w-full shimmer rounded"></div><div class="h-6 w-4/5 shimmer rounded"></div></div></td>`;
+      tBody.appendChild(dShim);
+
+      const mShim = document.createElement('div');
+      mShim.id = 'members-lazy-shimmer-mobile';
+      mShim.innerHTML = `<div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3"><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full shimmer shrink-0"></div><div class="space-y-2 flex-1"><div class="h-3.5 w-32 shimmer rounded"></div><div class="h-2.5 w-20 shimmer rounded"></div></div></div></div>`;
+      mContainer.appendChild(mShim);
+
+      setTimeout(() => {
+        const dShimEl = document.getElementById('members-lazy-shimmer-desktop');
+        if (dShimEl) dShimEl.remove();
+        const mShimEl = document.getElementById('members-lazy-shimmer-mobile');
+        if (mShimEl) mShimEl.remove();
+
+        const startIdx = this.renderedCount;
+        const nextBatch = this.filteredData.slice(startIdx, startIdx + this.pageSize);
+        if (nextBatch.length > 0) {
+          const dHtml = nextBatch.map(m => this.buildDesktopRowHtml(m)).join('');
+          const mHtml = nextBatch.map(m => this.buildMobileCardHtml(m)).join('');
+          tBody.insertAdjacentHTML('beforeend', dHtml);
+          mContainer.insertAdjacentHTML('beforeend', mHtml);
+          this.renderedCount += nextBatch.length;
         }
+        this.isLoadingMore = false;
+      }, 160);
+    },
 
-        const dobStr = member.dob ? member.dob : 'N/A';
-        const genderStr = member.gender || 'N/A';
-        const notesStr = member.notes ? (member.notes.length > 25 ? member.notes.substring(0, 25) + '...' : member.notes) : '--';
-        const phoneStr = member.phone || 'No Phone';
-        const joinStr = member.joinDate ? member.joinDate : '--';
-        const rawAmt = member.membershipAmount ? member.membershipAmount.toString().replace(/[^0-9.-]+/g,"") : '';
-        
-        let dueStr = member.dueDate ? member.dueDate : 'N/A';
-        let dueInfo = this.getDueInfo(member.dueDate);
-        if (sLower.includes('inactive') || sLower.includes('in-active') || sLower.includes('exit')) {
-             dueStr = '--';
-             dueInfo = { text: 'Account Closed', class: 'bg-slate-100 text-slate-500 border-slate-200' };
+    initScrollListener: function() {
+      if (this.scrollListenerBound) return;
+      this.scrollListenerBound = true;
+
+      const handleScroll = () => {
+        if (this.isLoadingMore || this.renderedCount >= this.filteredData.length) return;
+        const sContainer = document.getElementById('members-scroll-container');
+        const appRoot = document.getElementById('app-root');
+
+        const checkNearBottom = (el) => el && (el.scrollTop + el.clientHeight >= el.scrollHeight - 100);
+
+        if (checkNearBottom(sContainer) || checkNearBottom(appRoot)) {
+          this.loadMore();
         }
+      };
 
-        const memberJson = JSON.stringify(member).replace(/"/g, '&quot;');
+      const debouncedScroll = AppUtils.debounce(handleScroll, 60);
 
-        dHtml += `
-          <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer group" onclick="MembersApp.openDetails(${memberJson})">
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0 shadow-sm border border-slate-200">
-                   ${avatarHtml}
-                </div>
-                <div>
-                  <div class="font-bold text-slate-800 text-xs group-hover:text-brand-primary transition-colors">${member.fullName}</div>
-                  <div class="text-[9px] text-slate-500 font-medium mt-0.5">📞 ${phoneStr} • ${member.memberId || '--'} • ${genderStr} • DOB: ${dobStr}</div>
-                </div>
-              </div>
-            </td>
-            <td class="px-4 py-3">
-               <div class="text-xs text-slate-800 font-bold">${planName}</div>
-               <div class="text-[9px] text-slate-500 font-medium mt-0.5">${batchName} <span class="font-bold uppercase tracking-wider ${groupBadgeColor}">(${groupName})</span></div>
-            </td>
-            <td class="px-4 py-3">
-               <div class="text-[9px] text-slate-500 font-medium mb-0.5">Joined: <span class="font-bold text-slate-700">${joinStr}</span></div>
-               <div class="text-[9px] text-slate-500 font-medium mb-1">Due: <span class="font-bold text-slate-700">${dueStr}</span></div>
-               <div><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border ${dueInfo.class} uppercase tracking-wider">${dueInfo.text}</span></div>
-            </td>
-            <td class="px-4 py-3"><span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${sClass} uppercase tracking-wider">${sName}</span></td>
-            <td class="px-4 py-3 text-[10px] text-slate-500 max-w-[120px] truncate" title="${member.notes || ''}">${notesStr}</td>
-            <td class="px-4 py-3 text-right">
-              <button onclick="event.stopPropagation(); MembersApp.openModal(${memberJson})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-full transition-colors">
-                 <span class="material-symbols-rounded text-[18px]">edit</span>
-              </button>
-            </td>
-          </tr>`;
+      const sContainer = document.getElementById('members-scroll-container');
+      if (sContainer && typeof sContainer.addEventListener === 'function') sContainer.addEventListener('scroll', debouncedScroll, { passive: true });
 
-        mHtml += `
-          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3" onclick="MembersApp.openDetails(${memberJson})">
-            <div class="flex items-start justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold shrink-0 shadow-sm border border-slate-200">
-                   ${avatarHtml}
-                </div>
-                <div>
-                   <h3 class="font-bold text-sm text-slate-800">${member.fullName}</h3>
-                   <p class="text-[9px] font-medium text-slate-400">📞 ${phoneStr} • ${member.memberId || '--'}</p>
-                </div>
-              </div>
-              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${sClass} uppercase">${sName}</span>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-2 text-[10px] border-t border-slate-100 pt-3">
-              <div><span class="text-slate-400">Plan:</span> <span class="font-bold text-slate-700">${planName}</span></div>
-              <div class="text-right"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border ${dueInfo.class} uppercase tracking-wider">${dueInfo.text}</span></div>
-              <div class="col-span-2 flex justify-between items-center">
-                 <div><span class="text-slate-400">Batch:</span> <span class="font-bold text-slate-700">${batchName} <span class="${groupBadgeColor}">(${groupName})</span></span></div>
-                 <div><span class="text-slate-400">Joined:</span> <span class="font-bold text-slate-700">${joinStr}</span></div>
-              </div>
-            </div>
-          </div>`;
-      });
-
-      tBody.innerHTML = dHtml;
-      mContainer.innerHTML = mHtml;
+      const appRoot = document.getElementById('app-root');
+      if (appRoot && typeof appRoot.addEventListener === 'function') appRoot.addEventListener('scroll', debouncedScroll, { passive: true });
     },
 
     openDetails: function(member) {
@@ -493,6 +604,9 @@
            if(res.success && res.data) {
              this.currentMemberPayments = res.data;
              this.chartMetrics = res.chartMetrics || {};
+             if (res.currencyFormat) {
+               AppUtils.setCurrencyFormat(res.currencyFormat);
+             }
            } else if (!res.success) {
              Toast.error("Failed to load payments: " + res.error);
            }
@@ -777,7 +891,7 @@
       let categories = [];
       let chartData = [];
 
-      const dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCurrency(val) : '', offsetY: -6, style: { fontSize: '9px', colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 2, padding: 2, opacity: 0.9, borderWidth: 0 } };
+      const dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '', offsetY: -6, style: { fontSize: '11px', fontWeight: 600, colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 } };
 
       if (viewMode === 'quarterly') {
           categories = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
@@ -805,14 +919,14 @@
         dataLabels: { ...dlOptions, offsetY: -10 },
         xaxis: { 
             categories: categories, 
-            labels: { style: { fontSize: '9px', colors: '#64748b' } }, 
+            labels: { style: { fontSize: '11px', colors: '#64748b' } }, 
             axisBorder: { show: false }, axisTicks: { show: false } 
         },
-        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#10b981'], 
-        legend: { position: 'top', horizontalAlign: 'right', fontSize: '10px', markers: { radius: 10 } },
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 0, right: 0, bottom: 0, left: 10 } }
+        legend: { position: 'top', horizontalAlign: 'right', fontSize: '11px', markers: { radius: 10 } },
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 24, right: 10, bottom: 4, left: 10 } }
       };
 
       const container = document.querySelector("#member-revenue-chart");

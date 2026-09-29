@@ -51,11 +51,23 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
     // Looks for a row where Key/Setting is 'Revenue_Recognition' (Values: 'Anchor' or 'Split')
     let accrualMode = 'anchor'; 
     const accSetting = settingsRows.find(s => {
-        const k = String(s.key || s.setting || s.Name || '').toLowerCase();
+        const k = String(s.key || s.Key || s.setting || s.Setting || s.Name || '').toLowerCase();
         return k === 'revenue_recognition' || k === 'revenue recognition';
     });
     if (accSetting) {
-        accrualMode = String(accSetting.value || accSetting.Value || '').toLowerCase();
+        accrualMode = String(accSetting.value !== undefined ? accSetting.value : (accSetting.Value || '')).toLowerCase();
+    }
+
+    let currencyFormat = 'Indian';
+    const currSetting = settingsRows.find(s => {
+        const k = String(s.key || s.Key || s.setting || s.Setting || s.Name || '').toLowerCase();
+        return k === 'currency_format' || k === 'currency format' || k === 'currency_style';
+    });
+    if (currSetting) {
+        const rawVal = currSetting.value !== undefined ? currSetting.value : currSetting.Value;
+        if (rawVal) {
+            currencyFormat = String(rawVal).trim();
+        }
     }
 
     const globalDataRes = api_getGlobalDropdowns && api_getGlobalDropdowns();
@@ -66,7 +78,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
 
     // 3. Pass the accrualMode into the financials processor
     const financialData = processFinancials(payments, expenses, salaries, targetYear, resolveName, accrualMode);
-    const expenseAverages = calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrualMode, today);
+    const expenseAverages = calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrualMode, today, staff);
     const operationalData = processOperations(members, staff, payments, targetYear, today, resolveName, dropDowns, accrualMode);
     let actualAnchor = null;
     if (targetYear > today.getFullYear()) {
@@ -84,7 +96,9 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
 
     return {
       success: true,
+      currencyFormat: currencyFormat,
       data: {
+        currencyFormat: currencyFormat,
         userGreetingName: formattedName,
         kpis: {
           activeMembers: operationalData.activeCount || 0,
@@ -95,7 +109,9 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
           businessExpenses: (chartMetrics.totalOperatingExpenses - chartMetrics.staffCost) || 0,
           staffCost: chartMetrics.staffCost || 0,
           totalOperatingExpenses: chartMetrics.totalOperatingExpenses || 0,
-          netInHand: (chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0
+          netInHand: chartMetrics.actualNet != null ? chartMetrics.actualNet : ((chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0),
+          remainingForecastNet: chartMetrics.remainingForecastNet || 0,
+          projectedNet: chartMetrics.projectedNet != null ? chartMetrics.projectedNet : ((chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0)
         },
         charts: {
           categories: chartMetrics.filteredLabels,
@@ -107,7 +123,10 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
             categories: chartMetrics.predictionLabels,
             actual: chartMetrics.actualNetArr,
             expected: chartMetrics.expectedNetArr,
-            transitionIndex: chartMetrics.transitionIndex
+            transitionIndex: chartMetrics.transitionIndex,
+            actualNet: chartMetrics.actualNet || 0,
+            remainingForecastNet: chartMetrics.remainingForecastNet || 0,
+            projectedNet: chartMetrics.projectedNet != null ? chartMetrics.projectedNet : ((chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0)
           },
           collectionTrend: { collected: chartMetrics.filteredRev, overdue: chartMetrics.filteredOverdue },
           expenseBreakdown: {
@@ -296,7 +315,7 @@ function formatExpenseBreakdown(financialData, mode, periods) {
   };
 }
 
-function calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrualMode, today) {
+function calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrualMode, today, staff = []) {
   const monthStart = new Date(today.getFullYear(), today.getMonth() - 12, 1);
   const operatingByMonth = new Array(12).fill(0);
   const staffByMonth = new Array(12).fill(0);
@@ -316,9 +335,25 @@ function calculateMonthlyExpenseAverages(expenses, salaries, resolveName, accrua
     addToHistory(salary.startDate, salary.endDate, salary.paidDate, parseAmt(salary.amount), staffByMonth);
   });
 
+  let staffRunRate = 0;
+  let activeStaffFound = false;
+  if (Array.isArray(staff) && staff.length > 0) {
+    staff.forEach(s => {
+      const sStatus = resolveName ? resolveName('STAFF', 'status', s.status) : s.status;
+      const sName = String(sStatus || '').trim().toLowerCase();
+      const isActive = !sName.includes('inactive') && !sName.includes('in-active') && !sName.includes('exit') && !sName.includes('left');
+      if (isActive) {
+        activeStaffFound = true;
+        staffRunRate += parseAmt(s.salary);
+      }
+    });
+  }
+
+  const trailingStaffAvg = staffByMonth.reduce((total, amount) => total + amount, 0) / 12;
+
   return {
     operating: operatingByMonth.reduce((total, amount) => total + amount, 0) / 12,
-    staff: staffByMonth.reduce((total, amount) => total + amount, 0) / 12
+    staff: (activeStaffFound && staffRunRate > 0) ? staffRunRate : trailingStaffAvg
   };
 }
 
@@ -579,7 +614,7 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     ? null
     : Number(((finalRev[index] || 0) - (finalExp[index] || 0)).toFixed(2)));
   let predictionExpected = selectedIndices.map(index => isFuturePeriod(index)
-    ? Number((finalExpectedCollections[index] - finalExpectedExpenses[index]).toFixed(2))
+    ? Number(((finalRev[index] || 0) + (finalExpectedCollections[index] || 0) - (finalExpectedExpenses[index] || 0)).toFixed(2))
     : null);
   let transitionIndex = selectedIndices.indexOf(elapsedBoundaryIdx);
 
@@ -602,6 +637,20 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     }
   }
 
+  let actualNet = 0;
+  let remainingForecastNet = 0;
+  selectedIndices.forEach(index => {
+    if (isFuturePeriod(index)) {
+      remainingForecastNet += ((finalRev[index] || 0) + (finalExpectedCollections[index] || 0) - (finalExpectedExpenses[index] || 0));
+    } else {
+      actualNet += ((finalRev[index] || 0) - (finalExp[index] || 0));
+    }
+  });
+
+  actualNet = Number(actualNet.toFixed(2));
+  remainingForecastNet = Number(remainingForecastNet.toFixed(2));
+  const projectedNet = Number((actualNet + remainingForecastNet).toFixed(2));
+
   return {
     filteredLabels,
     filteredRev: safeNumArray(filteredRev),
@@ -614,7 +663,10 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     transitionIndex,
     membersCollected,
     totalOperatingExpenses,
-    staffCost
+    staffCost,
+    actualNet,
+    remainingForecastNet,
+    projectedNet
   };
 }
 

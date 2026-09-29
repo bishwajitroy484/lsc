@@ -131,20 +131,20 @@
         html += `
           <tr onclick="window.navigateToMemberDetail(${row.memberId ? `'${row.memberId}'` : 'null'}, ${rowJson})" 
               class="border-b border-slate-50 hover:bg-slate-100/80 transition-colors cursor-pointer group">
-            <td class="px-3 py-2">
-              <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[9px] font-bold shrink-0 shadow-sm group-hover:bg-brand-primary group-hover:text-white transition-colors">${initials}</div>
+            <td class="px-3 py-2.5">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[11px] font-bold shrink-0 shadow-sm group-hover:bg-brand-primary group-hover:text-white transition-colors">${initials}</div>
                 <div>
-                  <div class="font-bold text-slate-800 text-[11px] group-hover:text-brand-primary transition-colors">${row.name}</div>
-                  <div class="text-[9px] text-slate-500 md:hidden mt-0.5">${row.plan}</div>
+                  <div class="font-bold text-slate-800 text-xs md:text-sm group-hover:text-brand-primary transition-colors">${row.name}</div>
+                  <div class="text-[11px] text-slate-500 md:hidden mt-0.5">${row.plan}</div>
                 </div>
               </div>
             </td>
-            <td class="px-3 py-2 text-slate-500 whitespace-nowrap hidden md:table-cell text-[10px]">${row.plan}</td>
-            <td class="px-3 py-2 font-semibold text-slate-800 whitespace-nowrap text-[10px]">${AppUtils.formatCurrency(row.amount)}</td>
-            <td class="px-3 py-2 text-slate-500 whitespace-nowrap hidden md:table-cell text-[10px]">${row.date}</td>
-            <td class="px-3 py-2 text-right whitespace-nowrap">
-              <span class="px-2.5 py-1 rounded text-[10px] font-bold ${row.status}">${row.days}</span>
+            <td class="px-3 py-2.5 text-slate-600 font-medium whitespace-nowrap hidden md:table-cell text-xs">${row.plan}</td>
+            <td class="px-3 py-2.5 font-bold text-slate-800 whitespace-nowrap text-xs md:text-sm">${AppUtils.formatCurrency(row.amount)}</td>
+            <td class="px-3 py-2.5 text-slate-500 whitespace-nowrap hidden md:table-cell text-xs">${row.date}</td>
+            <td class="px-3 py-2.5 text-right whitespace-nowrap">
+              <span class="px-2.5 py-1 rounded text-xs font-bold ${row.status}">${row.days}</span>
             </td>
           </tr>
         `;
@@ -295,7 +295,7 @@
   };
 
   function toggleShimmer(isActive) {
-    const kpis = ['kpi-active', 'kpi-collected', 'kpi-overdue', 'kpi-bus-exp', 'kpi-staff-cost', 'kpi-total-exp', 'kpi-net', 'mini-staff-count', 'mini-staff-cost', 'mini-staff-avg'];
+    const kpis = ['kpi-active', 'kpi-collected', 'kpi-overdue', 'kpi-bus-exp', 'kpi-staff-cost', 'kpi-total-exp', 'kpi-net', 'kpi-net-forecast', 'mini-staff-count', 'mini-staff-cost', 'mini-staff-avg'];
     const chartIds = ['chart-batch', 'chart-rev-exp', 'chart-trend', 'chart-expense-breakdown', 'chart-prediction', 'chart-staff-trend'];
     const tables = ['table-overdue', 'table-upcoming'];
     
@@ -325,12 +325,16 @@
     }
 
     window.DashboardData = response.data || {};
-    const data = response.data;
+    const data = response.data || {};
+    const incomingCurrencyFormat = data.currencyFormat || response.currencyFormat;
+    if (incomingCurrencyFormat) {
+      AppUtils.setCurrencyFormat(incomingCurrencyFormat);
+    }
 
     if (!isRebuild) {
       DashboardState.updateLabel(); 
       
-      const formatCurrency = AppUtils.formatCurrency;
+      const formatCurrency = (val, style) => AppUtils.formatCurrency(val, style);
       
       const currentHour = new Date().getHours();
       let timeGreet = "Good Morning";
@@ -348,6 +352,22 @@
       safeSetText('kpi-total-exp', formatCurrency(data.kpis.totalOperatingExpenses));
       safeSetText('kpi-net', formatCurrency(data.kpis.netInHand));
 
+      const projNet = data.kpis.projectedNet != null ? data.kpis.projectedNet : data.kpis.netInHand;
+      safeSetText('kpi-net-forecast', formatCurrency(projNet));
+      const forecastEl = document.getElementById('kpi-net-forecast');
+      if (forecastEl) {
+        const rem = data.kpis.remainingForecastNet || 0;
+        forecastEl.title = `Actual: ${formatCurrency(data.kpis.netInHand)} | Remaining Forecast: ${rem >= 0 ? '+' : ''}${formatCurrency(rem)}`;
+      }
+
+      const predActual = (data.charts.prediction && data.charts.prediction.actualNet != null) ? data.charts.prediction.actualNet : data.kpis.netInHand;
+      const predRemaining = (data.charts.prediction && data.charts.prediction.remainingForecastNet != null) ? data.charts.prediction.remainingForecastNet : (data.kpis.remainingForecastNet || 0);
+      const predTotal = (data.charts.prediction && data.charts.prediction.projectedNet != null) ? data.charts.prediction.projectedNet : projNet;
+
+      safeSetText('pred-sum-actual', formatCurrency(predActual));
+      safeSetText('pred-sum-remaining', (predRemaining > 0 ? '+' : '') + formatCurrency(predRemaining));
+      safeSetText('pred-sum-total', formatCurrency(predTotal));
+
       if (data.kpis.activeSegregation) {
          const segContainer = document.getElementById('kpi-active-segregation');
          if (segContainer) {
@@ -355,13 +375,13 @@
             Object.entries(data.kpis.activeSegregation).forEach(([planName, count]) => {
                if (count > 0) { 
                   segHtml += `
-                    <div class="bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 flex items-center gap-1.5 shrink-0">
-                      <span class="text-[8px] text-slate-400 font-bold uppercase truncate max-w-[45px]" title="${planName}">${planName}</span>
-                      <span class="text-[9px] font-bold text-slate-700">${count}</span>
+                    <div class="bg-slate-50 border border-slate-100 rounded px-2 py-0.5 flex items-center gap-1.5 shrink-0">
+                      <span class="text-[10px] text-slate-500 font-bold uppercase truncate max-w-[55px]" title="${planName}">${planName}</span>
+                      <span class="text-xs font-bold text-slate-700">${count}</span>
                     </div>`;
                }
             });
-            if (segHtml === '') segHtml = `<span class="text-[9px] text-slate-400 font-medium">No active memberships</span>`;
+            if (segHtml === '') segHtml = `<span class="text-xs text-slate-400 font-medium">No active memberships</span>`;
             segContainer.innerHTML = segHtml;
          }
       }
@@ -380,8 +400,9 @@
     window.AppCharts = {};
 
     const commonToolbar = { show: true, tools: { download: false, selection: false, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true }, autoSelected: 'zoom' };
-    const commonXAxis = { categories: data.charts.categories || [], tickAmount: 'dataPoints', labels: { hideOverlappingLabels: false, rotate: -45, rotateAlways: false, style: { fontSize: '9px' } } };
-    var dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCurrency(val) : '', offsetY: -6, style: { fontSize: '9px', colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 2, padding: 2, opacity: 0.9, borderWidth: 0 } };
+    const commonGrid = { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 28, right: 12, left: 10, bottom: 4 } };
+    const commonXAxis = { categories: data.charts.categories || [], tickAmount: 'dataPoints', labels: { hideOverlappingLabels: false, rotate: -45, rotateAlways: false, style: { fontSize: '11px', colors: '#64748b' } } };
+    var dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '', offsetY: -6, style: { fontSize: '11px', fontWeight: 600, colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 } };
 
     // 1. Rev vs Exp
     const elRevExp = document.querySelector("#chart-rev-exp");
@@ -392,11 +413,11 @@
         plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 2, dataLabels: { position: 'top' } } },
         dataLabels: dlOptions,
         xaxis: commonXAxis,
-        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#3b82f6', '#f43f5e'],
-        legend: { position: 'top', horizontalAlign: 'left', markers: { radius: 12 }, fontSize: '10px' },
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+        legend: { position: 'top', horizontalAlign: 'left', markers: { radius: 12 }, fontSize: '11px' },
+        grid: commonGrid
       };
       elRevExp.innerHTML = ''; 
       window.AppCharts.revExp = new ApexCharts(elRevExp, window.AppChartConfigs.revExp);
@@ -410,12 +431,12 @@
         series: [{ name: 'Members', data: data.charts.batchData }],
         chart: { type: 'bar', height: '100%', toolbar: commonToolbar },
         plotOptions: { bar: { distributed: true, columnWidth: '50%', borderRadius: 4, dataLabels: { position: 'top' } } },
-        dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '10px', colors: ["#304758"] } },
-        xaxis: { categories: data.charts.batchLabels, axisBorder: { show: false }, labels: { rotate: -45, style: { fontSize: '9px', fontWeight: 600 } } },
-        yaxis: { labels: { style: { fontSize: '9px', colors: '#64748b' } } },
+        dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '11px', fontWeight: 600, colors: ["#304758"] } },
+        xaxis: { categories: data.charts.batchLabels, axisBorder: { show: false }, labels: { rotate: -45, style: { fontSize: '11px', fontWeight: 600 } } },
+        yaxis: { labels: { style: { fontSize: '11px', colors: '#64748b' } } },
         colors: ['#3b82f6', '#10b981', '#a855f7', '#fbbf24', '#3b82f6'],
         legend: { show: false },
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+        grid: commonGrid
       };
       elBatch.innerHTML = ''; 
       window.AppCharts.batch = new ApexCharts(elBatch, window.AppChartConfigs.batch);
@@ -440,7 +461,7 @@
         },
         stroke: { width: 2, curve: 'smooth', dashArray: [0, 5], connectNulls: true },
         xaxis: { ...commonXAxis, categories: prediction.categories || data.charts.categories || [] },
-        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: {
           y: {
             formatter: (val) => AppUtils.formatCurrency(val),
@@ -465,9 +486,9 @@
           offsetY: -10,
           formatter: (val, opts) => opts.seriesIndex === 1 && opts.dataPointIndex === prediction.transitionIndex
             ? ''
-            : (val ? AppUtils.formatCurrency(val) : '')
+            : (val ? AppUtils.formatCompactCurrency(val) : '')
         },
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+        grid: commonGrid
       };
       elPred.innerHTML = ''; 
       window.AppCharts.pred = new ApexCharts(elPred, window.AppChartConfigs.pred);
@@ -488,11 +509,11 @@
         stroke: { curve: 'smooth', width: trendType === 'bar' ? 0 : 2, connectNulls: true },
         markers: { size: trendType === 'bar' ? 0 : 4 },
         xaxis: commonXAxis,
-        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#10b981', '#ef4444'],
-        legend: { position: 'bottom', horizontalAlign: 'center', offsetY: 5, fontSize: '10px' },
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+        legend: { position: 'bottom', horizontalAlign: 'center', offsetY: 5, fontSize: '11px' },
+        grid: commonGrid
       };
       elTrend.innerHTML = ''; 
       window.AppCharts.trend = new ApexCharts(elTrend, window.AppChartConfigs.trend);
@@ -516,10 +537,10 @@
         labels: expLabels,
         chart: { type: 'donut', height: '100%' },
         colors: ['#3b82f6', '#10b981', '#fbbf24', '#f97316', '#a855f7', '#06b6d4', '#94a3b8', '#e2e8f0', '#6366f1', '#ec4899'],
-        plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: DashboardState.isShowingMisc ? 'Total Misc' : 'Total', formatter: function(w) { const tot = w.globals.seriesTotals.reduce((a,b)=>a+b,0); return AppUtils.formatCurrency(tot); } } } } } },
-        legend: { position: 'right', fontSize: '10px', offsetX: -10, offsetY: 20 },
+        plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: DashboardState.isShowingMisc ? 'Total Misc' : 'Total', fontSize: '14px', fontWeight: 600, formatter: function(w) { const tot = w.globals.seriesTotals.reduce((a,b)=>a+b,0); return AppUtils.formatCurrency(tot); } } } } } },
+        legend: { position: 'right', fontSize: '11px', offsetX: -10, offsetY: 20 },
         responsive: [{ breakpoint: 768, options: { legend: { position: 'bottom', offsetX: 0, offsetY: 0 } } }],
-        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); } },
+        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCompactCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
       };
       elExp.innerHTML = ''; 
@@ -536,12 +557,12 @@
         chart: { type: staffType, height: '100%', toolbar: commonToolbar, zoom: { enabled: true } },
         stroke: { curve: 'smooth', width: staffType === 'bar' ? 0 : 3, connectNulls: true },
         xaxis: commonXAxis,
-        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '9px', colors: '#64748b' } } },
+        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
         colors: ['#8b5cf6'], 
         markers: { size: staffType === 'bar' ? 0 : 4 },
-        legend: { position: 'bottom', horizontalAlign: 'center', show: true, offsetY: 5, fontSize: '10px' },
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { left: 10, right: 10, top: 0, bottom: 0 } },
+        legend: { position: 'bottom', horizontalAlign: 'center', show: true, offsetY: 5, fontSize: '11px' },
+        grid: commonGrid,
         dataLabels: { ...dlOptions, offsetY: -10 }
       };
       elStaff.innerHTML = ''; 

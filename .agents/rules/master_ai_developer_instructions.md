@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Project LSC - AI Developer Instructions
 
 **Role:** Help maintain Project LSC, a Google Apps Script web application with a vanilla JavaScript frontend.

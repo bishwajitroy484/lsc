@@ -25,12 +25,20 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
     const getMockElement = (id) => {
       if (!mockElements[id]) {
         mockElements[id] = {
+          id: id || '',
           innerHTML: '',
           innerText: '',
           value: '',
           classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() },
           options: [],
-          selectedIndex: 0
+          selectedIndex: 0,
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+          insertAdjacentHTML: jest.fn(),
+          appendChild: jest.fn((el) => {
+            if (el && el.id) mockElements[el.id] = el;
+          }),
+          remove: jest.fn()
         };
       }
       return mockElements[id];
@@ -39,7 +47,14 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
     global.document = {
       getElementById: jest.fn((id) => getMockElement(id)),
       querySelector: jest.fn(() => ({})),
-      addEventListener: jest.fn()
+      addEventListener: jest.fn(),
+      createElement: jest.fn((tag) => ({
+        tagName: tag,
+        id: '',
+        className: '',
+        innerHTML: '',
+        remove: jest.fn()
+      }))
     };
 
     global.ApexCharts = jest.fn(() => ({
@@ -176,6 +191,31 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
       expect(ExpensesApp.getName('CAT-1')).toBe('CAT-1');
       expect(ExpensesApp.getName('CAT-2')).toBe('Maintenance');
       expect(ExpensesApp.getName('UNKNOWN')).toBe('UNKNOWN');
+    });
+
+    it('should lazy load expenses in batches of 50 records', () => {
+      jest.useFakeTimers();
+      const records = [];
+      for (let i = 1; i <= 120; i++) {
+        records.push({ expenseId: 'EXP-' + i, categoryId: 'CAT-1', amount: 100, date: '10-Jan-2026', description: 'Item ' + i });
+      }
+      ExpensesApp.tableData = records;
+      ExpensesApp.renderTable();
+
+      expect(ExpensesApp.pageSize).toBe(50);
+      expect(ExpensesApp.renderedCount).toBe(50);
+
+      // Trigger loadMore
+      ExpensesApp.loadMore();
+      jest.advanceTimersByTime(200);
+
+      expect(ExpensesApp.renderedCount).toBe(100);
+
+      ExpensesApp.loadMore();
+      jest.advanceTimersByTime(200);
+
+      expect(ExpensesApp.renderedCount).toBe(120);
+      jest.useRealTimers();
     });
   });
 
