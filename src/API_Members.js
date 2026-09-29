@@ -12,14 +12,24 @@ function api_getMembers() {
     const payments = dbData['PAYMENTS'] || [];
     const settingsRows = dbData['SETTINGS'] || [];
 
-    // 2. Extract Accrual Mode
+    // 2. Extract Accrual Mode and Currency Format
     let accrualMode = 'anchor';
     const accSetting = settingsRows.find(s => {
-      const k = String(s.key || s.setting || s.Name || '').toLowerCase();
+      const k = String(s.key || s.Key || s.setting || s.Setting || s.Name || '').toLowerCase();
       return k === 'revenue_recognition' || k === 'revenue recognition';
     });
     if (accSetting) {
-      accrualMode = String(accSetting.value || accSetting.Value || '').toLowerCase();
+      accrualMode = String(accSetting.value !== undefined ? accSetting.value : (accSetting.Value || '')).toLowerCase();
+    }
+
+    let currencyFormat = 'Indian';
+    const currSetting = settingsRows.find(s => {
+      const k = String(s.key || s.Key || s.setting || s.Setting || s.Name || '').toLowerCase();
+      return k === 'currency_format' || k === 'currency format' || k === 'currency_style';
+    });
+    if (currSetting) {
+      const rawVal = currSetting.value !== undefined ? currSetting.value : currSetting.Value;
+      if (rawVal) currencyFormat = String(rawVal).trim();
     }
 
     const globalData = api_getGlobalDropdowns && api_getGlobalDropdowns();
@@ -96,8 +106,8 @@ function api_getMembers() {
       return m;
     });
 
-    // 3. Return accrualMode at the root level to avoid breaking the frontend data array
-    return { success: true, data: enrichedMembers, accrualMode: accrualMode };
+    // 3. Return accrualMode and currencyFormat at the root level to avoid breaking the frontend data array
+    return { success: true, data: enrichedMembers, accrualMode: accrualMode, currencyFormat: currencyFormat };
   } catch (error) {
     return { success: false, error: error.toString() };
   }
@@ -186,11 +196,21 @@ function api_getMemberPayments(memberId) {
 
     let accrualMode = 'anchor';
     const accSetting = settingsRows.find(s => {
-      const k = String(s.key || s.setting || s.Name || '').toLowerCase();
+      const k = String(s.key || s.Key || s.setting || s.Setting || s.Name || '').toLowerCase();
       return k === 'revenue_recognition' || k === 'revenue recognition';
     });
     if (accSetting) {
-      accrualMode = String(accSetting.value || accSetting.Value || '').toLowerCase();
+      accrualMode = String(accSetting.value !== undefined ? accSetting.value : (accSetting.Value || '')).toLowerCase();
+    }
+
+    let currencyFormat = 'Indian';
+    const currSetting = settingsRows.find(s => {
+      const k = String(s.key || s.Key || s.setting || s.Setting || s.Name || '').toLowerCase();
+      return k === 'currency_format' || k === 'currency format' || k === 'currency_style';
+    });
+    if (currSetting) {
+      const rawVal = currSetting.value !== undefined ? currSetting.value : currSetting.Value;
+      if (rawVal) currencyFormat = String(rawVal).trim();
     }
 
     const memberPayments = allPayments.filter(p => p.memberId === memberId);
@@ -214,7 +234,7 @@ function api_getMemberPayments(memberId) {
       });
     });
 
-    return { success: true, data: memberPayments, chartMetrics: chartMetrics };
+    return { success: true, data: memberPayments, chartMetrics: chartMetrics, accrualMode: accrualMode, currencyFormat: currencyFormat };
   } catch (error) {
     return { success: false, error: error.toString() };
   }

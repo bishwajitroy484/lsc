@@ -156,7 +156,7 @@
           </div>
 
           <div class="p-5 md:p-6 space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <!-- Revenue Recognition -->
               <div>
                 <label for="gen-Revenue_Recognition" class="block text-xs font-semibold text-slate-700 mb-1.5">Revenue Recognition Method</label>
@@ -171,6 +171,23 @@
                 <div id="revenue-rec-explanation" class="mt-2 p-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
                   <span class="material-symbols-rounded text-brand-primary text-[16px] shrink-0 mt-0.5">info</span>
                   <span id="revenue-rec-text">Anchor recognizes the full transaction amount immediately on the payment date.</span>
+                </div>
+              </div>
+
+              <!-- Currency Format Style -->
+              <div>
+                <label for="gen-CURRENCY_FORMAT" class="block text-xs font-semibold text-slate-700 mb-1.5">Currency Numbering Style</label>
+                <div class="relative">
+                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">currency_rupee</span>
+                  <select id="gen-CURRENCY_FORMAT" onchange="SettingsApp.updateCurrencyExplanation()" class="w-full pl-9 pr-8 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none appearance-none cursor-pointer transition-all">
+                    <option value="Indian">Indian (₹10,000, ₹1.3Lakhs, ₹1Crore)</option>
+                    <option value="Standard">Standard Metric (₹10k, ₹1.3M, ₹1B)</option>
+                  </select>
+                  <span class="material-symbols-rounded absolute right-2.5 top-2.5 text-[18px] text-slate-400 pointer-events-none">expand_more</span>
+                </div>
+                <div id="currency-format-explanation" class="mt-2 p-2.5 bg-emerald-50/60 border border-emerald-100 rounded-xl text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
+                  <span class="material-symbols-rounded text-emerald-600 text-[16px] shrink-0 mt-0.5">info</span>
+                  <span id="currency-format-text">Indian system formats thousands as ₹10,000, lakhs as ₹1.3Lakhs, and crores as ₹1Crore.</span>
                 </div>
               </div>
 

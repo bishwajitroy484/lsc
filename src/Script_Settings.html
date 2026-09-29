@@ -16,7 +16,7 @@
     logoFileName: null,
 
     // Core known settings mapped directly to UI Inputs
-    coreKeys: ['GYM_NAME', 'LOGO_ID', 'Revenue_Recognition', 'OWNER_EMAIL', 'SPREADSHEET_ID', 'DRIVE_ID', 'REMINDER_BUFFER', 'ENABLE_NOTIFICATION'],
+    coreKeys: ['GYM_NAME', 'LOGO_ID', 'Revenue_Recognition', 'CURRENCY_FORMAT', 'OWNER_EMAIL', 'SPREADSHEET_ID', 'DRIVE_ID', 'REMINDER_BUFFER', 'ENABLE_NOTIFICATION'],
 
     safeSetText: AppUtils.safeSetText,
     safeSetValue: AppUtils.safeSetValue,
@@ -108,28 +108,37 @@
        });
 
        (this.generalSettingsData || []).forEach(item => {
-           if (!item || !item.key || String(item.key).trim() === '') return; 
+           if (!item) return;
+           const rawKey = item.key || item.Key || item.setting || item.Setting || '';
+           if (!rawKey || String(rawKey).trim() === '') return; 
+           const rawVal = item.value !== undefined ? item.value : (item.Value !== undefined ? item.Value : '');
 
-           const kLower = String(item.key).trim().toLowerCase();
+           const kLower = String(rawKey).trim().toLowerCase();
 
            this.coreKeys.forEach(core => {
                if (core.toLowerCase() === kLower || (core === 'ENABLE_NOTIFICATION' && kLower === 'notification_enabled')) {
                    const el = document.getElementById('gen-' + core);
                    if (el) {
                      if (el.type === 'checkbox' || core === 'ENABLE_NOTIFICATION') {
-                       const v = String(item.value || '').trim().toUpperCase();
+                       const v = String(rawVal || '').trim().toUpperCase();
                        el.checked = (v === 'YES' || v === 'Y' || v === 'TRUE' || v === '1' || v === 'ENABLED');
                      } else {
-                       el.value = item.value || '';
+                       el.value = rawVal || '';
                      }
                    }
                }
            });
        });
 
+       const currSelect = document.getElementById('gen-CURRENCY_FORMAT');
+       if (currSelect && !currSelect.value && AppUtils.currencyFormat) {
+         currSelect.value = AppUtils.currencyFormat;
+       }
+
        // Update live preview helpers and notifications
        this.updateLogoPreview();
        this.updateRevenueExplanation();
+       this.updateCurrencyExplanation();
        this.toggleNotificationView();
        this.updateNotificationSummary();
     },
@@ -242,6 +251,18 @@
         textEl.textContent = 'Split (Accrual Basis) prorates recurring membership revenue evenly across subscription days for accounting accuracy.';
       } else {
         textEl.textContent = 'Anchor (Cash Basis) recognizes 100% of payment revenue immediately on the collection date for real cash-in-hand tracking.';
+      }
+    },
+
+    updateCurrencyExplanation: function() {
+      const sel = document.getElementById('gen-CURRENCY_FORMAT');
+      const textEl = document.getElementById('currency-format-text');
+      if (!sel || !textEl) return;
+
+      if (sel.value === 'Standard') {
+        textEl.textContent = 'Standard metric formats thousands as ₹10k, millions as ₹1.3M, and billions as ₹1B.';
+      } else {
+        textEl.textContent = 'Indian system formats thousands as ₹10,000, lakhs as ₹1.3Lakhs, and crores as ₹1Crore.';
       }
     },
 
@@ -386,11 +407,14 @@
 
        // Preserve any non-core legacy rows from the sheet to prevent data loss
        (this.generalSettingsData || []).forEach(item => {
-           if (!item || !item.key) return;
-           const kLower = String(item.key).trim().toLowerCase();
+           if (!item) return;
+           const rawKey = item.key || item.Key || item.setting || item.Setting || '';
+           if (!rawKey) return;
+           const rawVal = item.value !== undefined ? item.value : (item.Value !== undefined ? item.Value : '');
+           const kLower = String(rawKey).trim().toLowerCase();
            const isCore = this.coreKeys.some(c => c.toLowerCase() === kLower || (c === 'ENABLE_NOTIFICATION' && kLower === 'notification_enabled'));
            if (!isCore) {
-               payload.push({ key: item.key, value: item.value || '' });
+               payload.push({ key: rawKey, value: rawVal || '' });
            }
        });
 
@@ -415,6 +439,8 @@
                const currentGymName = gymNameEl ? gymNameEl.value : '';
                const currentLogoId = (document.getElementById('gen-LOGO_ID') || {}).value || '';
                AppUtils.applyAppBranding(currentLogoId, currentGymName);
+               const currentCurrency = (document.getElementById('gen-CURRENCY_FORMAT') || {}).value || 'Indian';
+               AppUtils.setCurrencyFormat(currentCurrency);
            } else {
                const err = (res && res.error) ? res.error : "Failed to save settings.";
                this.showToast(err, true);

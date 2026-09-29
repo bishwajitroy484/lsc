@@ -31,7 +31,11 @@ Member, staff, expense, payment, staff salary, and Settings add/edit forms valid
 
 ## Dashboard Net-In-Hand forecast
 
-The Dashboard Net-In-Hand Prediction chart always uses an area chart, showing recognized actual collection less actual expenses through the current period, followed by an estimated trend for future periods. Forecast collections are based on active members' next payment due dates, membership frequency, and expected membership amount; overdue members and ad-hoc or trial plans are not counted as upcoming payments. Forecast expenses use the trailing 12 completed months of recorded operating expenses and paid staff salaries. Both actuals and forecasts respect the configured Anchor (cash) or Split (accrual) revenue-recognition mode and the selected year and period filters. A green dotted line and Forecast label identify projected values; tooltips distinguish actual from predicted points.
+The Dashboard Net-In-Hand Prediction chart always uses an area chart, showing recognized actual collection less actual expenses through the current period, followed by an estimated trend for future periods. For future periods, projected net-in-hand accounts for both recognized revenue from active prepaid subscriptions extending into those periods (essential in Split/Accrual mode) as well as forecasted renewal collections based on active members' next payment due dates and amounts. Overdue members and ad-hoc or trial plans are not counted as upcoming renewal payments. Forecast expenses use the trailing 12 completed months of recorded operating expenses, combined with the nominal monthly salary run rate of all active staff members (with fallback to the trailing 12-month salary average if nominal staff salaries are unavailable). Both actuals and forecasts respect the configured Anchor (cash) or Split (accrual) revenue-recognition mode and the selected year and period filters. A green dotted line and Forecast label identify projected values; tooltips distinguish actual from predicted points.
+
+To eliminate manual calculations, cumulative projected sums are surfaced in two complementary locations:
+- **Net-In Hand KPI Card:** Displays the primary Actual Net In Hand achieved to date alongside an integrated bottom summary badge showing the total projected year-end / period net (`Projected: ₹XX.Xk`), with detailed tooltip breakdown of actual plus remaining forecast.
+- **Net-In-Hand Chart Summary Bar:** Directly above the chart curve, a persistent metrics strip breaks down `Actual: ₹XX.Xk`, `Remaining: ±₹YY.Yk`, and `Total: ₹ZZ.Zk`, allowing instantaneous analysis of upcoming cash flow and final bottom-line earnings without summing individual chart points.
 
 ## Dashboard period filters
 
@@ -41,7 +45,7 @@ The Dashboard year, monthly/quarterly mode, and selected months or quarters filt
 
 The Settings module provides a responsive, device-compatible interface organized into two main tabs:
 
-- **General Config:** Configures gym identity (gym name, owner email, and gym logo with image file upload saved directly to Google Drive, live preview tile, and stylized "LSC" fallback badge), financial and operating policies (revenue recognition method with explanatory summaries, and renewal alert buffer days), database persistence details (Google Spreadsheet ID and Google Drive storage folder ID with one-click copy and open actions), and automated notifications (ENABLE_NOTIFICATION toggle to enable/disable scheduled email alerts with a configuration modal previewing future scope dispatch rules, recipient email, and trigger frequencies).
+- **General Config:** Configures gym identity (gym name, owner email, and gym logo with image file upload saved directly to Google Drive, live preview tile, and stylized "LSC" fallback badge), financial and operating policies (revenue recognition method with explanatory summaries, currency numbering format supporting both Indian Lakhs/Crores and Standard metric notations, and renewal alert buffer days), database persistence details (Google Spreadsheet ID and Google Drive storage folder ID with one-click copy and open actions), and automated notifications (ENABLE_NOTIFICATION toggle to enable/disable scheduled email alerts with a configuration modal previewing future scope dispatch rules, recipient email, and trigger frequencies).
 - **Dropdown Options:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
 
 ## Mock Data Generator
@@ -69,4 +73,14 @@ All ApexCharts throughout the application (Dashboard, Expenses, Staff, and Membe
 
 - **Consistent Data-Labels & Axes:** Data labels use styled badge containers (`11px font-size`, semi-bold weight, contrasting dark text `#0f172a`, and subtle rounded pill backgrounds `#ffffff` with 0.92 opacity). Axes and legend text are scaled to a readable `11px` to ensure effortless legibility across devices.
 - **Mobile Toolbar Ergonomics:** Toolbar buttons (zoom-in, zoom-out, pan/range, and reset) feature top clearance and scaled mobile padding on small screens (`max-width: 640px`) to prevent any visual overlap with peak chart data points and labels.
+
+## Currency Numbering Styles and Chart Data Points
+
+The application provides configurable currency numbering styles under **Settings > General Config**, allowing users to tailor how amounts are displayed across all modules (KPIs, tables, summary bars, quick-view drawers, transaction modals, and tooltips):
+
+- **Indian System:** Formats amounts using standard Indian comma grouping and terminology (`₹10,000`, `₹1.3Lakhs`, `₹1.2Crore`).
+- **Standard Metric System:** Formats amounts using international compact metric notations (`₹10k`, `₹1.3M`, `₹1B`).
+- **Charts Data Points Exception:** To prevent visual clutter and overlapping labels on dense chart bars and points, chart data labels (`dataLabels`) plotted directly on ApexChart series always render using compact metric format (e.g. `₹30k`, `₹18.6k`), while chart tooltips, y-axis labels, KPI cards, and summary bars display the user-selected format.
+- **Client Caching & Persistence:** The selected format is persisted to Google Sheets and mirrored locally in browser storage (`localStorage`) so formatting applies immediately across all pages without layout shift or waiting for network round-trips.
+
 

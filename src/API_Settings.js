@@ -330,7 +330,8 @@ function api_saveGeneralSettings(settingsArray) {
     // Check if a logo image upload is provided (key === 'LOGO_ID' with base64Image)
     for (var i = 0; i < settingsArray.length; i++) {
       var item = settingsArray[i];
-      if (item && item.key === 'LOGO_ID' && item.base64Image) {
+      var k = String((item && (item.key || item.Key)) || '').toUpperCase();
+      if (item && k === 'LOGO_ID' && item.base64Image) {
         if (typeof api_uploadImageToDrive === 'function') {
           var uploadRes = api_uploadImageToDrive(item.base64Image, item.imageName || ('Gym_Logo_' + new Date().getTime()));
           if (uploadRes && uploadRes.success) {
@@ -353,7 +354,10 @@ function api_saveGeneralSettings(settingsArray) {
     }
     
     // Write new array mapping safely
-    const writeData = settingsArray.map(s => [s.key || '', s.value || '']);
+    const writeData = settingsArray.map(s => [
+      s.key || s.Key || '',
+      s.value !== undefined ? s.value : (s.Value !== undefined ? s.Value : '')
+    ]);
     sheet.getRange(2, 1, writeData.length, 2).setValues(writeData);
     
     return { 
