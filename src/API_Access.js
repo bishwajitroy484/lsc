@@ -187,18 +187,6 @@ function getEmailFromAuthSession_(sessionToken) {
   return normalizeEmail_(authCache_().get('lsc_sess_' + token) || '');
 }
 
-function putLoginOtp_(email, code) {
-  authCache_().put('lsc_otp_' + normalizeEmail_(email), String(code), 600);
-}
-
-function getLoginOtp_(email) {
-  return authCache_().get('lsc_otp_' + normalizeEmail_(email)) || '';
-}
-
-function clearLoginOtp_(email) {
-  authCache_().remove('lsc_otp_' + normalizeEmail_(email));
-}
-
 function newAuthToken_() {
   return Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
 }
@@ -232,7 +220,7 @@ function buildSessionPayload_(context) {
     setup = null;
   }
   const fix = needsLogin
-    ? 'Enter the Google email the owner invited, tap Send code, then enter the emailed code. Or open the per-user invite link (Users → link icon).'
+    ? 'Open the personal link from your invitation email. If you cannot find it, ask your admin to resend it.'
     : (!context.allowed
       ? 'Ask the gym owner to add this Google email under Settings → Users & Access (status Active/Invited).'
       : '');
@@ -270,7 +258,7 @@ function issueSessionForEmail_(email) {
       return {
         success: false,
         error: 'This email is not on the Users list.',
-        fix: 'Gym owner: Settings → Users → Add, enter this exact Google email, save, then share the invite link or ask the user to request a login code again.'
+        fix: 'Admin: add this user under Settings → Users and resend their invitation.'
       };
     }
     const status = String(userRow.status || '').trim().toLowerCase();
@@ -278,7 +266,7 @@ function issueSessionForEmail_(email) {
       return {
         success: false,
         error: 'This account is disabled.',
-        fix: 'Gym owner: Settings → Users → edit this user → set Status to Active or Invited.'
+        fix: 'Ask your admin to re-enable your account.'
       };
     }
     userRow = activateInvitedUser_(userRow);
@@ -287,7 +275,7 @@ function issueSessionForEmail_(email) {
       return {
         success: false,
         error: context.error || 'Access denied.',
-        fix: 'Gym owner: confirm this user exists in Settings → Users with Active/Invited status.'
+        fix: 'Ask your admin to confirm your account is active.'
       };
     }
     bindIdentityToTemporaryKey_(normalized);
@@ -653,8 +641,6 @@ function api_invoke(sessionToken, functionName, args) {
     }
 
     const openApis = {
-      api_requestLoginCode: true,
-      api_verifyLoginCode: true,
       api_redeemInviteToken: true,
       api_getSession: true
     };
@@ -665,7 +651,7 @@ function api_invoke(sessionToken, functionName, args) {
         success: false,
         error: 'Sign in required.',
         code: 'AUTH_REQUIRED',
-        fix: 'Open the app, enter your invited email, send/verify the login code, or use your personal invite link.'
+        fix: 'Open the personal link from your invitation email.'
       };
     }
 
@@ -690,101 +676,6 @@ function api_invoke(sessionToken, functionName, args) {
   }
 }
 
-function api_requestLoginCode(email) {
-  try {
-    const normalized = normalizeEmail_(email);
-    if (!normalized || normalized.indexOf('@') < 0) {
-      return {
-        success: false,
-        error: 'Enter a valid Google email.',
-        fix: 'Use the exact Gmail/Google address the owner added in Users.'
-      };
-    }
-    ensureUsersSheet_();
-    const user = findUserByEmail_(normalized);
-    if (!user) {
-      return {
-        success: false,
-        error: 'This email is not on the Users list.',
-        fix: 'Gym owner: Settings → Users → Add this exact email, then ask the user to try again (or share the user invite link).'
-      };
-    }
-    const status = String(user.status || '').trim().toLowerCase();
-    if (status === 'disabled') {
-      return {
-        success: false,
-        error: 'This account is disabled.',
-        fix: 'Gym owner: Settings → Users → set Status to Active or Invited.'
-      };
-    }
-
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    putLoginOtp_(normalized, code);
-    const settings = readSettingsMapForAccess_();
-    const gymName = settings.GYM_NAME || settings.CLUB_NAME || 'LSC';
-    try {
-      MailApp.sendEmail({
-        to: normalized,
-        subject: gymName + ' login code',
-        htmlBody:
-          '<p>Your ' + gymName + ' login code is:</p>' +
-          '<p style="font-size:28px;font-weight:700;letter-spacing:4px;">' + code + '</p>' +
-          '<p>This code expires in 10 minutes.</p>'
-      });
-    } catch (mailError) {
-      clearLoginOtp_(normalized);
-      const mailMsg = mailError && mailError.message ? mailError.message : String(mailError);
-      return {
-        success: false,
-        error: 'Could not email the login code. ' + mailMsg,
-        code: 'MAIL_SEND_FAILED',
-        fix: 'Gym owner: sign in as the deployer account → Settings → Setup & Authorization → Authorize Google services. Then the invitee can request a code again. Or share the per-user invite link (Users → link icon) which does not need email.'
-      };
-    }
-    return {
-      success: true,
-      message: 'Login code sent to ' + normalized + '. Check inbox/spam.',
-      fix: 'If no email arrives in 1–2 minutes, ask the owner for your personal invite link instead.'
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: (error && error.message) || 'Could not send login code.',
-      fix: 'Gym owner: authorize Mail in Settings → Setup, or share the per-user invite link.'
-    };
-  }
-}
-
-function api_verifyLoginCode(email, code) {
-  try {
-    const normalized = normalizeEmail_(email);
-    const entered = String(code || '').trim();
-    if (!normalized || !entered) {
-      return {
-        success: false,
-        error: 'Email and login code are required.',
-        fix: 'Enter both fields, or request a new code.'
-      };
-    }
-    const expected = String(getLoginOtp_(normalized) || '');
-    if (!expected || entered !== expected) {
-      return {
-        success: false,
-        error: 'Invalid or expired login code.',
-        fix: 'Request a new code (codes expire in 10 minutes) and enter it carefully.'
-      };
-    }
-    clearLoginOtp_(normalized);
-    return issueSessionForEmail_(normalized);
-  } catch (error) {
-    return {
-      success: false,
-      error: error.message || String(error),
-      fix: 'Request a new login code and try again.'
-    };
-  }
-}
-
 function api_redeemInviteToken(inviteToken) {
   try {
     const token = String(inviteToken || '').trim();
@@ -792,7 +683,7 @@ function api_redeemInviteToken(inviteToken) {
       return {
         success: false,
         error: 'Invite link is missing a token.',
-        fix: 'Ask the owner to copy your invite link from Settings → Users (link icon).'
+        fix: 'Open the link from your invitation email, or ask your admin to resend it.'
       };
     }
     ensureUsersSheet_();
@@ -803,7 +694,7 @@ function api_redeemInviteToken(inviteToken) {
       return {
         success: false,
         error: 'Invalid or revoked invite link.',
-        fix: 'Ask the owner to open Settings → Users and copy a fresh invite link for your user.'
+        fix: 'Ask your admin to send you a new invitation.'
       };
     }
     return issueSessionForEmail_(user.email);
@@ -811,57 +702,197 @@ function api_redeemInviteToken(inviteToken) {
     return {
       success: false,
       error: error.message || String(error),
-      fix: 'Ask the owner for a fresh invite link, or use email + login code.'
+      fix: 'Ask your admin to resend your invitation.'
     };
   }
 }
 
-function api_getUserInviteLink(userId) {
+function buildInviteUrl_(token) {
+  const base = getWebAppUrl_();
+  if (!base || !token) return '';
+  return base + (base.indexOf('?') >= 0 ? '&' : '?') + 't=' + encodeURIComponent(token);
+}
+
+function rotateUserInviteToken_(userRow) {
+  const token = newInviteToken_();
+  DB.update('USERS', userRow.userId, { loginToken: token });
+  userRow.loginToken = token;
+  return token;
+}
+
+function escapeHtml_(value) {
+  return String(value === undefined || value === null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+var MODULE_LABELS_ = {
+  dashboard: 'Dashboard',
+  members: 'Members',
+  staff: 'Staff',
+  expenses: 'Expenses',
+  calendar: 'Calendar',
+  settings: 'Settings'
+};
+
+/** Human-readable page list for the invitation email, e.g. [{ page: 'Members', level: 'View only' }]. */
+function describeAccess_(permissions) {
+  const rows = [];
+  ACCESS_MODULES.forEach(function(mod) {
+    const p = (permissions && permissions[mod]) || {};
+    if (!p.view) return;
+    const extras = [];
+    if (p.create) extras.push('add');
+    if (p.edit) extras.push('edit');
+    if (p.delete) extras.push('delete');
+    rows.push({
+      page: MODULE_LABELS_[mod] || mod,
+      level: extras.length ? 'View, ' + extras.join(', ') : 'View only'
+    });
+  });
+  return rows;
+}
+
+function buildInvitationEmail_(opts) {
+  const appName = opts.appName;
+  const greeting = opts.name ? 'Hi ' + opts.name + ',' : 'Hello,';
+  const inviter = opts.invitedBy || 'The administrator';
+  const rows = opts.access;
+
+  const accessHtml = rows.length
+    ? '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:8px 0 0;">' +
+      rows.map(function(r) {
+        return '<tr>' +
+          '<td style="padding:9px 12px;border-bottom:1px solid #eef0f4;font-size:14px;color:#1e293b;font-weight:600;">' + escapeHtml_(r.page) + '</td>' +
+          '<td style="padding:9px 12px;border-bottom:1px solid #eef0f4;font-size:13px;color:#64748b;text-align:right;">' + escapeHtml_(r.level) + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</table>'
+    : '<p style="font-size:14px;color:#64748b;margin:8px 0 0;">Your administrator will confirm which pages you can open.</p>';
+
+  const html =
+    '<div style="background:#f1f5f9;padding:32px 16px;font-family:Segoe UI,Helvetica,Arial,sans-serif;">' +
+    '<div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">' +
+    '<div style="background:#0f172a;padding:24px 28px;">' +
+    '<div style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:0.3px;">' + escapeHtml_(appName) + '</div>' +
+    '</div>' +
+    '<div style="padding:28px;">' +
+    '<h1 style="margin:0 0 12px;font-size:20px;color:#0f172a;">You have been given access</h1>' +
+    '<p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#334155;">' + escapeHtml_(greeting) + '</p>' +
+    '<p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;">' +
+    escapeHtml_(inviter) + ' has granted you access to the <strong>' + escapeHtml_(appName) + '</strong> application. ' +
+    'Use the button below to open it.</p>' +
+    '<p style="margin:0 0 24px;"><a href="' + escapeHtml_(opts.url) + '" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 26px;border-radius:10px;">Open ' + escapeHtml_(appName) + '</a></p>' +
+    '<p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;">Your access</p>' +
+    accessHtml +
+    '<p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#64748b;">This link is personal to you, so please do not forward it. ' +
+    'If the button does not work, copy this address into your browser:<br>' +
+    '<span style="word-break:break-all;color:#2563eb;">' + escapeHtml_(opts.url) + '</span></p>' +
+    '</div>' +
+    '<div style="padding:16px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">' +
+    'You received this email because an administrator of ' + escapeHtml_(appName) + ' added you as a user. If you were not expecting it, you can ignore this message.' +
+    '</div>' +
+    '</div></div>';
+
+  const text = [
+    greeting,
+    '',
+    inviter + ' has granted you access to the ' + appName + ' application.',
+    '',
+    'Open it here: ' + opts.url,
+    '',
+    rows.length ? 'Your access:' : '',
+    rows.map(function(r) { return '  - ' + r.page + ': ' + r.level; }).join('\n'),
+    '',
+    'This link is personal to you, so please do not forward it.'
+  ].join('\n');
+
+  return { subject: 'You now have access to ' + appName, html: html, text: text };
+}
+
+/**
+ * Emails the user their personal link. Returns { ok, error }.
+ * Never mentions the Spreadsheet, Drive, or script behind the app.
+ */
+function sendInvitationEmail_(userRow, invitedByEmail) {
+  const to = normalizeEmail_(userRow && userRow.email);
+  if (!to) return { ok: false, error: 'User has no email address.' };
+  const token = ensureUserInviteToken_(userRow);
+  const url = buildInviteUrl_(token);
+  if (!url) return { ok: false, error: 'Publish the web app first so there is a link to send.' };
+
+  const settings = readSettingsMapForAccess_();
+  const appName = String(settings.GYM_NAME || settings.CLUB_NAME || 'LSC').trim() || 'LSC';
+  const message = buildInvitationEmail_({
+    appName: appName,
+    name: String(userRow.name || '').trim(),
+    invitedBy: String(settings.OWNER_NAME || '').trim() || invitedByEmail || '',
+    url: url,
+    access: describeAccess_(parsePermissionsJson_(userRow.permissions, userRow.rolePreset || 'Viewer'))
+  });
+
+  try {
+    const mail = {
+      to: to,
+      subject: message.subject,
+      htmlBody: message.html,
+      body: message.text,
+      name: appName
+    };
+    if (invitedByEmail) mail.replyTo = invitedByEmail;
+    MailApp.sendEmail(mail);
+    return { ok: true, error: '' };
+  } catch (error) {
+    return { ok: false, error: (error && error.message) || String(error) };
+  }
+}
+
+function findUserById_(userId) {
+  ensureUsersSheet_();
+  return listUsersRecords_().find(function(row) {
+    return String(row.userId) === String(userId);
+  }) || null;
+}
+
+function api_getUserInviteLink(userId, regenerate) {
   try {
     const gate = requirePermission_('settings', 'edit');
     if (!gate.ok) return gate.response;
     if (!userId) return { success: false, error: 'User id is required.' };
-    ensureUsersSheet_();
-    const user = listUsersRecords_().find(function(row) {
-      return String(row.userId) === String(userId);
-    });
+    const user = findUserById_(userId);
     if (!user) return { success: false, error: 'User not found.' };
-    const token = ensureUserInviteToken_(user);
+    const token = regenerate === true ? rotateUserInviteToken_(user) : ensureUserInviteToken_(user);
     if (!token) return { success: false, error: 'Could not create invite token.' };
-    const base = getWebAppUrl_();
-    if (!base) return { success: false, error: 'Publish the web app first.' };
-    const url = base + (base.indexOf('?') >= 0 ? '&' : '?') + 't=' + encodeURIComponent(token);
+    const url = buildInviteUrl_(token);
+    if (!url) return { success: false, error: 'Publish the web app first.' };
     return {
       success: true,
-      data: {
-        url: url,
-        email: user.email,
-        userId: user.userId
-      }
+      message: regenerate === true ? 'New link created. The previous link no longer works.' : '',
+      data: { url: url, email: user.email, userId: user.userId, name: user.name || '' }
     };
   } catch (error) {
     return { success: false, error: error.message || String(error) };
   }
 }
 
-/**
- * Shareable /exec web app URL for invite QR / copy link.
- * USERS-sheet invites only work when this published URL allows "Anyone" (Google sign-in).
- */
-function api_getWebAppShareInfo() {
+function api_sendInvitation(userId) {
   try {
-    const gate = requirePermission_('settings', 'view');
-    if (!gate.ok) return { success: false, error: gate.error };
-    const url = getWebAppUrl_();
-    return {
-      success: true,
-      data: {
-        url: url,
-        hint: url
-          ? 'Share the app link or a per-user invite link. Invitees verify with a login code emailed to them (Google does not expose their email to Execute-as-Me apps).'
-          : 'No published web app URL found. Deploy the web app with Who has access: Anyone.'
-      }
-    };
+    const gate = requirePermission_('settings', 'edit');
+    if (!gate.ok) return gate.response;
+    if (!userId) return { success: false, error: 'User id is required.' };
+    const user = findUserById_(userId);
+    if (!user) return { success: false, error: 'User not found.' };
+    if (String(user.status || '').trim().toLowerCase() === 'disabled') {
+      return { success: false, error: 'This user is disabled. Set them to Active or Invited first.' };
+    }
+    const sent = sendInvitationEmail_(user, gate.context.email);
+    if (!sent.ok) {
+      return { success: false, error: 'Could not send the invitation email. ' + sent.error };
+    }
+    return { success: true, message: 'Invitation sent to ' + user.email + '.' };
   } catch (error) {
     return { success: false, error: error.message || String(error) };
   }
@@ -979,126 +1010,6 @@ function api_listUsers() {
   }
 }
 
-/**
- * Google resource ACL for invited users (cuts the "Request access" loop).
- * Viewer / Manager → reader (view). Admin / Owner → writer (edit).
- * Active / Invited → grant. Disabled / deleted → revoke.
- */
-function resolveGoogleAclLevel_(rolePreset, isOwner) {
-  if (isOwner) return 'writer';
-  const key = String(rolePreset || '').trim().toLowerCase();
-  if (key === 'admin') return 'writer';
-  return 'reader';
-}
-
-function shouldGrantGoogleAcl_(status) {
-  const s = String(status || '').trim().toLowerCase();
-  return s === 'active' || s === 'invited';
-}
-
-function getAclResourceIds_() {
-  const settings = readSettingsMapForAccess_();
-  const spreadsheetId = String(typeof SPREADSHEET_ID !== 'undefined' ? SPREADSHEET_ID : '').trim();
-  const driveId = String(
-    (settings && (settings.DRIVE_ID || settings.drive_id)) ||
-    (typeof LSC_DRIVE_ID !== 'undefined' ? LSC_DRIVE_ID : '') ||
-    ''
-  ).trim();
-  const scriptId = String(typeof LSC_SCRIPT_ID !== 'undefined' ? LSC_SCRIPT_ID : '').trim();
-  return { spreadsheetId: spreadsheetId, driveId: driveId, scriptId: scriptId };
-}
-
-function clearDriveAccess_(target, email) {
-  try { target.removeViewer(email); } catch (e1) { /* not a viewer */ }
-  try { target.removeEditor(email); } catch (e2) { /* not an editor */ }
-}
-
-function applyDriveAccess_(target, email, level, grant) {
-  clearDriveAccess_(target, email);
-  if (!grant) return;
-  if (level === 'writer') target.addEditor(email);
-  else target.addViewer(email);
-}
-
-/**
- * Sync one email across Spreadsheet, Drive folder, and Apps Script project file.
- * Returns { ok, details[], error }. Partial failures do not throw.
- */
-function syncUserGoogleResources_(email, opts) {
-  opts = opts || {};
-  const normalized = normalizeEmail_(email);
-  const details = [];
-  if (!normalized || normalized.indexOf('@') < 0) {
-    return { ok: false, details: details, error: 'Missing email for Google share.' };
-  }
-
-  const previousEmail = normalizeEmail_(opts.previousEmail || '');
-  if (previousEmail && previousEmail !== normalized) {
-    const revokedPrev = syncUserGoogleResources_(previousEmail, { grant: false, level: 'reader' });
-    details.push({ resource: 'previousEmail', ok: revokedPrev.ok, grant: false });
-  }
-
-  const grant = opts.grant === true;
-  const level = opts.level === 'writer' ? 'writer' : 'reader';
-  const ids = getAclResourceIds_();
-
-  if (ids.spreadsheetId) {
-    try {
-      const file = DriveApp.getFileById(ids.spreadsheetId);
-      applyDriveAccess_(file, normalized, level, grant);
-      try {
-        const ss = SpreadsheetApp.openById(ids.spreadsheetId);
-        if (!grant) {
-          try { ss.removeViewer(normalized); } catch (e1) { /* ignore */ }
-          try { ss.removeEditor(normalized); } catch (e2) { /* ignore */ }
-        } else if (level === 'writer') {
-          ss.addEditor(normalized);
-        } else {
-          ss.addViewer(normalized);
-        }
-      } catch (ssErr) { /* Drive file ACL is enough for open access */ }
-      details.push({ resource: 'spreadsheet', ok: true, grant: grant, level: level });
-    } catch (error) {
-      details.push({ resource: 'spreadsheet', ok: false, error: error.message || String(error) });
-    }
-  } else {
-    details.push({ resource: 'spreadsheet', ok: false, error: 'Spreadsheet id is not configured.' });
-  }
-
-  if (ids.driveId) {
-    try {
-      const folder = DriveApp.getFolderById(ids.driveId);
-      applyDriveAccess_(folder, normalized, level, grant);
-      details.push({ resource: 'drive', ok: true, grant: grant, level: level });
-    } catch (error) {
-      details.push({ resource: 'drive', ok: false, error: error.message || String(error) });
-    }
-  } else {
-    details.push({ resource: 'drive', ok: false, error: 'Drive folder id is not configured.' });
-  }
-
-  if (ids.scriptId) {
-    try {
-      const scriptFile = DriveApp.getFileById(ids.scriptId);
-      applyDriveAccess_(scriptFile, normalized, level, grant);
-      details.push({ resource: 'script', ok: true, grant: grant, level: level });
-    } catch (error) {
-      details.push({ resource: 'script', ok: false, error: error.message || String(error) });
-    }
-  } else {
-    details.push({ resource: 'script', ok: false, error: 'Script id is not configured.' });
-  }
-
-  const failed = details.filter(function(d) { return d.ok === false; });
-  return {
-    ok: failed.length === 0,
-    details: details,
-    error: failed.length
-      ? failed.map(function(f) { return f.resource + ': ' + (f.error || 'failed'); }).join('; ')
-      : ''
-  };
-}
-
 function api_saveUser(userData) {
   try {
     const gate = requirePermission_('settings', 'edit');
@@ -1125,7 +1036,6 @@ function api_saveUser(userData) {
     const isOwner = payload.isOwner === true || isYes_(payload.isOwner);
 
     let savedUserId = '';
-    let previousEmail = '';
 
     if (existing) {
       if (isYes_(existing.isOwner) && !isOwner) {
@@ -1134,7 +1044,6 @@ function api_saveUser(userData) {
           return { success: false, error: 'At least one owner is required.' };
         }
       }
-      previousEmail = normalizeEmail_(existing.email);
       DB.update('USERS', existing.userId, {
         email: email,
         name: name,
@@ -1165,30 +1074,25 @@ function api_saveUser(userData) {
       savedUserId = record.userId;
     }
 
-    const grant = shouldGrantGoogleAcl_(status);
-    const level = resolveGoogleAclLevel_(rolePreset, isOwner);
-    const googleAcl = syncUserGoogleResources_(email, {
-      grant: grant,
-      level: level,
-      previousEmail: previousEmail
-    });
-
     let message = existing ? 'User updated.' : 'User added.';
-    if (grant) {
-      message += googleAcl.ok
-        ? ' Shared Spreadsheet, Drive folder, and Script for this Google account.'
-        : ' User saved, but some Google shares failed: ' + googleAcl.error;
-    } else {
-      message += googleAcl.ok
-        ? ' Google access revoked (user disabled).'
-        : ' User saved, but some Google revokes failed: ' + googleAcl.error;
+    let warning = '';
+    const canReceiveInvite = status.toLowerCase() !== 'disabled';
+    if (payload.sendInvite === true && canReceiveInvite) {
+      const saved = findUserById_(savedUserId);
+      const sent = saved ? sendInvitationEmail_(saved, gate.context.email) : { ok: false, error: 'User not found.' };
+      if (sent.ok) {
+        message += ' Invitation emailed to ' + email + '.';
+      } else {
+        warning = 'The invitation email could not be sent: ' + sent.error;
+        message += ' ' + warning + ' You can copy their link or resend from the user list.';
+      }
     }
 
     return {
       success: true,
       message: message,
-      warning: googleAcl.ok ? '' : googleAcl.error,
-      data: { userId: savedUserId, googleAcl: googleAcl }
+      warning: warning,
+      data: { userId: savedUserId }
     };
   } catch (error) {
     return { success: false, error: error.message || String(error) };
@@ -1214,22 +1118,9 @@ function api_deleteUser(userId) {
       return { success: false, error: 'You cannot remove your own account.' };
     }
 
-    const googleAcl = syncUserGoogleResources_(target.email, { grant: false, level: 'reader' });
     DB.remove('USERS', userId);
 
-    let message = 'User removed.';
-    if (googleAcl.ok) {
-      message += ' Google access revoked from Spreadsheet, Drive, and Script.';
-    } else {
-      message += ' Removed from app, but some Google revokes failed: ' + googleAcl.error;
-    }
-
-    return {
-      success: true,
-      message: message,
-      warning: googleAcl.ok ? '' : googleAcl.error,
-      data: { googleAcl: googleAcl }
-    };
+    return { success: true, message: 'User removed. Their link no longer works.' };
   } catch (error) {
     return { success: false, error: error.message || String(error) };
   }

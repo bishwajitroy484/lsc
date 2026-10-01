@@ -542,45 +542,17 @@
             <div class="flex items-start justify-between gap-3">
               <div>
                 <h3 class="text-sm font-bold text-slate-800">Users &amp; Access</h3>
-                <p class="text-[11px] text-slate-500 mt-0.5">Invite Google accounts and set View / Create / Edit / Delete per module.</p>
+                <p class="text-[11px] text-slate-500 mt-0.5">Choose who can open the app and which pages they can see or change.</p>
               </div>
               <button type="button" id="btn-add-user" onclick="SettingsApp.openUserEditor()" class="h-9 px-3 bg-brand-primary hover:bg-blue-700 text-white rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer shrink-0">
                 <span class="material-symbols-rounded text-[16px]">person_add</span><span>Add</span>
               </button>
             </div>
 
-            <!-- Share app link / QR (published /exec URL) -->
-            <div id="users-share-card" class="rounded-xl border border-blue-100 bg-blue-50/40 p-3 space-y-2.5">
-              <div class="flex items-start gap-2">
-                <span class="material-symbols-rounded text-brand-primary text-[18px] shrink-0 mt-0.5">qr_code_2</span>
-                <div class="min-w-0">
-                  <p class="text-[12px] font-bold text-slate-800 leading-tight">Share app link</p>
-                  <p class="text-[10px] text-slate-500 mt-0.5 leading-snug">Share this app URL, or use the link icon on a user for a one-tap invite. Invitees enter their email + login code (Google hides emails from Execute-as-Me apps).</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-3">
-                <div class="w-[96px] h-[96px] shrink-0 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden relative">
-                  <div id="users-share-qr-shimmer" class="absolute inset-0 shimmer"></div>
-                  <img id="users-share-qr" alt="App QR code" class="relative w-full h-full object-contain hidden">
-                  <span id="users-share-qr-placeholder" class="relative text-[10px] text-slate-400 px-2 text-center leading-snug hidden">No URL</span>
-                </div>
-                <div class="min-w-0 flex-1 space-y-2">
-                  <input type="text" id="users-share-url" readonly class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-mono text-slate-700 outline-none" placeholder="Web app URL">
-                  <div class="flex flex-wrap gap-1.5">
-                    <button type="button" onclick="SettingsApp.copyShareUrl()" class="h-8 px-2.5 bg-brand-primary hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer">
-                      <span class="material-symbols-rounded text-[15px]">content_copy</span><span>Copy</span>
-                    </button>
-                    <button type="button" id="btn-share-native" onclick="SettingsApp.nativeShareUrl()" class="h-8 px-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer">
-                      <span class="material-symbols-rounded text-[15px]">ios_share</span><span>Share</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <p id="users-share-hint" class="text-[9px] text-slate-500 leading-snug">Use the /exec link only — not the Apps Script editor or /dev test URL. Saving a user also shares the Spreadsheet, Drive folder, and Script with their Google email (Viewer/Manager = view, Admin/Owner = edit). Disabling or deleting revokes that share.</p>
-            </div>
+            <p class="text-[10px] text-slate-500 leading-snug">Add a person, choose what they can open, and they receive an email with their personal link. You can also copy the link or show a QR code from the user list.</p>
 
             <div id="users-list" class="space-y-2"></div>
-            <p id="users-empty" class="hidden text-xs text-slate-500 py-4 text-center">No users yet. Add a Google email to grant access.</p>
+            <p id="users-empty" class="hidden text-xs text-slate-500 py-4 text-center">No users yet. Add someone to give them access.</p>
           </div>
         </div>
       </div>
@@ -603,7 +575,7 @@
               <input type="text" id="user-edit-name" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary">
             </div>
             <div>
-              <label class="block text-[11px] font-semibold text-slate-700 mb-1">Google email</label>
+              <label class="block text-[11px] font-semibold text-slate-700 mb-1">Email</label>
               <input type="email" id="user-edit-email" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary">
             </div>
           </div>
@@ -628,6 +600,9 @@
           <label class="inline-flex items-center gap-2 text-[11px] font-semibold text-slate-700">
             <input type="checkbox" id="user-edit-owner" class="rounded border-slate-300 text-brand-primary"> Owner (full access)
           </label>
+          <label id="user-edit-send-wrap" class="inline-flex items-center gap-2 text-[11px] font-semibold text-slate-700">
+            <input type="checkbox" id="user-edit-send" checked class="rounded border-slate-300 text-brand-primary"> Email them their access link when I save
+          </label>
           <div>
             <p class="text-[11px] font-semibold text-slate-700 mb-1.5">Permissions</p>
             <div class="overflow-x-auto border border-slate-200 rounded-xl">
@@ -649,6 +624,32 @@
         <div class="p-3 border-t border-slate-100 bg-slate-50 flex gap-2 justify-end">
           <button type="button" onclick="SettingsApp.closeUserEditor()" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-pointer">Cancel</button>
           <button type="button" onclick="SettingsApp.saveUserEditor()" class="px-4 py-2 bg-brand-primary text-white rounded-xl text-xs font-bold cursor-pointer">Save user</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Personal link / QR modal -->
+    <div id="user-invite-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[130] flex lsc-modal-overlay">
+      <div id="user-invite-modal-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col border border-slate-200 overflow-hidden lsc-modal-panel">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50 shrink-0">
+          <h2 class="text-sm font-bold text-slate-800">Access link</h2>
+          <button type="button" onclick="SettingsApp.closeInviteModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 bg-slate-100 rounded-full cursor-pointer">
+            <span class="material-symbols-rounded text-lg">close</span>
+          </button>
+        </div>
+        <div class="p-4 space-y-3 text-center">
+          <p id="invite-modal-who" class="text-xs font-semibold text-slate-700 truncate"></p>
+          <div class="w-[180px] h-[180px] mx-auto rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden relative">
+            <div id="invite-qr" class="w-full h-full flex items-center justify-center [&>img]:w-full [&>img]:h-full"></div>
+            <span id="invite-qr-fallback" class="hidden text-[10px] text-slate-400 px-3 leading-snug">QR unavailable. Copy the link instead.</span>
+          </div>
+          <input type="text" id="invite-modal-url" readonly class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-mono text-slate-700 outline-none">
+          <p class="text-[10px] text-slate-500 leading-snug">This link is personal to this user. Share it only with them.</p>
+          <div class="flex flex-wrap gap-1.5 justify-center">
+            <button type="button" onclick="SettingsApp.copyInviteModalUrl()" class="h-8 px-3 bg-brand-primary hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer"><span class="material-symbols-rounded text-[15px]">content_copy</span><span>Copy link</span></button>
+            <button type="button" onclick="SettingsApp.shareInviteModalUrl()" class="h-8 px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer"><span class="material-symbols-rounded text-[15px]">ios_share</span><span>Share</span></button>
+            <button type="button" onclick="SettingsApp.resetInviteLink()" class="h-8 px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer"><span class="material-symbols-rounded text-[15px]">autorenew</span><span>New link</span></button>
+          </div>
         </div>
       </div>
     </div>

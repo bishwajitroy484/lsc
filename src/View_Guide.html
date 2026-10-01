@@ -118,7 +118,7 @@
           <li>Go to <strong>Settings → General → Setup &amp; Authorization</strong>. Tap <strong>Authorize Google services</strong>. Status chips cover Spreadsheet, Settings, Drive, Mail, ScriptApp, and the weekly report trigger.</li>
           <li>When checks look good, tap <strong>Mark setup complete</strong>.</li>
           <li>Fill gym name, owner name/email, and optional logo (LSC badge is used if none).</li>
-          <li>Invite other staff from the <strong>Users</strong> tab. Saving them also shares the Spreadsheet, Drive folder, and Script with their Google email. Then share the QR / invite link.</li>
+          <li>Add other staff from the <strong>Users</strong> tab. Choose what each person can open and tick <strong>Email them their access link</strong>; they receive a short email with a button to open the app.</li>
         </ol>
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600 leading-relaxed">
           Authorization and “mark complete” are meant for the <strong>owner / deployer</strong>. You do not need the Apps Script code editor for day-to-day setup.
@@ -127,7 +127,7 @@
     </section>
 
     <!-- 3 Access -->
-    <section id="guide-sec-access" data-guide-section="access" data-guide-search="access login code invite link qr share users roles viewer manager admin permissions active invited disabled" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+    <section id="guide-sec-access" data-guide-section="access" data-guide-search="access invite link email qr share users roles viewer manager admin permissions active invited disabled" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
       <button type="button" data-guide-toggle="access" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
         <span class="w-9 h-9 rounded-xl bg-violet-50 text-violet-700 border border-violet-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">lock_person</span></span>
         <div class="flex-1 min-w-0">
@@ -135,20 +135,20 @@
             <h3 class="text-sm font-bold text-slate-800">Sign-in, invites &amp; roles</h3>
             <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-violet-50 text-violet-700 border border-violet-100">Access</span>
           </div>
-          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Login codes, invite links, Viewer / Manager / Admin</p>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Personal links, QR codes, Viewer / Manager / Admin</p>
         </div>
         <span id="guide-chevron-access" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
       </button>
       <div id="guide-body-access" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
-        <p class="text-xs text-slate-600 leading-relaxed pt-3">Being listed in <strong>Users</strong> is required, but not always enough. If Google does not tell the app your email, you prove identity with a code or invite link.</p>
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">There is no password or code. Each user gets a <strong>personal link</strong>. Opening it signs them in, and this device remembers them.</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div class="rounded-xl border border-violet-100 bg-violet-50/40 p-3">
-            <p class="text-[11px] font-bold text-violet-900 mb-1">Login code</p>
-            <p class="text-[11px] text-slate-600 leading-relaxed">Enter your invited email → receive a 6-digit code by email (about 10 minutes) → enter the code → you are in.</p>
+            <p class="text-[11px] font-bold text-violet-900 mb-1">Email</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">When you save a new user, they get an email saying you have given them access, with a button to open the app and the list of pages they can use. Use the mail icon on a user to send it again.</p>
           </div>
           <div class="rounded-xl border border-violet-100 bg-violet-50/40 p-3">
-            <p class="text-[11px] font-bold text-violet-900 mb-1">Invite link / QR</p>
-            <p class="text-[11px] text-slate-600 leading-relaxed">Users tab shows the shared <code class="text-[10px] bg-white px-1 rounded">/exec</code> URL and QR. Each user also has a personal invite link (<code class="text-[10px] bg-white px-1 rounded">?t=…</code>). Opening it completes verification for that person.</p>
+            <p class="text-[11px] font-bold text-violet-900 mb-1">Link / QR</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">The QR icon on a user shows their link and QR code to copy or share. <strong>New link</strong> cancels the old one, for example if it was forwarded by mistake. Disabling or deleting a user also stops their link.</p>
           </div>
         </div>
         <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -364,7 +364,7 @@
           </div>
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">Users</p>
-            <p class="text-[11px] text-slate-600 leading-relaxed">Invite emails, role presets, permission matrix, share URL/QR, copy invite link. Add/update shares Sheet + Drive + Script; disable/delete revokes those shares.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Add people, role presets, per-page permissions, email their access link, personal link and QR code.</p>
           </div>
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">Dropdowns</p>
