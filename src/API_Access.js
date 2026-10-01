@@ -103,10 +103,53 @@ function googleActiveEmail_() {
   }
 }
 
+function getTemporaryUserKey_() {
+  try {
+    return String(Session.getTemporaryActiveUserKey() || '').trim();
+  } catch (error) {
+    return '';
+  }
+}
+
+function bindIdentityToTemporaryKey_(email) {
+  const normalized = normalizeEmail_(email);
+  const key = getTemporaryUserKey_();
+  if (!normalized || !key) return false;
+  try {
+    PropertiesService.getScriptProperties().setProperty('lsc_uid_' + key, normalized);
+  } catch (error) {
+    // non-fatal
+  }
+  try {
+    authCache_().put('lsc_uid_' + key, normalized, 21600);
+  } catch (error) {
+    // non-fatal
+  }
+  return true;
+}
+
+function emailFromTemporaryKey_() {
+  const key = getTemporaryUserKey_();
+  if (!key) return '';
+  try {
+    const cached = authCache_().get('lsc_uid_' + key);
+    if (cached) return normalizeEmail_(cached);
+  } catch (error) {
+    // continue to properties
+  }
+  try {
+    return normalizeEmail_(PropertiesService.getScriptProperties().getProperty('lsc_uid_' + key) || '');
+  } catch (error) {
+    return '';
+  }
+}
+
 function getActiveUserEmail_() {
   const fromGoogle = googleActiveEmail_();
   if (fromGoogle) return fromGoogle;
-  return normalizeEmail_(REQUEST_AUTH_EMAIL_);
+  const fromRequest = normalizeEmail_(REQUEST_AUTH_EMAIL_);
+  if (fromRequest) return fromRequest;
+  return emailFromTemporaryKey_();
 }
 
 function getEffectiveUserEmail_() {
@@ -179,8 +222,20 @@ function ensureUserInviteToken_(userRow) {
 }
 
 function buildSessionPayload_(context) {
-  const setup = getSetupStatus_();
   const effectiveEmail = getEffectiveUserEmail_();
+  const needsLogin = !context.email;
+  let setup = null;
+  try {
+    // Avoid expensive/auth-touching setup probes during anonymous bootstrap.
+    setup = needsLogin ? null : getSetupStatus_();
+  } catch (error) {
+    setup = null;
+  }
+  const fix = needsLogin
+    ? 'Enter the Google email the owner invited, tap Send code, then enter the emailed code. Or open the per-user invite link (Users → link icon).'
+    : (!context.allowed
+      ? 'Ask the gym owner to add this Google email under Settings → Users & Access (status Active/Invited).'
+      : '');
   return {
     email: context.email,
     name: context.name,
@@ -191,7 +246,8 @@ function buildSessionPayload_(context) {
     permissions: context.permissions,
     allowed: context.allowed,
     error: context.error,
-    needsLogin: !context.email,
+    fix: fix,
+    needsLogin: needsLogin,
     isDeployer: !!(context.email && effectiveEmail && context.email === effectiveEmail),
     setup: setup,
     webAppUrl: getWebAppUrl_(),
@@ -201,29 +257,47 @@ function buildSessionPayload_(context) {
 
 function issueSessionForEmail_(email) {
   const normalized = normalizeEmail_(email);
-  if (!normalized) return { success: false, error: 'Email is required.' };
+  if (!normalized) {
+    return {
+      success: false,
+      error: 'Email is required.',
+      fix: 'Enter the invited Google email address.'
+    };
+  }
   return withRequestEmail_(normalized, function() {
     let userRow = findUserByEmail_(normalized);
     if (!userRow) {
       return {
         success: false,
-        error: 'This email is not on the Users list. Ask the gym owner to add you.'
+        error: 'This email is not on the Users list.',
+        fix: 'Gym owner: Settings → Users → Add, enter this exact Google email, save, then share the invite link or ask the user to request a login code again.'
       };
     }
     const status = String(userRow.status || '').trim().toLowerCase();
     if (status === 'disabled') {
-      return { success: false, error: 'This account is disabled.' };
+      return {
+        success: false,
+        error: 'This account is disabled.',
+        fix: 'Gym owner: Settings → Users → edit this user → set Status to Active or Invited.'
+      };
     }
     userRow = activateInvitedUser_(userRow);
     const context = buildUserContext_(userRow, normalized);
     if (!context.allowed) {
-      return { success: false, error: context.error || 'Access denied.' };
+      return {
+        success: false,
+        error: context.error || 'Access denied.',
+        fix: 'Gym owner: confirm this user exists in Settings → Users with Active/Invited status.'
+      };
     }
+    bindIdentityToTemporaryKey_(normalized);
     const sessionToken = newAuthToken_();
     putAuthSession_(sessionToken, normalized);
     const data = buildSessionPayload_(context);
     data.sessionToken = sessionToken;
     data.needsLogin = false;
+    data.fix = '';
+    data.identityBound = !!getTemporaryUserKey_();
     return { success: true, message: 'Signed in.', data: data };
   });
 }
@@ -380,7 +454,7 @@ function getCurrentUserContext_() {
       rolePreset: '',
       permissions: getPresetPermissions_('viewer'),
       allowed: false,
-      error: 'Enter the invited Google email and login code to continue.'
+      error: 'Sign-in required. Google does not share invitee emails to this app automatically.'
     };
   }
 
@@ -392,7 +466,11 @@ function getCurrentUserContext_() {
   if (userRow) {
     userRow = activateInvitedUser_(userRow);
   }
-  return buildUserContext_(userRow, email);
+  const context = buildUserContext_(userRow, email);
+  if (!context.allowed && email) {
+    context.error = 'Your email (' + email + ') is not authorized for this app.';
+  }
+  return context;
 }
 
 function hasPermission_(context, moduleName, action) {
@@ -558,11 +636,20 @@ function api_getSession() {
  * Bridge for client calls that carry an invitee session token.
  * Needed because Execute-as-Me does not expose invitee Google emails.
  */
+function resolveApiFunction_(name) {
+  try {
+    // Global Apps Script functions are visible to Function bodies.
+    return new Function('return typeof ' + name + ' === "function" ? ' + name + ' : null;')();
+  } catch (error) {
+    return null;
+  }
+}
+
 function api_invoke(sessionToken, functionName, args) {
   try {
     const name = String(functionName || '');
     if (!/^api_[A-Za-z0-9_]+$/.test(name) || name === 'api_invoke') {
-      return { success: false, error: 'Invalid API call.' };
+      return { success: false, error: 'Invalid API call.', fix: 'Reload the app and try again.' };
     }
 
     const openApis = {
@@ -572,20 +659,34 @@ function api_invoke(sessionToken, functionName, args) {
       api_getSession: true
     };
 
-    const email = googleActiveEmail_() || getEmailFromAuthSession_(sessionToken);
+    const email = googleActiveEmail_() || getEmailFromAuthSession_(sessionToken) || emailFromTemporaryKey_();
     if (!email && !openApis[name]) {
-      return { success: false, error: 'Sign in required.', code: 'AUTH_REQUIRED' };
+      return {
+        success: false,
+        error: 'Sign in required.',
+        code: 'AUTH_REQUIRED',
+        fix: 'Open the app, enter your invited email, send/verify the login code, or use your personal invite link.'
+      };
     }
 
     return withRequestEmail_(email, function() {
-      const fn = new Function('return ' + name + ';')();
+      if (email) bindIdentityToTemporaryKey_(email);
+      const fn = resolveApiFunction_(name);
       if (typeof fn !== 'function') {
-        return { success: false, error: 'Unknown API: ' + name };
+        return {
+          success: false,
+          error: 'Unknown API: ' + name,
+          fix: 'Hard-refresh the app (or open the latest /exec deployment URL).'
+        };
       }
       return fn.apply(null, Array.isArray(args) ? args : []);
     });
   } catch (error) {
-    return { success: false, error: error.message || String(error) };
+    return {
+      success: false,
+      error: error.message || String(error),
+      fix: 'Hard-refresh and sign in again. If this continues, ask the owner to redeploy the web app.'
+    };
   }
 }
 
@@ -593,38 +694,63 @@ function api_requestLoginCode(email) {
   try {
     const normalized = normalizeEmail_(email);
     if (!normalized || normalized.indexOf('@') < 0) {
-      return { success: false, error: 'Enter a valid Google email.' };
+      return {
+        success: false,
+        error: 'Enter a valid Google email.',
+        fix: 'Use the exact Gmail/Google address the owner added in Users.'
+      };
     }
     ensureUsersSheet_();
     const user = findUserByEmail_(normalized);
     if (!user) {
       return {
         success: false,
-        error: 'This email is not on the Users list. Ask the gym owner to add you.'
+        error: 'This email is not on the Users list.',
+        fix: 'Gym owner: Settings → Users → Add this exact email, then ask the user to try again (or share the user invite link).'
       };
     }
     const status = String(user.status || '').trim().toLowerCase();
     if (status === 'disabled') {
-      return { success: false, error: 'This account is disabled.' };
+      return {
+        success: false,
+        error: 'This account is disabled.',
+        fix: 'Gym owner: Settings → Users → set Status to Active or Invited.'
+      };
     }
 
     const code = String(Math.floor(100000 + Math.random() * 900000));
     putLoginOtp_(normalized, code);
     const settings = readSettingsMapForAccess_();
     const gymName = settings.GYM_NAME || settings.CLUB_NAME || 'LSC';
-    MailApp.sendEmail({
-      to: normalized,
-      subject: gymName + ' login code',
-      htmlBody:
-        '<p>Your ' + gymName + ' login code is:</p>' +
-        '<p style="font-size:28px;font-weight:700;letter-spacing:4px;">' + code + '</p>' +
-        '<p>This code expires in 10 minutes.</p>'
-    });
-    return { success: true, message: 'Login code sent to ' + normalized + '.' };
+    try {
+      MailApp.sendEmail({
+        to: normalized,
+        subject: gymName + ' login code',
+        htmlBody:
+          '<p>Your ' + gymName + ' login code is:</p>' +
+          '<p style="font-size:28px;font-weight:700;letter-spacing:4px;">' + code + '</p>' +
+          '<p>This code expires in 10 minutes.</p>'
+      });
+    } catch (mailError) {
+      clearLoginOtp_(normalized);
+      const mailMsg = mailError && mailError.message ? mailError.message : String(mailError);
+      return {
+        success: false,
+        error: 'Could not email the login code. ' + mailMsg,
+        code: 'MAIL_SEND_FAILED',
+        fix: 'Gym owner: sign in as the deployer account → Settings → Setup & Authorization → Authorize Google services. Then the invitee can request a code again. Or share the per-user invite link (Users → link icon) which does not need email.'
+      };
+    }
+    return {
+      success: true,
+      message: 'Login code sent to ' + normalized + '. Check inbox/spam.',
+      fix: 'If no email arrives in 1–2 minutes, ask the owner for your personal invite link instead.'
+    };
   } catch (error) {
     return {
       success: false,
-      error: (error && error.message) || 'Could not send login code. Authorize Mail in Setup first.'
+      error: (error && error.message) || 'Could not send login code.',
+      fix: 'Gym owner: authorize Mail in Settings → Setup, or share the per-user invite link.'
     };
   }
 }
@@ -634,31 +760,59 @@ function api_verifyLoginCode(email, code) {
     const normalized = normalizeEmail_(email);
     const entered = String(code || '').trim();
     if (!normalized || !entered) {
-      return { success: false, error: 'Email and login code are required.' };
+      return {
+        success: false,
+        error: 'Email and login code are required.',
+        fix: 'Enter both fields, or request a new code.'
+      };
     }
     const expected = String(getLoginOtp_(normalized) || '');
     if (!expected || entered !== expected) {
-      return { success: false, error: 'Invalid or expired login code.' };
+      return {
+        success: false,
+        error: 'Invalid or expired login code.',
+        fix: 'Request a new code (codes expire in 10 minutes) and enter it carefully.'
+      };
     }
     clearLoginOtp_(normalized);
     return issueSessionForEmail_(normalized);
   } catch (error) {
-    return { success: false, error: error.message || String(error) };
+    return {
+      success: false,
+      error: error.message || String(error),
+      fix: 'Request a new login code and try again.'
+    };
   }
 }
 
 function api_redeemInviteToken(inviteToken) {
   try {
     const token = String(inviteToken || '').trim();
-    if (!token) return { success: false, error: 'Invite link is missing a token.' };
+    if (!token) {
+      return {
+        success: false,
+        error: 'Invite link is missing a token.',
+        fix: 'Ask the owner to copy your invite link from Settings → Users (link icon).'
+      };
+    }
     ensureUsersSheet_();
     const user = listUsersRecords_().find(function(row) {
       return String(row.loginToken || '').trim() === token;
     });
-    if (!user) return { success: false, error: 'Invalid or revoked invite link.' };
+    if (!user) {
+      return {
+        success: false,
+        error: 'Invalid or revoked invite link.',
+        fix: 'Ask the owner to open Settings → Users and copy a fresh invite link for your user.'
+      };
+    }
     return issueSessionForEmail_(user.email);
   } catch (error) {
-    return { success: false, error: error.message || String(error) };
+    return {
+      success: false,
+      error: error.message || String(error),
+      fix: 'Ask the owner for a fresh invite link, or use email + login code.'
+    };
   }
 }
 

@@ -24,6 +24,8 @@ describe('Access control foundation', () => {
     expect(accessSrc).toContain('function api_verifyLoginCode');
     expect(accessSrc).toContain('function api_redeemInviteToken');
     expect(accessSrc).toContain('function api_invoke');
+    expect(accessSrc).toContain('bindIdentityToTemporaryKey_');
+    expect(accessSrc).toContain('getTemporaryActiveUserKey');
     expect(accessSrc).toContain('webAppUrl');
     expect(accessSrc).toContain('function requirePermission_');
     expect(accessSrc).toContain("insertSheet('USERS')");
@@ -32,8 +34,11 @@ describe('Access control foundation', () => {
   test('Index exposes invitee login panel when Google email is unavailable', () => {
     expect(indexHtml).toContain('id="access-login-panel"');
     expect(indexHtml).toContain('id="btn-send-login-code"');
+    expect(indexHtml).toContain('id="access-denied-fix"');
+    expect(indexHtml).toContain('id="action-progress-overlay"');
     expect(globalState).toContain('installAuthScriptRunBridge');
     expect(globalState).toContain('requestLoginCode');
+    expect(globalState).toContain('ActionProgress');
   });
 
   test('permission presets include Admin Manager Viewer module CRUD', () => {
