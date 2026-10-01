@@ -86,11 +86,12 @@ The web app requires a Google sign-in (`Anyone` access, execute as the deployer)
 
 ## Settings and dropdown configuration
 
-The Settings module provides a responsive, device-compatible interface organized into three main tabs:
+The Settings module provides a responsive, device-compatible interface organized into four main tabs:
 
 - **General:** Configures gym identity (gym name, owner name, owner email, and gym logo upload with LSC fallback), setup/authorization, financial policies (revenue recognition and currency numbering), database IDs (Spreadsheet and Drive folder with compact copy/open actions), and automated notifications. Mobile general settings use denser two-column rows and a single header Save. Notifications support editable receipt/weekly templates, sample HTML previews, weekly CC recipients, day/time/days-ahead schedule, and selectable report table columns.
 - **Users:** Invite Google accounts and configure per-module View / Create / Edit / Delete access stored in the `USERS` sheet.
 - **Dropdowns:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
+- **Guide:** In-app product walkthrough (`View_Guide.html`) with search, sticky section chips, and expand/collapse cards. Covers architecture (web app ↔ Sheets ↔ Drive ↔ Mail), getting started, sign-in/invites/roles, every module, Dashboard metric formulas, money rules (Anchor/Split, currency, Paid status), notifications, everyday UX, and admin notes. Readable on mobile and desktop. No Save action — documentation only. When user-facing behavior changes, update this Guide in the same change as `docs/features.md`.
 
 ## Mock Data Generator
 

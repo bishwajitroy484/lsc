@@ -39,6 +39,10 @@
         <span class="material-symbols-rounded text-[16px]">dataset</span>
         <span>Dropdowns</span>
       </button>
+      <button id="tab-btn-guide" type="button" onclick="SettingsApp.switchTab('guide')" class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 text-slate-600 hover:text-slate-900 rounded-lg font-medium text-[11px] sm:text-xs transition-all cursor-pointer whitespace-nowrap">
+        <span class="material-symbols-rounded text-[16px]">menu_book</span>
+        <span>Guide</span>
+      </button>
     </div>
   </header>
 
@@ -776,6 +780,13 @@
 
         </div>
       </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: PRODUCT GUIDE                       -->
+    <!-- ========================================== -->
+    <div id="pane-guide" class="flex-1 flex-col h-full overflow-hidden bg-slate-50 hidden">
+      <?!= include('View_Guide'); ?>
     </div>
   </div>
 

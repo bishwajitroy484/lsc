@@ -11,7 +11,8 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const envName = String(process.argv[2] || '').trim().toLowerCase();
-const description = String(process.argv[3] || ('LSC ' + envName + ' web app ' + new Date().toISOString().slice(0, 10))).trim();
+// Avoid spaces in default description — Windows shell:true splits unquoted args.
+const description = String(process.argv[3] || ('LSC-' + envName + '-' + new Date().toISOString().slice(0, 10))).trim();
 
 if (envName !== 'dev' && envName !== 'prod') {
   console.error('Usage: node scripts/deploy-env.js <dev|prod> [description]');
@@ -43,8 +44,16 @@ const block = allEnv[envName];
 let deploymentId = String(block.deploymentId || '').trim();
 if (deploymentId.indexOf('YOUR_') === 0) deploymentId = '';
 
+function quoteForShell(arg) {
+  const s = String(arg);
+  if (!/[\s"]/.test(s)) return s;
+  return '"' + s.replace(/"/g, '\\"') + '"';
+}
+
 function runClasp(args) {
-  const result = spawnSync('npx', ['clasp', ...args], {
+  // On Windows, shell:true requires quoting args that contain spaces.
+  const cmdArgs = ['clasp', ...args].map(quoteForShell);
+  const result = spawnSync('npx', cmdArgs, {
     cwd: root,
     encoding: 'utf8',
     shell: true
@@ -87,7 +96,8 @@ if (prep.status !== 0) process.exit(prep.status || 1);
 if (deploymentId) {
   console.log('Updating existing ' + envName + ' deployment (stable URL)...');
   console.log('  deploymentId = ' + deploymentId);
-  runClasp(['deploy', '-i', deploymentId, '-d', description]);
+  // clasp v3: use update-deployment/redeploy <id>, not create-deployment -i
+  runClasp(['redeploy', deploymentId, '-d', description]);
   console.log('');
   console.log('Stable web app URL (unchanged):');
   console.log('  ' + webAppUrl(deploymentId));

@@ -39,7 +39,7 @@
   <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
     
     
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
       <div class="bg-cyan-50/50 p-4 rounded-xl border border-cyan-100 flex flex-col justify-center">
         <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[14px]">group</span><p class="text-[10px] text-slate-500 font-bold uppercase">Total Staff</p></div>
         <h2 id="kpi-total-staff" class="text-xl font-bold text-slate-800">--</h2>
@@ -48,7 +48,7 @@
         <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center material-symbols-rounded text-[14px]">account_balance_wallet</span><p class="text-[10px] text-slate-500 font-bold uppercase">Total Staff Cost</p></div>
         <h2 id="kpi-total-cost" class="text-xl font-bold text-slate-800">--</h2>
       </div>
-      <div onclick="StaffApp.scrollToActionNeeded()" class="bg-amber-50/50 p-4 rounded-xl border border-amber-200/80 flex flex-col justify-between cursor-pointer hover:border-amber-300 hover:shadow-sm transition-all group">
+      <div onclick="StaffApp.scrollToActionNeeded()" class="bg-amber-50/50 p-4 rounded-xl border border-amber-200/80 flex flex-col justify-between cursor-pointer hover:border-amber-300 hover:shadow-sm transition-all group col-span-2 lg:col-span-1">
         <div class="flex items-center justify-between mb-1">
           <div class="flex items-center gap-2">
             <span class="w-6 h-6 rounded bg-amber-100 text-amber-700 flex items-center justify-center material-symbols-rounded text-[14px]">pending_actions</span>
@@ -59,28 +59,6 @@
         <div>
           <h2 id="kpi-action-needed" class="text-xl font-bold text-amber-700 leading-tight">--</h2>
           <p id="kpi-action-needed-sub" class="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">--</p>
-        </div>
-      </div>
-      <div class="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex flex-col justify-between">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[14px]">swap_vert</span>
-          <p class="text-[10px] text-slate-500 font-bold uppercase">Salary Range</p>
-        </div>
-        <div class="grid grid-cols-2 gap-2 divide-x divide-purple-200/60 pt-0.5">
-          <div class="min-w-0 pr-1">
-            <div class="flex items-center gap-1 text-[9px] text-purple-700 font-bold uppercase tracking-wider">
-              <span class="material-symbols-rounded text-[12px]">arrow_upward</span> High
-            </div>
-            <h2 id="kpi-high-amt" class="text-sm md:text-base font-bold text-slate-800 truncate mt-0.5">--</h2>
-            <p id="kpi-high-name" class="text-[9px] font-medium text-slate-500 truncate mt-0.5 leading-tight" title="">--</p>
-          </div>
-          <div class="min-w-0 pl-2">
-            <div class="flex items-center gap-1 text-[9px] text-emerald-700 font-bold uppercase tracking-wider">
-              <span class="material-symbols-rounded text-[12px]">arrow_downward</span> Low
-            </div>
-            <h2 id="kpi-low-amt" class="text-sm md:text-base font-bold text-slate-800 truncate mt-0.5">--</h2>
-            <p id="kpi-low-name" class="text-[9px] font-medium text-slate-500 truncate mt-0.5 leading-tight" title="">--</p>
-          </div>
         </div>
       </div>
     </div>

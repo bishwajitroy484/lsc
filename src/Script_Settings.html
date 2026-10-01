@@ -516,9 +516,11 @@
       const paneGen = document.getElementById('pane-general');
       const paneUsers = document.getElementById('pane-users');
       const paneDrop = document.getElementById('pane-dropdowns');
+      const paneGuide = document.getElementById('pane-guide');
       const btnGen = document.getElementById('tab-btn-general');
       const btnUsers = document.getElementById('tab-btn-users');
       const btnDrop = document.getElementById('tab-btn-dropdowns');
+      const btnGuide = document.getElementById('tab-btn-guide');
       
       const baseBtn = 'flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs transition-all cursor-pointer whitespace-nowrap ';
       const activeClass = baseBtn + 'bg-white text-brand-primary font-bold shadow-xs';
@@ -533,10 +535,12 @@
       showPane(paneGen, tabName === 'general');
       showPane(paneUsers, tabName === 'users');
       showPane(paneDrop, tabName === 'dropdowns');
+      showPane(paneGuide, tabName === 'guide');
       if (tabName === 'users') this.loadShareInfo();
       if (btnGen) btnGen.className = tabName === 'general' ? activeClass : inactiveClass;
       if (btnUsers) btnUsers.className = tabName === 'users' ? activeClass : inactiveClass;
       if (btnDrop) btnDrop.className = tabName === 'dropdowns' ? activeClass : inactiveClass;
+      if (btnGuide) btnGuide.className = tabName === 'guide' ? activeClass : inactiveClass;
 
       const headerSaveBtn = document.getElementById('btn-save-general-header');
       if (headerSaveBtn) {
@@ -545,6 +549,9 @@
       }
 
       if (tabName === 'users') this.loadUsers();
+      if (tabName === 'guide' && typeof GuideApp !== 'undefined' && GuideApp.onShow) {
+        GuideApp.onShow();
+      }
     },
 
     // --- GENERAL SETTINGS LOGIC ---

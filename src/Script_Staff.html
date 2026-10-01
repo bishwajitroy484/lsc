@@ -548,25 +548,14 @@
 
     calculateKPIs: function(selectedYear, mode) {
       let totalStaff = 0;
-      let highestAmt = 0; let highestName = '--';
-      let lowestAmt = Infinity; let lowestName = '--';
-      
-      // 1. Calculate Staff Headcount & Salary Highs/Lows
+
+      // 1. Active staff headcount
       this.filteredData.forEach(stf => {
         const sName = this.getName('status', stf.status);
-        if(sName === 'Active') {
-           totalStaff++;
-           const sal = this.parseAmount(stf.salary);
-           
-           const rName = this.getName('role', stf.role);
-           if(sal > highestAmt) { highestAmt = sal; highestName = `${stf.fullName} (${rName})`; }
-           if(sal < lowestAmt) { lowestAmt = sal; lowestName = `${stf.fullName} (${rName})`; }
-        }
+        if (sName === 'Active') totalStaff++;
       });
 
-      if (lowestAmt === Infinity) lowestAmt = 0;
-
-      // 2. Calculate Total Cost strictly from ACTUAL payments in the selected year/period
+      // 2. Total Cost from ACTUAL payments in the selected year/period
       let totalCost = 0;
       (this.allPayments || []).forEach(p => {
          const pStatus = (p.paymentStatus || 'completed').toLowerCase();
@@ -584,26 +573,15 @@
          }
       });
 
-      // 3. Calculate Action Needed Staff
+      // 3. Action Needed staff
       const actionNeededList = this.getActionNeededStaffList();
       const actionNeededCount = actionNeededList.length;
 
-      // 4. Update the DOM
       this.safeSetText('kpi-total-staff', totalStaff);
       this.safeSetText('kpi-total-cost', AppUtils.formatCurrency(totalCost));
 
       this.safeSetText('kpi-action-needed', `${actionNeededCount} Staff`);
       this.safeSetText('kpi-action-needed-sub', actionNeededCount === 0 ? 'All salaries up to date' : (actionNeededCount === 1 ? '1 staff requires action' : `${actionNeededCount} staff require action`));
-      
-      this.safeSetText('kpi-high-amt', highestAmt > 0 ? AppUtils.formatCurrency(highestAmt) : '₹0');
-      this.safeSetText('kpi-high-name', highestName);
-      const highEl = document.getElementById('kpi-high-name');
-      if (highEl) highEl.title = highestName;
-      
-      this.safeSetText('kpi-low-amt', lowestAmt > 0 ? AppUtils.formatCurrency(lowestAmt) : '₹0');
-      this.safeSetText('kpi-low-name', lowestName);
-      const lowEl = document.getElementById('kpi-low-name');
-      if (lowEl) lowEl.title = lowestName;
     },
 
     renderCharts: function() {
