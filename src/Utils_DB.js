@@ -113,6 +113,7 @@ const DB = {
       r.staffId === recordId ||
       r.expenseId === recordId ||
       r.paymentId === recordId ||
+      r.userId === recordId ||
       r.id === recordId
     );
 
@@ -149,6 +150,7 @@ const DB = {
       r.staffId === recordId ||
       r.expenseId === recordId ||
       r.paymentId === recordId ||
+      r.userId === recordId ||
       r.id === recordId
     );
 
@@ -341,6 +343,8 @@ if (typeof module !== 'undefined' && module.exports) {
 
 function api_createRecord(sheetName, payload) {
   try {
+    const gate = requireAnyViewPermission_();
+    if (!gate.ok) return gate.response;
     const newRecord = DB.create(sheetName, payload);
     return { success: true, data: newRecord };
   } catch (error) {
@@ -354,6 +358,8 @@ function api_createRecord(sheetName, payload) {
  */
 function api_getGlobalDropdowns() {
   try {
+    const gate = requireAnyViewPermission_();
+    if (!gate.ok) return gate.response;
     const sheetName = 'DROP_DOWN';
 
     // 1. Fetch metadata columns A through G to find schemas
@@ -454,6 +460,8 @@ function generateId(prefix) {
  */
 function api_uploadImageToDrive(base64Data, filename) {
   try {
+    const gate = requireAnyViewPermission_();
+    if (!gate.ok) return gate.response;
     if (!base64Data) throw new Error("No image data provided.");
 
     // 1. Fetch the DRIVE_ID from the SETTINGS tab

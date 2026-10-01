@@ -5,6 +5,8 @@
 
 function api_getExpenses() {
   try {
+    const gate = requirePermission_('expenses', 'view');
+    if (!gate.ok) return gate.response;
     let dbData;
     try {
       dbData = DB.batchRead(['EXPENSES', 'SALARY', 'SETTINGS']);
@@ -83,6 +85,9 @@ function api_getExpenses() {
 
 function api_saveExpense(expenseData) {
   try {
+    const isNewGate = !(expenseData && expenseData.expenseId);
+    const gate = requirePermission_('expenses', isNewGate ? 'create' : 'edit');
+    if (!gate.ok) return gate.response;
     if (!expenseData.categoryId || !expenseData.amount || !expenseData.date) {
       throw new Error("Category, Amount, and Date are required.");
     }
@@ -133,6 +138,8 @@ function api_saveExpense(expenseData) {
 
 function api_deleteExpense(expenseId) {
   try {
+    const gate = requirePermission_('expenses', 'delete');
+    if (!gate.ok) return gate.response;
     if (!expenseId) throw new Error("Expense ID is missing.");
     DB.remove('EXPENSES', expenseId);
     return { success: true, message: "Expense deleted successfully." };

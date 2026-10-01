@@ -4,6 +4,8 @@
  */
 function api_getAvailableYears() {
   try {
+    const gate = requireAnyViewPermission_();
+    if (!gate.ok) return gate.response;
     const dbData = DB.batchRead(['MEMBERS', 'PAYMENTS', 'EXPENSES', 'STAFF', 'SALARY']);
     const datesBySheet = {
       MEMBERS: ['joinDate'],
@@ -31,6 +33,8 @@ function api_getAvailableYears() {
 
 function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mode = 'Monthly', periods = []) {
   try {
+    const gate = requirePermission_('dashboard', 'view');
+    if (!gate.ok) return gate.response;
     const targetYear = parseInt(year);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -525,7 +529,8 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                let displayAmt = totalUnpaidForMember > 0 ? totalUnpaidForMember : amt;
                overdueList.push({ 
                    memberId: m.memberId || '',
-                   name: m.fullName || 'Unknown', 
+                   name: m.fullName || 'Unknown',
+                   phone: m.phone || '',
                    plan: pNameLabel, 
                    amount: displayAmt, 
                    date: formattedDate, 
@@ -536,7 +541,8 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                // UPCOMING (0 to 7 days from today)
                upcomingList.push({ 
                    memberId: m.memberId || '',
-                   name: m.fullName || 'Unknown', 
+                   name: m.fullName || 'Unknown',
+                   phone: m.phone || '',
                    plan: pNameLabel, 
                    amount: amt, 
                    date: formattedDate, 

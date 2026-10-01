@@ -29,7 +29,81 @@
 
 <body class="bg-brand-surface font-sans text-slate-800 antialiased h-screen w-full flex overflow-hidden">
 
-  
+  <!-- Boot / access gate overlays -->
+  <div id="app-boot-overlay" class="fixed inset-0 z-[200] bg-slate-50 flex items-center justify-center p-6">
+    <div class="text-center space-y-3">
+      <div class="w-10 h-10 mx-auto rounded-full border-2 border-brand-primary border-t-transparent animate-spin"></div>
+      <p class="text-sm font-semibold text-slate-700">Loading session…</p>
+      <p class="text-xs text-slate-500">Checking Google sign-in and access permissions.</p>
+    </div>
+  </div>
+
+  <div id="app-access-denied" class="hidden fixed inset-0 z-[210] bg-slate-50 flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm max-w-md w-full p-5 sm:p-6 space-y-3 text-center">
+      <div id="access-denied-icon" class="w-12 h-12 mx-auto rounded-xl bg-red-50 text-red-500 flex items-center justify-center">
+        <span class="material-symbols-rounded text-[26px]">lock</span>
+      </div>
+      <h2 id="access-denied-title" class="text-lg font-bold text-slate-800">Access denied</h2>
+      <p id="access-denied-message" class="text-sm text-slate-600">Your Google account is not authorized to use this app.</p>
+      <p id="access-denied-email" class="text-xs text-slate-400"></p>
+      <div id="access-denied-fix" class="hidden text-left rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-amber-800 mb-1">How to fix</p>
+        <p id="access-denied-fix-text" class="text-[11px] text-amber-900 leading-snug"></p>
+      </div>
+
+      <div id="access-login-panel" class="hidden text-left space-y-2.5 pt-1">
+        <ol class="text-[11px] text-slate-500 leading-snug list-decimal pl-4 space-y-1">
+          <li>Enter the exact Google email the owner added in Users.</li>
+          <li>Tap <strong>Send code</strong> and check that inbox (and spam).</li>
+          <li>Enter the 6-digit code and tap <strong>Verify &amp; open</strong>.</li>
+        </ol>
+        <p class="text-[10px] text-slate-400 leading-snug">Prefer one tap? Ask the owner for your personal invite link (Users → link icon).</p>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-700 mb-1">Invited Google email</label>
+          <input type="email" id="login-email" autocomplete="username" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary" placeholder="name@gmail.com">
+        </div>
+        <div id="login-code-wrap" class="hidden">
+          <label class="block text-[11px] font-semibold text-slate-700 mb-1">Login code</label>
+          <input type="text" id="login-code" inputmode="numeric" autocomplete="one-time-code" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold tracking-widest outline-none focus:border-brand-primary" placeholder="6-digit code">
+        </div>
+        <div id="login-error-box" class="hidden rounded-xl border border-red-200 bg-red-50 px-3 py-2">
+          <p id="login-error-text" class="text-[11px] font-semibold text-red-700 leading-snug"></p>
+          <p id="login-fix-text" class="text-[10px] text-red-600/90 mt-1 leading-snug"></p>
+        </div>
+        <p id="login-status" class="text-[11px] text-slate-500 min-h-[1rem]"></p>
+        <div class="flex gap-2">
+          <button type="button" id="btn-send-login-code" onclick="AccessControl.requestLoginCode()" class="flex-1 h-10 bg-brand-primary hover:bg-blue-700 text-white rounded-xl text-[11px] font-bold cursor-pointer">Send code</button>
+          <button type="button" id="btn-verify-login-code" onclick="AccessControl.verifyLoginCode()" class="hidden flex-1 h-10 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[11px] font-bold cursor-pointer">Verify &amp; open</button>
+        </div>
+      </div>
+
+      <p id="access-denied-help" class="text-[11px] text-slate-500">Ask the gym owner to add your Google email under Settings → Users &amp; Access.</p>
+    </div>
+  </div>
+
+  <!-- Global % action progress for save / edit / delete -->
+  <div id="action-progress-overlay" class="hidden fixed inset-0 z-[300] bg-slate-900/35 backdrop-blur-[2px] flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl px-6 py-5 w-full max-w-[220px] text-center space-y-3">
+      <div class="relative w-16 h-16 mx-auto">
+        <svg class="w-16 h-16 -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
+          <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e2e8f0" stroke-width="3"></circle>
+          <circle id="action-progress-ring" cx="18" cy="18" r="15.5" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"
+            stroke-dasharray="97.4" stroke-dashoffset="97.4"></circle>
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <span id="action-progress-pct" class="text-sm font-bold text-slate-800">0%</span>
+        </div>
+      </div>
+      <p id="action-progress-label" class="text-xs font-semibold text-slate-700">Working…</p>
+    </div>
+  </div>
+
+  <div id="app-setup-banner" class="hidden fixed top-0 inset-x-0 z-[180] bg-amber-50 border-b border-amber-200 px-3 py-2">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
+      <p class="text-[11px] sm:text-xs text-amber-900 font-medium">Setup incomplete: authorize Google services and finish gym settings.</p>
+      <button type="button" id="btn-open-setup" class="h-8 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold cursor-pointer shrink-0">Open Setup</button>
+    </div>
+  </div>
   
   <aside id="main-sidebar"
     class="hidden md:flex w-20 flex-col bg-brand-dark border-r border-slate-800 z-20 h-full shrink-0 transition-all duration-300">
@@ -94,6 +168,9 @@
 
 
   
+  <script>
+    window.LSC_PAGE_PARAMS = <?!= JSON.stringify(pageParams || {}) ?>;
+  </script>
   <?!= include('Global_State'); ?>
   <?!= include('Toast'); ?>
 

@@ -24,29 +24,24 @@
 
     <div class="bg-white px-4 md:px-6 py-3 shrink-0 shadow-sm flex flex-col md:flex-row md:items-center gap-3">
 
-      
-      <div class="relative flex-1 w-full max-w-md">
-        <span class="material-symbols-rounded absolute left-3 top-2 text-slate-400 text-[18px]">search</span>
-        <input type="text" id="member-search" onkeyup="MembersApp.search(this.value)" placeholder="Search by name, phone or member ID..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-brand-primary focus:bg-white transition-colors">
+      <div class="relative flex-1 w-full md:max-w-md min-w-0">
+        <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">search</span>
+        <input type="text" id="member-search" onkeyup="MembersApp.search(this.value)" placeholder="Search by name, phone or member ID..." class="w-full h-9 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-brand-primary focus:bg-white transition-colors">
       </div>
 
-      
-      <div class="grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 w-full md:w-auto">
-        
-        <select id="filter-status" onchange="MembersApp.applyFilters()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 md:py-2 md:pl-3 md:pr-7 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center] shrink-0">
+      <div class="grid grid-cols-3 md:flex md:flex-nowrap md:items-center gap-2 w-full md:w-auto">
+        <select id="filter-status" onchange="MembersApp.applyFilters()" class="w-full md:w-auto h-9 appearance-none bg-white pl-3 pr-8 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] shrink-0 md:min-w-[8.5rem]">
           <option value="All">All Status</option>
           <option value="Active">Active</option>
           <option value="Due Soon">Due Soon</option>
           <option value="Overdue">Overdue</option>
         </select>
 
-        
-        <select id="filter-batch" onchange="MembersApp.applyFilters()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 md:py-2 md:pl-3 md:pr-7 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+        <select id="filter-batch" onchange="MembersApp.applyFilters()" class="w-full md:w-auto h-9 appearance-none bg-white pl-3 pr-8 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] shrink-0 md:min-w-[9rem]">
           <option value="All">All Batches</option>
         </select>
 
-        
-        <select id="filter-plan" onchange="MembersApp.applyFilters()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 md:py-2 md:pl-3 md:pr-7 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+        <select id="filter-plan" onchange="MembersApp.applyFilters()" class="w-full md:w-auto h-9 appearance-none bg-white pl-3 pr-8 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] shrink-0 md:min-w-[10.5rem]">
           <option value="All">All Memberships</option>
         </select>
       </div>
@@ -278,7 +273,7 @@
                     <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Phone Number *</label>
                     <div class="relative">
                       <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">call</span>
-                      <input type="tel" id="mem-phone" required class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
+                      <input type="tel" id="mem-phone" required pattern="[0-9]{10}" maxlength="10" inputmode="numeric" title="Enter exactly 10 digits." class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
                     </div>
                   </div>
                 </div>
@@ -356,7 +351,7 @@
                     <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Join Date</label>
                     <div class="relative">
                       <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
-                      <input type="text" id="mem-join" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm text-slate-700">
+                      <input type="text" id="mem-join" placeholder="DD-MMM-YYYY" onchange="MembersApp.onPlanOrBatchChange()" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm text-slate-700">
                     </div>
                   </div>
                   <div>
@@ -373,7 +368,7 @@
                     <label class="block text-[9px] font-bold text-red-500 mb-1 uppercase tracking-wide">Exit Date (Required)</label>
                     <div class="relative">
                       <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-red-400 pointer-events-none">calendar_month</span>
-                      <input type="text" id="mem-exit-date" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-red-50/30 border border-red-200 rounded-lg text-xs font-bold text-slate-700 focus:border-red-400 outline-none shadow-sm">
+                      <input type="text" id="mem-exit-date" placeholder="DD-MMM-YYYY" onchange="MembersApp.onPlanOrBatchChange()" class="date-field w-full px-2.5 py-2 bg-red-50/30 border border-red-200 rounded-lg text-xs font-bold text-slate-700 focus:border-red-400 outline-none shadow-sm">
                     </div>
                   </div>
                   

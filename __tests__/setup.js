@@ -12,5 +12,18 @@ global.SpreadsheetApp = {
 global.Session = {
     getActiveUser: jest.fn(() => ({
         getEmail: jest.fn(() => 'admin@gym.com')
+    })),
+    getEffectiveUser: jest.fn(() => ({
+        getEmail: jest.fn(() => 'admin@gym.com')
     }))
 };
+
+global.requirePermission_ = jest.fn(() => ({
+    ok: true,
+    context: { email: 'admin@gym.com', isOwner: true, allowed: true, permissions: {} }
+}));
+
+global.requireAnyViewPermission_ = jest.fn(() => ({
+    ok: true,
+    context: { email: 'admin@gym.com', isOwner: true, allowed: true, permissions: {} }
+}));

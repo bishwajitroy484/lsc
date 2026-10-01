@@ -2,6 +2,21 @@
  * LSC Web App - Main Server Entry Point
  */
 
+/**
+ * Legacy editor helper — prefer api_authorizeServices from the web app UI.
+ */
+function authorizeLscScriptPermissions() {
+  if (typeof api_authorizeServices === 'function') {
+    const result = api_authorizeServices();
+    if (result && result.success) {
+      return result.message || 'LSC permissions authorized.';
+    }
+  }
+  ScriptApp.getProjectTriggers();
+  MailApp.getRemainingDailyQuota();
+  return 'LSC permissions authorized. Save Settings again to create the weekly report trigger.';
+}
+
 function doGet(e) {
   const template = HtmlService.createTemplateFromFile('Index');
   

@@ -70,6 +70,8 @@ function createSettingsApi(overrides = {}) {
     url: 'https://drive.google.com/uc?export=view&id=DRIVE_FILE_LOGO_123'
   }));
 
+  const allowGate = () => ({ ok: true, context: { email: 'admin@gym.com', isOwner: true, allowed: true } });
+
   const api = new Function(
     'DB',
     'SpreadsheetApp',
@@ -77,6 +79,8 @@ function createSettingsApi(overrides = {}) {
     'SPREADSHEET_ID',
     '_colToLetter',
     'api_uploadImageToDrive',
+    'requirePermission_',
+    'requireAnyViewPermission_',
     `
       ${source};
       return { 
@@ -94,7 +98,9 @@ function createSettingsApi(overrides = {}) {
     overrides.Sheets || defaultSheets,
     'spreadsheet-id-123',
     _colToLetter,
-    mockUploadImage
+    mockUploadImage,
+    overrides.requirePermission_ || allowGate,
+    overrides.requireAnyViewPermission_ || allowGate
   );
 
   return { api, sheet: defaultSheet, sheetsService: defaultSheets.Spreadsheets, dummyRange, mockUploadImage };
@@ -370,22 +376,26 @@ describe('Settings Module', () => {
 
       // Tab navigation pills
       expect(viewHtml).toContain('id="tab-btn-general"');
+      expect(viewHtml).toContain('id="tab-btn-users"');
       expect(viewHtml).toContain('id="tab-btn-dropdowns"');
 
       // Core inputs
       expect(viewHtml).toContain('id="gen-GYM_NAME"');
+      expect(viewHtml).toContain('id="gen-OWNER_NAME"');
       expect(viewHtml).toContain('id="gen-OWNER_EMAIL"');
+      expect(viewHtml).toContain('id="gen-NOTIFY_WEEKLY_CC"');
       expect(viewHtml).toContain('id="gen-Revenue_Recognition"');
-      expect(viewHtml).toContain('id="gen-REMINDER_BUFFER"');
       expect(viewHtml).toContain('id="gen-SPREADSHEET_ID"');
       expect(viewHtml).toContain('id="gen-DRIVE_ID"');
       expect(viewHtml).toContain('id="gen-LOGO_ID"');
       expect(viewHtml).toContain('id="gen-ENABLE_NOTIFICATION"');
+      expect(viewHtml).toContain('id="gen-NOTIFY_REPORT_DAYS"');
+      expect(viewHtml).not.toContain('id="gen-REMINDER_BUFFER"');
 
-      // Fixed bottom action bar for general settings (desktop/tablet) & mobile actions
+      // Fixed bottom action bar for general settings (desktop/tablet) & mobile header save
       expect(viewHtml).toContain('id="general-bottom-bar"');
       expect(viewHtml).toContain('id="btn-save-general"');
-      expect(viewHtml).toContain('id="btn-save-general-mobile"');
+      expect(viewHtml).not.toContain('id="btn-save-general-mobile"');
       expect(viewHtml).toContain('id="btn-save-general-header"');
 
       // Custom key addition option is removed
@@ -401,7 +411,9 @@ describe('Settings Module', () => {
       expect(viewHtml).toContain('id="schema-modal"');
       expect(viewHtml).toContain('id="option-modal"');
       expect(viewHtml).toContain('id="delete-opt-modal"');
-      expect(viewHtml).toContain('id="notification-modal"');
+      expect(viewHtml).toContain('id="notification-message-modal"');
+      expect(viewHtml).toContain('id="notification-preview-modal"');
+      expect(viewHtml).not.toContain('id="notification-modal"');
     });
   });
 
