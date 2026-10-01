@@ -30,9 +30,10 @@ function doGet(e) {
 }
 
 /**
- * Universal HTML include helper for modular components
- * Supports nesting: <?!= include('View_Dashboard'); ?>
+ * Universal HTML include helper for modular components.
+ * Evaluates the file as a template so nested includes work, e.g.
+ * View_Settings → <?!= include('View_Guide'); ?>
  */
 function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  return HtmlService.createTemplateFromFile(filename).evaluate().getContent();
 }
