@@ -459,7 +459,7 @@
             this.showToast((res && res.error) || 'Could not save user.', true);
             return;
           }
-          this.showToast(res.message || 'User saved.', false);
+          this.showToast(res.message || 'User saved.', !!res.warning);
           this.closeUserEditor();
           this.loadUsers();
         })
@@ -467,14 +467,14 @@
     },
 
     deleteUser: function(userId) {
-      if (!userId || !confirm('Remove this user from access?')) return;
+      if (!userId || !confirm('Remove this user from access? Google share on Sheet, Drive, and Script will also be revoked.')) return;
       google.script.run
         .withSuccessHandler((res) => {
           if (!res || !res.success) {
             this.showToast((res && res.error) || 'Could not remove user.', true);
             return;
           }
-          this.showToast(res.message || 'User removed.', false);
+          this.showToast(res.message || 'User removed.', !!res.warning);
           this.loadUsers();
         })
         .api_deleteUser(userId);

@@ -979,6 +979,126 @@ function api_listUsers() {
   }
 }
 
+/**
+ * Google resource ACL for invited users (cuts the "Request access" loop).
+ * Viewer / Manager → reader (view). Admin / Owner → writer (edit).
+ * Active / Invited → grant. Disabled / deleted → revoke.
+ */
+function resolveGoogleAclLevel_(rolePreset, isOwner) {
+  if (isOwner) return 'writer';
+  const key = String(rolePreset || '').trim().toLowerCase();
+  if (key === 'admin') return 'writer';
+  return 'reader';
+}
+
+function shouldGrantGoogleAcl_(status) {
+  const s = String(status || '').trim().toLowerCase();
+  return s === 'active' || s === 'invited';
+}
+
+function getAclResourceIds_() {
+  const settings = readSettingsMapForAccess_();
+  const spreadsheetId = String(typeof SPREADSHEET_ID !== 'undefined' ? SPREADSHEET_ID : '').trim();
+  const driveId = String(
+    (settings && (settings.DRIVE_ID || settings.drive_id)) ||
+    (typeof LSC_DRIVE_ID !== 'undefined' ? LSC_DRIVE_ID : '') ||
+    ''
+  ).trim();
+  const scriptId = String(typeof LSC_SCRIPT_ID !== 'undefined' ? LSC_SCRIPT_ID : '').trim();
+  return { spreadsheetId: spreadsheetId, driveId: driveId, scriptId: scriptId };
+}
+
+function clearDriveAccess_(target, email) {
+  try { target.removeViewer(email); } catch (e1) { /* not a viewer */ }
+  try { target.removeEditor(email); } catch (e2) { /* not an editor */ }
+}
+
+function applyDriveAccess_(target, email, level, grant) {
+  clearDriveAccess_(target, email);
+  if (!grant) return;
+  if (level === 'writer') target.addEditor(email);
+  else target.addViewer(email);
+}
+
+/**
+ * Sync one email across Spreadsheet, Drive folder, and Apps Script project file.
+ * Returns { ok, details[], error }. Partial failures do not throw.
+ */
+function syncUserGoogleResources_(email, opts) {
+  opts = opts || {};
+  const normalized = normalizeEmail_(email);
+  const details = [];
+  if (!normalized || normalized.indexOf('@') < 0) {
+    return { ok: false, details: details, error: 'Missing email for Google share.' };
+  }
+
+  const previousEmail = normalizeEmail_(opts.previousEmail || '');
+  if (previousEmail && previousEmail !== normalized) {
+    const revokedPrev = syncUserGoogleResources_(previousEmail, { grant: false, level: 'reader' });
+    details.push({ resource: 'previousEmail', ok: revokedPrev.ok, grant: false });
+  }
+
+  const grant = opts.grant === true;
+  const level = opts.level === 'writer' ? 'writer' : 'reader';
+  const ids = getAclResourceIds_();
+
+  if (ids.spreadsheetId) {
+    try {
+      const file = DriveApp.getFileById(ids.spreadsheetId);
+      applyDriveAccess_(file, normalized, level, grant);
+      try {
+        const ss = SpreadsheetApp.openById(ids.spreadsheetId);
+        if (!grant) {
+          try { ss.removeViewer(normalized); } catch (e1) { /* ignore */ }
+          try { ss.removeEditor(normalized); } catch (e2) { /* ignore */ }
+        } else if (level === 'writer') {
+          ss.addEditor(normalized);
+        } else {
+          ss.addViewer(normalized);
+        }
+      } catch (ssErr) { /* Drive file ACL is enough for open access */ }
+      details.push({ resource: 'spreadsheet', ok: true, grant: grant, level: level });
+    } catch (error) {
+      details.push({ resource: 'spreadsheet', ok: false, error: error.message || String(error) });
+    }
+  } else {
+    details.push({ resource: 'spreadsheet', ok: false, error: 'Spreadsheet id is not configured.' });
+  }
+
+  if (ids.driveId) {
+    try {
+      const folder = DriveApp.getFolderById(ids.driveId);
+      applyDriveAccess_(folder, normalized, level, grant);
+      details.push({ resource: 'drive', ok: true, grant: grant, level: level });
+    } catch (error) {
+      details.push({ resource: 'drive', ok: false, error: error.message || String(error) });
+    }
+  } else {
+    details.push({ resource: 'drive', ok: false, error: 'Drive folder id is not configured.' });
+  }
+
+  if (ids.scriptId) {
+    try {
+      const scriptFile = DriveApp.getFileById(ids.scriptId);
+      applyDriveAccess_(scriptFile, normalized, level, grant);
+      details.push({ resource: 'script', ok: true, grant: grant, level: level });
+    } catch (error) {
+      details.push({ resource: 'script', ok: false, error: error.message || String(error) });
+    }
+  } else {
+    details.push({ resource: 'script', ok: false, error: 'Script id is not configured.' });
+  }
+
+  const failed = details.filter(function(d) { return d.ok === false; });
+  return {
+    ok: failed.length === 0,
+    details: details,
+    error: failed.length
+      ? failed.map(function(f) { return f.resource + ': ' + (f.error || 'failed'); }).join('; ')
+      : ''
+  };
+}
+
 function api_saveUser(userData) {
   try {
     const gate = requirePermission_('settings', 'edit');
@@ -1004,6 +1124,9 @@ function api_saveUser(userData) {
     const name = String(payload.name || email.split('@')[0]).trim();
     const isOwner = payload.isOwner === true || isYes_(payload.isOwner);
 
+    let savedUserId = '';
+    let previousEmail = '';
+
     if (existing) {
       if (isYes_(existing.isOwner) && !isOwner) {
         const owners = rows.filter(function(r) { return isYes_(r.isOwner); });
@@ -1011,6 +1134,7 @@ function api_saveUser(userData) {
           return { success: false, error: 'At least one owner is required.' };
         }
       }
+      previousEmail = normalizeEmail_(existing.email);
       DB.update('USERS', existing.userId, {
         email: email,
         name: name,
@@ -1020,26 +1144,52 @@ function api_saveUser(userData) {
         permissions: JSON.stringify(permissions),
         loginToken: String(existing.loginToken || '').trim() || newInviteToken_()
       });
-      return { success: true, message: 'User updated.', data: { userId: existing.userId } };
+      savedUserId = existing.userId;
+    } else {
+      if (findUserByEmail_(email)) {
+        return { success: false, error: 'A user with this email already exists.' };
+      }
+
+      const record = {
+        userId: nextUserId_(rows),
+        email: email,
+        name: name,
+        status: status,
+        isOwner: isOwner ? 'YES' : 'NO',
+        rolePreset: rolePreset,
+        permissions: JSON.stringify(permissions),
+        invitedBy: gate.context.email,
+        loginToken: newInviteToken_()
+      };
+      DB.create('USERS', record);
+      savedUserId = record.userId;
     }
 
-    if (findUserByEmail_(email)) {
-      return { success: false, error: 'A user with this email already exists.' };
+    const grant = shouldGrantGoogleAcl_(status);
+    const level = resolveGoogleAclLevel_(rolePreset, isOwner);
+    const googleAcl = syncUserGoogleResources_(email, {
+      grant: grant,
+      level: level,
+      previousEmail: previousEmail
+    });
+
+    let message = existing ? 'User updated.' : 'User added.';
+    if (grant) {
+      message += googleAcl.ok
+        ? ' Shared Spreadsheet, Drive folder, and Script for this Google account.'
+        : ' User saved, but some Google shares failed: ' + googleAcl.error;
+    } else {
+      message += googleAcl.ok
+        ? ' Google access revoked (user disabled).'
+        : ' User saved, but some Google revokes failed: ' + googleAcl.error;
     }
 
-    const record = {
-      userId: nextUserId_(rows),
-      email: email,
-      name: name,
-      status: status,
-      isOwner: isOwner ? 'YES' : 'NO',
-      rolePreset: rolePreset,
-      permissions: JSON.stringify(permissions),
-      invitedBy: gate.context.email,
-      loginToken: newInviteToken_()
+    return {
+      success: true,
+      message: message,
+      warning: googleAcl.ok ? '' : googleAcl.error,
+      data: { userId: savedUserId, googleAcl: googleAcl }
     };
-    DB.create('USERS', record);
-    return { success: true, message: 'User added.', data: { userId: record.userId } };
   } catch (error) {
     return { success: false, error: error.message || String(error) };
   }
@@ -1064,8 +1214,22 @@ function api_deleteUser(userId) {
       return { success: false, error: 'You cannot remove your own account.' };
     }
 
+    const googleAcl = syncUserGoogleResources_(target.email, { grant: false, level: 'reader' });
     DB.remove('USERS', userId);
-    return { success: true, message: 'User removed.' };
+
+    let message = 'User removed.';
+    if (googleAcl.ok) {
+      message += ' Google access revoked from Spreadsheet, Drive, and Script.';
+    } else {
+      message += ' Removed from app, but some Google revokes failed: ' + googleAcl.error;
+    }
+
+    return {
+      success: true,
+      message: message,
+      warning: googleAcl.ok ? '' : googleAcl.error,
+      data: { googleAcl: googleAcl }
+    };
   } catch (error) {
     return { success: false, error: error.message || String(error) };
   }

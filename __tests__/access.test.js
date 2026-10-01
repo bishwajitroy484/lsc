@@ -19,6 +19,11 @@ describe('Access control foundation', () => {
     expect(accessSrc).toContain('function api_authorizeServices');
     expect(accessSrc).toContain('function api_listUsers');
     expect(accessSrc).toContain('function api_saveUser');
+    expect(accessSrc).toContain('function api_deleteUser');
+    expect(accessSrc).toContain('function syncUserGoogleResources_');
+    expect(accessSrc).toContain('function resolveGoogleAclLevel_');
+    expect(accessSrc).toContain('DriveApp.getFileById');
+    expect(accessSrc).toContain('DriveApp.getFolderById');
     expect(accessSrc).toContain('function api_getWebAppShareInfo');
     expect(accessSrc).toContain('function api_requestLoginCode');
     expect(accessSrc).toContain('function api_verifyLoginCode');
@@ -65,5 +70,13 @@ describe('Access control foundation', () => {
     expect(viewSettings).toContain('id="user-perm-matrix"');
     expect(viewSettings).toContain('id="users-share-card"');
     expect(viewSettings).toContain('id="users-share-qr"');
+    expect(viewSettings).toMatch(/Shared Spreadsheet|shares the Spreadsheet/i);
+  });
+
+  test('Google ACL helpers map roles and Active/Invited grant vs Disabled revoke', () => {
+    expect(accessSrc).toContain("return 'writer'");
+    expect(accessSrc).toContain("return 'reader'");
+    expect(accessSrc).toContain("s === 'active' || s === 'invited'");
+    expect(accessSrc).toContain('googleAcl');
   });
 });
