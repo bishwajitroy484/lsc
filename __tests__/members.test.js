@@ -208,6 +208,39 @@ describe('Members Module', () => {
     }
   });
 
+  test('api_getMembers heals legacy inactive labels to the dropdown key', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-01T12:00:00Z'));
+    try {
+      const membersApi = loadMembersApi({
+        MEMBERS: [
+          { memberId: 'MEM-LABEL', membershipId: 'PLAN-TRIAL', status: 'Inactive', exitDate: '02-Oct-2026' }
+        ],
+        PAYMENTS: [],
+        SETTINGS: []
+      }, {
+        success: true,
+        data: {
+          options: {
+            membership: [
+              { id: 'PLAN-TRIAL', name: 'Trial', frequency: 'Trial' }
+            ],
+            status: [
+              { id: 'STA-INACTIVE', name: 'In-Active' },
+              { id: 'STA-ACTIVE', name: 'Active' }
+            ]
+          }
+        }
+      });
+
+      const response = membersApi.api_getMembers();
+      expect(response.success).toBe(true);
+      expect(response.data[0].status).toBe('STA-INACTIVE');
+      expect(membersApi.db.update).toHaveBeenCalledWith('MEMBERS', 'MEM-LABEL', { status: 'STA-INACTIVE' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test('api_saveMember rejects phone numbers that are not exactly 10 digits', () => {
     const membersApi = loadMembersApi();
 

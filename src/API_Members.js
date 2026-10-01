@@ -4,30 +4,89 @@
  * No mock data. Strictly relies on the DB utility.
  */
 
-function deactivateExpiredMemberStatuses(members, plans, memberStatuses, asOfDate) {
-  const statusName = (status) => {
-    const option = memberStatuses.find(item => String(item.id) === String(status));
-    return String(option ? (option.name || option.label || option.id) : status || '').trim().toLowerCase();
-  };
-  const inactiveStatus = memberStatuses.find(item =>
-    String(item.name || item.label || item.id || '').trim().toLowerCase() === 'inactive'
+function isInactiveStatusLabel_(value) {
+  const label = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+  return label === 'inactive' || label.includes('inactive') || label.includes('in active');
+}
+
+function isActiveStatusLabel_(value) {
+  const label = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+  return label === 'active';
+}
+
+/**
+ * Resolve a member status value to the dropdown option key (id).
+ * Accepts either a stored key or a display label and always prefers the key.
+ */
+function resolveMemberStatusKey_(statusValue, memberStatuses) {
+  const statuses = memberStatuses || [];
+  const raw = String(statusValue || '').trim();
+  if (!raw) return '';
+
+  const byId = statuses.find(item => String(item.id || item.value || '').trim() === raw);
+  if (byId) return String(byId.id || byId.value);
+
+  const rawLower = raw.toLowerCase();
+  const byName = statuses.find(item =>
+    String(item.name || item.label || '').trim().toLowerCase() === rawLower
   );
+  if (byName) return String(byName.id || byName.value || '');
+
+  // Heal legacy label values (e.g. "Inactive") onto the dropdown key even when
+  // the option display name is "In-Active" / "In Active".
+  if (isInactiveStatusLabel_(raw)) return resolveInactiveStatusKey_(statuses);
+  if (isActiveStatusLabel_(raw)) {
+    const active = statuses.find(item => isActiveStatusLabel_(item.name || item.label || item.id));
+    return active ? String(active.id || active.value || '') : '';
+  }
+
+  return '';
+}
+
+function resolveInactiveStatusKey_(memberStatuses) {
+  const statuses = memberStatuses || [];
+  const match = statuses.find(item => {
+    const name = String(item.name || item.label || '').trim();
+    const id = String(item.id || item.value || '').trim();
+    return isInactiveStatusLabel_(name) || isInactiveStatusLabel_(id);
+  });
+  return match ? String(match.id || match.value || '') : '';
+}
+
+function deactivateExpiredMemberStatuses(members, plans, memberStatuses, asOfDate) {
+  const statusLabel = (status) => {
+    const key = resolveMemberStatusKey_(status, memberStatuses) || String(status || '');
+    const option = (memberStatuses || []).find(item =>
+      String(item.id || item.value || '') === String(key)
+    );
+    return String(option ? (option.name || option.label || option.id) : key).trim().toLowerCase();
+  };
+
+  const inactiveStatusKey = resolveInactiveStatusKey_(memberStatuses);
   const today = new Date(asOfDate || new Date());
   today.setHours(0, 0, 0, 0);
 
   members.forEach(member => {
+    // Heal legacy rows that stored a status label instead of the dropdown key.
+    const normalizedKey = resolveMemberStatusKey_(member.status, memberStatuses);
+    if (normalizedKey && String(member.status) !== normalizedKey) {
+      member.status = normalizedKey;
+      DB.update('MEMBERS', member.memberId, { status: normalizedKey });
+    }
+
     const plan = plans.find(item => String(item.id) === String(member.membershipId));
     const planName = String(plan && plan.name || '').toUpperCase();
     const frequency = String(plan && plan.frequency || '').toUpperCase();
     const isAdHocOrTrial = /AD[\s-]?HOC|TRIAL/.test(`${frequency} ${planName}`);
-    if (!isAdHocOrTrial || !member.exitDate || statusName(member.status) !== 'active') return;
+    if (!isAdHocOrTrial || !member.exitDate || !isActiveStatusLabel_(statusLabel(member.status))) return;
+    if (!inactiveStatusKey) return; // Never write a bare label like "Inactive".
 
     const exitDate = parseSafeDate(member.exitDate);
     if (isNaN(exitDate)) return;
     exitDate.setHours(0, 0, 0, 0);
     if (exitDate <= today) {
-      member.status = inactiveStatus ? inactiveStatus.id : 'Inactive';
-      DB.update('MEMBERS', member.memberId, { status: member.status });
+      member.status = inactiveStatusKey;
+      DB.update('MEMBERS', member.memberId, { status: inactiveStatusKey });
     }
   });
 }
