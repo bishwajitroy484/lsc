@@ -17,11 +17,42 @@
 
     // Core known settings mapped directly to UI Inputs
     coreKeys: [
-      'GYM_NAME', 'LOGO_ID', 'Revenue_Recognition', 'CURRENCY_FORMAT', 'OWNER_EMAIL',
-      'SPREADSHEET_ID', 'DRIVE_ID', 'REMINDER_BUFFER', 'ENABLE_NOTIFICATION',
-      'NOTIFY_PAYMENT_RECEIPT', 'NOTIFY_WEEKLY_REPORT', 'NOTIFY_REPORT_DAY', 'NOTIFY_REPORT_HOUR'
+      'GYM_NAME', 'OWNER_NAME', 'OWNER_EMAIL', 'LOGO_ID',
+      'Revenue_Recognition', 'CURRENCY_FORMAT',
+      'SPREADSHEET_ID', 'DRIVE_ID', 'ENABLE_NOTIFICATION',
+      'NOTIFY_PAYMENT_RECEIPT', 'NOTIFY_WEEKLY_REPORT', 'NOTIFY_REPORT_DAY', 'NOTIFY_REPORT_HOUR',
+      'NOTIFY_REPORT_DAYS', 'NOTIFY_WEEKLY_CC', 'NOTIFY_WEEKLY_FIELDS',
+      'NOTIFY_RECEIPT_SUBJECT', 'NOTIFY_RECEIPT_BODY',
+      'NOTIFY_WEEKLY_SUBJECT', 'NOTIFY_WEEKLY_INTRO'
     ],
     checkboxKeys: ['ENABLE_NOTIFICATION', 'NOTIFY_PAYMENT_RECEIPT', 'NOTIFY_WEEKLY_REPORT'],
+    editingMessageType: null,
+
+    defaultTemplates: {
+      receipt: {
+        subject: '{{gymName}} — Payment confirmation',
+        body:
+          'Hi {{memberName}},\n\n' +
+          'Thank you for your payment at {{gymName}}. Your membership has been updated successfully.\n\n' +
+          'Plan: {{plan}}\n' +
+          'Amount paid: {{amount}}\n' +
+          'Payment date: {{paidDate}}\n' +
+          'Coverage period: {{startDate}} to {{endDate}}\n' +
+          'Member ID: {{memberId}}\n\n' +
+          'If you have any questions, please reply to this email or contact the front desk.\n\n' +
+          'Warm regards,\n' +
+          '{{gymName}} Team'
+      },
+      weekly: {
+        subject: '{{gymName}} — Weekly renewal report ({{rangeLabel}})',
+        body:
+          'Hi {{ownerName}},\n\n' +
+          'Here is your weekly renewal snapshot for {{gymName}} covering {{rangeLabel}}.\n\n' +
+          '• Upcoming renewals (next {{reportDays}} days): {{upcomingCount}}\n' +
+          '• Already overdue: {{overdueCount}}\n\n' +
+          'Member details are listed in the tables below so you can follow up promptly.'
+      }
+    },
 
     safeSetText: AppUtils.safeSetText,
     safeSetValue: AppUtils.safeSetValue,
@@ -35,10 +66,418 @@
       }
     },
 
+    usersCache: [],
+    permissionPresets: null,
+    accessModules: ['dashboard', 'members', 'staff', 'expenses', 'calendar', 'settings'],
+
+    shareAppUrl: '',
+
     init: function() {
       this.fetchData();
       this.fetchGeneralSettings();
       this.initSectionDefaults();
+      this.refreshSetupStatus();
+      this.applySettingsAccessGates();
+      this.loadShareInfo();
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (res && res.success) this.permissionPresets = res.data || null;
+        })
+        .api_getPermissionPresets();
+    },
+
+    loadShareInfo: function() {
+      const sessionUrl = (typeof AccessControl !== 'undefined' && AccessControl.session && AccessControl.session.webAppUrl)
+        ? AccessControl.session.webAppUrl
+        : '';
+      const qrShimmer = document.getElementById('users-share-qr-shimmer');
+      const qr = document.getElementById('users-share-qr');
+      const placeholder = document.getElementById('users-share-qr-placeholder');
+      if (qrShimmer) qrShimmer.classList.remove('hidden');
+      if (qr) qr.classList.add('hidden');
+      if (placeholder) placeholder.classList.add('hidden');
+      if (sessionUrl) this.renderShareInfo({ url: sessionUrl, hint: '' });
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res || !res.success || !res.data) {
+            this.renderShareInfo({ url: sessionUrl, hint: (res && res.error) || '' });
+            return;
+          }
+          this.renderShareInfo(res.data);
+        })
+        .withFailureHandler(() => {
+          this.renderShareInfo({ url: sessionUrl, hint: 'Could not load share URL.' });
+        })
+        .api_getWebAppShareInfo();
+    },
+
+    renderShareInfo: function(data) {
+      const url = (data && data.url) ? String(data.url).trim() : '';
+      this.shareAppUrl = url;
+      const input = document.getElementById('users-share-url');
+      const qr = document.getElementById('users-share-qr');
+      const placeholder = document.getElementById('users-share-qr-placeholder');
+      const qrShimmer = document.getElementById('users-share-qr-shimmer');
+      const hint = document.getElementById('users-share-hint');
+      if (input) input.value = url;
+      if (hint && data && data.hint) hint.textContent = data.hint;
+      if (!qr || !placeholder) return;
+      if (url) {
+        qr.onload = function() {
+          qr.classList.remove('hidden');
+          if (qrShimmer) qrShimmer.classList.add('hidden');
+          placeholder.classList.add('hidden');
+        };
+        qr.onerror = function() {
+          if (qrShimmer) qrShimmer.classList.add('hidden');
+          qr.classList.add('hidden');
+          placeholder.classList.remove('hidden');
+          placeholder.textContent = 'QR unavailable';
+        };
+        qr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=' + encodeURIComponent(url);
+      } else {
+        qr.removeAttribute('src');
+        qr.classList.add('hidden');
+        if (qrShimmer) qrShimmer.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        placeholder.textContent = 'Deploy the web app first';
+      }
+    },
+
+    copyShareUrl: function() {
+      const url = this.shareAppUrl || (document.getElementById('users-share-url') || {}).value || '';
+      if (!url) {
+        this.showToast('No shareable app URL yet. Deploy the web app with access Anyone.', true);
+        return;
+      }
+      const done = () => this.showToast('App link copied. Share it with invited users.', false);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done).catch(() => {
+          const input = document.getElementById('users-share-url');
+          if (input) { input.focus(); input.select(); document.execCommand('copy'); }
+          done();
+        });
+      } else {
+        const input = document.getElementById('users-share-url');
+        if (input) { input.focus(); input.select(); document.execCommand('copy'); }
+        done();
+      }
+    },
+
+    nativeShareUrl: function() {
+      const url = this.shareAppUrl || (document.getElementById('users-share-url') || {}).value || '';
+      if (!url) {
+        this.showToast('No shareable app URL yet.', true);
+        return;
+      }
+      if (navigator.share) {
+        navigator.share({ title: 'LSC Gym App', text: 'Open LSC with your invited Google account.', url: url })
+          .catch(function() { /* user cancelled */ });
+        return;
+      }
+      this.copyShareUrl();
+    },
+
+    applySettingsAccessGates: function() {
+      const canEdit = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'edit');
+      const canViewUsers = typeof AccessControl !== 'undefined' && (AccessControl.can('settings', 'view') || AccessControl.can('settings', 'edit'));
+      const usersTab = document.getElementById('tab-btn-users');
+      if (usersTab && !canViewUsers) usersTab.classList.add('hidden');
+      const addBtn = document.getElementById('btn-add-user');
+      if (addBtn) addBtn.classList.toggle('hidden', !canEdit);
+    },
+
+    refreshSetupStatus: function() {
+      const list = document.getElementById('setup-status-list');
+      if (list) {
+        let shm = '';
+        for (let i = 0; i < 6; i++) {
+          shm += '<div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>';
+        }
+        list.innerHTML = shm;
+      }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res || !res.success || !res.data) return;
+          this.renderSetupStatus(res.data);
+          if (typeof AccessControl !== 'undefined' && AccessControl.session) {
+            AccessControl.session.setup = res.data;
+            AccessControl.updateSetupBanner();
+          }
+        })
+        .withFailureHandler(() => {
+          if (list) {
+            list.innerHTML = '<div class="col-span-2 text-[10px] text-slate-400 py-1">Could not load setup status.</div>';
+          }
+        })
+        .api_getSetupStatus();
+    },
+
+    renderSetupStatus: function(setup) {
+      const list = document.getElementById('setup-status-list');
+      if (!list || !setup) return;
+      const rows = [
+        ['Spreadsheet', setup.spreadsheetOk],
+        ['Settings', setup.settingsOk],
+        ['Drive', setup.driveOk],
+        ['Mail', setup.mailOk],
+        ['ScriptApp', setup.scriptAppOk],
+        ['Weekly trigger', setup.triggerOk],
+        ['Setup done', setup.setupComplete]
+      ];
+      list.innerHTML = rows.map(function(pair) {
+        const ok = !!pair[1];
+        return '<div class="flex items-center justify-between gap-1 px-2 py-1 md:px-2.5 md:py-1.5 rounded-md md:rounded-lg border ' +
+          (ok ? 'bg-emerald-50/70 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-200 text-amber-800') +
+          '"><span class="font-semibold truncate">' + pair[0] + '</span>' +
+          '<span class="material-symbols-rounded text-[14px] shrink-0" title="' + (ok ? 'OK' : 'Needed') + '">' +
+          (ok ? 'check_circle' : 'error') + '</span></div>';
+      }).join('');
+      const hint = document.getElementById('setup-auth-hint');
+      if (hint && setup.authError) hint.textContent = setup.authError;
+    },
+
+    authorizeServices: function() {
+      const btn = document.getElementById('btn-authorize-services');
+      const authBtnHtml = '<span class="material-symbols-rounded text-[15px] md:text-[16px]">key</span><span class="sm:hidden">Authorize</span><span class="hidden sm:inline">Authorize Google services</span>';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[15px]">progress_activity</span><span>…</span>';
+      }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = authBtnHtml;
+          }
+          if (!res || !res.success) {
+            this.showToast((res && res.error) || 'Authorization failed.', true);
+            if (res && res.data) this.renderSetupStatus(res.data);
+            return;
+          }
+          this.showToast(res.message || 'Services authorized.', false);
+          if (res.data) this.renderSetupStatus(res.data);
+          this.refreshSetupStatus();
+        })
+        .withFailureHandler((err) => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = authBtnHtml;
+          }
+          this.showToast(err && err.message ? err.message : 'Authorization failed.', true);
+        })
+        .api_authorizeServices();
+    },
+
+    markSetupComplete: function() {
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res || !res.success) {
+            this.showToast((res && res.error) || 'Could not mark setup complete.', true);
+            return;
+          }
+          this.showToast(res.message || 'Setup complete.', false);
+          if (res.data) this.renderSetupStatus(res.data);
+          this.refreshSetupStatus();
+        })
+        .api_markSetupComplete();
+    },
+
+    loadUsers: function() {
+      const shimmer = document.getElementById('users-shimmer');
+      const content = document.getElementById('users-content');
+      if (shimmer) shimmer.classList.remove('hidden');
+      if (content) content.classList.add('hidden');
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res || !res.success) {
+            if (shimmer) shimmer.classList.add('hidden');
+            if (content) content.classList.remove('hidden');
+            this.showToast((res && res.error) || 'Could not load users.', true);
+            return;
+          }
+          this.usersCache = res.data || [];
+          this.renderUsersList();
+        })
+        .withFailureHandler(() => {
+          if (shimmer) shimmer.classList.add('hidden');
+          if (content) content.classList.remove('hidden');
+          this.showToast('Could not load users.', true);
+        })
+        .api_listUsers();
+    },
+
+    renderUsersList: function() {
+      const list = document.getElementById('users-list');
+      const empty = document.getElementById('users-empty');
+      const shimmer = document.getElementById('users-shimmer');
+      const content = document.getElementById('users-content');
+      if (shimmer) shimmer.classList.add('hidden');
+      if (content) content.classList.remove('hidden');
+      if (!list) return;
+      const canEdit = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'edit');
+      if (!this.usersCache.length) {
+        list.innerHTML = '';
+        if (empty) empty.classList.remove('hidden');
+        return;
+      }
+      if (empty) empty.classList.add('hidden');
+      list.innerHTML = this.usersCache.map((u) => {
+        const perms = u.permissions || {};
+        const viewMods = Object.keys(perms).filter(k => perms[k] && perms[k].view).join(', ') || 'none';
+        const uid = String(u.userId || '').replace(/'/g, '');
+        const actions = canEdit
+          ? ('<div class="flex gap-1 shrink-0">' +
+             '<button type="button" title="Copy invite link" onclick="SettingsApp.copyUserInviteLink(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">link</span></button>' +
+             '<button type="button" onclick="SettingsApp.openUserEditor(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">edit</span></button>' +
+             (u.isOwner ? '' : '<button type="button" onclick="SettingsApp.deleteUser(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-red-500 cursor-pointer"><span class="material-symbols-rounded text-[16px]">delete</span></button>') +
+             '</div>')
+          : '';
+        return '<div class="p-3 border border-slate-200 rounded-xl flex items-start justify-between gap-2">' +
+          '<div class="min-w-0">' +
+          '<div class="text-xs font-bold text-slate-800">' + (u.name || '—') + (u.isOwner ? ' <span class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">Owner</span>' : '') + '</div>' +
+          '<div class="text-[11px] text-slate-500 truncate">' + (u.email || '') + '</div>' +
+          '<div class="text-[10px] text-slate-400 mt-1">' + (u.status || '') + ' · ' + (u.rolePreset || 'Viewer') + ' · Views: ' + viewMods + '</div>' +
+          '</div>' + actions + '</div>';
+      }).join('');
+    },
+
+    copyUserInviteLink: function(userId) {
+      const existing = this.usersCache.find(u => String(u.userId) === String(userId));
+      const cachedUrl = existing && existing.inviteUrl ? String(existing.inviteUrl) : '';
+      const copy = (url) => {
+        if (!url) {
+          this.showToast('Could not build invite link. Deploy the web app first.', true);
+          return;
+        }
+        const done = () => this.showToast('Invite link copied for ' + ((existing && existing.email) || 'user') + '.', false);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(done).catch(() => {
+            window.prompt('Copy invite link:', url);
+            done();
+          });
+        } else {
+          window.prompt('Copy invite link:', url);
+          done();
+        }
+      };
+      if (cachedUrl) {
+        copy(cachedUrl);
+        return;
+      }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res || !res.success || !res.data || !res.data.url) {
+            this.showToast((res && res.error) || 'Could not create invite link.', true);
+            return;
+          }
+          if (existing) existing.inviteUrl = res.data.url;
+          copy(res.data.url);
+        })
+        .api_getUserInviteLink(userId);
+    },
+
+    openUserEditor: function(userId) {
+      const existing = userId ? this.usersCache.find(u => String(u.userId) === String(userId)) : null;
+      document.getElementById('user-editor-title').textContent = existing ? 'Edit user' : 'Add user';
+      document.getElementById('user-edit-id').value = existing ? existing.userId : '';
+      document.getElementById('user-edit-name').value = existing ? (existing.name || '') : '';
+      document.getElementById('user-edit-email').value = existing ? (existing.email || '') : '';
+      document.getElementById('user-edit-email').disabled = !!existing;
+      document.getElementById('user-edit-status').value = existing ? (existing.status || 'Invited') : 'Invited';
+      document.getElementById('user-edit-preset').value = existing ? (existing.rolePreset || 'Viewer') : 'Viewer';
+      document.getElementById('user-edit-owner').checked = !!(existing && existing.isOwner);
+      this.renderPermMatrix(existing ? existing.permissions : null, document.getElementById('user-edit-preset').value);
+      this.openModalById('user-editor-modal', 'user-editor-modal-content');
+    },
+
+    closeUserEditor: function() {
+      this.closeModalById('user-editor-modal', 'user-editor-modal-content');
+    },
+
+    renderPermMatrix: function(permissions, preset) {
+      const body = document.getElementById('user-perm-matrix');
+      if (!body) return;
+      let perms = permissions;
+      if (!perms && this.permissionPresets && this.permissionPresets[preset]) {
+        perms = this.permissionPresets[preset];
+      }
+      if (!perms) {
+        perms = {};
+        this.accessModules.forEach(m => { perms[m] = { view: m !== 'settings', create: false, edit: false, delete: false }; });
+      }
+      body.innerHTML = this.accessModules.map(mod => {
+        const row = perms[mod] || {};
+        const cell = (action) =>
+          '<td class="text-center px-1 py-1.5"><input type="checkbox" data-mod="' + mod + '" data-act="' + action + '" ' +
+          (row[action] ? 'checked' : '') + ' class="rounded border-slate-300 text-brand-primary"></td>';
+        return '<tr class="border-t border-slate-100">' +
+          '<td class="px-2 py-1.5 font-semibold text-slate-700 capitalize">' + mod + '</td>' +
+          cell('view') + cell('create') + cell('edit') + cell('delete') +
+          '</tr>';
+      }).join('');
+    },
+
+    applyUserPreset: function() {
+      const preset = document.getElementById('user-edit-preset').value || 'Viewer';
+      if (this.permissionPresets && this.permissionPresets[preset]) {
+        this.renderPermMatrix(this.permissionPresets[preset], preset);
+      } else {
+        this.renderPermMatrix(null, preset);
+      }
+      if (preset === 'Admin') document.getElementById('user-edit-owner').checked = true;
+    },
+
+    collectPermMatrix: function() {
+      const perms = {};
+      this.accessModules.forEach(m => { perms[m] = { view: false, create: false, edit: false, delete: false }; });
+      document.querySelectorAll('#user-perm-matrix input[type="checkbox"]').forEach(cb => {
+        const mod = cb.getAttribute('data-mod');
+        const act = cb.getAttribute('data-act');
+        if (perms[mod] && act) perms[mod][act] = !!cb.checked;
+      });
+      return perms;
+    },
+
+    saveUserEditor: function() {
+      const payload = {
+        userId: document.getElementById('user-edit-id').value || '',
+        name: document.getElementById('user-edit-name').value.trim(),
+        email: document.getElementById('user-edit-email').value.trim(),
+        status: document.getElementById('user-edit-status').value,
+        rolePreset: document.getElementById('user-edit-preset').value,
+        isOwner: document.getElementById('user-edit-owner').checked,
+        permissions: this.collectPermMatrix()
+      };
+      if (!payload.email) {
+        this.showToast('Email is required.', true);
+        return;
+      }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res || !res.success) {
+            this.showToast((res && res.error) || 'Could not save user.', true);
+            return;
+          }
+          this.showToast(res.message || 'User saved.', false);
+          this.closeUserEditor();
+          this.loadUsers();
+        })
+        .api_saveUser(payload);
+    },
+
+    deleteUser: function(userId) {
+      if (!userId || !confirm('Remove this user from access?')) return;
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res || !res.success) {
+            this.showToast((res && res.error) || 'Could not remove user.', true);
+            return;
+          }
+          this.showToast(res.message || 'User removed.', false);
+          this.loadUsers();
+        })
+        .api_deleteUser(userId);
     },
 
     initSectionDefaults: function() {
@@ -75,36 +514,37 @@
       this.activeTab = tabName;
       
       const paneGen = document.getElementById('pane-general');
+      const paneUsers = document.getElementById('pane-users');
       const paneDrop = document.getElementById('pane-dropdowns');
       const btnGen = document.getElementById('tab-btn-general');
+      const btnUsers = document.getElementById('tab-btn-users');
       const btnDrop = document.getElementById('tab-btn-dropdowns');
       
-      const activeClass = 'bg-white text-brand-primary font-bold shadow-xs';
-      const inactiveClass = 'text-slate-600 hover:text-slate-900 font-medium';
-      
-      if (tabName === 'general') {
-         if (paneGen) { paneGen.classList.remove('hidden'); paneGen.classList.add('flex'); }
-         if (paneDrop) { paneDrop.classList.add('hidden'); paneDrop.classList.remove('flex'); }
-         if (btnGen) { 
-           btnGen.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + activeClass; 
-         }
-         if (btnDrop) { 
-           btnDrop.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + inactiveClass; 
-         }
-         const headerSaveBtn = document.getElementById('btn-save-general-header');
-         if (headerSaveBtn) headerSaveBtn.classList.remove('hidden');
-      } else {
-         if (paneGen) { paneGen.classList.add('hidden'); paneGen.classList.remove('flex'); }
-         if (paneDrop) { paneDrop.classList.remove('hidden'); paneDrop.classList.add('flex'); }
-         if (btnGen) { 
-           btnGen.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + inactiveClass; 
-         }
-         if (btnDrop) { 
-           btnDrop.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + activeClass; 
-         }
-         const headerSaveBtn = document.getElementById('btn-save-general-header');
-         if (headerSaveBtn) headerSaveBtn.classList.add('hidden');
+      const baseBtn = 'flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs transition-all cursor-pointer whitespace-nowrap ';
+      const activeClass = baseBtn + 'bg-white text-brand-primary font-bold shadow-xs';
+      const inactiveClass = baseBtn + 'text-slate-600 hover:text-slate-900 font-medium';
+
+      const showPane = (el, show) => {
+        if (!el) return;
+        if (show) { el.classList.remove('hidden'); el.classList.add('flex'); }
+        else { el.classList.add('hidden'); el.classList.remove('flex'); }
+      };
+
+      showPane(paneGen, tabName === 'general');
+      showPane(paneUsers, tabName === 'users');
+      showPane(paneDrop, tabName === 'dropdowns');
+      if (tabName === 'users') this.loadShareInfo();
+      if (btnGen) btnGen.className = tabName === 'general' ? activeClass : inactiveClass;
+      if (btnUsers) btnUsers.className = tabName === 'users' ? activeClass : inactiveClass;
+      if (btnDrop) btnDrop.className = tabName === 'dropdowns' ? activeClass : inactiveClass;
+
+      const headerSaveBtn = document.getElementById('btn-save-general-header');
+      if (headerSaveBtn) {
+        if (tabName === 'general') headerSaveBtn.classList.remove('hidden');
+        else headerSaveBtn.classList.add('hidden');
       }
+
+      if (tabName === 'users') this.loadUsers();
     },
 
     // --- GENERAL SETTINGS LOGIC ---
@@ -121,8 +561,15 @@
                this.generalSettingsData = res.data || [];
                this.renderGeneralSettings();
            } else {
+               if (shimmer) shimmer.classList.add('hidden');
+               if (content) content.classList.remove('hidden');
                this.showToast("Failed to load General Settings.", true);
            }
+        })
+        .withFailureHandler(() => {
+           if (shimmer) shimmer.classList.add('hidden');
+           if (content) content.classList.remove('hidden');
+           this.showToast("Failed to load General Settings.", true);
         })
         .api_getGeneralSettings();
     },
@@ -184,6 +631,20 @@
        if (dayEl && !hasKey('NOTIFY_REPORT_DAY') && !dayEl.value) dayEl.value = 'Monday';
        const hourEl = document.getElementById('gen-NOTIFY_REPORT_HOUR');
        if (hourEl && !hasKey('NOTIFY_REPORT_HOUR') && !hourEl.value) hourEl.value = '8';
+       const daysEl = document.getElementById('gen-NOTIFY_REPORT_DAYS');
+       if (daysEl && !hasKey('NOTIFY_REPORT_DAYS') && !daysEl.value) daysEl.value = '7';
+
+       const receiptSubject = document.getElementById('gen-NOTIFY_RECEIPT_SUBJECT');
+       const receiptBody = document.getElementById('gen-NOTIFY_RECEIPT_BODY');
+       if (receiptSubject && !String(receiptSubject.value || '').trim()) receiptSubject.value = this.defaultTemplates.receipt.subject;
+       if (receiptBody && !String(receiptBody.value || '').trim()) receiptBody.value = this.defaultTemplates.receipt.body;
+       const weeklySubject = document.getElementById('gen-NOTIFY_WEEKLY_SUBJECT');
+       const weeklyIntro = document.getElementById('gen-NOTIFY_WEEKLY_INTRO');
+       if (weeklySubject && !String(weeklySubject.value || '').trim()) weeklySubject.value = this.defaultTemplates.weekly.subject;
+       if (weeklyIntro && !String(weeklyIntro.value || '').trim()) weeklyIntro.value = this.defaultTemplates.weekly.body;
+
+       this.applyWeeklyFieldsToUI();
+       this.syncWeeklyFields();
 
        // Update live preview helpers and notifications
        this.updateLogoPreview();
@@ -212,7 +673,7 @@
           imgEl.classList.remove('hidden');
           fallbackEl.classList.add('hidden');
         }
-        if (statusEl) statusEl.textContent = 'New Logo Selected (Unsaved)';
+        if (statusEl) statusEl.textContent = 'Unsaved';
         if (clearBtn) clearBtn.classList.remove('hidden');
 
         // Immediately reflect preview on sidebar logo
@@ -245,7 +706,7 @@
         imgEl.classList.add('hidden');
       }
       if (fallbackEl) fallbackEl.classList.remove('hidden');
-      if (statusEl) statusEl.textContent = 'LSC Fallback Badge';
+      if (statusEl) statusEl.textContent = 'Upload';
       if (clearBtn) clearBtn.classList.add('hidden');
 
       // Revert sidebar logo to LSC fallback
@@ -271,7 +732,7 @@
         imgEl.src = '';
         imgEl.classList.add('hidden');
         fallbackEl.classList.remove('hidden');
-        if (statusEl) statusEl.textContent = 'LSC Fallback Badge';
+        if (statusEl) statusEl.textContent = 'Upload';
         if (clearBtn) clearBtn.classList.add('hidden');
         return;
       }
@@ -280,13 +741,13 @@
       imgEl.onload = () => {
         imgEl.classList.remove('hidden');
         fallbackEl.classList.add('hidden');
-        if (statusEl) statusEl.textContent = this.logoBase64 ? 'New Logo Selected (Unsaved)' : 'Active Logo';
+        if (statusEl) statusEl.textContent = this.logoBase64 ? 'Unsaved' : 'Logo set';
         if (clearBtn) clearBtn.classList.remove('hidden');
       };
       imgEl.onerror = () => {
         imgEl.classList.add('hidden');
         fallbackEl.classList.remove('hidden');
-        if (statusEl) statusEl.textContent = 'Load Error (LSC Fallback)';
+        if (statusEl) statusEl.textContent = 'Upload';
         if (clearBtn) clearBtn.classList.remove('hidden');
       };
       imgEl.src = targetSrc;
@@ -382,63 +843,245 @@
       return String(hour12).padStart(2, '0') + ':00 ' + suffix;
     },
 
+    getWeeklyFieldsFromUI: function() {
+      const checked = (id) => {
+        const el = document.getElementById(id);
+        return !!(el && el.checked);
+      };
+      return {
+        name: checked('nf-field-name'),
+        phone: checked('nf-field-phone'),
+        email: checked('nf-field-email'),
+        due: checked('nf-field-due'),
+        days: checked('nf-field-days'),
+        memberId: checked('nf-field-memberId')
+      };
+    },
+
+    applyWeeklyFieldsToUI: function() {
+      const hidden = document.getElementById('gen-NOTIFY_WEEKLY_FIELDS');
+      let fields = { name: true, phone: true, email: false, due: true, days: true, memberId: true };
+      if (hidden && String(hidden.value || '').trim()) {
+        try {
+          const parsed = JSON.parse(hidden.value);
+          if (parsed && typeof parsed === 'object') {
+            fields = {
+              name: parsed.name !== false,
+              phone: parsed.phone !== false,
+              email: parsed.email === true,
+              due: parsed.due !== false,
+              days: parsed.days !== false,
+              memberId: parsed.memberId !== false
+            };
+          }
+        } catch (e) { /* keep defaults */ }
+      }
+      const map = {
+        'nf-field-name': fields.name,
+        'nf-field-phone': fields.phone,
+        'nf-field-email': fields.email,
+        'nf-field-due': fields.due,
+        'nf-field-days': fields.days,
+        'nf-field-memberId': fields.memberId
+      };
+      Object.keys(map).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = !!map[id];
+      });
+    },
+
+    syncWeeklyFields: function() {
+      const hidden = document.getElementById('gen-NOTIFY_WEEKLY_FIELDS');
+      if (hidden) hidden.value = JSON.stringify(this.getWeeklyFieldsFromUI());
+    },
+
     updateNotificationSummary: function() {
       const ownerEmailInput = document.getElementById('gen-OWNER_EMAIL');
       const summaryEmail = document.getElementById('notification-summary-email');
-      const targetEmail = document.getElementById('notif-target-email');
       const summaryFreq = document.getElementById('notification-summary-freq');
-      const scheduleLabel = document.getElementById('notif-schedule-label');
-      const receiptBadge = document.getElementById('notif-rule-receipt');
       const dayEl = document.getElementById('gen-NOTIFY_REPORT_DAY');
       const hourEl = document.getElementById('gen-NOTIFY_REPORT_HOUR');
+      const daysEl = document.getElementById('gen-NOTIFY_REPORT_DAYS');
       const weeklyEl = document.getElementById('gen-NOTIFY_WEEKLY_REPORT');
-      const receiptEl = document.getElementById('gen-NOTIFY_PAYMENT_RECEIPT');
 
       const ownerVal = (ownerEmailInput && ownerEmailInput.value.trim()) ? ownerEmailInput.value.trim() : 'Owner / Admin Email';
       const day = (dayEl && dayEl.value) ? dayEl.value : 'Monday';
       const hourLabel = this.formatReportHourLabel(hourEl ? hourEl.value : 8);
-      const scheduleText = weeklyEl && !weeklyEl.checked ? 'Weekly report off' : (day + ' ' + hourLabel);
+      const daysAhead = (daysEl && daysEl.value) ? daysEl.value : '7';
+      const scheduleText = weeklyEl && !weeklyEl.checked
+        ? 'Weekly report off'
+        : (day + ' ' + hourLabel + ' · ' + daysAhead + ' days');
 
       if (summaryEmail) summaryEmail.textContent = ownerVal;
-      if (targetEmail) targetEmail.textContent = ownerVal;
       if (summaryFreq) summaryFreq.textContent = scheduleText;
-      if (scheduleLabel) scheduleLabel.textContent = scheduleText;
-      if (receiptBadge) {
-        const on = !receiptEl || receiptEl.checked;
-        receiptBadge.textContent = on ? 'On' : 'Off';
-        receiptBadge.className = on
-          ? 'text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0'
-          : 'text-[10px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full shrink-0';
-      }
     },
 
-    openNotificationModal: function() {
-      this.updateNotificationSummary();
-      const modal = document.getElementById('notification-modal');
-      const content = document.getElementById('notification-modal-content');
+    openModalById: function(modalId, contentId) {
+      const modal = document.getElementById(modalId);
+      const content = document.getElementById(contentId);
       if (!modal || !content) return;
-
       modal.classList.remove('pointer-events-none', 'opacity-0');
       modal.classList.add('opacity-100');
       content.classList.remove('scale-95', 'opacity-0');
       content.classList.add('scale-100', 'opacity-100');
     },
 
-    closeNotificationModal: function() {
-      const modal = document.getElementById('notification-modal');
-      const content = document.getElementById('notification-modal-content');
+    closeModalById: function(modalId, contentId) {
+      const modal = document.getElementById(modalId);
+      const content = document.getElementById(contentId);
       if (!modal || !content) return;
-
       modal.classList.add('opacity-0', 'pointer-events-none');
       modal.classList.remove('opacity-100');
       content.classList.add('scale-95', 'opacity-0');
       content.classList.remove('scale-100', 'opacity-100');
     },
 
+    openMessageEditor: function(type) {
+      this.editingMessageType = type === 'weekly' ? 'weekly' : 'receipt';
+      const titleEl = document.getElementById('notif-editor-title');
+      const hintEl = document.getElementById('notif-editor-hint');
+      const placeholdersEl = document.getElementById('notif-editor-placeholders');
+      const subjectEl = document.getElementById('notif-editor-subject');
+      const bodyEl = document.getElementById('notif-editor-body');
+
+      if (this.editingMessageType === 'receipt') {
+        if (titleEl) titleEl.textContent = 'Payment receipt message';
+        if (hintEl) hintEl.textContent = 'This email goes to the member after a paid payment is logged.';
+        if (placeholdersEl) {
+          placeholdersEl.textContent = 'Placeholders: {{gymName}}, {{memberName}}, {{memberId}}, {{plan}}, {{amount}}, {{paidDate}}, {{startDate}}, {{endDate}}';
+        }
+        const s = document.getElementById('gen-NOTIFY_RECEIPT_SUBJECT');
+        const b = document.getElementById('gen-NOTIFY_RECEIPT_BODY');
+        if (subjectEl) subjectEl.value = (s && s.value) || this.defaultTemplates.receipt.subject;
+        if (bodyEl) bodyEl.value = (b && b.value) || this.defaultTemplates.receipt.body;
+      } else {
+        if (titleEl) titleEl.textContent = 'Weekly report message';
+        if (hintEl) hintEl.textContent = 'Intro text for the admin renewal report. Tables of members are added automatically below this message.';
+        if (placeholdersEl) {
+          placeholdersEl.textContent = 'Placeholders: {{ownerName}}, {{gymName}}, {{rangeLabel}}, {{reportDays}}, {{upcomingCount}}, {{overdueCount}}';
+        }
+        const s = document.getElementById('gen-NOTIFY_WEEKLY_SUBJECT');
+        const b = document.getElementById('gen-NOTIFY_WEEKLY_INTRO');
+        if (subjectEl) subjectEl.value = (s && s.value) || this.defaultTemplates.weekly.subject;
+        if (bodyEl) bodyEl.value = (b && b.value) || this.defaultTemplates.weekly.body;
+      }
+
+      this.openModalById('notification-message-modal', 'notification-message-modal-content');
+    },
+
+    closeMessageEditor: function() {
+      this.editingMessageType = null;
+      this.closeModalById('notification-message-modal', 'notification-message-modal-content');
+    },
+
+    resetMessageEditorDefaults: function() {
+      const type = this.editingMessageType || 'receipt';
+      const tmpl = this.defaultTemplates[type] || this.defaultTemplates.receipt;
+      const subjectEl = document.getElementById('notif-editor-subject');
+      const bodyEl = document.getElementById('notif-editor-body');
+      if (subjectEl) subjectEl.value = tmpl.subject;
+      if (bodyEl) bodyEl.value = tmpl.body;
+    },
+
+    applyMessageEditor: function() {
+      const type = this.editingMessageType || 'receipt';
+      const subjectEl = document.getElementById('notif-editor-subject');
+      const bodyEl = document.getElementById('notif-editor-body');
+      const subject = subjectEl ? subjectEl.value : '';
+      const body = bodyEl ? bodyEl.value : '';
+
+      if (type === 'receipt') {
+        const s = document.getElementById('gen-NOTIFY_RECEIPT_SUBJECT');
+        const b = document.getElementById('gen-NOTIFY_RECEIPT_BODY');
+        if (s) s.value = subject;
+        if (b) b.value = body;
+      } else {
+        const s = document.getElementById('gen-NOTIFY_WEEKLY_SUBJECT');
+        const b = document.getElementById('gen-NOTIFY_WEEKLY_INTRO');
+        if (s) s.value = subject;
+        if (b) b.value = body;
+      }
+
+      this.closeMessageEditor();
+      this.showToast('Message updated. Save settings to keep changes.', false);
+    },
+
+    collectNotificationDraft: function() {
+      const gymNameEl = document.getElementById('gen-GYM_NAME');
+      const ownerNameEl = document.getElementById('gen-OWNER_NAME');
+      const ownerEmailEl = document.getElementById('gen-OWNER_EMAIL');
+      const daysEl = document.getElementById('gen-NOTIFY_REPORT_DAYS');
+      const ccEl = document.getElementById('gen-NOTIFY_WEEKLY_CC');
+      this.syncWeeklyFields();
+      return {
+        gymName: gymNameEl ? gymNameEl.value.trim() : '',
+        ownerName: ownerNameEl ? ownerNameEl.value.trim() : '',
+        ownerEmail: ownerEmailEl ? ownerEmailEl.value.trim() : '',
+        weeklyCc: ccEl ? ccEl.value.trim() : '',
+        reportDays: daysEl ? daysEl.value : '7',
+        receiptSubject: (document.getElementById('gen-NOTIFY_RECEIPT_SUBJECT') || {}).value || '',
+        receiptBody: (document.getElementById('gen-NOTIFY_RECEIPT_BODY') || {}).value || '',
+        weeklySubject: (document.getElementById('gen-NOTIFY_WEEKLY_SUBJECT') || {}).value || '',
+        weeklyIntro: (document.getElementById('gen-NOTIFY_WEEKLY_INTRO') || {}).value || '',
+        weeklyFields: this.getWeeklyFieldsFromUI()
+      };
+    },
+
+    previewNotificationEmail: function(type) {
+      const kind = type === 'weekly' ? 'weekly' : 'receipt';
+      const metaEl = document.getElementById('notif-preview-meta');
+      const subjectEl = document.getElementById('notif-preview-subject');
+      const ccRow = document.getElementById('notif-preview-cc');
+      const ccVal = document.getElementById('notif-preview-cc-value');
+      const loadingEl = document.getElementById('notif-preview-loading');
+      const frame = document.getElementById('notif-preview-frame');
+
+      if (metaEl) metaEl.textContent = 'Loading sample preview…';
+      if (subjectEl) subjectEl.textContent = '—';
+      if (ccRow) ccRow.classList.add('hidden');
+      if (loadingEl) loadingEl.classList.remove('hidden');
+      if (frame) {
+        try { frame.srcdoc = ''; } catch (e) { /* ignore */ }
+      }
+
+      this.openModalById('notification-preview-modal', 'notification-preview-modal-content');
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (loadingEl) loadingEl.classList.add('hidden');
+          if (!res || !res.success || !res.data) {
+            this.showToast((res && res.error) || 'Could not build preview.', true);
+            return;
+          }
+          if (metaEl) {
+            metaEl.textContent = (res.data.isSample ? 'Sample preview · ' : '') + 'To: ' + (res.data.to || '—');
+          }
+          if (subjectEl) subjectEl.textContent = res.data.subject || '—';
+          if (ccRow && ccVal) {
+            if (res.data.cc) {
+              ccVal.textContent = res.data.cc;
+              ccRow.classList.remove('hidden');
+            } else {
+              ccRow.classList.add('hidden');
+            }
+          }
+          if (frame) frame.srcdoc = res.data.htmlBody || '<p>No preview content.</p>';
+        })
+        .withFailureHandler((err) => {
+          if (loadingEl) loadingEl.classList.add('hidden');
+          this.showToast(err && err.message ? err.message : 'Preview failed.', true);
+        })
+        .api_previewNotificationEmail(kind, this.collectNotificationDraft());
+    },
+
+    closePreviewModal: function() {
+      this.closeModalById('notification-preview-modal', 'notification-preview-modal-content');
+    },
+
     saveGeneralSettings: function() {
+       this.syncWeeklyFields();
        const saveBtns = [
          document.getElementById('btn-save-general'),
-         document.getElementById('btn-save-general-mobile'),
          document.getElementById('btn-save-general-header')
        ].filter(Boolean);
 
@@ -477,6 +1120,8 @@
                  logoObj.imageName = this.logoFileName || 'Gym_Logo.png';
                }
                payload.push(logoObj);
+           } else if (String(k).indexOf('NOTIFY_') === 0) {
+               payload.push({ key: k, value: el.value != null ? String(el.value) : '' });
            } else if (el.value && el.value.trim() !== '') {
                payload.push({ key: k, value: el.value.trim() });
            }
@@ -489,6 +1134,8 @@
            if (!rawKey) return;
            const rawVal = item.value !== undefined ? item.value : (item.Value !== undefined ? item.Value : '');
            const kLower = String(rawKey).trim().toLowerCase();
+           // Drop unused REMINDER_BUFFER (Due Date Alert Window) on save
+           if (kLower === 'reminder_buffer') return;
            const isCore = this.coreKeys.some(c => c.toLowerCase() === kLower || (c === 'ENABLE_NOTIFICATION' && kLower === 'notification_enabled'));
            if (!isCore) {
                payload.push({ key: rawKey, value: rawVal || '' });

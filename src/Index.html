@@ -29,7 +29,51 @@
 
 <body class="bg-brand-surface font-sans text-slate-800 antialiased h-screen w-full flex overflow-hidden">
 
-  
+  <!-- Boot / access gate overlays -->
+  <div id="app-boot-overlay" class="fixed inset-0 z-[200] bg-slate-50 flex items-center justify-center p-6">
+    <div class="text-center space-y-3">
+      <div class="w-10 h-10 mx-auto rounded-full border-2 border-brand-primary border-t-transparent animate-spin"></div>
+      <p class="text-sm font-semibold text-slate-700">Loading session…</p>
+      <p class="text-xs text-slate-500">Checking Google sign-in and access permissions.</p>
+    </div>
+  </div>
+
+  <div id="app-access-denied" class="hidden fixed inset-0 z-[210] bg-slate-50 flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm max-w-md w-full p-5 sm:p-6 space-y-3 text-center">
+      <div id="access-denied-icon" class="w-12 h-12 mx-auto rounded-xl bg-red-50 text-red-500 flex items-center justify-center">
+        <span class="material-symbols-rounded text-[26px]">lock</span>
+      </div>
+      <h2 id="access-denied-title" class="text-lg font-bold text-slate-800">Access denied</h2>
+      <p id="access-denied-message" class="text-sm text-slate-600">Your Google account is not authorized to use this app.</p>
+      <p id="access-denied-email" class="text-xs text-slate-400"></p>
+
+      <div id="access-login-panel" class="hidden text-left space-y-2.5 pt-1">
+        <p class="text-[11px] text-slate-500 leading-snug">Google cannot share your email to this app automatically. Use the email the owner invited, then enter the login code we email you.</p>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-700 mb-1">Invited Google email</label>
+          <input type="email" id="login-email" autocomplete="username" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary" placeholder="name@gmail.com">
+        </div>
+        <div id="login-code-wrap" class="hidden">
+          <label class="block text-[11px] font-semibold text-slate-700 mb-1">Login code</label>
+          <input type="text" id="login-code" inputmode="numeric" autocomplete="one-time-code" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold tracking-widest outline-none focus:border-brand-primary" placeholder="6-digit code">
+        </div>
+        <p id="login-status" class="text-[11px] text-slate-500 min-h-[1rem]"></p>
+        <div class="flex gap-2">
+          <button type="button" id="btn-send-login-code" onclick="AccessControl.requestLoginCode()" class="flex-1 h-10 bg-brand-primary hover:bg-blue-700 text-white rounded-xl text-[11px] font-bold cursor-pointer">Send code</button>
+          <button type="button" id="btn-verify-login-code" onclick="AccessControl.verifyLoginCode()" class="hidden flex-1 h-10 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[11px] font-bold cursor-pointer">Verify &amp; open</button>
+        </div>
+      </div>
+
+      <p id="access-denied-help" class="text-[11px] text-slate-500">Ask the gym owner to add your Google email under Settings → Users &amp; Access.</p>
+    </div>
+  </div>
+
+  <div id="app-setup-banner" class="hidden fixed top-0 inset-x-0 z-[180] bg-amber-50 border-b border-amber-200 px-3 py-2">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
+      <p class="text-[11px] sm:text-xs text-amber-900 font-medium">Setup incomplete: authorize Google services and finish gym settings.</p>
+      <button type="button" id="btn-open-setup" class="h-8 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold cursor-pointer shrink-0">Open Setup</button>
+    </div>
+  </div>
   
   <aside id="main-sidebar"
     class="hidden md:flex w-20 flex-col bg-brand-dark border-r border-slate-800 z-20 h-full shrink-0 transition-all duration-300">
@@ -94,6 +138,9 @@
 
 
   
+  <script>
+    window.LSC_PAGE_PARAMS = <?!= JSON.stringify(pageParams || {}) ?>;
+  </script>
   <?!= include('Global_State'); ?>
   <?!= include('Toast'); ?>
 

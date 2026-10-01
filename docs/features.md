@@ -41,6 +41,10 @@ To eliminate manual calculations, cumulative projected sums are surfaced in two 
 - **Net-In Hand KPI Card:** Displays the primary Actual Net In Hand achieved to date alongside an integrated bottom summary badge showing the remaining forecast (`Remaining: ₹XX.Xk`), with a tooltip breakdown of actual and remaining forecast.
 - **Net-In-Hand Chart Summary Bar:** Directly above the chart curve, a persistent metrics strip breaks down `Actual: ₹XX.Xk`, `Remaining: ±₹YY.Yk`, and `Total: ₹ZZ.Zk`, allowing instantaneous analysis of upcoming cash flow and final bottom-line earnings without summing individual chart points.
 
+## Dashboard metric info tips
+
+Each Dashboard KPI, chart, and overdue/upcoming table title includes a small info icon. Hover or tap it for a short plain-language explanation of what the metric means and how it is calculated (respecting year/period filters and Anchor/Split recognition where relevant).
+
 ## Dashboard period filters
 
 The Dashboard year, monthly/quarterly mode, and selected months or quarters filter the KPI totals and charts. Expense Breakdown follows those same selected periods, grouping recognized operating expenses and paid staff costs by category; misc expense details use the same period selection.
@@ -49,12 +53,32 @@ The Dashboard year, monthly/quarterly mode, and selected months or quarters filt
 
 The Dashboard Overdue and Upcoming member tables include a compact Notify/WA action with a WhatsApp icon. Tapping it opens a mobile-friendly preview sheet with a prefilled overdue or upcoming renewal message (gym name, member, plan, amount, due date, and days). The message can be edited, copied, or opened in WhatsApp via a `wa.me` link with the member’s phone number and the edited text prefilled. Members without a phone number show a disabled action. No WhatsApp Business API is used; sending still happens in the WhatsApp app after the user confirms.
 
+## Sign-in, authorization, and multi-user access
+
+The web app requires a Google sign-in (`Anyone` access, execute as the deployer). Data still reads/writes through the deploying account’s Spreadsheet, Drive, Mail, and triggers.
+
+- **First-run setup:** Owners use **Settings → Setup & Authorization** and click **Authorize Google services** in the UI (no Apps Script editor). Status checks cover Spreadsheet, Settings, Drive, Mail, ScriptApp, and the weekly trigger. **Mark setup complete** stores `SETUP_COMPLETE=YES`.
+- **USERS sheet:** A dedicated `USERS` spreadsheet tab stores `userId`, email, name, status (`Active` / `Invited` / `Disabled`), owner flag, role preset, and a JSON permissions matrix (View / Create / Edit / Delete) for dashboard, members, staff, expenses, calendar, and settings.
+- **Users & Access:** Settings tab to invite Google emails, apply Admin / Manager / Viewer presets, and edit the permission matrix.
+- **Why invitees see a login screen:** With **Execute as: Me**, Google does **not** give the app the visitor’s email for consumer Gmail accounts. Adding someone in USERS is not enough by itself — they must verify identity via a **login code** emailed to that address, or open a **per-user invite link** (`?t=…`).
+- **Share link / QR:** Users tab shows the published `/exec` URL (copy / share / QR). Each user also has a **copy invite link** action. Do not share the Apps Script editor or `/dev` URL.
+- **Enforcement:** Navigation and write actions hide when denied; every server API also checks permissions.
+
+### Client handover checklist
+
+1. Share ownership of the Spreadsheet, Apps Script project, and Drive folder with the client.
+2. Client creates a **new web app deployment** (`Execute as: Me`, `Who has access: Anyone`). `clasp push` alone does not change live access — redeploy after changing access.
+3. Client opens the **/exec** URL, signs in, authorizes Google services, completes gym settings, and adds staff users.
+4. Share the Users-tab QR / copy link with invitees (same `/exec` URL). They must use the invited Google account.
+5. Developer may keep Editor access for clasp pushes; the client remains the deployer for Mail/triggers.
+
 ## Settings and dropdown configuration
 
-The Settings module provides a responsive, device-compatible interface organized into two main tabs:
+The Settings module provides a responsive, device-compatible interface organized into three main tabs:
 
-- **General Config:** Configures gym identity (gym name, owner email, and gym logo with image file upload saved directly to Google Drive, live preview tile, and stylized "LSC" fallback badge), financial and operating policies (revenue recognition method with explanatory summaries, currency numbering format supporting both Indian Lakhs/Crores and Standard metric notations, and renewal alert buffer days), database persistence details (Google Spreadsheet ID and Google Drive storage folder ID with one-click copy and open actions), and automated notifications. General sections support expand/collapse on desktop and mobile. When notifications are enabled, the app can (1) email a payment thank-you receipt to the member after a paid payment is recorded, and (2) email a weekly admin report of upcoming renewals (next 7 days) and overdue members on a configurable Sunday/Monday schedule and hour.
-- **Dropdown Options:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
+- **General:** Configures gym identity (gym name, owner name, owner email, and gym logo upload with LSC fallback), setup/authorization, financial policies (revenue recognition and currency numbering), database IDs (Spreadsheet and Drive folder with compact copy/open actions), and automated notifications. Mobile general settings use denser two-column rows and a single header Save. Notifications support editable receipt/weekly templates, sample HTML previews, weekly CC recipients, day/time/days-ahead schedule, and selectable report table columns.
+- **Users:** Invite Google accounts and configure per-module View / Create / Edit / Delete access stored in the `USERS` sheet.
+- **Dropdowns:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
 
 ## Mock Data Generator
 

@@ -4,6 +4,8 @@
  */
 function api_getAvailableYears() {
   try {
+    const gate = requireAnyViewPermission_();
+    if (!gate.ok) return gate.response;
     const dbData = DB.batchRead(['MEMBERS', 'PAYMENTS', 'EXPENSES', 'STAFF', 'SALARY']);
     const datesBySheet = {
       MEMBERS: ['joinDate'],
@@ -31,6 +33,8 @@ function api_getAvailableYears() {
 
 function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mode = 'Monthly', periods = []) {
   try {
+    const gate = requirePermission_('dashboard', 'view');
+    if (!gate.ok) return gate.response;
     const targetYear = parseInt(year);
     const today = new Date();
     today.setHours(0, 0, 0, 0);

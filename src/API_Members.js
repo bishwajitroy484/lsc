@@ -115,6 +115,8 @@ function setupMemberExitDateTrigger() {
 
 function api_getMembers() {
   try {
+    const gate = requirePermission_('members', 'view');
+    if (!gate.ok) return gate.response;
     // 1. Batch read for performance, including SETTINGS
     const dbData = DB.batchRead(['MEMBERS', 'PAYMENTS', 'SETTINGS']);
     const members = dbData['MEMBERS'] || [];
@@ -229,6 +231,9 @@ function api_getMembers() {
 
 function api_saveMember(memberData) {
   try {
+    const isNew = !(memberData && memberData.memberId);
+    const gate = requirePermission_('members', isNew ? 'create' : 'edit');
+    if (!gate.ok) return gate.response;
     if (!memberData.fullName || !memberData.phone) throw new Error("Name and Phone are required.");
     if (!/^\d{10}$/.test(String(memberData.phone))) throw new Error("Phone number must contain exactly 10 digits.");
     const now = new Date().toISOString();
@@ -240,8 +245,6 @@ function api_saveMember(memberData) {
     const initialPayment = memberData.initialPayment;
     delete memberData.initialPayment;
 
-    let isNew = !memberData.memberId;
-    
     // 1. Generate Member ID FIRST so we can use it as the image name
     if (isNew) {
       memberData.memberId = generateId('MEM');
@@ -292,6 +295,8 @@ function api_saveMember(memberData) {
 
 function api_deleteMember(memberId) {
   try {
+    const gate = requirePermission_('members', 'delete');
+    if (!gate.ok) return gate.response;
     if (!memberId) throw new Error("Member ID is missing.");
     DB.remove('MEMBERS', memberId);
     return { success: true, message: "Member deleted successfully." };
@@ -302,6 +307,8 @@ function api_deleteMember(memberId) {
 
 function api_getMemberPayments(memberId) {
   try {
+    const gate = requirePermission_('members', 'view');
+    if (!gate.ok) return gate.response;
     if (!memberId) throw new Error("Member ID is missing.");
 
     const dbData = DB.batchRead(['PAYMENTS', 'SETTINGS']);
@@ -373,6 +380,9 @@ function isPaidPaymentStatus(status, paymentStatuses) {
 
 function api_recordPayment(paymentData) {
   try {
+    const isNewPaymentGate = !(paymentData && paymentData.paymentId);
+    const gate = requirePermission_('members', isNewPaymentGate ? 'create' : 'edit');
+    if (!gate.ok) return gate.response;
     if (!paymentData.memberId || !paymentData.amount || !paymentData.paidDate || !paymentData.startDate || !paymentData.endDate) {
       throw new Error("Missing required payment details (Member ID, Amount, Paid Date, Start Date, and End Date are strictly required).");
     }
@@ -406,6 +416,8 @@ function api_recordPayment(paymentData) {
 
 function api_deletePayment(paymentId) {
   try {
+    const gate = requirePermission_('members', 'delete');
+    if (!gate.ok) return gate.response;
     if (!paymentId) throw new Error("Payment ID is missing.");
     DB.remove('PAYMENTS', paymentId);
     return { success: true, message: "Payment deleted successfully." };

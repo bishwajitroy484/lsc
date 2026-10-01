@@ -1,8 +1,38 @@
 /**
  * Email notification helpers:
  * 1) Payment receipt to member after a paid payment is recorded
- * 2) Weekly admin report of upcoming (7 days) and overdue renewals
+ * 2) Weekly admin report of upcoming and overdue renewals
  */
+
+var DEFAULT_NOTIFY_RECEIPT_SUBJECT = '{{gymName}} — Payment confirmation';
+var DEFAULT_NOTIFY_RECEIPT_BODY =
+  'Hi {{memberName}},\n\n' +
+  'Thank you for your payment at {{gymName}}. Your membership has been updated successfully.\n\n' +
+  'Plan: {{plan}}\n' +
+  'Amount paid: {{amount}}\n' +
+  'Payment date: {{paidDate}}\n' +
+  'Coverage period: {{startDate}} to {{endDate}}\n' +
+  'Member ID: {{memberId}}\n\n' +
+  'If you have any questions, please reply to this email or contact the front desk.\n\n' +
+  'Warm regards,\n' +
+  '{{gymName}} Team';
+
+var DEFAULT_NOTIFY_WEEKLY_SUBJECT = '{{gymName}} — Weekly renewal report ({{rangeLabel}})';
+var DEFAULT_NOTIFY_WEEKLY_INTRO =
+  'Hi {{ownerName}},\n\n' +
+  'Here is your weekly renewal snapshot for {{gymName}} covering {{rangeLabel}}.\n\n' +
+  '• Upcoming renewals (next {{reportDays}} days): {{upcomingCount}}\n' +
+  '• Already overdue: {{overdueCount}}\n\n' +
+  'Member details are listed in the tables below so you can follow up promptly.';
+
+var DEFAULT_NOTIFY_WEEKLY_FIELDS = {
+  name: true,
+  phone: true,
+  email: false,
+  due: true,
+  days: true,
+  memberId: true
+};
 
 function readSettingsMap_() {
   const rows = DB.read('SETTINGS') || [];
@@ -20,8 +50,37 @@ function isSettingEnabled_(value) {
   return v === 'YES' || v === 'Y' || v === 'TRUE' || v === '1' || v === 'ENABLED';
 }
 
+function parseWeeklyFields_(raw) {
+  const defaults = Object.assign({}, DEFAULT_NOTIFY_WEEKLY_FIELDS);
+  if (!raw) return defaults;
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!parsed || typeof parsed !== 'object') return defaults;
+    return {
+      name: parsed.name !== false,
+      phone: parsed.phone !== false,
+      email: parsed.email === true,
+      due: parsed.due !== false,
+      days: parsed.days !== false,
+      memberId: parsed.memberId !== false
+    };
+  } catch (error) {
+    return defaults;
+  }
+}
+
+function normalizeEmailList_(raw) {
+  return String(raw || '')
+    .split(/[;,]+/)
+    .map(function(part) { return part.trim(); })
+    .filter(function(part) { return part && part.indexOf('@') > 0; })
+    .join(', ');
+}
+
 function getNotificationConfig_(settingsMap) {
   const settings = settingsMap || readSettingsMap_();
+  const reportDays = Math.min(30, Math.max(1, parseInt(settings.NOTIFY_REPORT_DAYS || '7', 10) || 7));
+  const ownerName = String(settings.OWNER_NAME || '').trim();
   return {
     masterEnabled: isSettingEnabled_(settings.ENABLE_NOTIFICATION || settings.NOTIFICATION_ENABLED),
     paymentReceiptEnabled: isSettingEnabled_(
@@ -36,10 +95,57 @@ function getNotificationConfig_(settingsMap) {
     ),
     reportDay: String(settings.NOTIFY_REPORT_DAY || 'Monday').trim(),
     reportHour: Math.min(23, Math.max(0, parseInt(settings.NOTIFY_REPORT_HOUR || '8', 10) || 8)),
+    reportDays: reportDays,
     ownerEmail: String(settings.OWNER_EMAIL || '').trim(),
+    ownerName: ownerName || 'there',
+    weeklyCc: normalizeEmailList_(settings.NOTIFY_WEEKLY_CC),
     gymName: String(settings.GYM_NAME || 'LSC').trim() || 'LSC',
-    reminderBuffer: Math.max(0, parseInt(settings.REMINDER_BUFFER || '7', 10) || 7)
+    receiptSubject: String(settings.NOTIFY_RECEIPT_SUBJECT || DEFAULT_NOTIFY_RECEIPT_SUBJECT),
+    receiptBody: String(settings.NOTIFY_RECEIPT_BODY || DEFAULT_NOTIFY_RECEIPT_BODY),
+    weeklySubject: String(settings.NOTIFY_WEEKLY_SUBJECT || DEFAULT_NOTIFY_WEEKLY_SUBJECT),
+    weeklyIntro: String(settings.NOTIFY_WEEKLY_INTRO || DEFAULT_NOTIFY_WEEKLY_INTRO),
+    weeklyFields: parseWeeklyFields_(settings.NOTIFY_WEEKLY_FIELDS)
   };
+}
+
+function applyTemplate_(template, vars) {
+  return String(template || '').replace(/\{\{(\w+)\}\}/g, function(match, key) {
+    return vars[key] !== undefined && vars[key] !== null ? String(vars[key]) : '';
+  });
+}
+
+function escapeHtmlEmail_(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function textToHtmlParagraphs_(text) {
+  const escaped = escapeHtmlEmail_(text).replace(/\r\n/g, '\n');
+  return escaped
+    .split('\n')
+    .map(function(line) {
+      return line
+        ? '<p style="margin:0 0 10px;font-size:14px;line-height:1.55;color:#334155">' + line + '</p>'
+        : '<p style="margin:0 0 10px">&nbsp;</p>';
+    })
+    .join('');
+}
+
+function wrapEmailHtml_(title, innerHtml) {
+  return (
+    '<div style="font-family:Segoe UI,Arial,sans-serif;background:#f8fafc;padding:24px">' +
+    '<div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">' +
+    '<div style="background:linear-gradient(135deg,#1d4ed8,#2563eb);padding:18px 22px">' +
+    '<div style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.2px">' +
+    escapeHtmlEmail_(title) +
+    '</div></div>' +
+    '<div style="padding:22px">' + innerHtml + '</div>' +
+    '<div style="padding:14px 22px;background:#f8fafc;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:12px">' +
+    'Sent automatically by LSC Gym Management</div></div></div>'
+  );
 }
 
 function formatMoneyForEmail_(amount) {
@@ -66,36 +172,20 @@ function resolveDropdownName_(options, id) {
 }
 
 function buildPaymentReceiptEmail_(member, payment, config, planName) {
-  const memberName = String(member.fullName || 'Member').trim();
-  const gymName = config.gymName;
-  const amount = formatMoneyForEmail_(payment.amount);
-  const paidDate = formatDateForEmail_(payment.paidDate || payment.date);
-  const startDate = formatDateForEmail_(payment.startDate);
-  const endDate = formatDateForEmail_(payment.endDate);
-  const planLabel = planName || 'membership';
-
-  const subject = gymName + ' — Thank you for your payment';
-  const htmlBody =
-    '<div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.5;max-width:560px">' +
-    '<h2 style="margin:0 0 12px;color:#1d4ed8">Payment received</h2>' +
-    '<p style="margin:0 0 12px">Hi ' + memberName + ',</p>' +
-    '<p style="margin:0 0 12px">Thank you for your payment towards <strong>' + planLabel +
-    '</strong> at <strong>' + gymName + '</strong>. Your payment has been recorded successfully.</p>' +
-    '<table style="border-collapse:collapse;width:100%;margin:16px 0;font-size:14px">' +
-    '<tr><td style="padding:8px;border:1px solid #e2e8f0;background:#f8fafc"><strong>Amount</strong></td>' +
-    '<td style="padding:8px;border:1px solid #e2e8f0">' + amount + '</td></tr>' +
-    '<tr><td style="padding:8px;border:1px solid #e2e8f0;background:#f8fafc"><strong>Paid on</strong></td>' +
-    '<td style="padding:8px;border:1px solid #e2e8f0">' + paidDate + '</td></tr>' +
-    '<tr><td style="padding:8px;border:1px solid #e2e8f0;background:#f8fafc"><strong>Coverage</strong></td>' +
-    '<td style="padding:8px;border:1px solid #e2e8f0">' + startDate + ' → ' + endDate + '</td></tr>' +
-    '<tr><td style="padding:8px;border:1px solid #e2e8f0;background:#f8fafc"><strong>Member ID</strong></td>' +
-    '<td style="padding:8px;border:1px solid #e2e8f0">' + String(member.memberId || '') + '</td></tr>' +
-    '</table>' +
-    '<p style="margin:0;color:#64748b;font-size:13px">We appreciate your continued membership with ' +
-    gymName + '.</p>' +
-    '</div>';
-
-  return { subject: subject, htmlBody: htmlBody };
+  const vars = {
+    gymName: config.gymName,
+    memberName: String(member.fullName || 'Member').trim(),
+    plan: planName || 'membership',
+    amount: formatMoneyForEmail_(payment.amount),
+    paidDate: formatDateForEmail_(payment.paidDate || payment.date),
+    startDate: formatDateForEmail_(payment.startDate),
+    endDate: formatDateForEmail_(payment.endDate),
+    memberId: String(member.memberId || '')
+  };
+  const subject = applyTemplate_(config.receiptSubject || DEFAULT_NOTIFY_RECEIPT_SUBJECT, vars);
+  const bodyText = applyTemplate_(config.receiptBody || DEFAULT_NOTIFY_RECEIPT_BODY, vars);
+  const htmlBody = wrapEmailHtml_('Payment received', textToHtmlParagraphs_(bodyText));
+  return { subject: subject, htmlBody: htmlBody, textBody: bodyText };
 }
 
 function maybeSendPaymentReceipt_(paymentData) {
@@ -160,17 +250,18 @@ function computeMemberDueDate_(member, payments, paymentStatuses) {
   return isNaN(fallback.getTime()) ? null : startOfDay_(fallback);
 }
 
-function classifyMembersForReport_(members, payments, paymentStatuses, asOfDate) {
+function classifyMembersForReport_(members, payments, paymentStatuses, asOfDate, reportDays) {
   const today = startOfDay_(asOfDate || new Date());
+  const days = Math.min(30, Math.max(1, parseInt(reportDays, 10) || 7));
   const horizon = new Date(today);
-  horizon.setDate(horizon.getDate() + 7);
+  horizon.setDate(horizon.getDate() + days);
 
   const upcoming = [];
   const overdue = [];
 
   (members || []).forEach(member => {
     const statusName = String(member.status || '').trim().toLowerCase();
-    if (statusName === 'inactive' || statusName === 'left') return;
+    if (statusName === 'inactive' || statusName === 'left' || statusName.indexOf('inactive') >= 0) return;
 
     const dueDate = computeMemberDueDate_(member, payments, paymentStatuses);
     if (!dueDate) return;
@@ -191,51 +282,143 @@ function classifyMembersForReport_(members, payments, paymentStatuses, asOfDate)
 
   upcoming.sort((a, b) => a.dueDate - b.dueDate);
   overdue.sort((a, b) => a.dueDate - b.dueDate);
-  return { upcoming: upcoming, overdue: overdue, today: today, horizon: horizon };
+  return { upcoming: upcoming, overdue: overdue, today: today, horizon: horizon, reportDays: days };
+}
+
+function buildWeeklyTableHtml_(rows, fields, emptyText) {
+  if (!rows.length) {
+    return '<p style="margin:8px 0 0;color:#64748b;font-size:13px">' + escapeHtmlEmail_(emptyText) + '</p>';
+  }
+
+  const columns = [];
+  if (fields.name) columns.push({ key: 'fullName', label: 'Member' });
+  if (fields.memberId) columns.push({ key: 'memberId', label: 'ID' });
+  if (fields.phone) columns.push({ key: 'phone', label: 'Phone' });
+  if (fields.email) columns.push({ key: 'email', label: 'Email' });
+  if (fields.due) columns.push({ key: 'dueLabel', label: 'Due date' });
+  if (fields.days) columns.push({ key: 'daysUntil', label: 'Days' });
+  if (!columns.length) columns.push({ key: 'fullName', label: 'Member' });
+
+  let html =
+    '<table style="border-collapse:collapse;width:100%;font-size:13px;margin-top:10px">' +
+    '<tr style="background:#f8fafc">';
+  columns.forEach(function(col) {
+    html +=
+      '<th align="left" style="padding:10px 12px;border:1px solid #e2e8f0;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:0.03em">' +
+      escapeHtmlEmail_(col.label) +
+      '</th>';
+  });
+  html += '</tr>';
+
+  rows.forEach(function(row) {
+    html += '<tr>';
+    columns.forEach(function(col) {
+      let value = row[col.key] !== undefined && row[col.key] !== '' ? row[col.key] : '--';
+      if (col.key === 'daysUntil' && Number.isFinite(Number(value))) {
+        const n = Number(value);
+        value = n < 0 ? Math.abs(n) + ' overdue' : n === 0 ? 'Today' : 'In ' + n + 'd';
+      }
+      html +=
+        '<td style="padding:10px 12px;border:1px solid #e2e8f0;color:#0f172a">' +
+        escapeHtmlEmail_(value) +
+        '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+  return html;
+}
+
+function buildSampleWeeklyReport_(reportDays) {
+  const days = Math.min(30, Math.max(1, parseInt(reportDays, 10) || 7));
+  const today = startOfDay_(new Date());
+  const horizon = startOfDay_(new Date(Date.now() + days * 86400000));
+  return {
+    upcoming: [
+      {
+        memberId: 'MEM-1042',
+        fullName: 'Ananya Sharma',
+        phone: '98765 43210',
+        email: 'ananya.sharma@email.com',
+        dueLabel: formatDateForEmail_(new Date(Date.now() + 2 * 86400000)),
+        daysUntil: 2
+      },
+      {
+        memberId: 'MEM-1088',
+        fullName: 'Vikram Patel',
+        phone: '98123 45670',
+        email: 'vikram.p@email.com',
+        dueLabel: formatDateForEmail_(new Date(Date.now() + 5 * 86400000)),
+        daysUntil: 5
+      }
+    ],
+    overdue: [
+      {
+        memberId: 'MEM-0971',
+        fullName: 'Neha Reddy',
+        phone: '99001 12233',
+        email: 'neha.reddy@email.com',
+        dueLabel: formatDateForEmail_(new Date(Date.now() - 3 * 86400000)),
+        daysUntil: -3
+      },
+      {
+        memberId: 'MEM-0855',
+        fullName: 'Arjun Mehta',
+        phone: '91234 56780',
+        email: 'arjun.m@email.com',
+        dueLabel: formatDateForEmail_(new Date(Date.now() - 8 * 86400000)),
+        daysUntil: -8
+      }
+    ],
+    today: today,
+    horizon: horizon,
+    reportDays: days
+  };
 }
 
 function buildWeeklyReportEmail_(config, report) {
-  const gymName = config.gymName;
   const rangeLabel = formatDateForEmail_(report.today) + ' → ' + formatDateForEmail_(report.horizon);
-  const subject = gymName + ' — Weekly renewal report (' + rangeLabel + ')';
-
-  const renderRows = (rows, emptyText) => {
-    if (!rows.length) {
-      return '<p style="margin:8px 0;color:#64748b;font-size:13px">' + emptyText + '</p>';
-    }
-    let html = '<table style="border-collapse:collapse;width:100%;font-size:13px;margin-top:8px">' +
-      '<tr style="background:#f8fafc">' +
-      '<th align="left" style="padding:8px;border:1px solid #e2e8f0">Member</th>' +
-      '<th align="left" style="padding:8px;border:1px solid #e2e8f0">Phone</th>' +
-      '<th align="left" style="padding:8px;border:1px solid #e2e8f0">Due</th>' +
-      '<th align="left" style="padding:8px;border:1px solid #e2e8f0">Days</th>' +
-      '</tr>';
-    rows.forEach(row => {
-      html += '<tr>' +
-        '<td style="padding:8px;border:1px solid #e2e8f0">' + row.fullName +
-        '<div style="color:#94a3b8;font-size:11px">' + row.memberId + '</div></td>' +
-        '<td style="padding:8px;border:1px solid #e2e8f0">' + row.phone + '</td>' +
-        '<td style="padding:8px;border:1px solid #e2e8f0">' + row.dueLabel + '</td>' +
-        '<td style="padding:8px;border:1px solid #e2e8f0">' + row.daysUntil + '</td>' +
-        '</tr>';
-    });
-    html += '</table>';
-    return html;
+  const vars = {
+    gymName: config.gymName,
+    ownerName: config.ownerName || 'there',
+    rangeLabel: rangeLabel,
+    reportDays: report.reportDays || config.reportDays || 7,
+    upcomingCount: report.upcoming.length,
+    overdueCount: report.overdue.length
   };
+  const subject = applyTemplate_(config.weeklySubject || DEFAULT_NOTIFY_WEEKLY_SUBJECT, vars);
+  const introText = applyTemplate_(config.weeklyIntro || DEFAULT_NOTIFY_WEEKLY_INTRO, vars);
+  const fields = config.weeklyFields || DEFAULT_NOTIFY_WEEKLY_FIELDS;
 
-  const htmlBody =
-    '<div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.5;max-width:720px">' +
-    '<h2 style="margin:0 0 8px;color:#1d4ed8">Weekly member renewal report</h2>' +
-    '<p style="margin:0 0 16px;color:#475569">Window: <strong>' + rangeLabel + '</strong> · Gym: <strong>' +
-    gymName + '</strong></p>' +
-    '<h3 style="margin:20px 0 0;font-size:15px">Upcoming in next 7 days (' + report.upcoming.length + ')</h3>' +
-    renderRows(report.upcoming, 'No upcoming renewals in the next 7 days.') +
-    '<h3 style="margin:24px 0 0;font-size:15px;color:#b91c1c">Already overdue (' + report.overdue.length + ')</h3>' +
-    renderRows(report.overdue, 'No overdue members right now.') +
-    '<p style="margin:20px 0 0;color:#94a3b8;font-size:12px">Generated automatically by LSC notifications.</p>' +
-    '</div>';
+  const inner =
+    textToHtmlParagraphs_(introText) +
+    '<div style="margin-top:18px;padding:12px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px">' +
+    '<div style="font-size:12px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px">Summary</div>' +
+    '<div style="font-size:13px;color:#1e3a8a">Upcoming: <strong>' +
+    vars.upcomingCount +
+    '</strong> · Overdue: <strong>' +
+    vars.overdueCount +
+    '</strong> · Window: <strong>' +
+    escapeHtmlEmail_(rangeLabel) +
+    '</strong></div></div>' +
+    '<h3 style="margin:22px 0 0;font-size:15px;color:#0f172a">Upcoming renewals (' +
+    vars.upcomingCount +
+    ')</h3>' +
+    buildWeeklyTableHtml_(
+      report.upcoming,
+      fields,
+      'No upcoming renewals in the selected window.'
+    ) +
+    '<h3 style="margin:24px 0 0;font-size:15px;color:#b91c1c">Already overdue (' +
+    vars.overdueCount +
+    ')</h3>' +
+    buildWeeklyTableHtml_(report.overdue, fields, 'No overdue members right now.');
 
-  return { subject: subject, htmlBody: htmlBody };
+  return {
+    subject: subject,
+    htmlBody: wrapEmailHtml_('Weekly renewal report', inner),
+    textBody: introText
+  };
 }
 
 function runWeeklyMemberDueReport() {
@@ -255,19 +438,89 @@ function runWeeklyMemberDueReport() {
     ? globalData.data.options.paymentstatus || globalData.data.options.status || []
     : [];
 
-  const report = classifyMembersForReport_(members, payments, paymentStatuses, new Date());
+  const report = classifyMembersForReport_(
+    members,
+    payments,
+    paymentStatuses,
+    new Date(),
+    config.reportDays
+  );
   const mail = buildWeeklyReportEmail_(config, report);
-  MailApp.sendEmail({
+  const emailPayload = {
     to: config.ownerEmail,
     subject: mail.subject,
     htmlBody: mail.htmlBody
-  });
+  };
+  if (config.weeklyCc) emailPayload.cc = config.weeklyCc;
+  MailApp.sendEmail(emailPayload);
 
   return {
     success: true,
     upcoming: report.upcoming.length,
     overdue: report.overdue.length
   };
+}
+
+function api_previewNotificationEmail(type, draftConfig) {
+  try {
+    const gate = requirePermission_('settings', 'view');
+    if (!gate.ok) return gate.response;
+    const saved = getNotificationConfig_();
+    const draft = draftConfig || {};
+    const config = Object.assign({}, saved, {
+      gymName: draft.gymName || saved.gymName,
+      ownerName: draft.ownerName || saved.ownerName || 'there',
+      ownerEmail: draft.ownerEmail || saved.ownerEmail,
+      weeklyCc: normalizeEmailList_(draft.weeklyCc !== undefined ? draft.weeklyCc : saved.weeklyCc),
+      reportDays: Math.min(30, Math.max(1, parseInt(draft.reportDays || saved.reportDays, 10) || 7)),
+      receiptSubject: draft.receiptSubject || saved.receiptSubject,
+      receiptBody: draft.receiptBody || saved.receiptBody,
+      weeklySubject: draft.weeklySubject || saved.weeklySubject,
+      weeklyIntro: draft.weeklyIntro || saved.weeklyIntro,
+      weeklyFields: parseWeeklyFields_(draft.weeklyFields || saved.weeklyFields)
+    });
+
+    if (String(type || '').toLowerCase() === 'receipt') {
+      const sampleMember = {
+        fullName: 'Priya Kapoor',
+        memberId: 'MEM-1120',
+        email: 'priya.kapoor@email.com'
+      };
+      const samplePayment = {
+        amount: 4500,
+        paidDate: new Date(),
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 90 * 86400000)
+      };
+      const mail = buildPaymentReceiptEmail_(sampleMember, samplePayment, config, 'Quarterly Plan');
+      return {
+        success: true,
+        data: {
+          to: sampleMember.email,
+          cc: '',
+          subject: mail.subject,
+          htmlBody: mail.htmlBody,
+          isSample: true
+        }
+      };
+    }
+
+    // Preview always uses polished sample rows so admins can see exact formatting.
+    const report = buildSampleWeeklyReport_(config.reportDays);
+    const mail = buildWeeklyReportEmail_(config, report);
+    return {
+      success: true,
+      data: {
+        to: config.ownerEmail || 'owner@example.com',
+        cc: config.weeklyCc || '',
+        subject: mail.subject,
+        htmlBody: mail.htmlBody,
+        isSample: true
+      }
+    };
+  } catch (error) {
+    return { success: false, error: error.message || String(error) };
+  }
 }
 
 function weekDayFromSetting_(dayName) {

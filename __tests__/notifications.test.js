@@ -74,7 +74,7 @@ describe('notification report helpers', () => {
       { gymName: 'Lakeside' },
       'Quarterly'
     );
-    expect(mail.subject).toContain('Thank you for your payment');
+    expect(mail.subject).toContain('Payment confirmation');
     expect(mail.htmlBody).toContain('Bishwajit Roy');
     expect(mail.htmlBody).toContain('Quarterly');
     expect(mail.htmlBody).toContain('Lakeside');

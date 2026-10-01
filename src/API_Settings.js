@@ -7,6 +7,8 @@
 
 function api_getSheetStructure() {
   try {
+    const gate = requirePermission_('settings', 'view');
+    if (!gate.ok) return gate.response;
     const ssMeta = Sheets.Spreadsheets.get(SPREADSHEET_ID);
     const sheetNames = ssMeta.sheets
       .map(s => s.properties.title)
@@ -37,6 +39,8 @@ function api_getSheetStructure() {
 
 function api_getDropdownConfig() {
   try {
+    const gate = requirePermission_('settings', 'view');
+    if (!gate.ok) return gate.response;
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('DROP_DOWN');
     if (!sheet) throw new Error("DropDown sheet is missing.");
@@ -115,6 +119,8 @@ function api_getDropdownConfig() {
 
 function api_saveSchema(schemaObj) {
   try {
+    const gate = requirePermission_('settings', 'edit');
+    if (!gate.ok) return gate.response;
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('DROP_DOWN');
     if (!sheet) throw new Error("DROP_DOWN sheet is missing.");
@@ -244,6 +250,8 @@ function api_saveSchema(schemaObj) {
 
 function api_saveDropdownOptions(categoryKey, optionsArray) {
   try {
+    const gate = requirePermission_('settings', 'edit');
+    if (!gate.ok) return gate.response;
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('DROP_DOWN');
     if (!sheet) throw new Error("DROP_DOWN sheet is missing.");
@@ -305,6 +313,9 @@ function api_saveDropdownOptions(categoryKey, optionsArray) {
 
 function api_getGeneralSettings() {
   try {
+    // Branding bootstrap may run before full settings access; allow any authorized viewer.
+    const gate = requireAnyViewPermission_();
+    if (!gate.ok) return gate.response;
     const data = DB.read('SETTINGS') || [];
     return { success: true, data: data };
   } catch (error) {
@@ -314,6 +325,8 @@ function api_getGeneralSettings() {
 
 function api_saveGeneralSettings(settingsArray) {
   try {
+    const gate = requirePermission_('settings', 'edit');
+    if (!gate.ok) return gate.response;
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('SETTINGS');
     
@@ -374,7 +387,7 @@ function api_saveGeneralSettings(settingsArray) {
         const detail = triggerError && triggerError.message ? triggerError.message : String(triggerError);
         triggerSync = { success: false, error: detail };
         if (/script\.scriptapp|getProjectTriggers|Authorization/i.test(detail)) {
-          message = 'Settings saved. Authorize the script once in Apps Script (run authorizeLscScriptPermissions) to enable the weekly report schedule.';
+          message = 'Settings saved. Open Settings → Setup and click Authorize Google services to enable the weekly report schedule.';
         } else {
           message = 'Settings saved, but the weekly report schedule could not be updated: ' + detail;
         }

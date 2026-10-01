@@ -26,14 +26,18 @@
     </div>
 
     <!-- Segmented Navigation Pills -->
-    <div class="flex items-center bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 self-stretch sm:self-auto shrink-0">
-      <button id="tab-btn-general" type="button" onclick="SettingsApp.switchTab('general')" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 bg-white text-brand-primary rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap">
-        <span class="material-symbols-rounded text-[17px]">tune</span>
-        <span>General Config</span>
+    <div class="flex items-center bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 self-stretch sm:self-auto shrink-0 overflow-x-auto no-scrollbar">
+      <button id="tab-btn-general" type="button" onclick="SettingsApp.switchTab('general')" class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 bg-white text-brand-primary rounded-lg font-bold text-[11px] sm:text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap">
+        <span class="material-symbols-rounded text-[16px]">tune</span>
+        <span>General</span>
       </button>
-      <button id="tab-btn-dropdowns" type="button" onclick="SettingsApp.switchTab('dropdowns')" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 text-slate-600 hover:text-slate-900 rounded-lg font-medium text-xs transition-all cursor-pointer whitespace-nowrap">
-        <span class="material-symbols-rounded text-[17px]">dataset</span>
-        <span>Dropdown Options</span>
+      <button id="tab-btn-users" type="button" onclick="SettingsApp.switchTab('users')" class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 text-slate-600 hover:text-slate-900 rounded-lg font-medium text-[11px] sm:text-xs transition-all cursor-pointer whitespace-nowrap">
+        <span class="material-symbols-rounded text-[16px]">manage_accounts</span>
+        <span>Users</span>
+      </button>
+      <button id="tab-btn-dropdowns" type="button" onclick="SettingsApp.switchTab('dropdowns')" class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 text-slate-600 hover:text-slate-900 rounded-lg font-medium text-[11px] sm:text-xs transition-all cursor-pointer whitespace-nowrap">
+        <span class="material-symbols-rounded text-[16px]">dataset</span>
+        <span>Dropdowns</span>
       </button>
     </div>
   </header>
@@ -49,25 +53,133 @@
       <!-- Scrollable Settings Body -->
       <div class="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 no-scrollbar pb-6">
         
-        <!-- Skeleton Shimmer Loader -->
-        <div id="general-shimmer" class="max-w-4xl mx-auto space-y-4 md:space-y-6 hidden">
-        <div class="bg-white border border-slate-200/80 rounded-2xl p-5 md:p-6 space-y-4 shadow-xs">
-          <div class="h-5 w-44 bg-slate-200 shimmer rounded-md mb-4"></div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><div class="h-3 w-24 bg-slate-200 shimmer rounded mb-2"></div><div class="h-10 w-full bg-slate-100 shimmer rounded-xl"></div></div>
-            <div><div class="h-3 w-24 bg-slate-200 shimmer rounded mb-2"></div><div class="h-10 w-full bg-slate-100 shimmer rounded-xl"></div></div>
-            <div><div class="h-3 w-24 bg-slate-200 shimmer rounded mb-2"></div><div class="h-10 w-full bg-slate-100 shimmer rounded-xl"></div></div>
-            <div><div class="h-3 w-24 bg-slate-200 shimmer rounded mb-2"></div><div class="h-10 w-full bg-slate-100 shimmer rounded-xl"></div></div>
+        <!-- Skeleton Shimmer Loader (mirrors Setup + General sections) -->
+        <div id="general-shimmer" class="max-w-4xl mx-auto space-y-3 md:space-y-6 hidden">
+          <!-- Setup & Authorization skeleton -->
+          <div class="bg-white border border-amber-200 rounded-2xl overflow-hidden shadow-xs">
+            <div class="px-3 md:px-5 py-2.5 md:py-3 border-b border-amber-100 bg-amber-50/60 flex items-center gap-2 md:gap-3">
+              <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg md:rounded-xl shimmer shrink-0"></div>
+              <div class="space-y-1.5 flex-1 min-w-0">
+                <div class="h-3.5 w-40 bg-slate-200 shimmer rounded"></div>
+                <div class="hidden md:block h-2.5 w-64 bg-slate-100 shimmer rounded"></div>
+              </div>
+            </div>
+            <div class="p-2.5 md:p-5 space-y-2 md:space-y-3">
+              <div class="grid grid-cols-2 gap-1.5 md:gap-2">
+                <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+                <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+                <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+                <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+                <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+                <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+              </div>
+              <div class="flex flex-row gap-1.5 md:gap-2">
+                <div class="flex-1 h-8 md:h-9 bg-slate-200 shimmer rounded-lg md:rounded-xl"></div>
+                <div class="flex-1 h-8 md:h-9 bg-slate-100 shimmer rounded-lg md:rounded-xl"></div>
+              </div>
+              <div class="h-2.5 w-3/4 bg-slate-100 shimmer rounded"></div>
+            </div>
+          </div>
+
+          <!-- Identity skeleton -->
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-4 md:p-6 space-y-4 shadow-xs">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl shimmer shrink-0"></div>
+              <div class="space-y-1.5 flex-1">
+                <div class="h-3.5 w-44 bg-slate-200 shimmer rounded"></div>
+                <div class="h-2.5 w-56 bg-slate-100 shimmer rounded"></div>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5 md:gap-4">
+              <div><div class="h-2.5 w-20 bg-slate-200 shimmer rounded mb-2"></div><div class="h-9 w-full bg-slate-100 shimmer rounded-xl"></div></div>
+              <div><div class="h-2.5 w-20 bg-slate-200 shimmer rounded mb-2"></div><div class="h-9 w-full bg-slate-100 shimmer rounded-xl"></div></div>
+              <div><div class="h-2.5 w-20 bg-slate-200 shimmer rounded mb-2"></div><div class="h-9 w-full bg-slate-100 shimmer rounded-xl"></div></div>
+              <div><div class="h-2.5 w-20 bg-slate-200 shimmer rounded mb-2"></div><div class="h-9 w-full bg-slate-100 shimmer rounded-xl"></div></div>
+            </div>
+          </div>
+
+          <!-- Finance skeleton -->
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-4 md:p-6 space-y-3 shadow-xs">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl shimmer shrink-0"></div>
+              <div class="h-3.5 w-40 bg-slate-200 shimmer rounded"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div class="h-9 bg-slate-100 shimmer rounded-xl"></div>
+              <div class="h-9 bg-slate-100 shimmer rounded-xl"></div>
+            </div>
+          </div>
+
+          <!-- Database skeleton -->
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-4 md:p-6 space-y-3 shadow-xs">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl shimmer shrink-0"></div>
+              <div class="h-3.5 w-36 bg-slate-200 shimmer rounded"></div>
+            </div>
+            <div class="h-9 w-full bg-slate-100 shimmer rounded-xl"></div>
+            <div class="h-9 w-full bg-slate-100 shimmer rounded-xl"></div>
+          </div>
+
+          <!-- Notifications skeleton -->
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-4 md:p-6 space-y-3 shadow-xs">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl shimmer shrink-0"></div>
+              <div class="space-y-1.5 flex-1">
+                <div class="h-3.5 w-48 bg-slate-200 shimmer rounded"></div>
+                <div class="h-2.5 w-40 bg-slate-100 shimmer rounded"></div>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="h-9 bg-slate-100 shimmer rounded-xl"></div>
+              <div class="h-9 bg-slate-100 shimmer rounded-xl"></div>
+              <div class="h-9 bg-slate-100 shimmer rounded-xl"></div>
+            </div>
+            <div class="h-20 w-full bg-slate-100 shimmer rounded-xl"></div>
+            <div class="h-20 w-full bg-slate-100 shimmer rounded-xl"></div>
           </div>
         </div>
-        <div class="bg-white border border-slate-200/80 rounded-2xl p-5 md:p-6 space-y-4 shadow-xs">
-          <div class="h-5 w-36 bg-slate-200 shimmer rounded-md mb-4"></div>
-          <div class="h-10 w-full bg-slate-100 shimmer rounded-xl"></div>
-        </div>
-      </div>
 
       <!-- Real Form Content -->
-      <div id="general-content" class="max-w-4xl mx-auto space-y-5 md:space-y-6 hidden">
+      <div id="general-content" class="max-w-4xl mx-auto space-y-3 md:space-y-6 hidden">
+
+        <!-- Setup / Authorization -->
+        <div id="setup-section" class="settings-section bg-white border border-amber-200 rounded-2xl shadow-xs overflow-hidden" data-section="setup">
+          <button type="button" onclick="SettingsApp.toggleSection(this)" aria-expanded="true" class="w-full px-3 md:px-5 py-2.5 md:py-3 border-b border-amber-100 bg-amber-50/60 flex items-center justify-between gap-2 text-left cursor-pointer">
+            <div class="flex items-center gap-2 md:gap-3 min-w-0">
+              <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg md:rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200">
+                <span class="material-symbols-rounded text-[17px] md:text-[20px]">verified_user</span>
+              </div>
+              <div class="min-w-0">
+                <h3 class="font-bold text-[13px] md:text-sm text-slate-800 leading-tight">Setup &amp; Authorization</h3>
+                <p class="hidden md:block text-[11px] text-slate-500 truncate">Authorize Google services from the UI (no Apps Script editor).</p>
+              </div>
+            </div>
+            <span class="settings-section-chevron material-symbols-rounded text-slate-500 text-[20px] md:text-[22px]">expand_less</span>
+          </button>
+          <div class="settings-section-body p-2.5 md:p-5 space-y-2 md:space-y-3">
+            <div id="setup-status-list" class="grid grid-cols-2 gap-1.5 md:gap-2 text-[10px] md:text-[11px]">
+              <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+              <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+              <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+              <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+              <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+              <div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>
+            </div>
+            <div class="flex flex-row gap-1.5 md:gap-2">
+              <button type="button" id="btn-authorize-services" onclick="SettingsApp.authorizeServices()" class="flex-1 h-8 md:h-9 px-2 md:px-3 bg-brand-primary hover:bg-blue-700 text-white rounded-lg md:rounded-xl text-[10px] md:text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                <span class="material-symbols-rounded text-[15px] md:text-[16px]">key</span>
+                <span class="sm:hidden">Authorize</span>
+                <span class="hidden sm:inline">Authorize Google services</span>
+              </button>
+              <button type="button" id="btn-mark-setup-complete" onclick="SettingsApp.markSetupComplete()" class="flex-1 h-8 md:h-9 px-2 md:px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg md:rounded-xl text-[10px] md:text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                <span class="material-symbols-rounded text-[15px] md:text-[16px]">check_circle</span>
+                <span class="sm:hidden">Complete</span>
+                <span class="hidden sm:inline">Mark setup complete</span>
+              </button>
+            </div>
+            <p id="setup-auth-hint" class="text-[9px] md:text-[10px] text-slate-500 leading-snug">Sign in as the deployer Google account, then authorize once.</p>
+          </div>
+        </div>
         
         <!-- Section 1: Gym Profile & Branding -->
         <div class="settings-section bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300" data-section="identity">
@@ -87,58 +199,52 @@
             </div>
           </button>
 
-          <div class="settings-section-body p-5 md:p-6 space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- Gym Name -->
-              <div>
-                <label for="gen-GYM_NAME" class="block text-xs font-semibold text-slate-700 mb-1.5">Gym / App Name <span class="text-red-500">*</span></label>
+          <div class="settings-section-body p-3.5 md:p-6 space-y-3 md:space-y-4">
+            <!-- Row: Gym name + Logo -->
+            <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2.5 sm:gap-4 items-start">
+              <div class="min-w-0">
+                <label for="gen-GYM_NAME" class="block text-[11px] md:text-xs font-semibold text-slate-700 mb-1">Gym / App Name <span class="text-red-500">*</span></label>
                 <div class="relative">
-                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">fitness_center</span>
-                  <input type="text" id="gen-GYM_NAME" placeholder="e.g., Lakeside Fitness Club" class="w-full pl-9 pr-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                  <span class="material-symbols-rounded absolute left-2.5 top-2 text-[17px] text-slate-400 pointer-events-none">fitness_center</span>
+                  <input type="text" id="gen-GYM_NAME" placeholder="e.g., Lakeside Fitness Club" class="w-full pl-8 pr-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all">
                 </div>
-                <p class="text-[10px] text-slate-400 mt-1">Displayed on dashboard, receipts, and headers.</p>
               </div>
-
-              <!-- Owner Email -->
-              <div>
-                <label for="gen-OWNER_EMAIL" class="block text-xs font-semibold text-slate-700 mb-1.5">Owner / Admin Email <span class="text-red-500">*</span></label>
-                <div class="relative">
-                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">mail</span>
-                  <input type="email" id="gen-OWNER_EMAIL" placeholder="owner@gymdomain.com" class="w-full pl-9 pr-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all">
-                </div>
-                <p class="text-[10px] text-slate-400 mt-1">Primary administrative contact and notifications.</p>
-              </div>
-            </div>
-
-            <!-- App / Gym Logo Upload with Live Preview & LSC Fallback -->
-            <div class="pt-2 border-t border-slate-100">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Gym Logo</label>
-              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <!-- Upload Input Container -->
-                <div class="relative flex-1">
-                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">upload_file</span>
-                  <input type="file" id="setting-logo-file" accept="image/*" onchange="SettingsApp.onLogoFileSelected(this)" class="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none shadow-xs file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer text-slate-600">
-                  <input type="hidden" id="gen-LOGO_ID">
-                </div>
-
-                <!-- Live Preview Tile -->
-                <div class="flex items-center gap-3 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl shrink-0">
+              <div class="min-w-0 sm:w-[220px]">
+                <label class="block text-[11px] md:text-xs font-semibold text-slate-700 mb-1">Gym Logo</label>
+                <div class="flex items-center gap-2">
                   <div id="logo-preview-box" class="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center overflow-hidden shrink-0 shadow-xs border border-slate-200 relative">
                     <img id="logo-preview-img" src="" alt="Logo Preview" class="w-full h-full object-contain p-0.5 hidden" />
-                    <div id="logo-preview-fallback" class="w-full h-full flex items-center justify-center font-black text-white text-[13px] tracking-widest uppercase select-none">
-                      LSC
-                    </div>
+                    <div id="logo-preview-fallback" class="w-full h-full flex items-center justify-center font-black text-white text-[12px] tracking-widest uppercase select-none">LSC</div>
                   </div>
-                  <div class="text-left flex-1 min-w-[120px]">
-                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Live Preview</span>
-                    <span id="logo-preview-status" class="text-[11px] font-medium text-slate-600">LSC Fallback Badge</span>
-                  </div>
-                  <button type="button" id="btn-clear-logo" onclick="SettingsApp.clearLogo()" class="text-xs text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-200/50 transition-colors hidden" title="Remove custom logo and revert to LSC fallback">
-                    <span class="material-symbols-rounded text-[18px]">delete</span>
+                  <label class="flex-1 min-w-0 h-10 px-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 transition-colors">
+                    <span class="material-symbols-rounded text-[16px] text-slate-400 shrink-0">upload</span>
+                    <span id="logo-preview-status" class="text-[10px] font-medium text-slate-600 truncate">Upload</span>
+                    <input type="file" id="setting-logo-file" accept="image/*" onchange="SettingsApp.onLogoFileSelected(this)" class="hidden">
+                    <input type="hidden" id="gen-LOGO_ID">
+                  </label>
+                  <button type="button" id="btn-clear-logo" onclick="SettingsApp.clearLogo()" class="w-9 h-9 text-slate-400 hover:text-red-500 bg-slate-50 border border-slate-200 rounded-xl hidden shrink-0" title="Remove logo">
+                    <span class="material-symbols-rounded text-[17px]">delete</span>
                   </button>
                 </div>
               </div>
-              <p class="text-[10px] text-slate-400 mt-1">Upload a PNG, JPEG, or WebP image. Automatically uploaded to Google Drive on save and reflected across the app. If omitted or fails to load, displays LSC fallback nicely.</p>
+            </div>
+
+            <!-- Row: Owner name + Email -->
+            <div class="grid grid-cols-2 gap-2.5 sm:gap-4">
+              <div class="min-w-0">
+                <label for="gen-OWNER_NAME" class="block text-[11px] md:text-xs font-semibold text-slate-700 mb-1">Owner Name</label>
+                <div class="relative">
+                  <span class="material-symbols-rounded absolute left-2.5 top-2 text-[17px] text-slate-400 pointer-events-none">person</span>
+                  <input type="text" id="gen-OWNER_NAME" placeholder="e.g., Rahul Sharma" class="w-full pl-8 pr-2.5 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                </div>
+              </div>
+              <div class="min-w-0">
+                <label for="gen-OWNER_EMAIL" class="block text-[11px] md:text-xs font-semibold text-slate-700 mb-1">Owner Email <span class="text-red-500">*</span></label>
+                <div class="relative">
+                  <span class="material-symbols-rounded absolute left-2.5 top-2 text-[17px] text-slate-400 pointer-events-none">mail</span>
+                  <input type="email" id="gen-OWNER_EMAIL" placeholder="owner@gym.com" class="w-full pl-8 pr-2.5 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -152,7 +258,7 @@
               </div>
               <div class="min-w-0">
                 <h3 class="font-bold text-sm text-slate-800 leading-tight">Financial & Operating Policies</h3>
-                <p class="text-[11px] text-slate-500 truncate">Revenue calculation logic and automated reminder windows.</p>
+                <p class="text-[11px] text-slate-500 truncate">Revenue recognition and currency display.</p>
               </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
@@ -161,52 +267,36 @@
             </div>
           </button>
 
-          <div class="settings-section-body p-5 md:p-6 space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <!-- Revenue Recognition -->
-              <div>
-                <label for="gen-Revenue_Recognition" class="block text-xs font-semibold text-slate-700 mb-1.5">Revenue Recognition Method</label>
+          <div class="settings-section-body p-3.5 md:p-6 space-y-2.5 md:space-y-4">
+            <div class="grid grid-cols-2 gap-2.5 md:gap-4">
+              <div class="min-w-0">
+                <label for="gen-Revenue_Recognition" class="block text-[11px] md:text-xs font-semibold text-slate-700 mb-1">Revenue Method</label>
                 <div class="relative">
-                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">payments</span>
-                  <select id="gen-Revenue_Recognition" onchange="SettingsApp.updateRevenueExplanation()" class="w-full pl-9 pr-8 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none appearance-none cursor-pointer transition-all">
-                    <option value="Anchor">Anchor (Cash Basis)</option>
-                    <option value="Split">Split (Accrual Basis)</option>
+                  <select id="gen-Revenue_Recognition" onchange="SettingsApp.updateRevenueExplanation()" class="w-full px-2.5 pr-7 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-[11px] md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary outline-none appearance-none cursor-pointer">
+                    <option value="Anchor">Anchor (Cash)</option>
+                    <option value="Split">Split (Accrual)</option>
                   </select>
-                  <span class="material-symbols-rounded absolute right-2.5 top-2.5 text-[18px] text-slate-400 pointer-events-none">expand_more</span>
-                </div>
-                <div id="revenue-rec-explanation" class="mt-2 p-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
-                  <span class="material-symbols-rounded text-brand-primary text-[16px] shrink-0 mt-0.5">info</span>
-                  <span id="revenue-rec-text">Anchor recognizes the full transaction amount immediately on the payment date.</span>
+                  <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
                 </div>
               </div>
-
-              <!-- Currency Format Style -->
-              <div>
-                <label for="gen-CURRENCY_FORMAT" class="block text-xs font-semibold text-slate-700 mb-1.5">Currency Numbering Style</label>
+              <div class="min-w-0">
+                <label for="gen-CURRENCY_FORMAT" class="block text-[11px] md:text-xs font-semibold text-slate-700 mb-1">Currency Style</label>
                 <div class="relative">
-                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">currency_rupee</span>
-                  <select id="gen-CURRENCY_FORMAT" onchange="SettingsApp.updateCurrencyExplanation()" class="w-full pl-9 pr-8 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none appearance-none cursor-pointer transition-all">
-                    <option value="Indian">Indian (₹10,000, ₹1.3Lakhs, ₹1Crore)</option>
-                    <option value="Standard">Standard Metric (₹10k, ₹1.3M, ₹1B)</option>
+                  <select id="gen-CURRENCY_FORMAT" onchange="SettingsApp.updateCurrencyExplanation()" class="w-full px-2.5 pr-7 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-[11px] md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary outline-none appearance-none cursor-pointer">
+                    <option value="Indian">Indian (Lakhs)</option>
+                    <option value="Standard">Standard (M/B)</option>
                   </select>
-                  <span class="material-symbols-rounded absolute right-2.5 top-2.5 text-[18px] text-slate-400 pointer-events-none">expand_more</span>
-                </div>
-                <div id="currency-format-explanation" class="mt-2 p-2.5 bg-emerald-50/60 border border-emerald-100 rounded-xl text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
-                  <span class="material-symbols-rounded text-emerald-600 text-[16px] shrink-0 mt-0.5">info</span>
-                  <span id="currency-format-text">Indian system formats thousands as ₹10,000, lakhs as ₹1.3Lakhs, and crores as ₹1Crore.</span>
+                  <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
                 </div>
               </div>
-
-              <!-- Reminder Buffer Days -->
-              <div>
-                <label for="gen-REMINDER_BUFFER" class="block text-xs font-semibold text-slate-700 mb-1.5">Due Date Alert Window (Days)</label>
-                <div class="relative">
-                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">notifications_active</span>
-                  <input type="number" id="gen-REMINDER_BUFFER" min="0" max="60" placeholder="e.g., 7" class="w-full pl-9 pr-14 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all">
-                  <span class="absolute right-3 top-2.5 text-[11px] font-bold text-slate-400 uppercase pointer-events-none">Days</span>
-                </div>
-                <p class="text-[10px] text-slate-400 mt-1">Number of days before expiration when member status switches to "Due Soon".</p>
-              </div>
+            </div>
+            <div id="revenue-rec-explanation" class="hidden md:flex p-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-[11px] text-slate-600 leading-relaxed items-start gap-2">
+              <span class="material-symbols-rounded text-brand-primary text-[16px] shrink-0 mt-0.5">info</span>
+              <span id="revenue-rec-text">Anchor recognizes the full transaction amount immediately on the payment date.</span>
+            </div>
+            <div id="currency-format-explanation" class="hidden md:flex p-2.5 bg-emerald-50/60 border border-emerald-100 rounded-xl text-[11px] text-slate-600 leading-relaxed items-start gap-2">
+              <span class="material-symbols-rounded text-emerald-600 text-[16px] shrink-0 mt-0.5">info</span>
+              <span id="currency-format-text">Indian system formats thousands as ₹10,000, lakhs as ₹1.3Lakhs, and crores as ₹1Crore.</span>
             </div>
           </div>
         </div>
@@ -229,49 +319,30 @@
             </div>
           </button>
 
-          <div class="settings-section-body p-5 md:p-6 space-y-4">
-            <!-- Target Google Spreadsheet ID -->
+          <div class="settings-section-body p-3.5 md:p-6 space-y-2.5 md:space-y-3">
             <div>
-              <label for="gen-SPREADSHEET_ID" class="block text-xs font-semibold text-slate-700 mb-1">Target Google Spreadsheet ID</label>
-              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <div class="relative flex-1">
-                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">dataset</span>
-                  <input type="text" id="gen-SPREADSHEET_ID" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-mono text-slate-600 focus:bg-white focus:border-brand-primary outline-none transition-all select-all">
-                </div>
-                <div class="flex items-center gap-2 shrink-0">
-                  <button type="button" onclick="SettingsApp.copySpreadsheetId()" class="flex-1 sm:flex-none h-9 px-3 bg-white border border-slate-200 hover:bg-slate-50 active:bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer" title="Copy Spreadsheet ID">
-                    <span class="material-symbols-rounded text-[16px]">content_copy</span>
-                    <span>Copy</span>
-                  </button>
-                  <button type="button" onclick="SettingsApp.openSpreadsheetUrl()" class="flex-1 sm:flex-none h-9 px-3 bg-white border border-slate-200 hover:bg-slate-50 active:bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer" title="Open Google Sheet in new tab">
-                    <span class="material-symbols-rounded text-[16px]">open_in_new</span>
-                    <span>Open Sheet</span>
-                  </button>
-                </div>
+              <label for="gen-SPREADSHEET_ID" class="block text-[11px] md:text-xs font-semibold text-slate-700 mb-1">Spreadsheet ID</label>
+              <div class="flex items-center gap-1.5">
+                <input type="text" id="gen-SPREADSHEET_ID" class="min-w-0 flex-1 px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] md:text-sm font-mono text-slate-600 focus:bg-white focus:border-brand-primary outline-none select-all">
+                <button type="button" onclick="SettingsApp.copySpreadsheetId()" class="w-9 h-9 shrink-0 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center cursor-pointer" title="Copy">
+                  <span class="material-symbols-rounded text-[17px]">content_copy</span>
+                </button>
+                <button type="button" onclick="SettingsApp.openSpreadsheetUrl()" class="w-9 h-9 shrink-0 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center cursor-pointer" title="Open Sheet">
+                  <span class="material-symbols-rounded text-[17px]">open_in_new</span>
+                </button>
               </div>
-              <p class="text-[10px] text-slate-400 mt-1">The spreadsheet stores all members, staff, payments, expenses, and configuration tables.</p>
             </div>
-
-            <!-- Target Google Drive Storage Folder ID (DRIVE_ID) -->
-            <div class="pt-3 border-t border-slate-100">
-              <label for="gen-DRIVE_ID" class="block text-xs font-semibold text-slate-700 mb-1">Google Drive Folder ID (DRIVE_ID)</label>
-              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <div class="relative flex-1">
-                  <span class="material-symbols-rounded absolute left-3 top-2.5 text-[18px] text-slate-400 pointer-events-none">folder_shared</span>
-                  <input type="text" id="gen-DRIVE_ID" placeholder="e.g., 1A2b3C4d5E6f7G8h9I0j" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-mono text-slate-600 focus:bg-white focus:border-brand-primary outline-none transition-all select-all">
-                </div>
-                <div class="flex items-center gap-2 shrink-0">
-                  <button type="button" onclick="SettingsApp.copyDriveId()" class="flex-1 sm:flex-none h-9 px-3 bg-white border border-slate-200 hover:bg-slate-50 active:bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer" title="Copy Drive Folder ID">
-                    <span class="material-symbols-rounded text-[16px]">content_copy</span>
-                    <span>Copy</span>
-                  </button>
-                  <button type="button" onclick="SettingsApp.openDriveUrl()" class="flex-1 sm:flex-none h-9 px-3 bg-white border border-slate-200 hover:bg-slate-50 active:bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer" title="Open Drive Folder in new tab">
-                    <span class="material-symbols-rounded text-[16px]">open_in_new</span>
-                    <span>Open Folder</span>
-                  </button>
-                </div>
+            <div>
+              <label for="gen-DRIVE_ID" class="block text-[11px] md:text-xs font-semibold text-slate-700 mb-1">Drive Folder ID</label>
+              <div class="flex items-center gap-1.5">
+                <input type="text" id="gen-DRIVE_ID" placeholder="Drive folder ID" class="min-w-0 flex-1 px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] md:text-sm font-mono text-slate-600 focus:bg-white focus:border-brand-primary outline-none select-all">
+                <button type="button" onclick="SettingsApp.copyDriveId()" class="w-9 h-9 shrink-0 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center cursor-pointer" title="Copy">
+                  <span class="material-symbols-rounded text-[17px]">content_copy</span>
+                </button>
+                <button type="button" onclick="SettingsApp.openDriveUrl()" class="w-9 h-9 shrink-0 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center cursor-pointer" title="Open Folder">
+                  <span class="material-symbols-rounded text-[17px]">open_in_new</span>
+                </button>
               </div>
-              <p class="text-[10px] text-slate-400 mt-1">Google Drive storage folder where member profile photos and document attachments are stored.</p>
             </div>
           </div>
         </div>
@@ -294,94 +365,120 @@
             </div>
           </button>
 
-          <div class="settings-section-body p-5 md:p-6 space-y-4">
-            <div class="flex items-center justify-between gap-4 p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-xl">
-              <div>
-                <span class="text-xs font-bold text-slate-800 block">Enable Automated Notifications</span>
-                <span class="text-[11px] text-slate-500 block mt-0.5">Master switch for payment thank-you emails and the weekly admin renewal report.</span>
-              </div>
+          <div class="settings-section-body p-3.5 md:p-6 space-y-2.5 md:space-y-3">
+            <div class="flex items-center justify-between gap-3 px-3 py-2.5 bg-slate-50/70 border border-slate-200/80 rounded-xl">
+              <span class="text-[11px] md:text-xs font-bold text-slate-800">Enable notifications</span>
               <label class="relative inline-flex items-center cursor-pointer shrink-0">
                 <input type="checkbox" id="gen-ENABLE_NOTIFICATION" onchange="SettingsApp.toggleNotificationView()" class="sr-only peer">
-                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
               </label>
             </div>
 
-            <div id="notification-config-area" class="hidden space-y-3 pt-1">
-              <div class="p-3.5 bg-white border border-slate-200 rounded-xl space-y-3">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <span class="text-xs font-bold text-slate-800 block">Payment receipt emails</span>
-                    <span class="text-[11px] text-slate-500 block mt-0.5">When a paid payment is logged, email the member a thank-you note with amount and coverage dates. Requires member email.</span>
-                  </div>
-                  <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+            <div id="notification-config-area" class="hidden space-y-2.5">
+              <!-- Payment receipt -->
+              <div class="p-2.5 md:p-3.5 bg-white border border-slate-200 rounded-xl space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[11px] md:text-xs font-bold text-slate-800">Payment receipt</span>
+                  <label class="relative inline-flex items-center cursor-pointer shrink-0">
                     <input type="checkbox" id="gen-NOTIFY_PAYMENT_RECEIPT" checked class="sr-only peer">
-                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                    <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                  </label>
+                </div>
+                <div class="flex gap-1.5">
+                  <button type="button" onclick="SettingsApp.openMessageEditor('receipt')" class="flex-1 h-8 px-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">edit_note</span><span>Edit</span>
+                  </button>
+                  <button type="button" onclick="SettingsApp.previewNotificationEmail('receipt')" class="flex-1 h-8 px-2 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">visibility</span><span>Preview</span>
+                  </button>
+                </div>
+                <input type="hidden" id="gen-NOTIFY_RECEIPT_SUBJECT">
+                <textarea id="gen-NOTIFY_RECEIPT_BODY" class="hidden"></textarea>
+              </div>
+
+              <!-- Weekly report -->
+              <div class="p-2.5 md:p-3.5 bg-white border border-slate-200 rounded-xl space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[11px] md:text-xs font-bold text-slate-800">Weekly renewal report</span>
+                  <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input type="checkbox" id="gen-NOTIFY_WEEKLY_REPORT" checked onchange="SettingsApp.updateNotificationSummary()" class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
                   </label>
                 </div>
 
-                <div class="pt-3 border-t border-slate-100 space-y-3">
-                  <div class="flex items-start justify-between gap-3">
-                    <div>
-                      <span class="text-xs font-bold text-slate-800 block">Weekly admin renewal report</span>
-                      <span class="text-[11px] text-slate-500 block mt-0.5">Email the owner a summary of upcoming renewals (next 7 days) and overdue members.</span>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
-                      <input type="checkbox" id="gen-NOTIFY_WEEKLY_REPORT" checked onchange="SettingsApp.updateNotificationSummary()" class="sr-only peer">
-                      <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
-                    </label>
+                <div class="grid grid-cols-3 gap-1.5">
+                  <div>
+                    <label for="gen-NOTIFY_REPORT_DAY" class="block text-[10px] font-semibold text-slate-500 mb-0.5">Day</label>
+                    <select id="gen-NOTIFY_REPORT_DAY" onchange="SettingsApp.updateNotificationSummary()" class="w-full px-1.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800 outline-none">
+                      <option value="Sunday">Sunday</option>
+                      <option value="Monday" selected>Monday</option>
+                    </select>
                   </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label for="gen-NOTIFY_REPORT_DAY" class="block text-[11px] font-semibold text-slate-700 mb-1">Report day</label>
-                      <select id="gen-NOTIFY_REPORT_DAY" onchange="SettingsApp.updateNotificationSummary()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-brand-primary outline-none">
-                        <option value="Sunday">Sunday</option>
-                        <option value="Monday" selected>Monday</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label for="gen-NOTIFY_REPORT_HOUR" class="block text-[11px] font-semibold text-slate-700 mb-1">Report time</label>
-                      <select id="gen-NOTIFY_REPORT_HOUR" onchange="SettingsApp.updateNotificationSummary()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-brand-primary outline-none">
-                        <option value="6">06:00 AM</option>
-                        <option value="7">07:00 AM</option>
-                        <option value="8" selected>08:00 AM</option>
-                        <option value="9">09:00 AM</option>
-                        <option value="10">10:00 AM</option>
-                        <option value="12">12:00 PM</option>
-                        <option value="18">06:00 PM</option>
-                        <option value="20">08:00 PM</option>
-                      </select>
-                    </div>
+                  <div>
+                    <label for="gen-NOTIFY_REPORT_HOUR" class="block text-[10px] font-semibold text-slate-500 mb-0.5">Time</label>
+                    <select id="gen-NOTIFY_REPORT_HOUR" onchange="SettingsApp.updateNotificationSummary()" class="w-full px-1.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800 outline-none">
+                      <option value="6">06:00 AM</option>
+                      <option value="7">07:00 AM</option>
+                      <option value="8" selected>08:00 AM</option>
+                      <option value="9">09:00 AM</option>
+                      <option value="10">10:00 AM</option>
+                      <option value="12">12:00 PM</option>
+                      <option value="18">06:00 PM</option>
+                      <option value="20">08:00 PM</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="gen-NOTIFY_REPORT_DAYS" class="block text-[10px] font-semibold text-slate-500 mb-0.5">Days ahead</label>
+                    <select id="gen-NOTIFY_REPORT_DAYS" onchange="SettingsApp.updateNotificationSummary()" class="w-full px-1.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800 outline-none">
+                      <option value="3">3</option>
+                      <option value="5">5</option>
+                      <option value="7" selected>7</option>
+                      <option value="10">10</option>
+                      <option value="14">14</option>
+                      <option value="21">21</option>
+                      <option value="30">30</option>
+                    </select>
                   </div>
                 </div>
+
+                <div>
+                  <label for="gen-NOTIFY_WEEKLY_CC" class="block text-[10px] font-semibold text-slate-500 mb-0.5">CC (optional)</label>
+                  <input type="text" id="gen-NOTIFY_WEEKLY_CC" placeholder="manager@gym.com, accounts@gym.com" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium text-slate-800 focus:bg-white focus:border-brand-primary outline-none">
+                </div>
+
+                <div>
+                  <label class="block text-[10px] font-semibold text-slate-500 mb-1">Table columns</label>
+                  <div class="flex flex-wrap gap-1">
+                    <label class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-1 cursor-pointer"><input type="checkbox" id="nf-field-name" checked onchange="SettingsApp.syncWeeklyFields()" class="rounded border-slate-300 text-brand-primary scale-90"> Name</label>
+                    <label class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-1 cursor-pointer"><input type="checkbox" id="nf-field-phone" checked onchange="SettingsApp.syncWeeklyFields()" class="rounded border-slate-300 text-brand-primary scale-90"> Phone</label>
+                    <label class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-1 cursor-pointer"><input type="checkbox" id="nf-field-email" onchange="SettingsApp.syncWeeklyFields()" class="rounded border-slate-300 text-brand-primary scale-90"> Email</label>
+                    <label class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-1 cursor-pointer"><input type="checkbox" id="nf-field-due" checked onchange="SettingsApp.syncWeeklyFields()" class="rounded border-slate-300 text-brand-primary scale-90"> Due</label>
+                    <label class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-1 cursor-pointer"><input type="checkbox" id="nf-field-days" checked onchange="SettingsApp.syncWeeklyFields()" class="rounded border-slate-300 text-brand-primary scale-90"> Days</label>
+                    <label class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-1 cursor-pointer"><input type="checkbox" id="nf-field-memberId" checked onchange="SettingsApp.syncWeeklyFields()" class="rounded border-slate-300 text-brand-primary scale-90"> ID</label>
+                  </div>
+                  <input type="hidden" id="gen-NOTIFY_WEEKLY_FIELDS">
+                </div>
+
+                <div class="flex gap-1.5">
+                  <button type="button" onclick="SettingsApp.openMessageEditor('weekly')" class="flex-1 h-8 px-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">edit_note</span><span>Edit</span>
+                  </button>
+                  <button type="button" onclick="SettingsApp.previewNotificationEmail('weekly')" class="flex-1 h-8 px-2 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">visibility</span><span>Preview</span>
+                  </button>
+                </div>
+                <input type="hidden" id="gen-NOTIFY_WEEKLY_SUBJECT">
+                <textarea id="gen-NOTIFY_WEEKLY_INTRO" class="hidden"></textarea>
               </div>
 
-              <div class="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div class="space-y-1">
-                  <div class="flex items-center gap-2">
-                    <span class="material-symbols-rounded text-indigo-600 text-[18px]">forward_to_inbox</span>
-                    <span class="text-xs font-bold text-indigo-950">Active Notification Rules</span>
-                  </div>
-                  <p class="text-[11px] text-indigo-800/80">
-                    Admin: <strong id="notification-summary-email" class="text-indigo-950 font-semibold">Owner / Admin Email</strong> •
-                    Weekly report: <strong id="notification-summary-freq" class="text-indigo-950 font-semibold">Monday 08:00 AM</strong>
-                  </p>
-                </div>
-                <button type="button" onclick="SettingsApp.openNotificationModal()" class="h-9 px-3.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold shadow-xs transition-colors shrink-0 cursor-pointer">
-                  <span class="material-symbols-rounded text-[17px]">info</span>
-                  <span>View Details</span>
-                </button>
-              </div>
+              <p class="text-[10px] text-indigo-900 px-0.5">
+                To: <strong id="notification-summary-email">Owner email</strong>
+                <span class="text-indigo-700/70"> · </span>
+                <strong id="notification-summary-freq">Monday 08:00 AM · 7 days</strong>
+              </p>
             </div>
           </div>
         </div>
-
-          <!-- Mobile In-Flow Save Button -->
-          <div class="md:hidden pt-3 pb-8">
-            <button type="button" onclick="SettingsApp.saveGeneralSettings()" id="btn-save-general-mobile" class="w-full py-3 bg-brand-primary hover:bg-blue-700 active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
-              <span class="material-symbols-rounded text-[18px]">save</span>
-              <span>Save All Settings</span>
-            </button>
-          </div>
 
         </div>
       </div>
@@ -403,6 +500,155 @@
     <!-- ========================================== -->
     <!-- TAB 2: DROPDOWNS SETTINGS                  -->
     <!-- ========================================== -->
+    <!-- TAB: Users & Access -->
+    <div id="pane-users" class="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 hidden">
+      <div class="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 no-scrollbar pb-24">
+        <div class="max-w-4xl mx-auto space-y-3">
+
+          <!-- Users tab shimmer -->
+          <div id="users-shimmer" class="bg-white border border-slate-200 rounded-2xl p-3.5 md:p-5 space-y-3 hidden">
+            <div class="flex items-start justify-between gap-3">
+              <div class="space-y-1.5 flex-1">
+                <div class="h-4 w-36 bg-slate-200 shimmer rounded"></div>
+                <div class="h-2.5 w-56 bg-slate-100 shimmer rounded"></div>
+              </div>
+              <div class="h-9 w-16 bg-slate-200 shimmer rounded-xl shrink-0"></div>
+            </div>
+            <div class="rounded-xl border border-slate-100 p-3 space-y-2.5">
+              <div class="h-3 w-28 bg-slate-200 shimmer rounded"></div>
+              <div class="flex items-center gap-3">
+                <div class="w-[96px] h-[96px] rounded-lg shimmer shrink-0"></div>
+                <div class="flex-1 space-y-2">
+                  <div class="h-8 w-full bg-slate-100 shimmer rounded-lg"></div>
+                  <div class="flex gap-1.5">
+                    <div class="h-8 w-16 bg-slate-200 shimmer rounded-lg"></div>
+                    <div class="h-8 w-16 bg-slate-100 shimmer rounded-lg"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div class="h-16 w-full bg-slate-100 shimmer rounded-xl"></div>
+              <div class="h-16 w-full bg-slate-100 shimmer rounded-xl"></div>
+              <div class="h-16 w-full bg-slate-100 shimmer rounded-xl"></div>
+            </div>
+          </div>
+
+          <div id="users-content" class="bg-white border border-slate-200 rounded-2xl p-3.5 md:p-5 space-y-3 hidden">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-bold text-slate-800">Users &amp; Access</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5">Invite Google accounts and set View / Create / Edit / Delete per module.</p>
+              </div>
+              <button type="button" id="btn-add-user" onclick="SettingsApp.openUserEditor()" class="h-9 px-3 bg-brand-primary hover:bg-blue-700 text-white rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer shrink-0">
+                <span class="material-symbols-rounded text-[16px]">person_add</span><span>Add</span>
+              </button>
+            </div>
+
+            <!-- Share app link / QR (published /exec URL) -->
+            <div id="users-share-card" class="rounded-xl border border-blue-100 bg-blue-50/40 p-3 space-y-2.5">
+              <div class="flex items-start gap-2">
+                <span class="material-symbols-rounded text-brand-primary text-[18px] shrink-0 mt-0.5">qr_code_2</span>
+                <div class="min-w-0">
+                  <p class="text-[12px] font-bold text-slate-800 leading-tight">Share app link</p>
+                  <p class="text-[10px] text-slate-500 mt-0.5 leading-snug">Share this app URL, or use the link icon on a user for a one-tap invite. Invitees enter their email + login code (Google hides emails from Execute-as-Me apps).</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="w-[96px] h-[96px] shrink-0 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden relative">
+                  <div id="users-share-qr-shimmer" class="absolute inset-0 shimmer"></div>
+                  <img id="users-share-qr" alt="App QR code" class="relative w-full h-full object-contain hidden">
+                  <span id="users-share-qr-placeholder" class="relative text-[10px] text-slate-400 px-2 text-center leading-snug hidden">No URL</span>
+                </div>
+                <div class="min-w-0 flex-1 space-y-2">
+                  <input type="text" id="users-share-url" readonly class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-mono text-slate-700 outline-none" placeholder="Web app URL">
+                  <div class="flex flex-wrap gap-1.5">
+                    <button type="button" onclick="SettingsApp.copyShareUrl()" class="h-8 px-2.5 bg-brand-primary hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer">
+                      <span class="material-symbols-rounded text-[15px]">content_copy</span><span>Copy</span>
+                    </button>
+                    <button type="button" id="btn-share-native" onclick="SettingsApp.nativeShareUrl()" class="h-8 px-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer">
+                      <span class="material-symbols-rounded text-[15px]">ios_share</span><span>Share</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p id="users-share-hint" class="text-[9px] text-slate-500 leading-snug">Use the /exec link only — not the Apps Script editor or /dev test URL.</p>
+            </div>
+
+            <div id="users-list" class="space-y-2"></div>
+            <p id="users-empty" class="hidden text-xs text-slate-500 py-4 text-center">No users yet. Add a Google email to grant access.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User editor modal -->
+    <div id="user-editor-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[130] flex items-center justify-center p-3 overflow-y-auto">
+      <div id="user-editor-modal-content" class="bg-white w-full max-w-lg rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col my-auto border border-slate-200 overflow-hidden max-h-[90vh]">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50 shrink-0">
+          <h2 id="user-editor-title" class="text-sm font-bold text-slate-800">Add user</h2>
+          <button type="button" onclick="SettingsApp.closeUserEditor()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 bg-slate-100 rounded-full cursor-pointer">
+            <span class="material-symbols-rounded text-lg">close</span>
+          </button>
+        </div>
+        <div class="p-4 space-y-3 overflow-y-auto">
+          <input type="hidden" id="user-edit-id">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-700 mb-1">Name</label>
+              <input type="text" id="user-edit-name" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-700 mb-1">Google email</label>
+              <input type="email" id="user-edit-email" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-700 mb-1">Status</label>
+              <select id="user-edit-status" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none">
+                <option value="Invited">Invited</option>
+                <option value="Active">Active</option>
+                <option value="Disabled">Disabled</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-700 mb-1">Preset</label>
+              <select id="user-edit-preset" onchange="SettingsApp.applyUserPreset()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none">
+                <option value="Viewer">Viewer</option>
+                <option value="Manager">Manager</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <label class="inline-flex items-center gap-2 text-[11px] font-semibold text-slate-700">
+            <input type="checkbox" id="user-edit-owner" class="rounded border-slate-300 text-brand-primary"> Owner (full access)
+          </label>
+          <div>
+            <p class="text-[11px] font-semibold text-slate-700 mb-1.5">Permissions</p>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="w-full text-[10px]">
+                <thead class="bg-slate-50 text-slate-500">
+                  <tr>
+                    <th class="text-left px-2 py-2 font-semibold">Module</th>
+                    <th class="px-1 py-2 font-semibold">View</th>
+                    <th class="px-1 py-2 font-semibold">Create</th>
+                    <th class="px-1 py-2 font-semibold">Edit</th>
+                    <th class="px-1 py-2 font-semibold">Delete</th>
+                  </tr>
+                </thead>
+                <tbody id="user-perm-matrix"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="p-3 border-t border-slate-100 bg-slate-50 flex gap-2 justify-end">
+          <button type="button" onclick="SettingsApp.closeUserEditor()" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-pointer">Cancel</button>
+          <button type="button" onclick="SettingsApp.saveUserEditor()" class="px-4 py-2 bg-brand-primary text-white rounded-xl text-xs font-bold cursor-pointer">Save user</button>
+        </div>
+      </div>
+    </div>
+
     <div id="pane-dropdowns" class="flex-1 flex flex-col lg:flex-row overflow-hidden bg-slate-50 hidden">
       
       <!-- Left Master List (Categories) -->
@@ -660,102 +906,65 @@
     </div>
   </div>
 
-  <!-- 4. Notification Configuration Modal (Future Scope) -->
-  <div id="notification-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[130] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-    <div id="notification-modal-content" class="bg-white w-full max-w-lg rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col my-auto border border-slate-200 overflow-hidden">
-      
-      <!-- Modal Header -->
+  <!-- Message editor modal -->
+  <div id="notification-message-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[130] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div id="notification-message-modal-content" class="bg-white w-full max-w-lg rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col my-auto border border-slate-200 overflow-hidden">
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
-            <span class="material-symbols-rounded text-[18px]">notifications_active</span>
-          </div>
-          <div>
-            <h2 class="text-sm md:text-base font-bold text-slate-800">Notification Configuration</h2>
-            <p class="text-[10px] text-slate-500">Scheduled email triggers, target inboxes, and alert frequency.</p>
-          </div>
+        <div class="min-w-0">
+          <h2 id="notif-editor-title" class="text-sm md:text-base font-bold text-slate-800">Edit message</h2>
+          <p id="notif-editor-hint" class="text-[10px] text-slate-500 mt-0.5">Use placeholders like {{memberName}}. Changes apply after you save settings.</p>
         </div>
-        <button type="button" onclick="SettingsApp.closeNotificationModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer">
+        <button type="button" onclick="SettingsApp.closeMessageEditor()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer shrink-0">
           <span class="material-symbols-rounded text-lg">close</span>
         </button>
       </div>
-
-      <!-- Modal Body -->
-      <div class="p-5 space-y-4 overflow-y-auto no-scrollbar max-h-[75vh]">
-        <div class="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-xl flex items-start gap-3">
-          <span class="material-symbols-rounded text-brand-primary text-[20px] shrink-0 mt-0.5">info</span>
-          <div class="text-[11px] text-slate-600 leading-relaxed">
-            <span class="font-bold text-slate-800 block mb-0.5">How notifications work</span>
-            Payment receipts are sent immediately after a paid payment is saved. The weekly report uses an Apps Script time-driven trigger and emails the owner email configured above. Save Settings after changing day/time so the schedule updates.
-          </div>
+      <div class="p-5 space-y-3 overflow-y-auto no-scrollbar max-h-[70vh]">
+        <div>
+          <label for="notif-editor-subject" class="block text-[11px] font-semibold text-slate-700 mb-1">Subject</label>
+          <input type="text" id="notif-editor-subject" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:border-brand-primary outline-none">
         </div>
-
-        <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-start gap-3">
-          <div class="w-8 h-8 rounded-lg bg-blue-50 text-brand-primary flex items-center justify-center shrink-0 border border-blue-100 mt-0.5">
-            <span class="material-symbols-rounded text-[18px]">mail</span>
-          </div>
-          <div class="flex-1">
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Admin Report Email</span>
-            <span id="notif-target-email" class="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">--</span>
-            <p class="text-[10px] text-slate-400 mt-0.5">Weekly renewal report recipient (Owner / Admin Email).</p>
-          </div>
+        <div>
+          <label for="notif-editor-body" class="block text-[11px] font-semibold text-slate-700 mb-1">Message body</label>
+          <textarea id="notif-editor-body" rows="10" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:border-brand-primary outline-none resize-y leading-relaxed"></textarea>
         </div>
-
-        <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-start gap-3">
-          <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100 mt-0.5">
-            <span class="material-symbols-rounded text-[18px]">schedule</span>
-          </div>
-          <div class="flex-1">
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Weekly Report Schedule</span>
-            <span id="notif-schedule-label" class="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">Monday 08:00 AM</span>
-            <p class="text-[10px] text-slate-400 mt-0.5">Timezone follows the Apps Script project setting (Asia/Kolkata).</p>
-          </div>
-        </div>
-
-        <div class="pt-2 border-t border-slate-100">
-          <label class="block text-xs font-bold text-slate-700 mb-2">Enabled Rules</label>
-          <div class="space-y-2">
-            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2.5">
-                <span class="material-symbols-rounded text-emerald-500 text-[18px]">mark_email_read</span>
-                <div>
-                  <div class="text-xs font-bold text-slate-700">Payment receipt to member</div>
-                  <div class="text-[10px] text-slate-400">Sent when a new paid payment is recorded and the member has an email.</div>
-                </div>
-              </div>
-              <span id="notif-rule-receipt" class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">On</span>
-            </div>
-
-            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2.5">
-                <span class="material-symbols-rounded text-amber-500 text-[18px]">alarm</span>
-                <div>
-                  <div class="text-xs font-bold text-slate-700">Upcoming renewals (next 7 days)</div>
-                  <div class="text-[10px] text-slate-400">Included in the weekly admin report.</div>
-                </div>
-              </div>
-              <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">Included</span>
-            </div>
-
-            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2.5">
-                <span class="material-symbols-rounded text-red-500 text-[18px]">event_busy</span>
-                <div>
-                  <div class="text-xs font-bold text-slate-700">Overdue members</div>
-                  <div class="text-[10px] text-slate-400">Included in the weekly admin report.</div>
-                </div>
-              </div>
-              <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">Included</span>
-            </div>
-          </div>
+        <p id="notif-editor-placeholders" class="text-[10px] text-slate-500 leading-relaxed"></p>
+      </div>
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row gap-2 sm:justify-between shrink-0">
+        <button type="button" onclick="SettingsApp.resetMessageEditorDefaults()" class="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs rounded-xl transition-colors cursor-pointer">Reset to default</button>
+        <div class="flex gap-2">
+          <button type="button" onclick="SettingsApp.closeMessageEditor()" class="flex-1 sm:flex-none px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer">Cancel</button>
+          <button type="button" onclick="SettingsApp.applyMessageEditor()" class="flex-1 sm:flex-none px-5 py-2.5 bg-brand-primary hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer">Apply</button>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Modal Footer -->
+  <!-- Email preview modal -->
+  <div id="notification-preview-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[140] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div id="notification-preview-modal-content" class="bg-white w-full max-w-xl rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col my-auto border border-slate-200 overflow-hidden max-h-[90vh]">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+        <div class="min-w-0">
+          <h2 class="text-sm md:text-base font-bold text-slate-800">Email preview</h2>
+          <p id="notif-preview-meta" class="text-[10px] text-slate-500 mt-0.5 truncate">Sample recipient</p>
+        </div>
+        <button type="button" onclick="SettingsApp.closePreviewModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer shrink-0">
+          <span class="material-symbols-rounded text-lg">close</span>
+        </button>
+      </div>
+      <div class="px-5 py-3 border-b border-slate-100 shrink-0 space-y-1.5">
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Subject</p>
+          <p id="notif-preview-subject" class="text-xs font-bold text-slate-800 mt-0.5">—</p>
+        </div>
+        <p id="notif-preview-cc" class="hidden text-[10px] text-slate-500">CC: <span id="notif-preview-cc-value" class="font-semibold text-slate-700"></span></p>
+      </div>
+      <div class="flex-1 overflow-y-auto bg-slate-100 p-3 sm:p-4 min-h-[240px]">
+        <div id="notif-preview-loading" class="hidden text-center text-xs text-slate-500 py-10">Loading preview…</div>
+        <iframe id="notif-preview-frame" title="Email preview" class="w-full min-h-[320px] h-[50vh] bg-white rounded-xl border border-slate-200 shadow-xs" sandbox=""></iframe>
+      </div>
       <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end shrink-0">
-        <button type="button" onclick="SettingsApp.closeNotificationModal()" class="w-full sm:w-auto px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer">Close</button>
+        <button type="button" onclick="SettingsApp.closePreviewModal()" class="w-full sm:w-auto px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer">Close</button>
       </div>
-
     </div>
   </div>
 

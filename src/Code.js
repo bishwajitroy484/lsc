@@ -3,10 +3,15 @@
  */
 
 /**
- * Run once from the Apps Script editor (as the deployer), then click Allow.
- * Grants ScriptApp trigger + MailApp permissions used by notifications.
+ * Legacy editor helper — prefer api_authorizeServices from the web app UI.
  */
 function authorizeLscScriptPermissions() {
+  if (typeof api_authorizeServices === 'function') {
+    const result = api_authorizeServices();
+    if (result && result.success) {
+      return result.message || 'LSC permissions authorized.';
+    }
+  }
   ScriptApp.getProjectTriggers();
   MailApp.getRemainingDailyQuota();
   return 'LSC permissions authorized. Save Settings again to create the weekly report trigger.';
