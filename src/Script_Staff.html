@@ -1013,15 +1013,21 @@
       if (tabName === 'salary') tabName = 'payments';
       const activeCls = 'text-brand-primary text-sm font-bold border-b-2 border-brand-primary pb-2 px-1 transition-colors';
       const inactiveCls = 'text-slate-400 hover:text-slate-800 text-sm font-medium border-b-2 border-transparent pb-2 px-1 transition-colors';
-      
+
       this.safeSetClass('tab-btn-overview', tabName === 'overview' ? activeCls : inactiveCls);
       this.safeSetClass('tab-btn-payments', tabName === 'payments' ? activeCls : inactiveCls);
-      
+
       const elOverview = document.getElementById('det-tab-overview');
       const elPayments = document.getElementById('det-tab-payments');
-      
-      if(elOverview) elOverview.classList.toggle('hidden', tabName !== 'overview');
-      if(elPayments) elPayments.classList.toggle('hidden', tabName !== 'payments');
+
+      if (elOverview) {
+        elOverview.classList.toggle('hidden', tabName !== 'overview');
+      }
+      if (elPayments) {
+        const showPay = tabName === 'payments';
+        elPayments.classList.toggle('hidden', !showPay);
+        elPayments.classList.toggle('flex', showPay);
+      }
     },
 
     openDetails: function(stf) {

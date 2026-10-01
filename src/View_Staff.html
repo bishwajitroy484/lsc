@@ -169,7 +169,7 @@
       </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
+    <div class="flex-1 min-h-0 overflow-hidden flex flex-col">
       <div class="bg-white px-6 py-5 border-b border-slate-100 shrink-0">
         <div class="flex items-start gap-4">
           <div id="det-stf-avatar" class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xl text-slate-500 shadow-inner shrink-0">--</div>
@@ -190,7 +190,7 @@
         </div>
       </div>
 
-      <div id="det-tab-overview" class="p-4 md:p-6 space-y-6">
+      <div id="det-tab-overview" class="flex-1 min-h-0 overflow-y-auto no-scrollbar p-4 md:p-6 pb-24 md:pb-6 space-y-6">
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div class="px-4 py-3 border-b border-slate-100"><h4 class="font-bold text-sm text-slate-800">Staff Information</h4></div>
           <div class="p-4 grid grid-cols-2 gap-y-4 text-xs">
@@ -205,19 +205,19 @@
         </div>
       </div>
 
-      <div id="det-tab-payments" class="hidden p-4 md:p-6 space-y-4">
-        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 flex items-center justify-between">
+      <div id="det-tab-payments" class="hidden flex-1 min-h-0 flex-col p-3 md:p-6 pb-24 md:pb-6 gap-3 overflow-hidden">
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-3.5 md:p-4 flex items-center justify-between shrink-0">
            <div><p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Total Salary Paid</p><h3 id="det-stf-total-paid" class="text-xl font-bold text-emerald-600">₹0</h3></div>
-           <button onclick="StaffApp.openTransactionModal()" class="h-9 px-4 bg-brand-primary text-white rounded-lg flex items-center justify-center gap-1.5 shadow-sm hover:bg-blue-700 text-xs font-semibold"><span class="material-symbols-rounded text-[16px]">add</span> Record Salary</button>
+           <button onclick="StaffApp.openTransactionModal()" class="h-9 px-3 md:px-4 bg-brand-primary text-white rounded-lg flex items-center justify-center gap-1.5 shadow-sm hover:bg-blue-700 text-xs font-semibold"><span class="material-symbols-rounded text-[16px]">add</span> Record Salary</button>
         </div>
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+          <div class="px-4 py-2.5 md:py-3 border-b border-slate-100 flex items-center justify-between shrink-0">
             <h4 class="font-bold text-sm text-slate-800">Salary Records</h4>
             <span class="text-[10px] text-slate-400 font-medium">Paid & Action Needed</span>
           </div>
-          <div class="max-h-[300px] overflow-y-auto no-scrollbar">
+          <div class="flex-1 min-h-0 overflow-y-auto no-scrollbar">
             <table class="w-full text-left border-collapse">
-              <thead class="bg-slate-50 border-b border-slate-100 sticky top-0">
+              <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-[1]">
                 <tr class="text-[9px] uppercase text-slate-500 font-bold">
                   <th class="px-4 py-2">Cycle / Date</th>
                   <th class="px-4 py-2">Amount & Status</th>
