@@ -361,18 +361,29 @@ function api_saveGeneralSettings(settingsArray) {
     sheet.getRange(2, 1, writeData.length, 2).setValues(writeData);
 
     let triggerSync = null;
+    let message = 'General Settings saved successfully.';
     if (typeof syncNotificationTriggers_ === 'function') {
-      const settingsMap = {};
-      settingsArray.forEach(item => {
-        const key = String((item && (item.key || item.Key)) || '').trim().toUpperCase();
-        if (key) settingsMap[key] = String(item.value !== undefined ? item.value : '').trim();
-      });
-      triggerSync = syncNotificationTriggers_(settingsMap);
+      try {
+        const settingsMap = {};
+        settingsArray.forEach(item => {
+          const key = String((item && (item.key || item.Key)) || '').trim().toUpperCase();
+          if (key) settingsMap[key] = String(item.value !== undefined ? item.value : '').trim();
+        });
+        triggerSync = syncNotificationTriggers_(settingsMap);
+      } catch (triggerError) {
+        const detail = triggerError && triggerError.message ? triggerError.message : String(triggerError);
+        triggerSync = { success: false, error: detail };
+        if (/script\.scriptapp|getProjectTriggers|Authorization/i.test(detail)) {
+          message = 'Settings saved. Authorize the script once in Apps Script (run authorizeLscScriptPermissions) to enable the weekly report schedule.';
+        } else {
+          message = 'Settings saved, but the weekly report schedule could not be updated: ' + detail;
+        }
+      }
     }
     
     return { 
       success: true, 
-      message: "General Settings saved successfully.",
+      message: message,
       logoId: uploadedLogoId,
       logoUrl: uploadedLogoUrl,
       notificationTrigger: triggerSync
