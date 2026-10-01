@@ -41,6 +41,10 @@ Member Payment Insights, Dashboard collected-revenue KPIs, and collection charts
 
 Member, staff, expense, payment, staff salary, and Settings add/edit forms validate every visible required field when Save is clicked. Missing or invalid fields are highlighted and show an inline message; the form is not submitted until those fields are corrected. Conditional fields, such as expense misc details, exit dates, salary coverage dates, and optional initial-payment details, are validated when their corresponding form state makes them visible and required. Expense amount edits use the same validation as the expense form.
 
+## Mobile modal clearance
+
+On phones, dialogs and bottom sheets (login/access, Settings user editor and notification editors, schema/option modals, member/staff/expense/payment forms, delete confirms, WhatsApp notify, chart expand, and side drawers) keep padding and max-height above the bottom navigation and safe-area inset so actions are not cut off or covered by the nav. Overlays scroll when content is taller than the remaining viewport.
+
 ## Member filters, payments, and exit dates
 
 The Members module's status, batch, and membership filters keep their selected values visible while filtering the member list. Member phone numbers must contain exactly 10 digits when adding or editing a record. Adding a member can optionally capture an initial payment; its payment mode and status choices are populated from the configured dropdown options and shown when Record Now is selected. Ad-hoc and trial members require an exit date and are changed to Inactive when that date is reached, both during member-list loading and by a daily scheduled check. Trial fees use the configured daily rate multiplied by the inclusive number of days between join and exit dates, and recalculate when the plan or dates change.

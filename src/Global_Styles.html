@@ -196,4 +196,74 @@
     opacity: 1;
     visibility: visible;
   }
+
+  /* Safe-area + mobile bottom-nav clearance for overlays */
+  :root {
+    --lsc-mobile-nav-clearance: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /*
+   * Centered dialogs (Settings user editor, deletes, login, etc.):
+   * scrollable, padded above the mobile bottom nav so footers stay tappable.
+   */
+  .lsc-modal-overlay {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    align-items: flex-start !important;
+    padding: 0.75rem !important;
+    padding-bottom: var(--lsc-mobile-nav-clearance) !important;
+    box-sizing: border-box;
+  }
+  @media (min-width: 768px) {
+    .lsc-modal-overlay {
+      align-items: center !important;
+      padding: 1rem !important;
+      padding-bottom: 1rem !important;
+    }
+  }
+
+  .lsc-modal-panel {
+    max-height: calc(100dvh - var(--lsc-mobile-nav-clearance) - 0.75rem) !important;
+    margin-top: auto;
+    margin-bottom: auto;
+    width: 100%;
+  }
+  @media (min-width: 768px) {
+    .lsc-modal-panel {
+      max-height: min(90vh, calc(100dvh - 2rem)) !important;
+    }
+  }
+
+  /* Bottom-sheet overlays: keep sheet above the nav band */
+  .lsc-modal-sheet {
+    padding-bottom: var(--lsc-mobile-nav-clearance) !important;
+    box-sizing: border-box;
+  }
+  @media (min-width: 768px) {
+    .lsc-modal-sheet {
+      padding-bottom: 1rem !important;
+    }
+  }
+  .lsc-modal-sheet-panel {
+    max-height: calc(100dvh - var(--lsc-mobile-nav-clearance)) !important;
+    height: auto !important;
+  }
+  @media (min-width: 768px) {
+    .lsc-modal-sheet-panel {
+      max-height: 90vh !important;
+      height: auto !important;
+    }
+  }
+
+  /* Full-height drawers: leave content clear of bottom nav on phones */
+  @media (max-width: 767px) {
+    .lsc-drawer-panel {
+      padding-bottom: var(--lsc-mobile-nav-clearance);
+    }
+  }
 </style>

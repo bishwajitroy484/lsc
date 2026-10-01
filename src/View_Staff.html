@@ -135,7 +135,7 @@
 
   
   <div id="staff-drawer-backdrop" onclick="StaffApp.closeDetails()" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[120]"></div>
-  <div id="staff-drawer" class="fixed top-0 bottom-0 right-0 w-full md:w-[450px] bg-slate-50 shadow-2xl z-[130] transform translate-x-full transition-transform duration-300 flex flex-col overflow-hidden">
+  <div id="staff-drawer" class="fixed top-0 bottom-0 right-0 w-full md:w-[450px] bg-slate-50 shadow-2xl z-[130] transform translate-x-full transition-transform duration-300 flex flex-col overflow-hidden lsc-drawer-panel">
     <header class="bg-white px-4 py-3 flex items-center justify-between border-b border-slate-100 shrink-0">
       <div class="flex items-center gap-3">
         <button onclick="StaffApp.closeDetails()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-full transition-colors"><span class="material-symbols-rounded">arrow_back</span></button>
@@ -212,8 +212,8 @@
   </div>
 
   
-  <div id="staff-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[140] flex items-end md:items-center justify-center sm:p-4 pb-20 md:pb-4">
-    <div id="staff-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh]">
+  <div id="staff-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[140] flex items-end md:items-center justify-center sm:p-4 lsc-modal-sheet">
+    <div id="staff-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh] lsc-modal-sheet-panel">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
         <h2 id="stf-modal-title" class="text-lg font-bold text-slate-800">Add Staff</h2>
         <button onclick="StaffApp.closeModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200 transition-colors"><span class="material-symbols-rounded text-lg">close</span></button>
@@ -278,8 +278,8 @@
   </div>
 
   
-  <div id="txn-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[150] flex items-end md:items-center justify-center sm:p-4 pb-20 md:pb-4">
-    <div id="txn-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh]">
+  <div id="txn-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[150] flex items-end md:items-center justify-center sm:p-4 lsc-modal-sheet">
+    <div id="txn-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh] lsc-modal-sheet-panel">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
         <h2 id="txn-modal-title" class="text-lg font-bold text-slate-800">Record Salary</h2>
         <button onclick="StaffApp.closeTransactionModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200"><span class="material-symbols-rounded text-lg">close</span></button>
@@ -343,8 +343,8 @@
     </div>
   </div>
 
-  <div id="delete-stf-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[160] flex items-center justify-center p-4">
-    <div id="delete-stf-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 p-6 text-center">
+  <div id="delete-stf-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[160] flex lsc-modal-overlay">
+    <div id="delete-stf-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 p-6 text-center lsc-modal-panel">
       <div class="w-16 h-16 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4"><span class="material-symbols-rounded text-3xl">delete_forever</span></div>
       <h3 id="delete-title" class="text-lg font-bold text-slate-800 mb-2">Confirm Delete</h3>
       <p class="text-sm text-slate-500 mb-6">Are you sure you want to delete <strong id="delete-stf-name"></strong>? This action cannot be undone.</p>

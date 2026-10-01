@@ -38,8 +38,8 @@
     </div>
   </div>
 
-  <div id="app-access-denied" class="hidden fixed inset-0 z-[210] bg-slate-50 flex items-center justify-center p-4">
-    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm max-w-md w-full p-5 sm:p-6 space-y-3 text-center">
+  <div id="app-access-denied" class="hidden fixed inset-0 z-[210] bg-slate-50 flex lsc-modal-overlay">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm max-w-md w-full p-5 sm:p-6 space-y-3 text-center lsc-modal-panel overflow-y-auto no-scrollbar">
       <div id="access-denied-icon" class="w-12 h-12 mx-auto rounded-xl bg-red-50 text-red-500 flex items-center justify-center">
         <span class="material-symbols-rounded text-[26px]">lock</span>
       </div>
@@ -82,8 +82,8 @@
   </div>
 
   <!-- Global % action progress for save / edit / delete -->
-  <div id="action-progress-overlay" class="hidden fixed inset-0 z-[300] bg-slate-900/35 backdrop-blur-[2px] flex items-center justify-center p-4">
-    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl px-6 py-5 w-full max-w-[220px] text-center space-y-3">
+  <div id="action-progress-overlay" class="hidden fixed inset-0 z-[300] bg-slate-900/35 backdrop-blur-[2px] flex lsc-modal-overlay">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl px-6 py-5 w-full max-w-[220px] text-center space-y-3 lsc-modal-panel">
       <div class="relative w-16 h-16 mx-auto">
         <svg class="w-16 h-16 -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
           <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e2e8f0" stroke-width="3"></circle>
