@@ -1,4 +1,27 @@
 <style>
+  /* App-wide readable type scale (especially mobile) */
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+  @media (max-width: 767px) {
+    html {
+      font-size: 17px;
+    }
+    /* Bump common fixed-px utilities used across modules */
+    .text-\[9px\] { font-size: 11px !important; }
+    .text-\[10px\] { font-size: 12px !important; }
+    .text-\[11px\] { font-size: 13px !important; }
+    .text-\[12px\] { font-size: 14px !important; }
+    .text-\[13px\] { font-size: 15px !important; }
+    .text-\[14px\] { font-size: 15px !important; }
+    .text-\[15px\] { font-size: 16px !important; }
+    .text-\[16px\] { font-size: 17px !important; }
+    .text-\[17px\] { font-size: 18px !important; }
+    .text-\[18px\] { font-size: 19px !important; }
+    .text-\[20px\] { font-size: 21px !important; }
+  }
+
   /* Hide scrollbar for Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -40,10 +63,15 @@
 
   .field-validation-error {
     color: #dc2626;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     line-height: 1.25;
     margin-top: 4px;
+  }
+  @media (max-width: 767px) {
+    .field-validation-error {
+      font-size: 13px;
+    }
   }
 
   .field-validation-invalid {
@@ -73,36 +101,36 @@
 
   /* Consistent legible ApexCharts Typography across all modules */
   .apexcharts-tooltip {
-    font-size: 12px !important;
+    font-size: 13px !important;
     font-family: inherit !important;
     border-radius: 8px !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
     border-color: #e2e8f0 !important;
   }
   .apexcharts-tooltip-title {
-    font-size: 12px !important;
+    font-size: 13px !important;
     font-weight: 700 !important;
     padding: 6px 10px !important;
     background-color: #f8fafc !important;
     border-bottom: 1px solid #e2e8f0 !important;
   }
   .apexcharts-tooltip-text {
-    font-size: 12px !important;
+    font-size: 13px !important;
     font-family: inherit !important;
   }
   .apexcharts-datalabel,
   .apexcharts-data-labels text {
-    font-size: 11px !important;
+    font-size: 12px !important;
     font-weight: 600 !important;
     font-family: inherit !important;
   }
   .apexcharts-xaxis-label text,
   .apexcharts-yaxis-label text {
-    font-size: 11px !important;
+    font-size: 12px !important;
     font-family: inherit !important;
   }
   .apexcharts-legend-text {
-    font-size: 11px !important;
+    font-size: 12px !important;
     font-family: inherit !important;
   }
 

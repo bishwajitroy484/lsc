@@ -4,6 +4,16 @@ This guide documents user-visible behavior. Keep it focused on what users can do
 
 Update the relevant section whenever a feature is added or its user-visible behavior changes. Include the user goal, key workflows, important validation or limitations, and related modules where useful.
 
+## Local environment IDs (dev / prod)
+
+Developers keep spreadsheet, Drive folder, and Apps Script IDs in a local file that is **not** committed:
+
+1. Copy `config/env.example.json` → `config/env.json`
+2. Fill `dev` and `prod` blocks (`scriptId`, `spreadsheetId`, `driveId`)
+3. Run `npm run use:dev` or `npm run use:prod` before push/deploy
+
+Those commands write `.clasp.json` (script target) and `src/Config_Env.js` (runtime `SPREADSHEET_ID` / drive defaults). Then `npm run push:dev` / `push:prod` / `deploy:dev` / `deploy:prod` use the selected environment’s IDs.
+
 ## Feature areas
 
 The current application includes these feature modules:

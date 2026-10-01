@@ -26,9 +26,29 @@
  * Note: SETTINGS and DROP_DOWN tabs are strictly preserved and never wiped.
  */
 
-var DEV_SPREADSHEET_ID = "1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI";
-var DEV_SCRIPT_ID = "18gsDCFSfqq7XOVgVAjhctSgyeW7pjyA_QlAwbRvOtHyXgybOQkX_BPgp";
-var PROD_SCRIPT_ID = "1z0FR65RqWh25HtPpnc68MNUx_obdbHmE5ejRHRwXpwLIS6a56xxjXpJf";
+function readEnvGlobal_(name) {
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis[name] != null && String(globalThis[name]) !== '') {
+      return String(globalThis[name]);
+    }
+  } catch (error) {
+    // ignore
+  }
+  try {
+    // Apps Script shared global scope (Config_Env.js)
+    if (typeof this !== 'undefined' && this[name] != null && String(this[name]) !== '') {
+      return String(this[name]);
+    }
+  } catch (error) {
+    // ignore
+  }
+  return '';
+}
+
+// IDs come from Config_Env.js (npm run use:dev | use:prod).
+var DEV_SPREADSHEET_ID = readEnvGlobal_('LSC_DEV_SPREADSHEET_ID') || readEnvGlobal_('SPREADSHEET_ID');
+var DEV_SCRIPT_ID = readEnvGlobal_('LSC_DEV_SCRIPT_ID');
+var PROD_SCRIPT_ID = readEnvGlobal_('LSC_PROD_SCRIPT_ID');
 
 /**
  * Strict Environment Safeguard.
@@ -38,13 +58,20 @@ var PROD_SCRIPT_ID = "1z0FR65RqWh25HtPpnc68MNUx_obdbHmE5ejRHRwXpwLIS6a56xxjXpJf"
 function assertDevEnvironment() {
   if (typeof ScriptApp !== 'undefined' && ScriptApp.getScriptId) {
     var currentScriptId = ScriptApp.getScriptId();
-    if (currentScriptId === PROD_SCRIPT_ID) {
+    if (PROD_SCRIPT_ID && currentScriptId === PROD_SCRIPT_ID) {
       throw new Error("SECURITY VIOLATION: Mock data generation is strictly blocked on the Production Apps Script environment (Script ID: " + currentScriptId + "). It is only permitted on the Dev instance.");
+    }
+    if (String(readEnvGlobal_('LSC_ENV')).toLowerCase() === 'prod') {
+      throw new Error("SECURITY VIOLATION: Mock data generation is blocked when LSC_ENV=prod.");
     }
   }
 
-  if (DEV_SPREADSHEET_ID !== "1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI") {
-    throw new Error("SECURITY VIOLATION: Target spreadsheet must be Dev Spreadsheet (ID: 1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI).");
+  var activeSheetId = readEnvGlobal_('SPREADSHEET_ID') || DEV_SPREADSHEET_ID;
+  if (!DEV_SPREADSHEET_ID) {
+    throw new Error("SECURITY VIOLATION: Dev spreadsheet ID is not configured. Run npm run use:dev after filling config/env.json.");
+  }
+  if (activeSheetId && activeSheetId !== DEV_SPREADSHEET_ID) {
+    throw new Error("SECURITY VIOLATION: Target spreadsheet must be Dev Spreadsheet (ID: " + DEV_SPREADSHEET_ID + ").");
   }
 }
 var DEFAULT_SHEET_HEADERS = {
