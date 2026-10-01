@@ -359,12 +359,23 @@ function api_saveGeneralSettings(settingsArray) {
       s.value !== undefined ? s.value : (s.Value !== undefined ? s.Value : '')
     ]);
     sheet.getRange(2, 1, writeData.length, 2).setValues(writeData);
+
+    let triggerSync = null;
+    if (typeof syncNotificationTriggers_ === 'function') {
+      const settingsMap = {};
+      settingsArray.forEach(item => {
+        const key = String((item && (item.key || item.Key)) || '').trim().toUpperCase();
+        if (key) settingsMap[key] = String(item.value !== undefined ? item.value : '').trim();
+      });
+      triggerSync = syncNotificationTriggers_(settingsMap);
+    }
     
     return { 
       success: true, 
       message: "General Settings saved successfully.",
       logoId: uploadedLogoId,
-      logoUrl: uploadedLogoUrl
+      logoUrl: uploadedLogoUrl,
+      notificationTrigger: triggerSync
     };
   } catch (error) {
     return { success: false, error: error.toString() };

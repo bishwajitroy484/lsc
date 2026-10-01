@@ -70,21 +70,24 @@
       <div id="general-content" class="max-w-4xl mx-auto space-y-5 md:space-y-6 hidden">
         
         <!-- Section 1: Gym Profile & Branding -->
-        <div class="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300">
-          <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <div class="flex items-center gap-3">
+        <div class="settings-section bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300" data-section="identity">
+          <button type="button" onclick="SettingsApp.toggleSection(this)" aria-expanded="true" class="w-full px-4 md:px-5 py-3.5 md:py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-slate-50 transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
               <div class="w-9 h-9 rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center shrink-0 border border-blue-100">
                 <span class="material-symbols-rounded text-[20px]">storefront</span>
               </div>
-              <div>
+              <div class="min-w-0">
                 <h3 class="font-bold text-sm text-slate-800 leading-tight">Gym Identity & Branding</h3>
-                <p class="text-[11px] text-slate-500">Public name, communications, and logo representation.</p>
+                <p class="text-[11px] text-slate-500 truncate">Public name, communications, and logo representation.</p>
               </div>
             </div>
-            <span class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase bg-slate-100 px-2 py-0.5 rounded">Core</span>
-          </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="hidden sm:inline text-[10px] font-semibold tracking-wider text-slate-400 uppercase bg-slate-100 px-2 py-0.5 rounded">Core</span>
+              <span class="settings-section-chevron material-symbols-rounded text-slate-500 text-[22px] transition-transform">expand_less</span>
+            </div>
+          </button>
 
-          <div class="p-5 md:p-6 space-y-4">
+          <div class="settings-section-body p-5 md:p-6 space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- Gym Name -->
               <div>
@@ -141,21 +144,24 @@
         </div>
 
         <!-- Section 2: Financial & Operational Policies -->
-        <div class="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300">
-          <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <div class="flex items-center gap-3">
+        <div class="settings-section bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300" data-section="financial">
+          <button type="button" onclick="SettingsApp.toggleSection(this)" aria-expanded="true" class="w-full px-4 md:px-5 py-3.5 md:py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-slate-50 transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
               <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
                 <span class="material-symbols-rounded text-[20px]">account_balance</span>
               </div>
-              <div>
+              <div class="min-w-0">
                 <h3 class="font-bold text-sm text-slate-800 leading-tight">Financial & Operating Policies</h3>
-                <p class="text-[11px] text-slate-500">Revenue calculation logic and automated reminder windows.</p>
+                <p class="text-[11px] text-slate-500 truncate">Revenue calculation logic and automated reminder windows.</p>
               </div>
             </div>
-            <span class="text-[10px] font-semibold tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Accounting</span>
-          </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="hidden sm:inline text-[10px] font-semibold tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Accounting</span>
+              <span class="settings-section-chevron material-symbols-rounded text-slate-500 text-[22px] transition-transform">expand_less</span>
+            </div>
+          </button>
 
-          <div class="p-5 md:p-6 space-y-4">
+          <div class="settings-section-body p-5 md:p-6 space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <!-- Revenue Recognition -->
               <div>
@@ -206,21 +212,24 @@
         </div>
 
         <!-- Section 3: Database & Cloud Infrastructure -->
-        <div class="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300">
-          <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <div class="flex items-center gap-3">
+        <div class="settings-section bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300" data-section="database">
+          <button type="button" onclick="SettingsApp.toggleSection(this)" aria-expanded="true" class="w-full px-4 md:px-5 py-3.5 md:py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-slate-50 transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
               <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 border border-slate-200">
                 <span class="material-symbols-rounded text-[20px]">database</span>
               </div>
-              <div>
+              <div class="min-w-0">
                 <h3 class="font-bold text-sm text-slate-800 leading-tight">Database & Persistence</h3>
-                <p class="text-[11px] text-slate-500">Connected Google Sheets and Drive storage infrastructure.</p>
+                <p class="text-[11px] text-slate-500 truncate">Connected Google Sheets and Drive storage infrastructure.</p>
               </div>
             </div>
-            <span class="text-[10px] font-semibold tracking-wider text-slate-600 bg-slate-100 px-2 py-0.5 rounded">Connected</span>
-          </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="hidden sm:inline text-[10px] font-semibold tracking-wider text-slate-600 bg-slate-100 px-2 py-0.5 rounded">Connected</span>
+              <span class="settings-section-chevron material-symbols-rounded text-slate-500 text-[22px] transition-transform">expand_less</span>
+            </div>
+          </button>
 
-          <div class="p-5 md:p-6 space-y-4">
+          <div class="settings-section-body p-5 md:p-6 space-y-4">
             <!-- Target Google Spreadsheet ID -->
             <div>
               <label for="gen-SPREADSHEET_ID" class="block text-xs font-semibold text-slate-700 mb-1">Target Google Spreadsheet ID</label>
@@ -268,26 +277,28 @@
         </div>
 
         <!-- Section 4: Automated Notifications & Alerts -->
-        <div class="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300">
-          <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <div class="flex items-center gap-3">
+        <div class="settings-section bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300" data-section="notifications">
+          <button type="button" onclick="SettingsApp.toggleSection(this)" aria-expanded="true" class="w-full px-4 md:px-5 py-3.5 md:py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-slate-50 transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
               <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
                 <span class="material-symbols-rounded text-[20px]">notifications_active</span>
               </div>
-              <div>
+              <div class="min-w-0">
                 <h3 class="font-bold text-sm text-slate-800 leading-tight">Automated Notifications & Alerts</h3>
-                <p class="text-[11px] text-slate-500">Scheduled reminders for renewal due dates and payment digests.</p>
+                <p class="text-[11px] text-slate-500 truncate">Payment receipts and weekly renewal reports.</p>
               </div>
             </div>
-            <span id="notification-status-badge" class="text-[10px] font-semibold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Disabled</span>
-          </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span id="notification-status-badge" class="text-[10px] font-semibold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Disabled</span>
+              <span class="settings-section-chevron material-symbols-rounded text-slate-500 text-[22px] transition-transform">expand_less</span>
+            </div>
+          </button>
 
-          <div class="p-5 md:p-6 space-y-4">
-            <!-- Toggle Row -->
+          <div class="settings-section-body p-5 md:p-6 space-y-4">
             <div class="flex items-center justify-between gap-4 p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-xl">
               <div>
                 <span class="text-xs font-bold text-slate-800 block">Enable Automated Notifications</span>
-                <span class="text-[11px] text-slate-500 block mt-0.5">Activate scheduled alerts for expiring memberships, renewal warnings, and overdue fee summaries.</span>
+                <span class="text-[11px] text-slate-500 block mt-0.5">Master switch for payment thank-you emails and the weekly admin renewal report.</span>
               </div>
               <label class="relative inline-flex items-center cursor-pointer shrink-0">
                 <input type="checkbox" id="gen-ENABLE_NOTIFICATION" onchange="SettingsApp.toggleNotificationView()" class="sr-only peer">
@@ -295,23 +306,69 @@
               </label>
             </div>
 
-            <!-- Future Configuration Trigger Area (Shown only when Enabled) -->
             <div id="notification-config-area" class="hidden space-y-3 pt-1">
+              <div class="p-3.5 bg-white border border-slate-200 rounded-xl space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <span class="text-xs font-bold text-slate-800 block">Payment receipt emails</span>
+                    <span class="text-[11px] text-slate-500 block mt-0.5">When a paid payment is logged, email the member a thank-you note with amount and coverage dates. Requires member email.</span>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                    <input type="checkbox" id="gen-NOTIFY_PAYMENT_RECEIPT" checked class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                  </label>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 space-y-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="text-xs font-bold text-slate-800 block">Weekly admin renewal report</span>
+                      <span class="text-[11px] text-slate-500 block mt-0.5">Email the owner a summary of upcoming renewals (next 7 days) and overdue members.</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                      <input type="checkbox" id="gen-NOTIFY_WEEKLY_REPORT" checked onchange="SettingsApp.updateNotificationSummary()" class="sr-only peer">
+                      <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                    </label>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label for="gen-NOTIFY_REPORT_DAY" class="block text-[11px] font-semibold text-slate-700 mb-1">Report day</label>
+                      <select id="gen-NOTIFY_REPORT_DAY" onchange="SettingsApp.updateNotificationSummary()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-brand-primary outline-none">
+                        <option value="Sunday">Sunday</option>
+                        <option value="Monday" selected>Monday</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="gen-NOTIFY_REPORT_HOUR" class="block text-[11px] font-semibold text-slate-700 mb-1">Report time</label>
+                      <select id="gen-NOTIFY_REPORT_HOUR" onchange="SettingsApp.updateNotificationSummary()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-brand-primary outline-none">
+                        <option value="6">06:00 AM</option>
+                        <option value="7">07:00 AM</option>
+                        <option value="8" selected>08:00 AM</option>
+                        <option value="9">09:00 AM</option>
+                        <option value="10">10:00 AM</option>
+                        <option value="12">12:00 PM</option>
+                        <option value="18">06:00 PM</option>
+                        <option value="20">08:00 PM</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div class="space-y-1">
                   <div class="flex items-center gap-2">
                     <span class="material-symbols-rounded text-indigo-600 text-[18px]">forward_to_inbox</span>
-                    <span class="text-xs font-bold text-indigo-950">Active Notification Dispatch Rules</span>
-                    <span class="text-[9px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">Future Scope</span>
+                    <span class="text-xs font-bold text-indigo-950">Active Notification Rules</span>
                   </div>
                   <p class="text-[11px] text-indigo-800/80">
-                    Recipient: <strong id="notification-summary-email" class="text-indigo-950 font-semibold">Owner / Admin Email</strong> • 
-                    Frequency: <strong id="notification-summary-freq" class="text-indigo-950 font-semibold">Daily Morning Digest (08:00 AM)</strong>
+                    Admin: <strong id="notification-summary-email" class="text-indigo-950 font-semibold">Owner / Admin Email</strong> •
+                    Weekly report: <strong id="notification-summary-freq" class="text-indigo-950 font-semibold">Monday 08:00 AM</strong>
                   </p>
                 </div>
                 <button type="button" onclick="SettingsApp.openNotificationModal()" class="h-9 px-3.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold shadow-xs transition-colors shrink-0 cursor-pointer">
-                  <span class="material-symbols-rounded text-[17px]">settings</span>
-                  <span>View Notification Configuration</span>
+                  <span class="material-symbols-rounded text-[17px]">info</span>
+                  <span>View Details</span>
                 </button>
               </div>
             </div>
@@ -625,51 +682,56 @@
 
       <!-- Modal Body -->
       <div class="p-5 space-y-4 overflow-y-auto no-scrollbar max-h-[75vh]">
-        
-        <!-- Future Scope Notice Banner -->
         <div class="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-xl flex items-start gap-3">
           <span class="material-symbols-rounded text-brand-primary text-[20px] shrink-0 mt-0.5">info</span>
           <div class="text-[11px] text-slate-600 leading-relaxed">
-            <span class="font-bold text-slate-800 block mb-0.5">Scheduled Background Triggers (Upcoming Feature)</span>
-            Automated Google Apps Script time-driven triggers and Gmail dispatch routines are scheduled for an upcoming release. You can specify the recipient email and preferred frequency now so they take effect upon deployment.
+            <span class="font-bold text-slate-800 block mb-0.5">How notifications work</span>
+            Payment receipts are sent immediately after a paid payment is saved. The weekly report uses an Apps Script time-driven trigger and emails the owner email configured above. Save Settings after changing day/time so the schedule updates.
           </div>
         </div>
 
-        <!-- Target Email Card -->
         <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-start gap-3">
           <div class="w-8 h-8 rounded-lg bg-blue-50 text-brand-primary flex items-center justify-center shrink-0 border border-blue-100 mt-0.5">
             <span class="material-symbols-rounded text-[18px]">mail</span>
           </div>
           <div class="flex-1">
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Alert Email</span>
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Admin Report Email</span>
             <span id="notif-target-email" class="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">--</span>
-            <p class="text-[10px] text-slate-400 mt-0.5">Notifications will be sent to the primary gym owner / administrator email.</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Weekly renewal report recipient (Owner / Admin Email).</p>
           </div>
         </div>
 
-        <!-- Trigger Frequency Card -->
         <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-start gap-3">
           <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100 mt-0.5">
             <span class="material-symbols-rounded text-[18px]">schedule</span>
           </div>
           <div class="flex-1">
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Trigger Frequency & Timing</span>
-            <span class="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">Daily Morning Digest (08:00 AM)</span>
-            <p class="text-[10px] text-slate-400 mt-0.5">Scheduled time-driven trigger evaluates active member records and sends a consolidated daily alert.</p>
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Weekly Report Schedule</span>
+            <span id="notif-schedule-label" class="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">Monday 08:00 AM</span>
+            <p class="text-[10px] text-slate-400 mt-0.5">Timezone follows the Apps Script project setting (Asia/Kolkata).</p>
           </div>
         </div>
 
-        <!-- Event Trigger Scope Cards -->
         <div class="pt-2 border-t border-slate-100">
-          <label class="block text-xs font-bold text-slate-700 mb-2">Automated Event Rules Included</label>
+          <label class="block text-xs font-bold text-slate-700 mb-2">Enabled Rules</label>
           <div class="space-y-2">
-            
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <span class="material-symbols-rounded text-emerald-500 text-[18px]">mark_email_read</span>
+                <div>
+                  <div class="text-xs font-bold text-slate-700">Payment receipt to member</div>
+                  <div class="text-[10px] text-slate-400">Sent when a new paid payment is recorded and the member has an email.</div>
+                </div>
+              </div>
+              <span id="notif-rule-receipt" class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">On</span>
+            </div>
+
             <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3">
               <div class="flex items-center gap-2.5">
                 <span class="material-symbols-rounded text-amber-500 text-[18px]">alarm</span>
                 <div>
-                  <div class="text-xs font-bold text-slate-700">Upcoming Expirations ("Due Soon")</div>
-                  <div class="text-[10px] text-slate-400">Triggered for active members entering the configured alert buffer window.</div>
+                  <div class="text-xs font-bold text-slate-700">Upcoming renewals (next 7 days)</div>
+                  <div class="text-[10px] text-slate-400">Included in the weekly admin report.</div>
                 </div>
               </div>
               <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">Included</span>
@@ -679,27 +741,14 @@
               <div class="flex items-center gap-2.5">
                 <span class="material-symbols-rounded text-red-500 text-[18px]">event_busy</span>
                 <div>
-                  <div class="text-xs font-bold text-slate-700">Expired Memberships</div>
-                  <div class="text-[10px] text-slate-400">Notifies when membership reaches end-date without renewal payment.</div>
+                  <div class="text-xs font-bold text-slate-700">Overdue members</div>
+                  <div class="text-[10px] text-slate-400">Included in the weekly admin report.</div>
                 </div>
               </div>
               <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">Included</span>
             </div>
-
-            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2.5">
-                <span class="material-symbols-rounded text-indigo-500 text-[18px]">account_balance_wallet</span>
-                <div>
-                  <div class="text-xs font-bold text-slate-700">Overdue Collections Summary</div>
-                  <div class="text-[10px] text-slate-400">Aggregated breakdown of members with pending or overdue fees.</div>
-                </div>
-              </div>
-              <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">Included</span>
-            </div>
-
           </div>
         </div>
-
       </div>
 
       <!-- Modal Footer -->

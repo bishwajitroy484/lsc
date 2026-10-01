@@ -220,6 +220,9 @@ function api_saveMember(memberData) {
           initialPayment.updatedAt = now;
           initialPayment.updatedBy = userEmail;
           DB.create('PAYMENTS', initialPayment);
+          if (typeof maybeSendPaymentReceipt_ === 'function') {
+            maybeSendPaymentReceipt_(initialPayment);
+          }
       }
     }
     return { success: true, data: savedData, message: isNew ? "Member added successfully." : "Member updated successfully." };
@@ -317,6 +320,7 @@ function api_recordPayment(paymentData) {
 
     const now = new Date().toISOString();
     const userEmail = Session.getActiveUser().getEmail();
+    const isNewPayment = !paymentData.paymentId;
 
     paymentData.updatedAt = now;
     paymentData.updatedBy = userEmail;
@@ -330,7 +334,12 @@ function api_recordPayment(paymentData) {
       paymentData.createdBy = userEmail;
       savedData = DB.create('PAYMENTS', paymentData);
     }
-    return { success: true, data: savedData, message: paymentData.paymentId ? "Payment updated successfully." : "Payment recorded successfully." };
+
+    if (isNewPayment && typeof maybeSendPaymentReceipt_ === 'function') {
+      maybeSendPaymentReceipt_(savedData || paymentData);
+    }
+
+    return { success: true, data: savedData, message: isNewPayment ? "Payment recorded successfully." : "Payment updated successfully." };
   } catch (error) {
     return { success: false, error: error.toString() };
   }
