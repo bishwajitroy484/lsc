@@ -55,7 +55,7 @@
            this.isDropdownsLoaded = true;
            this.checkAndRender();
         })
-        .api_getGlobalDropdowns(AuthApp.token);
+        .api_getGlobalDropdowns();
         
       google.script.run
         .withSuccessHandler((res) => {
@@ -69,7 +69,7 @@
            this.isExpensesLoaded = true;
            this.checkAndRender();
         })
-        .api_getExpenses(AuthApp.token);
+        .api_getExpenses();
 
       document.addEventListener('click', (e) => {
         const menu = document.getElementById('exp-multi-select-menu');
@@ -173,7 +173,7 @@
            this.onDataLoaded(res);
            this.applyGlobalFilters();
         })
-        .api_getExpenses(AuthApp.token);
+        .api_getExpenses();
     },
 
     onDataLoaded: function(response) {
@@ -857,7 +857,7 @@
           btn.innerHTML = `Save Expense`; btn.disabled = false;
           Toast.error(err.message || 'Server Error.');
         })
-        .api_saveExpense(payload, AuthApp.token);
+        .api_saveExpense(payload);
     },
 
     openDeleteModal: function(id, desc) {
@@ -884,7 +884,7 @@
             this.fetchData();
           } else { Toast.error(res.error); }
         })
-        .api_deleteExpense(this.expenseToDelete, AuthApp.token);
+        .api_deleteExpense(this.expenseToDelete);
     }
   };
 

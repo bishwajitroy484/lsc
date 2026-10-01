@@ -56,7 +56,7 @@ function loadMembersApi(dbData = {
     'ScriptApp',
     `
       ${source};
-      return { api_getMembers, api_getMemberPayments, api_saveMember, ensureMemberExitDateTrigger_, db: DB, scriptApp: ScriptApp, trigger: ScriptApp.trigger };
+      return { api_getMembers, api_getMemberPayments, api_saveMember, setupMemberExitDateTrigger, db: DB, scriptApp: ScriptApp, trigger: ScriptApp.trigger };
     `
   )(
     db,
@@ -219,23 +219,23 @@ describe('Members Module', () => {
     expect(membersApi.db.update).not.toHaveBeenCalled();
   });
 
-  test('ensureMemberExitDateTrigger creates a daily trigger once and remains idempotent', () => {
+  test('setupMemberExitDateTrigger creates a daily trigger once and remains idempotent', () => {
     const membersApi = loadMembersApi();
 
-    expect(membersApi.ensureMemberExitDateTrigger_()).toEqual({
+    expect(membersApi.setupMemberExitDateTrigger()).toEqual({
       success: true,
       message: 'Daily member exit-date check scheduled.'
     });
-    expect(membersApi.scriptApp.newTrigger).toHaveBeenCalledWith('runDailyMemberExitDateCheck_');
+    expect(membersApi.scriptApp.newTrigger).toHaveBeenCalledWith('runDailyMemberExitDateCheck');
     expect(membersApi.trigger.timeBased).toHaveBeenCalledTimes(1);
     expect(membersApi.trigger.everyDays).toHaveBeenCalledWith(1);
     expect(membersApi.trigger.atHour).toHaveBeenCalledWith(1);
     expect(membersApi.trigger.create).toHaveBeenCalledTimes(1);
 
     membersApi.scriptApp.getProjectTriggers.mockReturnValue([
-      { getHandlerFunction: () => 'runDailyMemberExitDateCheck_' }
+      { getHandlerFunction: () => 'runDailyMemberExitDateCheck' }
     ]);
-    expect(membersApi.ensureMemberExitDateTrigger_()).toEqual({
+    expect(membersApi.setupMemberExitDateTrigger()).toEqual({
       success: true,
       message: 'Daily member exit-date check is already scheduled.'
     });

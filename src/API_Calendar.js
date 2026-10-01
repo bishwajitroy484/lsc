@@ -2,9 +2,8 @@
  * API_Calendar.gs
  * Returns the month-based member schedule derived from Member + Payment records.
  */
-function api_getCalendarData(month, year, authToken) {
+function api_getCalendarData(month, year) {
   try {
-    requireApiAccess_(authToken);
     const targetMonth = Number(month);
     const targetYear = Number(year);
     const monthStart = new Date(targetYear, targetMonth, 1);
@@ -16,7 +15,7 @@ function api_getCalendarData(month, year, authToken) {
     const members = dbData['MEMBERS'] || [];
     const payments = dbData['PAYMENTS'] || [];
 
-    const planOptions = api_getGlobalDropdowns(authToken);
+    const planOptions = api_getGlobalDropdowns && api_getGlobalDropdowns();
     const plans = planOptions && planOptions.success && planOptions.data && planOptions.data.options && planOptions.data.options.membership ? planOptions.data.options.membership : [];
     const planMap = {};
     plans.forEach(plan => {

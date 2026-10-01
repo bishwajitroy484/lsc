@@ -3,9 +3,8 @@
  * Handles server-side operations for the Staff module with Accrual Accounting support.
  */
 
-function api_getStaff(authToken) {
+function api_getStaff() {
   try {
-    requireApiAccess_(authToken);
     const dbData = DB.batchRead(['STAFF', 'SALARY', 'SETTINGS']);
     const staff = dbData['STAFF'] || [];
     const payments = dbData['SALARY'] || [];
@@ -64,9 +63,8 @@ function api_getStaff(authToken) {
   }
 }
 
-function api_saveStaff(staffData, authToken) {
+function api_saveStaff(staffData) {
   try {
-    requireApiAccess_(authToken);
     if (!staffData.fullName || !staffData.phone) throw new Error("Name and Phone are required.");
     const now = new Date().toISOString();
     const userEmail = Session.getActiveUser().getEmail(); 
@@ -94,9 +92,8 @@ function api_saveStaff(staffData, authToken) {
   }
 }
 
-function api_deleteStaff(staffId, authToken) {
+function api_deleteStaff(staffId) {
   try {
-    requireApiAccess_(authToken);
     if (!staffId) throw new Error("Staff ID is missing.");
     DB.remove('STAFF', staffId);
     return { success: true, message: "Staff member deleted successfully." };
@@ -107,9 +104,8 @@ function api_deleteStaff(staffId, authToken) {
 
 // --- Staff Payments & Transactions (SALARY Sheet) ---
 
-function api_getStaffTransactions(staffId, authToken) {
+function api_getStaffTransactions(staffId) {
   try {
-    requireApiAccess_(authToken);
     if (!staffId) throw new Error("Staff ID is missing.");
     
     // Batch read and pull settings for individual staff charts
@@ -165,9 +161,8 @@ function api_getStaffTransactions(staffId, authToken) {
   }
 }
 
-function api_recordStaffTransaction(txnData, authToken) {
+function api_recordStaffTransaction(txnData) {
   try {
-    requireApiAccess_(authToken);
     if (!txnData.staffId || !txnData.amount || !txnData.paidDate || !txnData.startDate || !txnData.endDate) {
       throw new Error("Staff ID, Amount, Paid Date, Start Date, and End Date are strictly required for accurate expense tracking.");
     }
@@ -193,9 +188,8 @@ function api_recordStaffTransaction(txnData, authToken) {
   }
 }
 
-function api_deleteStaffTransaction(paymentId, authToken) {
+function api_deleteStaffTransaction(paymentId) {
   try {
-    requireApiAccess_(authToken);
     if (!paymentId) throw new Error("Payment ID is missing.");
     DB.remove('SALARY', paymentId);
     return { success: true, message: "Transaction deleted successfully." };

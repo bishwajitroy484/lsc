@@ -197,7 +197,7 @@
           const callbacks = this.availableYearsCallbacks.splice(0);
           callbacks.forEach(onLoaded => onLoaded(this.availableYears));
         })
-        .api_getAvailableYears(AuthApp.token);
+        .api_getAvailableYears();
     },
 
     populateYearSelect: function(elementId, preferredYear) {
@@ -372,17 +372,28 @@
     },
 
     loadAppBranding: function() {
-      if (typeof google !== 'undefined' && google.script && google.script.run && typeof google.script.run.api_getAppBranding === 'function') {
+      if (typeof google !== 'undefined' && google.script && google.script.run && typeof google.script.run.api_getGeneralSettings === 'function') {
         google.script.run
           .withSuccessHandler((res) => {
-            if (res && res.success && res.data) {
-              const logoVal = res.data.LOGO_ID || '';
-              const gymVal = res.data.GYM_NAME || '';
-              this.setCurrencyFormat(res.data.CURRENCY_FORMAT || res.data.CURRENCY_STYLE || 'Indian');
+            if (res && res.success && Array.isArray(res.data)) {
+              let logoVal = '';
+              let gymVal = '';
+              res.data.forEach(item => {
+                if (!item) return;
+                const rawKey = item.key || item.Key || item.setting || item.Setting || '';
+                if (!rawKey) return;
+                const rawVal = item.value !== undefined ? item.value : (item.Value !== undefined ? item.Value : '');
+                const k = String(rawKey).trim().toUpperCase();
+                if (k === 'LOGO_ID' || k === 'LOGO') logoVal = rawVal || '';
+                if (k === 'GYM_NAME' || k === 'GYMNAME') gymVal = rawVal || '';
+                if (k === 'CURRENCY_FORMAT' || k === 'CURRENCY_STYLE') {
+                  this.setCurrencyFormat(rawVal || 'Indian');
+                }
+              });
               this.applyAppBranding(logoVal, gymVal);
             }
           })
-          .api_getAppBranding(AuthApp.token);
+          .api_getGeneralSettings();
       }
     }
   };
@@ -434,9 +445,6 @@
       // 1. Inject static layout components from templates
       this.injectTemplate('tpl-comp-sidebar', 'desktop-nav-container');
       this.injectTemplate('tpl-comp-bottom-nav', 'mobile-nav-container');
-      if (!AuthApp.isAdmin) {
-        document.querySelectorAll('[data-route="settings"]').forEach(link => link.classList.add('hidden'));
-      }
 
       // Load app branding into sidebar
       AppUtils.loadAppBranding();
@@ -477,10 +485,6 @@
     route: function(forcedView) {
       const hash = forcedView ? ('#' + forcedView) : (window.location.hash || '#dashboard');
       const viewName = hash.replace('#', '') || 'dashboard';
-      if (viewName === 'settings' && !AuthApp.isAdmin) {
-        window.location.hash = '#dashboard';
-        return this.route('dashboard');
-      }
 
       // Always update navigation highlight immediately for fast UI feedback
       this.updateNavHighlight(viewName);
@@ -548,10 +552,10 @@
     }
   };
 
-  // Wait for server-verified Google sign-in before loading any app modules.
+  // Boot the app when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => AuthApp.init());
+    document.addEventListener('DOMContentLoaded', () => AppState.init());
   } else {
-    AuthApp.init();
+    AppState.init();
   }
 </script>

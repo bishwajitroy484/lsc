@@ -64,7 +64,7 @@ function createSettingsApi(overrides = {}) {
     return result;
   };
 
-  const mockUploadImage = overrides.uploadImageToDrive_ || jest.fn(() => ({
+  const mockUploadImage = overrides.api_uploadImageToDrive || jest.fn(() => ({
     success: true,
     fileId: 'DRIVE_FILE_LOGO_123',
     url: 'https://drive.google.com/uc?export=view&id=DRIVE_FILE_LOGO_123'
@@ -76,7 +76,7 @@ function createSettingsApi(overrides = {}) {
     'Sheets',
     'SPREADSHEET_ID',
     '_colToLetter',
-    'uploadImageToDrive_',
+    'api_uploadImageToDrive',
     `
       ${source};
       return { 
@@ -141,7 +141,7 @@ describe('Settings Module', () => {
         url: 'https://drive.google.com/uc?export=view&id=DRIVE_LOGO_999'
       }));
 
-      const { api, mockUploadImage } = createSettingsApi({ uploadImageToDrive_: mockUpload });
+      const { api, mockUploadImage } = createSettingsApi({ api_uploadImageToDrive: mockUpload });
       const payload = [
         { key: 'GYM_NAME', value: 'LSC Fitness' },
         { key: 'LOGO_ID', value: '', base64Image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', imageName: 'logo.png' }

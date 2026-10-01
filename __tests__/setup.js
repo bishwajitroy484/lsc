@@ -14,6 +14,3 @@ global.Session = {
         getEmail: jest.fn(() => 'admin@gym.com')
     }))
 };
-
-global.requireApiAccess_ = jest.fn(() => ({ email: 'admin@gym.com', isAdmin: true }));
-global.AuthApp = { token: 'test-token', email: 'admin@gym.com', isAdmin: true };

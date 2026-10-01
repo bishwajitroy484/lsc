@@ -225,7 +225,7 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
         getActiveUser: () => ({ getEmail: () => 'admin@lsc.com' })
       };
       global.generateId = (prefix) => `${prefix}-TEST123`;
-      global.uploadImageToDrive_ = jest.fn((base64, filename) => ({
+      global.api_uploadImageToDrive = jest.fn((base64, filename) => ({
         success: true,
         fileId: 'DRIVE_FILE_999',
         url: 'https://drive.google.com/uc?export=view&id=DRIVE_FILE_999'
@@ -253,7 +253,7 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
 
       const res = api_saveExpense(payload);
       expect(res.success).toBe(true);
-      expect(global.uploadImageToDrive_).toHaveBeenCalledWith(
+      expect(global.api_uploadImageToDrive).toHaveBeenCalledWith(
         'data:image/png;base64,iVBORw0KGgo...',
         'EXP-TEST123'
       );
@@ -286,7 +286,7 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
       expect(res.success).toBe(true);
       expect(global.DB.update).toHaveBeenCalledWith('EXPENSES', 'EXP-EXISTING', expect.any(Object));
       expect(updatedRecord.receiptFileId).toBe('EXISTING_FILE_ID');
-      expect(global.uploadImageToDrive_).not.toHaveBeenCalled();
+      expect(global.api_uploadImageToDrive).not.toHaveBeenCalled();
     });
   });
 
@@ -357,6 +357,7 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
     });
   });
 });
+
 
 
 

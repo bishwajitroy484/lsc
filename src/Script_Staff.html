@@ -55,7 +55,7 @@
            this.isDropdownsLoaded = true;
            this.checkAndRender();
         })
-        .api_getGlobalDropdowns(AuthApp.token);
+        .api_getGlobalDropdowns();
 
       google.script.run
         .withSuccessHandler((res) => {
@@ -63,7 +63,7 @@
            this.isStaffLoaded = true;
            this.checkAndRender();
         })
-        .api_getStaff(AuthApp.token);
+        .api_getStaff();
 
       document.addEventListener('click', (e) => {
         const menu = document.getElementById('staff-multi-select-menu');
@@ -239,7 +239,7 @@
            this.onDataLoaded(res);
            this.applyGlobalFilters();
         })
-        .api_getStaff(AuthApp.token);
+        .api_getStaff();
     },
 
     onDataLoaded: function(response) {
@@ -1175,7 +1175,7 @@
            if(html === '') html = `<tr><td colspan="3" class="text-center py-6 text-xs text-slate-400">No records found.</td></tr>`;
            if(tBody) tBody.innerHTML = html;
         })
-        .api_getStaffTransactions(stf.staffId, AuthApp.token);
+        .api_getStaffTransactions(stf.staffId);
     },
 
     onStatusChange: function() {
@@ -1288,7 +1288,7 @@
             }
           } else { Toast.error(res.error); }
         })
-        .api_saveStaff(payload, AuthApp.token);
+        .api_saveStaff(payload);
     },
 
     onCreditTypeChange: function() {
@@ -1421,7 +1421,7 @@
             this.generatePaymentHistory(); 
           } else { Toast.error(res.error); }
         })
-        .api_recordStaffTransaction(payload, AuthApp.token);
+        .api_recordStaffTransaction(payload);
     },
 
     openDeleteModal: function(type, id, desc) {
@@ -1457,7 +1457,7 @@
               this.fetchData();
             } else { Toast.error(res.error); }
           })
-          .api_deleteStaff(this.deleteState.id, AuthApp.token);
+          .api_deleteStaff(this.deleteState.id);
       } else if(this.deleteState.type === 'payment') {
         google.script.run
           .withSuccessHandler((res) => {
@@ -1468,7 +1468,7 @@
               this.generatePaymentHistory();
             } else { Toast.error(res.error); }
           })
-          .api_deleteStaffTransaction(this.deleteState.id, AuthApp.token);
+          .api_deleteStaffTransaction(this.deleteState.id);
       }
     }
   };

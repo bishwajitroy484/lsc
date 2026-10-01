@@ -35,10 +35,6 @@
         <span class="material-symbols-rounded text-[17px]">dataset</span>
         <span>Dropdown Options</span>
       </button>
-      <button id="tab-btn-access" type="button" onclick="SettingsApp.switchTab('access')" class="hidden flex-1 sm:flex-none items-center justify-center gap-2 px-3.5 py-1.5 text-slate-600 hover:text-slate-900 rounded-lg font-medium text-xs transition-all cursor-pointer whitespace-nowrap">
-        <span class="material-symbols-rounded text-[17px]">admin_panel_settings</span>
-        <span>Access Control</span>
-      </button>
     </div>
   </header>
 
@@ -479,32 +475,6 @@
       </div>
     </div>
   </div>
-  <section id="pane-access" class="hidden flex-1 overflow-y-auto bg-slate-50 p-4 md:p-6">
-    <div class="mx-auto w-full max-w-3xl space-y-4">
-      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-        <h2 class="text-sm font-bold text-slate-800">App access</h2>
-        <p class="mt-1 text-xs leading-relaxed text-slate-500">Only the administrator can grant or remove access. Authorized users sign in with their Google account; spreadsheet access is not shared with them.</p>
-        <div class="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
-          <div class="text-[10px] font-bold uppercase tracking-wide text-indigo-500">Administrator</div>
-          <div id="access-admin-email" class="mt-1 text-sm font-semibold text-indigo-950">Loading…</div>
-        </div>
-      </div>
-      <form onsubmit="SettingsApp.addAuthorizedUser(event)" class="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:flex-row">
-        <label class="sr-only" for="access-user-email">Google account email</label>
-        <input id="access-user-email" type="email" required autocomplete="email" placeholder="person@example.com" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-primary">
-        <button id="access-add-button" type="submit" class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700">
-          <span class="material-symbols-rounded text-[17px]">person_add</span> Grant Access
-        </button>
-      </form>
-      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
-        <div class="border-b border-slate-100 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-700">Authorized Google accounts</div>
-        <div id="access-users-list" class="divide-y divide-slate-100 p-1">
-          <p class="p-4 text-xs text-slate-400">Loading authorized users…</p>
-        </div>
-      </div>
-      <p id="access-control-message" role="status" class="hidden rounded-lg p-3 text-xs font-medium"></p>
-    </div>
-  </section>
 
   <!-- ========================================== -->
   <!-- MODALS                                     -->

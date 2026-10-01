@@ -339,9 +339,8 @@ if (typeof module !== 'undefined' && module.exports) {
  * Handles all CREATE and UPDATE operations from the frontend forms.
  */
 
-function api_createRecord(sheetName, payload, authToken) {
+function api_createRecord(sheetName, payload) {
   try {
-    requireApiAccess_(authToken, true);
     const newRecord = DB.create(sheetName, payload);
     return { success: true, data: newRecord };
   } catch (error) {
@@ -353,16 +352,7 @@ function api_createRecord(sheetName, payload, authToken) {
  * Fully dynamic global dropdown API utility using Advanced Sheets Service.
  * Returns both the dropdown options and their exact structural usages (Tab/Column maps).
  */
-function api_getGlobalDropdowns(authToken) {
-  try {
-    requireApiAccess_(authToken);
-    return getGlobalDropdownOptions_();
-  } catch (error) {
-    return { success: false, error: error.toString() };
-  }
-}
-
-function getGlobalDropdownOptions_() {
+function api_getGlobalDropdowns() {
   try {
     const sheetName = 'DROP_DOWN';
 
@@ -462,7 +452,7 @@ function generateId(prefix) {
  * @param {string} filename - The desired name for the file (e.g., "MEM-1234.png")
  * @returns {object} { success: boolean, url: string, error: string }
  */
-function uploadImageToDrive_(base64Data, filename) {
+function api_uploadImageToDrive(base64Data, filename) {
   try {
     if (!base64Data) throw new Error("No image data provided.");
 

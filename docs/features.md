@@ -47,12 +47,10 @@ The Dashboard year, monthly/quarterly mode, and selected months or quarters filt
 
 ## Settings and dropdown configuration
 
-The Settings module provides a responsive, device-compatible interface organized into three main tabs:
+The Settings module provides a responsive, device-compatible interface organized into two main tabs:
 
 - **General Config:** Configures gym identity (gym name, owner email, and gym logo with image file upload saved directly to Google Drive, live preview tile, and stylized "LSC" fallback badge), financial and operating policies (revenue recognition method with explanatory summaries, currency numbering format supporting both Indian Lakhs/Crores and Standard metric notations, and renewal alert buffer days), database persistence details (Google Spreadsheet ID and Google Drive storage folder ID with one-click copy and open actions), and automated notifications (ENABLE_NOTIFICATION toggle to enable/disable scheduled email alerts with a configuration modal previewing future scope dispatch rules, recipient email, and trigger frequencies).
 - **Dropdown Options:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
-
-- **Access Control:** The configured Owner / Admin Email is the sole administrator. After the initial Google OAuth client ID setup, the administrator can grant and remove access for other verified Google email addresses. Authorized users authenticate with Google in the app; the application validates the signed Google ID token and checks the email allowlist on every protected server API call. Authorized users do not need direct spreadsheet access. Google OAuth client and consent configuration must be completed before first sign-in.
 
 ## Mock Data Generator
 

@@ -124,7 +124,7 @@ function mockColToLetter(colIndex) {
 // DROPDOWN CONFIGURATION RESOLUTION
 // ============================================================================
 
-function fetchOrCreateDropdownConfig_() {
+function fetchOrCreateDropdownConfig() {
   var dropdowns = {
     membership: [],
     batch: [],
@@ -188,9 +188,9 @@ function fetchOrCreateDropdownConfig_() {
 
   // 2. Fallback to api_getGlobalDropdowns if direct Dev read was empty
   if (Object.keys(dropdowns).every(function(k) { return !dropdowns[k] || dropdowns[k].length === 0; })) {
-    if (typeof getGlobalDropdownOptions_ === 'function') {
+    if (typeof api_getGlobalDropdowns === 'function') {
       try {
-        var res = getGlobalDropdownOptions_();
+        var res = api_getGlobalDropdowns();
         if (res && res.success && res.data && res.data.options) {
           var opts = res.data.options;
           dropdowns.membership = opts.membership || opts.Membership || [];
@@ -1054,7 +1054,7 @@ function buildExpenses(today, cfg) {
 // SHEET CLEAN & BATCH INSERT ENGINE
 // ============================================================================
 
-function clearSheetData_(sheetName) {
+function clearSheetData(sheetName) {
   if (typeof Sheets !== 'undefined' && Sheets.Spreadsheets && Sheets.Spreadsheets.Values) {
     try {
       Sheets.Spreadsheets.Values.clear({}, DEV_SPREADSHEET_ID, "'" + sheetName + "'!A2:ZZ");
@@ -1079,7 +1079,7 @@ function clearSheetData_(sheetName) {
   }
 }
 
-function getOrInitHeaders_(sheetName, defaultHeaders) {
+function getOrInitHeaders(sheetName, defaultHeaders) {
   var headers = [];
 
   if (typeof Sheets !== 'undefined' && Sheets.Spreadsheets && Sheets.Spreadsheets.Values) {
@@ -1147,7 +1147,7 @@ function mapRecordsToSheetRows(records, headers) {
   });
 }
 
-function batchWriteSheetData_(sheetName, headers, rows) {
+function batchWriteSheetData(sheetName, headers, rows) {
   if (!rows || rows.length === 0) return;
 
   var numRows = rows.length;
@@ -1189,7 +1189,7 @@ function batchWriteSheetData_(sheetName, headers, rows) {
 
 function generateAllMockDatasets(customToday) {
   var today = customToday || new Date();
-  var cfg = fetchOrCreateDropdownConfig_();
+  var cfg = fetchOrCreateDropdownConfig();
 
   var memRes = buildMembersAndPayments(today, cfg);
   var staffRes = buildStaffAndSalary(today, cfg);
@@ -1204,7 +1204,7 @@ function generateAllMockDatasets(customToday) {
   };
 }
 
-function generateMockData_() {
+function generateMockData() {
   assertDevEnvironment();
 
   var startTime = new Date().getTime();
@@ -1217,7 +1217,7 @@ function generateMockData_() {
   // Step 1: Clean all data rows (row 2 down) in target sheets
   console.log(logPrefix + " Step 1/3: Cleaning existing data rows...");
   targetSheets.forEach(function(sName) {
-    clearSheetData_(sName);
+    clearSheetData(sName);
   });
 
   // Step 2: Build fresh synchronized relational datasets
@@ -1237,9 +1237,9 @@ function generateMockData_() {
 
   var stats = {};
   sheetMap.forEach(function(item) {
-    var headers = getOrInitHeaders_(item.name, item.defaultHeaders);
+    var headers = getOrInitHeaders(item.name, item.defaultHeaders);
     var rows = mapRecordsToSheetRows(item.data, headers);
-    batchWriteSheetData_(item.name, headers, rows);
+    batchWriteSheetData(item.name, headers, rows);
     stats[item.name] = rows.length;
     console.log(logPrefix + " " + item.name + ": Inserted " + rows.length + " rows.");
   });
@@ -1257,11 +1257,10 @@ function generateMockData_() {
   };
 }
 
-function api_generateMockData(authToken) {
+function api_generateMockData() {
   try {
-    requireApiAccess_(authToken, true);
     assertDevEnvironment();
-    return generateMockData_();
+    return generateMockData();
   } catch (err) {
     console.error("api_generateMockData error: " + err.toString());
     return { success: false, error: err.toString() };
@@ -1270,7 +1269,7 @@ function api_generateMockData(authToken) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    generateMockData: generateMockData_,
+    generateMockData: generateMockData,
     api_generateMockData: api_generateMockData,
     generateAllMockDatasets: generateAllMockDatasets,
     mockFormatDDMMMYYYY: mockFormatDDMMMYYYY,
@@ -1280,7 +1279,7 @@ if (typeof module !== 'undefined' && module.exports) {
     mockColToLetter: mockColToLetter,
     mapRecordsToSheetRows: mapRecordsToSheetRows,
     DEFAULT_SHEET_HEADERS: DEFAULT_SHEET_HEADERS,
-    fetchOrCreateDropdownConfig: fetchOrCreateDropdownConfig_,
+    fetchOrCreateDropdownConfig: fetchOrCreateDropdownConfig,
     assertDevEnvironment: assertDevEnvironment,
     DEV_SPREADSHEET_ID: DEV_SPREADSHEET_ID,
     PROD_SCRIPT_ID: PROD_SCRIPT_ID,

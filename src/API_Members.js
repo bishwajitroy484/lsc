@@ -4,7 +4,7 @@
  * No mock data. Strictly relies on the DB utility.
  */
 
-function deactivateExpiredMemberStatuses_(members, plans, memberStatuses, asOfDate) {
+function deactivateExpiredMemberStatuses(members, plans, memberStatuses, asOfDate) {
   const statusName = (status) => {
     const option = memberStatuses.find(item => String(item.id) === String(status));
     return String(option ? (option.name || option.label || option.id) : status || '').trim().toLowerCase();
@@ -32,19 +32,19 @@ function deactivateExpiredMemberStatuses_(members, plans, memberStatuses, asOfDa
   });
 }
 
-function runDailyMemberExitDateCheck_() {
+function runDailyMemberExitDateCheck() {
   const members = DB.read('MEMBERS');
-  const globalData = getGlobalDropdownOptions_();
+  const globalData = api_getGlobalDropdowns();
   if (!globalData || !globalData.success || !globalData.data || !globalData.data.options) {
     throw new Error(globalData && globalData.error ? globalData.error : 'Failed to load member dropdown options.');
   }
 
   const options = globalData.data.options;
-  deactivateExpiredMemberStatuses_(members, options.membership || [], options.status || []);
+  deactivateExpiredMemberStatuses(members, options.membership || [], options.status || []);
 }
 
-function ensureMemberExitDateTrigger_() {
-  const handlerName = 'runDailyMemberExitDateCheck_';
+function setupMemberExitDateTrigger() {
+  const handlerName = 'runDailyMemberExitDateCheck';
   const alreadyScheduled = ScriptApp.getProjectTriggers().some(trigger =>
     trigger.getHandlerFunction() === handlerName
   );
@@ -54,9 +54,8 @@ function ensureMemberExitDateTrigger_() {
   return { success: true, message: 'Daily member exit-date check scheduled.' };
 }
 
-function api_getMembers(authToken) {
+function api_getMembers() {
   try {
-    requireApiAccess_(authToken);
     // 1. Batch read for performance, including SETTINGS
     const dbData = DB.batchRead(['MEMBERS', 'PAYMENTS', 'SETTINGS']);
     const members = dbData['MEMBERS'] || [];
@@ -83,7 +82,7 @@ function api_getMembers(authToken) {
       if (rawVal) currencyFormat = String(rawVal).trim();
     }
 
-    const globalData = api_getGlobalDropdowns(authToken);
+    const globalData = api_getGlobalDropdowns && api_getGlobalDropdowns();
     const plans = (globalData && globalData.success && globalData.data && globalData.data.options && globalData.data.options.membership)
       ? globalData.data.options.membership
       : [];
@@ -94,7 +93,7 @@ function api_getMembers(authToken) {
       ? globalData.data.options.paymentstatus || globalData.data.options.status || []
       : [];
 
-    deactivateExpiredMemberStatuses_(members, plans, memberStatuses);
+    deactivateExpiredMemberStatuses(members, plans, memberStatuses);
 
     const paymentsByMember = {};
     payments.forEach(p => {
@@ -169,9 +168,8 @@ function api_getMembers(authToken) {
   }
 }
 
-function api_saveMember(memberData, authToken) {
+function api_saveMember(memberData) {
   try {
-    requireApiAccess_(authToken);
     if (!memberData.fullName || !memberData.phone) throw new Error("Name and Phone are required.");
     if (!/^\d{10}$/.test(String(memberData.phone))) throw new Error("Phone number must contain exactly 10 digits.");
     const now = new Date().toISOString();
@@ -195,7 +193,7 @@ function api_saveMember(memberData, authToken) {
     // 2. Handle Image Upload intercept
     if (memberData.base64Image) {
         // Upload with Member ID as the filename
-        const uploadRes = uploadImageToDrive_(memberData.base64Image, memberData.memberId);
+        const uploadRes = api_uploadImageToDrive(memberData.base64Image, memberData.memberId);
         if (uploadRes.success) {
             memberData.profileImage = uploadRes.fileId; 
         } else {
@@ -230,9 +228,8 @@ function api_saveMember(memberData, authToken) {
   }
 }
 
-function api_deleteMember(memberId, authToken) {
+function api_deleteMember(memberId) {
   try {
-    requireApiAccess_(authToken);
     if (!memberId) throw new Error("Member ID is missing.");
     DB.remove('MEMBERS', memberId);
     return { success: true, message: "Member deleted successfully." };
@@ -241,15 +238,14 @@ function api_deleteMember(memberId, authToken) {
   }
 }
 
-function api_getMemberPayments(memberId, authToken) {
+function api_getMemberPayments(memberId) {
   try {
-    requireApiAccess_(authToken);
     if (!memberId) throw new Error("Member ID is missing.");
 
     const dbData = DB.batchRead(['PAYMENTS', 'SETTINGS']);
     const allPayments = dbData['PAYMENTS'] || [];
     const settingsRows = dbData['SETTINGS'] || [];
-    const globalData = api_getGlobalDropdowns(authToken);
+    const globalData = api_getGlobalDropdowns && api_getGlobalDropdowns();
     const paymentStatuses = (globalData && globalData.success && globalData.data && globalData.data.options)
       ? globalData.data.options.paymentstatus || globalData.data.options.status || []
       : [];
@@ -313,9 +309,8 @@ function isPaidPaymentStatus(status, paymentStatuses) {
   return statusName === 'paid' || statusName === 'completed';
 }
 
-function api_recordPayment(paymentData, authToken) {
+function api_recordPayment(paymentData) {
   try {
-    requireApiAccess_(authToken);
     if (!paymentData.memberId || !paymentData.amount || !paymentData.paidDate || !paymentData.startDate || !paymentData.endDate) {
       throw new Error("Missing required payment details (Member ID, Amount, Paid Date, Start Date, and End Date are strictly required).");
     }
@@ -341,9 +336,8 @@ function api_recordPayment(paymentData, authToken) {
   }
 }
 
-function api_deletePayment(paymentId, authToken) {
+function api_deletePayment(paymentId) {
   try {
-    requireApiAccess_(authToken);
     if (!paymentId) throw new Error("Payment ID is missing.");
     DB.remove('PAYMENTS', paymentId);
     return { success: true, message: "Payment deleted successfully." };

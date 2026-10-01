@@ -5,9 +5,8 @@
 
 // _colToLetter is provided by Utils_DB.gs (colToLetter)
 
-function api_getSheetStructure(authToken) {
+function api_getSheetStructure() {
   try {
-    requireApiAccess_(authToken, true);
     const ssMeta = Sheets.Spreadsheets.get(SPREADSHEET_ID);
     const sheetNames = ssMeta.sheets
       .map(s => s.properties.title)
@@ -36,9 +35,8 @@ function api_getSheetStructure(authToken) {
   }
 }
 
-function api_getDropdownConfig(authToken) {
+function api_getDropdownConfig() {
   try {
-    requireApiAccess_(authToken, true);
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('DROP_DOWN');
     if (!sheet) throw new Error("DropDown sheet is missing.");
@@ -115,9 +113,8 @@ function api_getDropdownConfig(authToken) {
   }
 }
 
-function api_saveSchema(schemaObj, authToken) {
+function api_saveSchema(schemaObj) {
   try {
-    requireApiAccess_(authToken, true);
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('DROP_DOWN');
     if (!sheet) throw new Error("DROP_DOWN sheet is missing.");
@@ -245,9 +242,8 @@ function api_saveSchema(schemaObj, authToken) {
   }
 }
 
-function api_saveDropdownOptions(categoryKey, optionsArray, authToken) {
+function api_saveDropdownOptions(categoryKey, optionsArray) {
   try {
-    requireApiAccess_(authToken, true);
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('DROP_DOWN');
     if (!sheet) throw new Error("DROP_DOWN sheet is missing.");
@@ -307,9 +303,8 @@ function api_saveDropdownOptions(categoryKey, optionsArray, authToken) {
 
 // --- GENERAL INFO / APP SETTINGS ---
 
-function api_getGeneralSettings(authToken) {
+function api_getGeneralSettings() {
   try {
-    requireApiAccess_(authToken, true);
     const data = DB.read('SETTINGS') || [];
     return { success: true, data: data };
   } catch (error) {
@@ -317,27 +312,8 @@ function api_getGeneralSettings(authToken) {
   }
 }
 
-function api_saveGeneralSettings(settingsArray, authToken) {
+function api_saveGeneralSettings(settingsArray) {
   try {
-    requireApiAccess_(authToken, true);
-    const existingSettings = DB.read('SETTINGS') || [];
-    const configuredClientId = existingSettings.find(item =>
-      String(item.key || item.Key || '').trim().toUpperCase() === 'AUTH_CLIENT_ID'
-    );
-    const existingOwnerEmail = existingSettings.find(item =>
-      String(item.key || item.Key || '').trim().toUpperCase() === 'OWNER_EMAIL'
-    );
-    if (configuredClientId && configuredClientId.value) {
-      const proposedOwner = settingsArray.find(item =>
-        String(item && (item.key || item.Key) || '').trim().toUpperCase() === 'OWNER_EMAIL'
-      );
-      const currentEmail = String(existingOwnerEmail && existingOwnerEmail.value || '').trim().toLowerCase();
-      const nextEmail = String(proposedOwner && proposedOwner.value || '').trim().toLowerCase();
-      if (!currentEmail || currentEmail !== nextEmail) {
-        throw new Error('The administrator email cannot be changed after Google sign-in is configured.');
-      }
-    }
-
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('SETTINGS');
     
@@ -356,8 +332,8 @@ function api_saveGeneralSettings(settingsArray, authToken) {
       var item = settingsArray[i];
       var k = String((item && (item.key || item.Key)) || '').toUpperCase();
       if (item && k === 'LOGO_ID' && item.base64Image) {
-        if (typeof uploadImageToDrive_ === 'function') {
-          var uploadRes = uploadImageToDrive_(item.base64Image, item.imageName || ('Gym_Logo_' + new Date().getTime()));
+        if (typeof api_uploadImageToDrive === 'function') {
+          var uploadRes = api_uploadImageToDrive(item.base64Image, item.imageName || ('Gym_Logo_' + new Date().getTime()));
           if (uploadRes && uploadRes.success) {
             uploadedLogoId = uploadRes.fileId;
             uploadedLogoUrl = uploadRes.url;

@@ -2,9 +2,8 @@
  * API_Finance.gs
  * Dynamically aggregates real financial data with correct dropdown name resolution and dynamic greeting.
  */
-function api_getAvailableYears(authToken) {
+function api_getAvailableYears() {
   try {
-    requireApiAccess_(authToken);
     const dbData = DB.batchRead(['MEMBERS', 'PAYMENTS', 'EXPENSES', 'STAFF', 'SALARY']);
     const datesBySheet = {
       MEMBERS: ['joinDate'],
@@ -30,9 +29,8 @@ function api_getAvailableYears(authToken) {
   }
 }
 
-function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mode = 'Monthly', periods = [], authToken) {
+function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mode = 'Monthly', periods = []) {
   try {
-    requireApiAccess_(authToken);
     const targetYear = parseInt(year);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -72,7 +70,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
         }
     }
 
-    const globalDataRes = api_getGlobalDropdowns(authToken);
+    const globalDataRes = api_getGlobalDropdowns && api_getGlobalDropdowns();
     const dropDowns = (globalDataRes && globalDataRes.success && globalDataRes.data && globalDataRes.data.options)
       ? globalDataRes.data.options
       : {};
