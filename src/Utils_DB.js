@@ -452,6 +452,24 @@ function generateId(prefix) {
 }
 
 /**
+ * Next sequential member ID: LSC-MEM-1, LSC-MEM-2, ...
+ * Also recognizes legacy MEM-<number> when computing the next value.
+ */
+function generateNextMemberId_() {
+  const rows = (typeof DB !== 'undefined' && DB.read) ? (DB.read('MEMBERS') || []) : [];
+  let max = 0;
+  rows.forEach(function(row) {
+    const id = String((row && row.memberId) || '').trim().toUpperCase();
+    let match = id.match(/^LSC-MEM-(\d+)$/);
+    if (!match) match = id.match(/^MEM-(\d+)$/);
+    if (!match) return;
+    const n = parseInt(match[1], 10);
+    if (!isNaN(n) && n > max) max = n;
+  });
+  return 'LSC-MEM-' + (max + 1);
+}
+
+/**
  * Uploads a base64 encoded image to a Google Drive folder specified in the SETTINGS tab.
  * 
  * @param {string} base64Data - The base64 string (can include the "data:image/png;base64," prefix)

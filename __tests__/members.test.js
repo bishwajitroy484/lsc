@@ -75,6 +75,22 @@ function loadMembersApi(dbData = {
 }
 
 describe('Members Module', () => {
+  test('generateNextMemberId_ returns sequential LSC-MEM-N ids', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../src/Utils_DB.js'), 'utf8');
+    const start = source.indexOf('function generateNextMemberId_');
+    const end = source.indexOf('\nfunction api_uploadImageToDrive', start);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const fnSource = source.slice(start, end);
+    const make = (rows) => new Function('DB', `${fnSource}; return generateNextMemberId_;`)({
+      read: jest.fn(() => rows)
+    });
+
+    expect(make([])()).toBe('LSC-MEM-1');
+    expect(make([{ memberId: 'LSC-MEM-1' }, { memberId: 'LSC-MEM-3' }])()).toBe('LSC-MEM-4');
+    expect(make([{ memberId: 'MEM-7' }, { memberId: 'LSC-MEM-2' }])()).toBe('LSC-MEM-8');
+  });
+
   test('api_getMembers returns enriched member records with dueDate and accrual mode', () => {
     const membersApi = loadMembersApi();
     const response = membersApi.api_getMembers();
