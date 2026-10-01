@@ -34,7 +34,7 @@
            this.isDropdownsLoaded = true;
            this.checkAndRender();
         })
-        .api_getGlobalDropdowns();
+        .api_getGlobalDropdowns(AuthApp.token);
         
       google.script.run
         .withSuccessHandler((res) => {
@@ -42,7 +42,7 @@
            this.isMembersLoaded = true;
            this.checkAndRender();
         })
-        .api_getMembers();
+        .api_getMembers(AuthApp.token);
     },
     getSafeAvatarUrl: function(rawStr) {
         if (!rawStr) return '';
@@ -309,7 +309,7 @@
             this.applyFilters();
             if(typeof callback === 'function') callback();
         })
-        .api_getMembers();
+        .api_getMembers(AuthApp.token);
     },
 
     onDataLoaded: function(response) {
@@ -626,7 +626,7 @@
              this.renderChart();
            });
         })
-        .api_getMemberPayments(member.memberId);
+        .api_getMemberPayments(member.memberId, AuthApp.token);
 
       document.getElementById('view-list').classList.add('opacity-0', 'pointer-events-none');
       setTimeout(() => { document.getElementById('view-details').classList.remove('translate-x-full'); }, 50);
@@ -1144,7 +1144,7 @@
             Toast.error(res.error); 
           }
         })
-        .api_saveMember(payload);
+        .api_saveMember(payload, AuthApp.token);
     },
 
     closeModal: function() {
@@ -1361,7 +1361,7 @@
             Toast.error(res.error); 
           }
         })
-        .api_recordPayment(payload);
+        .api_recordPayment(payload, AuthApp.token);
     },
 
     closeRecordPayment: function() {
@@ -1399,7 +1399,7 @@
               this.fetchData();
             } else { Toast.error(res.error); }
           })
-          .api_deleteMember(this.deleteState.id);
+          .api_deleteMember(this.deleteState.id, AuthApp.token);
       } 
       else if (this.deleteState.type === 'payment') {
         google.script.run
@@ -1415,7 +1415,7 @@
               });
             } else { Toast.error(res.error); }
           })
-          .api_deletePayment(this.deleteState.id);
+          .api_deletePayment(this.deleteState.id, AuthApp.token);
       }
     }
   };

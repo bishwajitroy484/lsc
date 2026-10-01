@@ -3,8 +3,9 @@
  * Handles server-side operations for the Expenses module.
  */
 
-function api_getExpenses() {
+function api_getExpenses(authToken) {
   try {
+    requireApiAccess_(authToken);
     let dbData;
     try {
       dbData = DB.batchRead(['EXPENSES', 'SALARY', 'SETTINGS']);
@@ -81,8 +82,9 @@ function api_getExpenses() {
   }
 }
 
-function api_saveExpense(expenseData) {
+function api_saveExpense(expenseData, authToken) {
   try {
+    requireApiAccess_(authToken);
     if (!expenseData.categoryId || !expenseData.amount || !expenseData.date) {
       throw new Error("Category, Amount, and Date are required.");
     }
@@ -102,7 +104,7 @@ function api_saveExpense(expenseData) {
 
     // Handle receipt image upload — use expenseId as filename (matches Members pattern)
     if (expenseData.base64Image) {
-      var uploadRes = api_uploadImageToDrive(expenseData.base64Image, expenseData.expenseId);
+      var uploadRes = uploadImageToDrive_(expenseData.base64Image, expenseData.expenseId);
       if (uploadRes.success) {
         expenseData.receiptFileId = uploadRes.fileId;
       } else {
@@ -131,8 +133,9 @@ function api_saveExpense(expenseData) {
   }
 }
 
-function api_deleteExpense(expenseId) {
+function api_deleteExpense(expenseId, authToken) {
   try {
+    requireApiAccess_(authToken);
     if (!expenseId) throw new Error("Expense ID is missing.");
     DB.remove('EXPENSES', expenseId);
     return { success: true, message: "Expense deleted successfully." };

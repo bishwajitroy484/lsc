@@ -4,6 +4,7 @@
     allDropdowns: {}, 
     sheetStructure: {}, 
     generalSettingsData: [], // Stores SETTINGS sheet data
+    authorizedUsers: [],
     
     activeTab: 'general',
     activeSchema: null,
@@ -33,42 +34,124 @@
     init: function() {
       this.fetchData();
       this.fetchGeneralSettings();
+      const accessTab = document.getElementById('tab-btn-access');
+      if (accessTab && AuthApp.isAdmin) accessTab.classList.remove('hidden');
     },
 
     switchTab: function(tabName) {
+      if (tabName === 'access' && !AuthApp.isAdmin) return;
       this.activeTab = tabName;
-      
-      const paneGen = document.getElementById('pane-general');
-      const paneDrop = document.getElementById('pane-dropdowns');
-      const btnGen = document.getElementById('tab-btn-general');
-      const btnDrop = document.getElementById('tab-btn-dropdowns');
-      
       const activeClass = 'bg-white text-brand-primary font-bold shadow-xs';
       const inactiveClass = 'text-slate-600 hover:text-slate-900 font-medium';
-      
-      if (tabName === 'general') {
-         if (paneGen) { paneGen.classList.remove('hidden'); paneGen.classList.add('flex'); }
-         if (paneDrop) { paneDrop.classList.add('hidden'); paneDrop.classList.remove('flex'); }
-         if (btnGen) { 
-           btnGen.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + activeClass; 
-         }
-         if (btnDrop) { 
-           btnDrop.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + inactiveClass; 
-         }
-         const headerSaveBtn = document.getElementById('btn-save-general-header');
-         if (headerSaveBtn) headerSaveBtn.classList.remove('hidden');
-      } else {
-         if (paneGen) { paneGen.classList.add('hidden'); paneGen.classList.remove('flex'); }
-         if (paneDrop) { paneDrop.classList.remove('hidden'); paneDrop.classList.add('flex'); }
-         if (btnGen) { 
-           btnGen.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + inactiveClass; 
-         }
-         if (btnDrop) { 
-           btnDrop.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' + activeClass; 
-         }
-         const headerSaveBtn = document.getElementById('btn-save-general-header');
-         if (headerSaveBtn) headerSaveBtn.classList.add('hidden');
+      ['general', 'dropdowns', 'access'].forEach(tab => {
+        const pane = document.getElementById('pane-' + tab);
+        const button = document.getElementById('tab-btn-' + tab);
+        if (pane) pane.classList.toggle('hidden', tab !== tabName);
+        if (button) {
+          button.className = 'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ' +
+            (tab === tabName ? activeClass : inactiveClass);
+        }
+      });
+      const headerSaveBtn = document.getElementById('btn-save-general-header');
+      if (headerSaveBtn) headerSaveBtn.classList.toggle('hidden', tabName !== 'general');
+      if (tabName === 'access') this.fetchAccessControl();
+    },
+
+    fetchAccessControl: function() {
+      google.script.run
+        .withSuccessHandler((response) => {
+          if (!response || !response.success) {
+            this.showAccessMessage(response && response.error ? response.error : 'Unable to load authorized users.', true);
+            return;
+          }
+          this.authorizedUsers = response.data || [];
+          const admin = document.getElementById('access-admin-email');
+          if (admin) admin.textContent = response.adminEmail || AuthApp.email;
+          this.renderAuthorizedUsers();
+        })
+        .withFailureHandler((error) => {
+          this.showAccessMessage(error && error.message ? error.message : 'Unable to load authorized users.', true);
+        })
+        .api_getAccessControl(AuthApp.token);
+    },
+
+    renderAuthorizedUsers: function() {
+      const list = document.getElementById('access-users-list');
+      if (!list) return;
+      list.innerHTML = '';
+      if (!this.authorizedUsers.length) {
+        const empty = document.createElement('p');
+        empty.className = 'p-4 text-xs text-slate-400';
+        empty.textContent = 'No additional users have been granted access.';
+        list.appendChild(empty);
+        return;
       }
+
+      this.authorizedUsers.forEach(user => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between gap-3 p-3';
+        const email = document.createElement('span');
+        email.className = 'min-w-0 break-all text-xs font-semibold text-slate-700';
+        email.textContent = user.email;
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'shrink-0 rounded-lg border border-red-100 px-3 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50';
+        remove.textContent = 'Remove';
+        remove.addEventListener('click', () => this.removeAuthorizedUser(user.email));
+        row.append(email, remove);
+        list.appendChild(row);
+      });
+    },
+
+    addAuthorizedUser: function(event) {
+      event.preventDefault();
+      const input = document.getElementById('access-user-email');
+      const button = document.getElementById('access-add-button');
+      if (!input || !input.value.trim()) return;
+      button.disabled = true;
+      google.script.run
+        .withSuccessHandler((response) => {
+          button.disabled = false;
+          if (!response || !response.success) {
+            this.showAccessMessage(response && response.error ? response.error : 'Unable to grant access.', true);
+            return;
+          }
+          input.value = '';
+          this.authorizedUsers = response.data || [];
+          this.renderAuthorizedUsers();
+          this.showAccessMessage(response.message || 'Access granted.', false);
+        })
+        .withFailureHandler((error) => {
+          button.disabled = false;
+          this.showAccessMessage(error && error.message ? error.message : 'Unable to grant access.', true);
+        })
+        .api_saveAccessControl(AuthApp.token, input.value);
+    },
+
+    removeAuthorizedUser: function(email) {
+      if (!window.confirm('Remove access for ' + email + '?')) return;
+      google.script.run
+        .withSuccessHandler((response) => {
+          if (!response || !response.success) {
+            this.showAccessMessage(response && response.error ? response.error : 'Unable to remove access.', true);
+            return;
+          }
+          this.authorizedUsers = response.data || [];
+          this.renderAuthorizedUsers();
+          this.showAccessMessage(response.message || 'Access removed.', false);
+        })
+        .withFailureHandler((error) => {
+          this.showAccessMessage(error && error.message ? error.message : 'Unable to remove access.', true);
+        })
+        .api_removeAccessControl(AuthApp.token, email);
+    },
+
+    showAccessMessage: function(message, isError) {
+      const element = document.getElementById('access-control-message');
+      if (!element) return;
+      element.textContent = message;
+      element.className = 'rounded-lg p-3 text-xs font-medium ' +
+        (isError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700');
     },
 
     // --- GENERAL SETTINGS LOGIC ---
@@ -88,7 +171,7 @@
                this.showToast("Failed to load General Settings.", true);
            }
         })
-        .api_getGeneralSettings();
+        .api_getGeneralSettings(AuthApp.token);
     },
 
     renderGeneralSettings: function() {
@@ -450,7 +533,7 @@
            restoreButtons();
            this.showToast((err && err.message) ? err.message : "Failed to save settings.", true);
         })
-        .api_saveGeneralSettings(payload);
+        .api_saveGeneralSettings(payload, AuthApp.token);
     },
 
     // --- DROPDOWNS LOGIC ---
@@ -497,7 +580,7 @@
 
       google.script.run
         .withSuccessHandler((res) => { if(res && res.success && Object.keys(res.data || {}).length > 0) this.sheetStructure = res.data; })
-        .api_getSheetStructure();
+        .api_getSheetStructure(AuthApp.token);
 
       if (Object.keys(this.sheetStructure).length === 0) {
         this.sheetStructure = {
@@ -509,7 +592,7 @@
 
       google.script.run
         .withSuccessHandler(this.onDataLoaded.bind(this))
-        .api_getDropdownConfig();
+        .api_getDropdownConfig(AuthApp.token);
     },
 
     onDataLoaded: function(response) {
@@ -848,7 +931,7 @@
               this.showToast(err, true); 
            }
         })
-        .api_saveDropdownOptions(this.activeSchema.key, this.activeOptionsList);
+        .api_saveDropdownOptions(this.activeSchema.key, this.activeOptionsList, AuthApp.token);
     },
 
     openOptionModal: function(optOrId = null) {
@@ -923,7 +1006,7 @@
               this.showToast(err, true);
            }
         })
-        .api_saveDropdownOptions(this.activeSchema.key, this.activeOptionsList);
+        .api_saveDropdownOptions(this.activeSchema.key, this.activeOptionsList, AuthApp.token);
     },
 
     closeOptionModal: function() {
@@ -969,7 +1052,7 @@
             this.showToast(err, true); 
           }
         })
-        .api_saveDropdownOptions(this.activeSchema.key, updatedList);
+        .api_saveDropdownOptions(this.activeSchema.key, updatedList, AuthApp.token);
     },
     
     openSchemaModal: function() {
@@ -1191,7 +1274,7 @@
               this.showToast(err, true);
            }
         })
-        .api_saveSchema(newSchema);
+        .api_saveSchema(newSchema, AuthApp.token);
     },
 
     closeSchemaModal: function() {
