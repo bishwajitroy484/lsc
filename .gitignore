@@ -16,6 +16,8 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+config/env.json
+src/Config_Env.js
 
 # Editor & OS artifacts
 .DS_Store

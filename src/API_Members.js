@@ -245,9 +245,11 @@ function api_saveMember(memberData) {
     const initialPayment = memberData.initialPayment;
     delete memberData.initialPayment;
 
-    // 1. Generate Member ID FIRST so we can use it as the image name
+    // 1. Generate Member ID FIRST so we can use it as the image name (LSC-MEM-1, LSC-MEM-2, ...)
     if (isNew) {
-      memberData.memberId = generateId('MEM');
+      memberData.memberId = (typeof generateNextMemberId_ === 'function')
+        ? generateNextMemberId_()
+        : generateId('MEM');
       memberData.createdAt = now;
       memberData.createdBy = userEmail;
     }

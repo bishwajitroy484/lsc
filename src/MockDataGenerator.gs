@@ -26,9 +26,29 @@
  * Note: SETTINGS and DROP_DOWN tabs are strictly preserved and never wiped.
  */
 
-var DEV_SPREADSHEET_ID = "1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI";
-var DEV_SCRIPT_ID = "18gsDCFSfqq7XOVgVAjhctSgyeW7pjyA_QlAwbRvOtHyXgybOQkX_BPgp";
-var PROD_SCRIPT_ID = "1z0FR65RqWh25HtPpnc68MNUx_obdbHmE5ejRHRwXpwLIS6a56xxjXpJf";
+function readEnvGlobal_(name) {
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis[name] != null && String(globalThis[name]) !== '') {
+      return String(globalThis[name]);
+    }
+  } catch (error) {
+    // ignore
+  }
+  try {
+    // Apps Script shared global scope (Config_Env.js)
+    if (typeof this !== 'undefined' && this[name] != null && String(this[name]) !== '') {
+      return String(this[name]);
+    }
+  } catch (error) {
+    // ignore
+  }
+  return '';
+}
+
+// IDs come from Config_Env.js (npm run use:dev | use:prod).
+var DEV_SPREADSHEET_ID = readEnvGlobal_('LSC_DEV_SPREADSHEET_ID') || readEnvGlobal_('SPREADSHEET_ID');
+var DEV_SCRIPT_ID = readEnvGlobal_('LSC_DEV_SCRIPT_ID');
+var PROD_SCRIPT_ID = readEnvGlobal_('LSC_PROD_SCRIPT_ID');
 
 /**
  * Strict Environment Safeguard.
@@ -38,13 +58,20 @@ var PROD_SCRIPT_ID = "1z0FR65RqWh25HtPpnc68MNUx_obdbHmE5ejRHRwXpwLIS6a56xxjXpJf"
 function assertDevEnvironment() {
   if (typeof ScriptApp !== 'undefined' && ScriptApp.getScriptId) {
     var currentScriptId = ScriptApp.getScriptId();
-    if (currentScriptId === PROD_SCRIPT_ID) {
+    if (PROD_SCRIPT_ID && currentScriptId === PROD_SCRIPT_ID) {
       throw new Error("SECURITY VIOLATION: Mock data generation is strictly blocked on the Production Apps Script environment (Script ID: " + currentScriptId + "). It is only permitted on the Dev instance.");
+    }
+    if (String(readEnvGlobal_('LSC_ENV')).toLowerCase() === 'prod') {
+      throw new Error("SECURITY VIOLATION: Mock data generation is blocked when LSC_ENV=prod.");
     }
   }
 
-  if (DEV_SPREADSHEET_ID !== "1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI") {
-    throw new Error("SECURITY VIOLATION: Target spreadsheet must be Dev Spreadsheet (ID: 1QM2_Ivi4hNtStWFO4QYkt7fYtIukiztHkhNVwbNNPLI).");
+  var activeSheetId = readEnvGlobal_('SPREADSHEET_ID') || DEV_SPREADSHEET_ID;
+  if (!DEV_SPREADSHEET_ID) {
+    throw new Error("SECURITY VIOLATION: Dev spreadsheet ID is not configured. Run npm run use:dev after filling config/env.json.");
+  }
+  if (activeSheetId && activeSheetId !== DEV_SPREADSHEET_ID) {
+    throw new Error("SECURITY VIOLATION: Target spreadsheet must be Dev Spreadsheet (ID: " + DEV_SPREADSHEET_ID + ").");
   }
 }
 var DEFAULT_SHEET_HEADERS = {
@@ -106,6 +133,12 @@ function mockGenerateId(prefix) {
   }
   var rand = Math.random().toString(36).substring(2, 8).toUpperCase();
   return prefix + '-' + rand;
+}
+
+var MOCK_MEMBER_SEQ_ = 0;
+function mockNextMemberId() {
+  MOCK_MEMBER_SEQ_ += 1;
+  return 'LSC-MEM-' + MOCK_MEMBER_SEQ_;
 }
 
 function mockColToLetter(colIndex) {
@@ -304,6 +337,7 @@ function fetchOrCreateDropdownConfig() {
  *  - Inactive / Left members with exitDate and completely closed payment cycles
  */
 function buildMembersAndPayments(today, cfg) {
+  MOCK_MEMBER_SEQ_ = 0;
   var members = [];
   var payments = [];
   var adminEmail = (typeof Session !== 'undefined' && Session.getActiveUser)
@@ -356,7 +390,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 1. ADULT: Due in 2 Days (Adult Morning, Quarterly ₹30,000)
   var memDue2Days = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Aarav Sharma',
     phone: '9820112233',
     email: 'aarav.sharma@example.com',
@@ -380,7 +414,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 2. KIDS: Due in 2 Days (Kids Evening, Quarterly ₹15,000)
   var memKidDue2 = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Anvi Joshi',
     phone: '9820223344',
     email: 'parent.joshi@example.com',
@@ -404,7 +438,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 3. ADULT: Due in 10 Days (Adult Evening, Quarterly ₹30,000)
   var memDue10Days = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Pooja Patel',
     phone: '9820334455',
     email: 'pooja.patel@example.com',
@@ -428,7 +462,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 4. KIDS: Due in 10 Days (Kids Evening, Quarterly ₹15,000)
   var memKidDue10 = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Reyansh Banerjee',
     phone: '9820445566',
     email: 'parent.banerjee@example.com',
@@ -452,7 +486,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 5. ADULT: Due Today (Adult Morning, Quarterly ₹30,000)
   var memDueToday = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Rohan Verma',
     phone: '9820556677',
     email: 'rohan.verma@example.com',
@@ -476,7 +510,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 6. ADULT: Overdue by 5 Days (Adult Evening, Quarterly ₹30,000)
   var memOverdue5 = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Vikram Malhotra',
     phone: '9820667788',
     email: 'vikram.m@example.com',
@@ -501,7 +535,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 7. KIDS: Overdue by 15 Days (Kids Morning, Quarterly ₹15,000)
   var memKidOverdue15 = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Myra Kapoor',
     phone: '9820778899',
     email: 'parent.kapoor@example.com',
@@ -525,7 +559,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 8. ADULT: Overdue by 30 Days (Adult Evening, Quarterly ₹30,000)
   var memOverdue30 = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Karan Singhania',
     phone: '9820889900',
     email: 'karan.s@example.com',
@@ -549,7 +583,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 9. KIDS: Active with Comfortable Runway (Kids Morning, Quarterly ₹15,000)
   var memKidActive1 = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Aarush Desai',
     phone: '9820990011',
     email: 'parent.desai@example.com',
@@ -573,7 +607,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 10. ADULT: Active with Comfortable Runway (Adult Morning, Quarterly ₹30,000)
   var memAdultActive1 = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Devendra Choudhury',
     phone: '9821001122',
     email: 'devendra.c@example.com',
@@ -597,7 +631,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 11. ADULT AD-HOC MEMBER (Adult Evening, ₹4,000 per pack)
   var memAdHocAdult = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Aditi Rao',
     phone: '9821112233',
     email: 'aditi.rao@example.com',
@@ -626,7 +660,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 12. KIDS AD-HOC MEMBER (Kids Morning, ₹2,000 per pack)
   var memAdHocKids = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Kabir Rawat',
     phone: '9821223344',
     email: 'parent.rawat@example.com',
@@ -651,7 +685,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 13. TRIAL MEMBER (Adult Morning, ₹1,500 1-Week Trial)
   var memTrial = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Ishaan Gupta',
     phone: '9821334455',
     email: 'ishaan.gupta@example.com',
@@ -676,7 +710,7 @@ function buildMembersAndPayments(today, cfg) {
   // 14. INACTIVE / LEFT MEMBER 1 (Adult, Joined Jan 2025, Left Jul 2025)
   // Fully paid up to exitDate so no phantom overdue cycles exist
   var memLeft1 = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Sameer Saxena',
     phone: '9821445566',
     email: 'sameer.saxena@example.com',
@@ -701,7 +735,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 15. INACTIVE / LEFT MEMBER 2 (Adult, Joined Mar 2025, Left Nov 2025)
   var memLeft2 = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Kavita Sen',
     phone: '9821556677',
     email: 'kavita.sen@example.com',
@@ -727,7 +761,7 @@ function buildMembersAndPayments(today, cfg) {
 
   // 16. INACTIVE / LEFT MEMBER 3 (Kids, Joined Feb 2025, Left Sep 2025)
   var memLeft3 = {
-    memberId: mockGenerateId('MEM'),
+    memberId: mockNextMemberId(),
     fullName: 'Vihaan Chatterjee',
     phone: '9821667788',
     email: 'parent.chatterjee@example.com',
@@ -775,7 +809,7 @@ function buildMembersAndPayments(today, cfg) {
   activeCohorts.forEach(function(c) {
     if (today >= c.join) {
       var mObj = {
-        memberId: mockGenerateId('MEM'),
+        memberId: mockNextMemberId(),
         fullName: c.name,
         phone: c.phone,
         email: c.name.toLowerCase().replace(/\s+/g, '.') + '@example.com',

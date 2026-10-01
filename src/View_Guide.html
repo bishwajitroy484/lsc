@@ -1,0 +1,500 @@
+<div id="guide-root" class="flex flex-col h-full min-h-0 overflow-hidden">
+  <!-- Sticky intro + search + chips -->
+  <div class="shrink-0 bg-white border-b border-slate-200 px-3 sm:px-5 pt-3 pb-2.5 space-y-2.5 shadow-xs z-10">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 border border-sky-100 flex items-center justify-center shrink-0">
+            <span class="material-symbols-rounded text-[18px]">menu_book</span>
+          </span>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-slate-800 leading-tight">Product Guide</h2>
+            <p class="text-[11px] text-slate-500 mt-0.5">Plain-language walkthrough of how LSC connects, what each screen does, and how numbers are calculated.</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button type="button" id="guide-expand-all" class="h-8 px-2.5 rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">Expand all</button>
+        <button type="button" id="guide-collapse-all" class="h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:bg-slate-50 cursor-pointer">Collapse</button>
+      </div>
+    </div>
+    <div class="relative">
+      <span class="material-symbols-rounded absolute left-3 top-2 text-[18px] text-slate-400 pointer-events-none">search</span>
+      <input id="guide-search" type="search" placeholder="Search modules, metrics, login, notifications…" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:border-brand-primary outline-none" />
+    </div>
+    <div id="guide-chips" class="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5 -mx-0.5 px-0.5">
+      <button type="button" data-guide-chip="overview" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-brand-primary text-white border-brand-primary cursor-pointer">Overview</button>
+      <button type="button" data-guide-chip="start" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Start</button>
+      <button type="button" data-guide-chip="access" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Access</button>
+      <button type="button" data-guide-chip="dashboard" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Dashboard</button>
+      <button type="button" data-guide-chip="members" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Members</button>
+      <button type="button" data-guide-chip="staff" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Staff</button>
+      <button type="button" data-guide-chip="expenses" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Expenses</button>
+      <button type="button" data-guide-chip="calendar" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Calendar</button>
+      <button type="button" data-guide-chip="settings" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Settings</button>
+      <button type="button" data-guide-chip="money" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Money</button>
+      <button type="button" data-guide-chip="notifications" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Notify</button>
+      <button type="button" data-guide-chip="ux" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Everyday</button>
+      <button type="button" data-guide-chip="ops" class="shrink-0 px-2.5 py-1 rounded-full border text-[10px] sm:text-[11px] font-bold bg-white text-slate-600 border-slate-200 cursor-pointer">Admin</button>
+    </div>
+  </div>
+
+  <div id="guide-scroll" class="flex-1 overflow-y-auto no-scrollbar p-3 sm:p-4 md:p-5 pb-24 md:pb-8 space-y-3">
+    <div id="guide-empty" class="hidden text-center py-12 px-4">
+      <span class="material-symbols-rounded text-4xl text-slate-300">search_off</span>
+      <p class="text-sm font-bold text-slate-700 mt-2">No matching sections</p>
+      <p class="text-xs text-slate-500 mt-1">Try another keyword like “overdue”, “invite”, or “salary”.</p>
+    </div>
+
+    <!-- 1 Overview -->
+    <section id="guide-sec-overview" data-guide-section="overview" data-guide-search="overview architecture big picture sheets drive mail web app execute as me connections block diagram" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="overview" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">hub</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Big picture — how LSC is connected</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-indigo-50 text-indigo-700 border border-indigo-100">Architecture</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Web app face · Sheets notebook · Drive files · Mail messages</p>
+        </div>
+        <span id="guide-chevron-overview" class="material-symbols-rounded text-slate-400 shrink-0">expand_less</span>
+      </button>
+      <div id="guide-body-overview" class="px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Think of LSC as four helpers working together. You use the <strong>web app</strong> (the published <code class="text-[10px] bg-slate-100 px-1 rounded">/exec</code> link). Behind the scenes, the account that <em>deployed</em> the app reads and writes a Google Spreadsheet, stores photos/receipts in Drive, and sends email via Gmail.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div class="rounded-xl border border-sky-100 bg-sky-50/50 p-3">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-sky-700 mb-1">Web app</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Screens you tap: Dashboard, Members, Staff, Expenses, Calendar, Settings. Runs in the browser / phone.</p>
+          </div>
+          <div class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-emerald-700 mb-1">Google Sheets</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">The gym’s notebook: members, payments, staff, salary, expenses, settings, users, dropdowns.</p>
+          </div>
+          <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-amber-700 mb-1">Google Drive</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Gym logo, member photos, expense receipts — linked by file ID, not stored inside the sheet cells.</p>
+          </div>
+          <div class="rounded-xl border border-rose-100 bg-rose-50/50 p-3">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-rose-700 mb-1">Gmail + triggers</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Login codes, payment receipts, weekly due/overdue reports. Needs Mail authorization from Setup.</p>
+          </div>
+        </div>
+        <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-2">Simple flow</p>
+          <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-700">
+            <span class="px-2 py-1 rounded-lg bg-white border border-slate-200">Open /exec URL</span>
+            <span class="material-symbols-rounded text-slate-400 text-[16px]">arrow_forward</span>
+            <span class="px-2 py-1 rounded-lg bg-white border border-slate-200">Sign in / login code</span>
+            <span class="material-symbols-rounded text-slate-400 text-[16px]">arrow_forward</span>
+            <span class="px-2 py-1 rounded-lg bg-white border border-slate-200">App modules</span>
+            <span class="material-symbols-rounded text-slate-400 text-[16px]">arrow_forward</span>
+            <span class="px-2 py-1 rounded-lg bg-white border border-slate-200">Sheets · Drive · Mail</span>
+          </div>
+        </div>
+        <div class="rounded-xl border border-amber-200 bg-amber-50/70 p-3">
+          <p class="text-[11px] font-bold text-amber-900 mb-1 flex items-center gap-1"><span class="material-symbols-rounded text-[16px]">lightbulb</span> Tip — “Execute as Me”</p>
+          <p class="text-[11px] text-amber-900/90 leading-relaxed">The app runs as the deployer’s Google account for Sheets/Drive/Mail. Visitors still sign in with Google, but the app may not see their email (common for consumer Gmail). That is why invitees use a <strong>login code</strong> or <strong>invite link</strong> — see Access below.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 Getting started -->
+    <section id="guide-sec-start" data-guide-section="start" data-guide-search="getting started setup authorization authorize mark complete gym name logo first run" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="start" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">rocket_launch</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Getting started</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-100">How it works</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">First open, authorize services, gym identity</p>
+        </div>
+        <span id="guide-chevron-start" class="material-symbols-rounded text-slate-400 shrink-0">expand_less</span>
+      </button>
+      <div id="guide-body-start" class="px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <ol class="pt-3 space-y-2 text-xs text-slate-600 list-decimal list-inside leading-relaxed">
+          <li>Open the shared <strong>web app URL</strong> ending in <code class="text-[10px] bg-slate-100 px-1 rounded">/exec</code> (not the editor or <code class="text-[10px] bg-slate-100 px-1 rounded">/dev</code>).</li>
+          <li>Sign in with Google when prompted.</li>
+          <li>Go to <strong>Settings → General → Setup &amp; Authorization</strong>. Tap <strong>Authorize Google services</strong>. Status chips cover Spreadsheet, Settings, Drive, Mail, ScriptApp, and the weekly report trigger.</li>
+          <li>When checks look good, tap <strong>Mark setup complete</strong>.</li>
+          <li>Fill gym name, owner name/email, and optional logo (LSC badge is used if none).</li>
+          <li>Invite other staff from the <strong>Users</strong> tab and share the QR / invite link.</li>
+        </ol>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600 leading-relaxed">
+          Authorization and “mark complete” are meant for the <strong>owner / deployer</strong>. You do not need the Apps Script code editor for day-to-day setup.
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 Access -->
+    <section id="guide-sec-access" data-guide-section="access" data-guide-search="access login code invite link qr share users roles viewer manager admin permissions active invited disabled" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="access" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-violet-50 text-violet-700 border border-violet-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">lock_person</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Sign-in, invites &amp; roles</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-violet-50 text-violet-700 border border-violet-100">Access</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Login codes, invite links, Viewer / Manager / Admin</p>
+        </div>
+        <span id="guide-chevron-access" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
+      </button>
+      <div id="guide-body-access" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Being listed in <strong>Users</strong> is required, but not always enough. If Google does not tell the app your email, you prove identity with a code or invite link.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div class="rounded-xl border border-violet-100 bg-violet-50/40 p-3">
+            <p class="text-[11px] font-bold text-violet-900 mb-1">Login code</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Enter your invited email → receive a 6-digit code by email (about 10 minutes) → enter the code → you are in.</p>
+          </div>
+          <div class="rounded-xl border border-violet-100 bg-violet-50/40 p-3">
+            <p class="text-[11px] font-bold text-violet-900 mb-1">Invite link / QR</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Users tab shows the shared <code class="text-[10px] bg-white px-1 rounded">/exec</code> URL and QR. Each user also has a personal invite link (<code class="text-[10px] bg-white px-1 rounded">?t=…</code>). Opening it completes verification for that person.</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-[11px] text-left min-w-[280px]">
+            <thead class="bg-slate-50 text-slate-500 uppercase tracking-wide text-[9px]">
+              <tr><th class="px-3 py-2 font-bold">Status</th><th class="px-3 py-2 font-bold">Meaning</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-slate-700">
+              <tr><td class="px-3 py-2 font-semibold text-emerald-700">Active</td><td class="px-3 py-2">Can use the app (within their permissions).</td></tr>
+              <tr><td class="px-3 py-2 font-semibold text-amber-700">Invited</td><td class="px-3 py-2">Added but not verified yet; becomes Active after first successful login/invite.</td></tr>
+              <tr><td class="px-3 py-2 font-semibold text-rose-700">Disabled</td><td class="px-3 py-2">Blocked from signing in and from APIs.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="rounded-xl border border-slate-200 p-3 space-y-2">
+          <p class="text-[11px] font-bold text-slate-800">Role presets (starting point — can customize per module)</p>
+          <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed">
+            <li><span class="font-bold text-slate-800">Admin</span> — full View / Create / Edit / Delete, including Settings.</li>
+            <li><span class="font-bold text-slate-800">Manager</span> — day-to-day ops (members, staff, expenses, etc.); typically no Settings edit.</li>
+            <li><span class="font-bold text-slate-800">Viewer</span> — look around; cannot create/edit/delete; Settings usually hidden.</li>
+          </ul>
+          <p class="text-[11px] text-slate-500 leading-relaxed">Menus and Save buttons hide when denied. The server also checks every action, so changing the URL alone cannot bypass permissions.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 Dashboard -->
+    <section id="guide-sec-dashboard" data-guide-section="dashboard" data-guide-search="dashboard kpi metrics net-in hand collected overdue operating expenses charts whatsapp notify forecast tip formula" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="dashboard" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">dashboard</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Dashboard — metrics &amp; charts</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-amber-50 text-amber-800 border border-amber-100">Formula</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">KPIs, filters, forecasts, overdue/upcoming, WhatsApp</p>
+        </div>
+        <span id="guide-chevron-dashboard" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
+      </button>
+      <div id="guide-body-dashboard" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Pick a <strong>year</strong>, then <strong>monthly or quarterly</strong>, then which months/quarters. Most money totals follow that selection. Tap the small <strong>info</strong> icon on any card or chart for a short tip.</p>
+        <p class="text-[11px] text-slate-500 leading-relaxed"><strong>Always “now” (not fully period-filtered):</strong> Active Members, staff count chips on that card, Overdue Amount KPI, Members by Batch chart, and the Overdue / Upcoming tables.</p>
+
+        <div class="space-y-2">
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="text-[11px] font-bold text-slate-800 mb-1">Active Members</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Count of members currently Active (not inactive / exited). Plan chips show how that count splits by membership plan.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="text-[11px] font-bold text-slate-800 mb-1">Net-In Hand</p>
+            <div class="rounded-lg bg-amber-50 border border-amber-100 px-2.5 py-2 text-[11px] text-amber-950 leading-relaxed font-medium mb-1.5">
+              Actual = collections recognized − expenses for elapsed periods<br>
+              Remaining = forecast collections − forecast expenses for later periods<br>
+              Projected total = Actual + Remaining
+            </div>
+            <p class="text-[11px] text-slate-600 leading-relaxed">The card shows Actual plus a <strong>Remaining</strong> badge. The chart summary bar shows Actual / Remaining / Total. Future periods use prepaid recognition (important in Split mode), expected renewals from next due dates (skip overdue, ad-hoc, trial), trailing expense averages, and active staff salary run-rate.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="text-[11px] font-bold text-slate-800 mb-1">Total Collected</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Sum of recognized member revenue for the selected year/periods. Only payments with status <strong>Paid</strong> or <strong>Completed</strong> count. Anchor vs Split (Settings) changes which month gets the money.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="text-[11px] font-bold text-slate-800 mb-1">Overdue Amount</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Estimated unpaid dues for active members whose renewal is past due (for the selected year). Not reshaped by Anchor/Split.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="text-[11px] font-bold text-slate-800 mb-1">Operating Expenses</p>
+            <div class="rounded-lg bg-amber-50 border border-amber-100 px-2.5 py-2 text-[11px] text-amber-950 leading-relaxed font-medium mb-1.5">
+              Total OpEx = utilities/expense categories + paid staff costs for the periods<br>
+              Utilities = Total − Staff portion
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 space-y-2">
+          <p class="text-[11px] font-bold text-slate-800">Charts at a glance</p>
+          <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
+            <li><strong>Revenue vs Expenses</strong> — bars of recognized revenue and expenses per period.</li>
+            <li><strong>Members by Batch</strong> — active members grouped by batch.</li>
+            <li><strong>Net-In-Hand Prediction</strong> — area chart; solid = actual, dotted = forecast.</li>
+            <li><strong>Collection Trend</strong> — collected vs overdue series (chart type toggle).</li>
+            <li><strong>Expense Breakdown</strong> — donut by category (+ staff); misc details available.</li>
+            <li><strong>Staff Cost Trend</strong> — paid staff costs over periods; mini cards for headcount / period cost / average.</li>
+          </ul>
+        </div>
+
+        <div class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
+          <p class="text-[11px] font-bold text-emerald-900 mb-1 flex items-center gap-1"><span class="material-symbols-rounded text-[16px]">chat</span> WhatsApp renewal notify</p>
+          <p class="text-[11px] text-slate-600 leading-relaxed">On Overdue and Upcoming tables, <strong>Notify / WA</strong> opens a preview with a editable message (gym, member, plan, amount, due date). Copy it or open WhatsApp via <code class="text-[10px] bg-white px-1 rounded">wa.me</code>. Needs a phone on the member. No WhatsApp Business API — you send from the WhatsApp app yourself.</p>
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed"><strong>Overdue table:</strong> active members past due (not ad-hoc/trial). <strong>Upcoming:</strong> due within about 0–7 days, same exclusions.</p>
+      </div>
+    </section>
+
+    <!-- 5 Members -->
+    <section id="guide-sec-members" data-guide-section="members" data-guide-search="members LSC-MEM payments trial ad-hoc exit photo insights filters phone" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="members" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 border border-teal-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">groups</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Members</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-teal-50 text-teal-700 border border-teal-100">Module</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Profiles, IDs, payments, trial/ad-hoc, insights</p>
+        </div>
+        <span id="guide-chevron-members" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
+      </button>
+      <div id="guide-body-members" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Add and edit members (name, <strong>10-digit phone</strong>, email, gender, DOB, join/exit, status, plan, batch, amount, notes, photo). New IDs look like <code class="text-[10px] bg-slate-100 px-1 rounded">LSC-MEM-1</code>, <code class="text-[10px] bg-slate-100 px-1 rounded">LSC-MEM-2</code>, …</p>
+        <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
+          <li><strong>Filters</strong> — status (All / Active / Due Soon / Overdue), batch, plan, and search; selections stay visible while filtering.</li>
+          <li><strong>Payments</strong> — record payments anytime; optional initial payment when adding. Coverage length follows the plan (e.g. monthly +1 month, quarterly +3, yearly +1 year, trial +7 days, ad-hoc +1 day).</li>
+          <li><strong>Next due</strong> — usually day after latest paid coverage end; otherwise from plan frequency / join. Ad-hoc &amp; trial show N/A for renewal due.</li>
+          <li><strong>Trial fee</strong> — daily rate × inclusive days between join and exit; recalculates when plan or dates change.</li>
+          <li><strong>Ad-hoc / trial exit</strong> — exit date required; when that date arrives, status becomes Inactive (on load and by a daily check).</li>
+          <li><strong>Insights</strong> — per-member earnings charts; only Paid/Completed payments count as collected.</li>
+          <li><strong>Photo</strong> — stored in Drive and linked on the member row.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 6 Staff -->
+    <section id="guide-sec-staff" data-guide-section="staff" data-guide-search="staff salary action needed payroll bonus advance incentive reimbursement coverage" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="staff" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-orange-50 text-orange-700 border border-orange-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">badge</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Staff &amp; salary</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-orange-50 text-orange-700 border border-orange-100">Module</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">KPIs, Action Needed, salary credits</p>
+        </div>
+        <span id="guide-chevron-staff" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
+      </button>
+      <div id="guide-body-staff" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Manage staff profiles and salary/credit transactions. There is <strong>no attendance</strong> module — payroll is about recorded payments.</p>
+        <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
+          <li><strong>KPIs</strong> — active headcount, total paid cost for selected periods, and Action Needed count.</li>
+          <li><strong>Salary cycles</strong> — from join through today (or exit). First cycle is join→end of that month; later cycles are full calendar months. Expected amount is the <strong>full nominal monthly salary</strong> (not mid-month prorated).</li>
+          <li><strong>Action Needed</strong> — a cycle with no matching paid salary row yet.</li>
+          <li><strong>Credit types</strong> — Salary, Bonus, Advance, Incentive, Reimbursement. Bonuses/extras are not used to “close” a salary cycle the same way a Salary payment is.</li>
+          <li><strong>Charts</strong> — payroll trend and cost-by-role donut.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 7 Expenses -->
+    <section id="guide-sec-expenses" data-guide-section="expenses" data-guide-search="expenses misc receipt staff cost utilities category" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="expenses" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">receipt_long</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Expenses</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-rose-50 text-rose-700 border border-rose-100">Module</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Operating spend, misc, receipts, staff cost link</p>
+        </div>
+        <span id="guide-chevron-expenses" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
+      </button>
+      <div id="guide-body-expenses" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Log facility and operating expenses by category and date. Optional receipt images go to Drive.</p>
+        <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
+          <li><strong>Misc / Other</strong> — when the category name looks like misc/other, a detail field is required.</li>
+          <li><strong>KPIs</strong> — total spend (expenses + staff cost), staff cost portion, most-spent category, average per selected period.</li>
+          <li><strong>Staff cost link</strong> — salary totals are shown with expenses for a full picture, but salary rows live in the Staff module (not duplicated as expense rows). The Staff Cost card can jump to Staff.</li>
+          <li><strong>Charts</strong> — spend trend, category donut, misc breakdown.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 8 Calendar -->
+    <section id="guide-sec-calendar" data-guide-section="calendar" data-guide-search="calendar due soon renewals month drawer legend" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="calendar" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-700 border border-cyan-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">calendar_month</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Calendar</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-cyan-50 text-cyan-700 border border-cyan-100">Module</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Upcoming renewals by day</p>
+        </div>
+        <span id="guide-chevron-calendar" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
+      </button>
+      <div id="guide-body-calendar" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Month grid of upcoming subscription renewals. Year dropdown, Today, and prev/next month controls. Tap a day for the member drawer; search the side list.</p>
+        <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
+          <li><strong>KPIs</strong> — Due Soon (≤2 days), In 3–5, In 6–10, Total shown.</li>
+          <li><strong>Who appears</strong> — active non-ad-hoc/trial members with a next due in the month <em>or</em> within about 10 days.</li>
+          <li><strong>Next due</strong> — usually day after latest payment end date; otherwise from paid/join + plan length. Failed/pending/cancelled payments are skipped.</li>
+          <li>Year list matches Dashboard / Members / Staff / Expenses (includes current year even with no data).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 9 Settings -->
+    <section id="guide-sec-settings" data-guide-section="settings" data-guide-search="settings general users dropdowns branding spreadsheet drive logo" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="settings" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">settings</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Settings tabs</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-slate-100 text-slate-700 border border-slate-200">Config</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">General, Users, Dropdowns, and this Guide</p>
+        </div>
+        <span id="guide-chevron-settings" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
+      </button>
+      <div id="guide-body-settings" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="text-[11px] font-bold text-slate-800 mb-1">General</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Gym identity, Setup &amp; Authorization, revenue recognition, currency style, Spreadsheet/Drive IDs, notification templates and schedule.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="text-[11px] font-bold text-slate-800 mb-1">Users</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Invite emails, role presets, permission matrix, share URL/QR, copy invite link.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="text-[11px] font-bold text-slate-800 mb-1">Dropdowns</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Plans, batches, payment modes/statuses, expense categories, staff roles, and other lists used across forms. Reorder, edit, add schemas.</p>
+          </div>
+          <div class="rounded-xl border border-sky-100 bg-sky-50/40 p-3">
+            <p class="text-[11px] font-bold text-sky-900 mb-1">Guide (this page)</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Living product walkthrough. No Save button — it is documentation inside the app.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 Money rules -->
+    <section id="guide-sec-money" data-guide-section="money" data-guide-search="money anchor split accrual cash currency indian standard paid completed recognition" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="money" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-yellow-50 text-yellow-800 border border-yellow-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">payments</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Money rules</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-amber-50 text-amber-800 border border-amber-100">Formula</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Anchor vs Split · currency · what counts as Paid</p>
+        </div>
+        <span id="guide-chevron-money" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
+      </button>
+      <div id="guide-body-money" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 pt-3">
+          <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
+            <p class="text-[11px] font-bold text-amber-900 mb-1">Anchor (cash-style)</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">The whole payment amount is recognized in the start / paid month. Simple cash view.</p>
+          </div>
+          <div class="rounded-xl border border-sky-100 bg-sky-50/50 p-3">
+            <p class="text-[11px] font-bold text-sky-900 mb-1">Split (accrual-style)</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Amount is spread day-by-day across the coverage window, so each calendar month gets its share. Affects Dashboard, member insights, and staff/expense money views.</p>
+          </div>
+        </div>
+        <div class="rounded-xl border border-slate-200 p-3 space-y-1.5">
+          <p class="text-[11px] font-bold text-slate-800">What counts as collected</p>
+          <p class="text-[11px] text-slate-600 leading-relaxed">Only payment (and salary) statuses that mean <strong>Paid</strong> or <strong>Completed</strong>. Overdue, unpaid, pending, and failed stay visible in history but do not inflate “collected” KPIs.</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 p-3 space-y-1.5">
+          <p class="text-[11px] font-bold text-slate-800">Currency display</p>
+          <ul class="text-[11px] text-slate-600 space-y-1 leading-relaxed list-disc list-inside">
+            <li><strong>Indian</strong> — commas + Lakhs / Crore style.</li>
+            <li><strong>Standard</strong> — compact k / M / B style.</li>
+            <li>Chart point labels always use compact metric so bars stay readable; tooltips and KPI cards follow your choice.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 Notifications -->
+    <section id="guide-sec-notifications" data-guide-section="notifications" data-guide-search="notifications email receipt weekly report cc schedule columns mail" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="notifications" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-pink-50 text-pink-700 border border-pink-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">mail</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Notifications</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-pink-50 text-pink-700 border border-pink-100">Email</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Payment receipts &amp; weekly due report</p>
+        </div>
+        <span id="guide-chevron-notifications" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
+      </button>
+      <div id="guide-body-notifications" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Turn the master switch on in Settings → General. Mail must be authorized in Setup.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div class="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+            <p class="text-[11px] font-bold text-pink-900 mb-1">Payment receipt</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">When a new payment is recorded as Paid/Completed and the member has an email, a receipt can be sent. Templates are editable with placeholders like member name, plan, amount, dates.</p>
+          </div>
+          <div class="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
+            <p class="text-[11px] font-bold text-pink-900 mb-1">Weekly report</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Scheduled email to the owner (plus CC list) with upcoming and overdue members. Choose day, time, days-ahead window, and which table columns appear. Preview samples from Settings.</p>
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed">Note: the weekly report’s “due” uses payment end dates; the Calendar screen’s next due is usually end date + 1 day. Both are intentional for their jobs.</p>
+      </div>
+    </section>
+
+    <!-- 12 Everyday UX -->
+    <section id="guide-sec-ux" data-guide-section="ux" data-guide-search="validation lazy load dates progress toast spinner forms" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="ux" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-lime-50 text-lime-800 border border-lime-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">touch_app</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Everyday UX patterns</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-lime-50 text-lime-800 border border-lime-100">Tip</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Validation, lazy lists, dates, progress</p>
+        </div>
+        <span id="guide-chevron-ux" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
+      </button>
+      <div id="guide-body-ux" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <ul class="pt-3 text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
+          <li><strong>Form validation</strong> — Save checks required fields; highlights errors. Conditional fields (misc details, exit date, salary coverage, initial payment) validate only when shown.</li>
+          <li><strong>Lazy lists</strong> — Members, Staff, and Expenses load in batches of <strong>50</strong>; scroll near the bottom for more. Search/filter resets to the first 50 matches.</li>
+          <li><strong>Dates</strong> — shown as day-month-year style (e.g. 01-Oct-2026).</li>
+          <li><strong>Progress &amp; toasts</strong> — longer actions show a progress overlay; short feedback appears as toast messages.</li>
+          <li><strong>Modals on mobile</strong> — dialogs and sheets stay above the bottom navigation so Save/Cancel and login actions are never hidden under the nav; tall panels scroll inside the safe area.</li>
+          <li><strong>Small screens</strong> — text scales down a bit on narrow phones; the page should not scroll sideways. Wide tables scroll inside their box instead.</li>
+          <li><strong>Charts</strong> — shared styling and mobile-friendly zoom/pan toolbars across modules.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 13 Admin ops -->
+    <section id="guide-sec-ops" data-guide-section="ops" data-guide-search="admin ops env.json deploymentId clasp mock data developer stable url" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <button type="button" data-guide-toggle="ops" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
+        <span class="w-9 h-9 rounded-xl bg-stone-100 text-stone-700 border border-stone-200 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">construction</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <h3 class="text-sm font-bold text-slate-800">Admin / developer notes</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-stone-100 text-stone-700 border border-stone-200">Ops</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Stable /exec URL, env IDs, mock data</p>
+        </div>
+        <span id="guide-chevron-ops" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
+      </button>
+      <div id="guide-body-ops" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
+        <ul class="pt-3 text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
+          <li><strong>Stable web URL</strong> — keep one published <code class="text-[10px] bg-slate-100 px-1 rounded">/exec</code> link. Redeploying should update that same deployment so QR codes and bookmarks do not break.</li>
+          <li><strong>Local env IDs</strong> — developers store spreadsheet, Drive, script, and deployment IDs in a local <code class="text-[10px] bg-slate-100 px-1 rounded">config/env.json</code> (not committed). Copy from <code class="text-[10px] bg-slate-100 px-1 rounded">config/env.example.json</code>.</li>
+          <li><strong>Mock data</strong> — a generator can wipe and refill sample members/payments/staff/expenses for testing. It is for development only; do not run it on a live gym’s real data.</li>
+          <li><strong>Handover</strong> — client should own Spreadsheet, Apps Script, and Drive; create the web app deployment as themselves; authorize from Settings; then invite staff.</li>
+        </ul>
+      </div>
+    </section>
+
+    <p class="text-[10px] text-slate-400 text-center pt-2 pb-1">Guide content is maintained with the product. When a feature changes, this page should be updated in the same change.</p>
+  </div>
+</div>

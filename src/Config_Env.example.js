@@ -1,0 +1,14 @@
+/**
+ * Copy/generate via: npm run use:dev  (or use:prod)
+ * Real file src/Config_Env.js is gitignored and written by scripts/prepare-env.js
+ */
+var LSC_ENV = 'dev';
+var SPREADSHEET_ID = 'YOUR_DEV_SPREADSHEET_ID';
+var LSC_DRIVE_ID = 'YOUR_DEV_DRIVE_FOLDER_ID';
+var LSC_SCRIPT_ID = 'YOUR_DEV_APPS_SCRIPT_ID';
+var LSC_DEV_SCRIPT_ID = 'YOUR_DEV_APPS_SCRIPT_ID';
+var LSC_PROD_SCRIPT_ID = 'YOUR_PROD_APPS_SCRIPT_ID';
+var LSC_DEV_SPREADSHEET_ID = 'YOUR_DEV_SPREADSHEET_ID';
+var LSC_PROD_SPREADSHEET_ID = 'YOUR_PROD_SPREADSHEET_ID';
+var LSC_DEV_DRIVE_ID = 'YOUR_DEV_DRIVE_FOLDER_ID';
+var LSC_PROD_DRIVE_ID = 'YOUR_PROD_DRIVE_FOLDER_ID';

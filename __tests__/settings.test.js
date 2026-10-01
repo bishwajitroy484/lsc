@@ -378,6 +378,9 @@ describe('Settings Module', () => {
       expect(viewHtml).toContain('id="tab-btn-general"');
       expect(viewHtml).toContain('id="tab-btn-users"');
       expect(viewHtml).toContain('id="tab-btn-dropdowns"');
+      expect(viewHtml).toContain('id="tab-btn-guide"');
+      expect(viewHtml).toContain('id="pane-guide"');
+      expect(viewHtml).toContain("include('View_Guide')");
 
       // Core inputs
       expect(viewHtml).toContain('id="gen-GYM_NAME"');
@@ -414,6 +417,31 @@ describe('Settings Module', () => {
       expect(viewHtml).toContain('id="notification-message-modal"');
       expect(viewHtml).toContain('id="notification-preview-modal"');
       expect(viewHtml).not.toContain('id="notification-modal"');
+    });
+
+    test('View_Guide.html includes searchable walkthrough sections and chips', () => {
+      const guideHtml = fs.readFileSync(path.join(__dirname, '../src/View_Guide.html'), 'utf8');
+      const scriptHtml = fs.readFileSync(path.join(__dirname, '../src/Script_Guide.html'), 'utf8');
+
+      expect(guideHtml).toContain('id="guide-root"');
+      expect(guideHtml).toContain('id="guide-search"');
+      expect(guideHtml).toContain('id="guide-scroll"');
+      [
+        'overview', 'start', 'access', 'dashboard', 'members', 'staff',
+        'expenses', 'calendar', 'settings', 'money', 'notifications', 'ux', 'ops'
+      ].forEach((id) => {
+        expect(guideHtml).toContain(`id="guide-sec-${id}"`);
+        expect(guideHtml).toContain(`data-guide-section="${id}"`);
+        expect(guideHtml).toContain(`data-guide-chip="${id}"`);
+      });
+
+      expect(guideHtml).toContain('Net-In Hand');
+      expect(guideHtml).toContain('LSC-MEM-');
+      expect(guideHtml).toContain('Anchor');
+      expect(guideHtml).toContain('login code');
+
+      expect(scriptHtml).toContain('const GuideApp');
+      expect(scriptHtml).toContain('onShow');
     });
   });
 

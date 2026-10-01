@@ -4,6 +4,18 @@ This guide documents user-visible behavior. Keep it focused on what users can do
 
 Update the relevant section whenever a feature is added or its user-visible behavior changes. Include the user goal, key workflows, important validation or limitations, and related modules where useful.
 
+## Local environment IDs (dev / prod)
+
+Developers keep spreadsheet, Drive folder, Apps Script, and **stable web-app deployment** IDs in a local file that is **not** committed:
+
+1. Copy `config/env.example.json` → `config/env.json`
+2. Fill `dev` and `prod` blocks (`scriptId`, `spreadsheetId`, `driveId`, `deploymentId`)
+3. Run `npm run use:dev` or `npm run use:prod` before push/deploy
+
+Those commands write `.clasp.json` (script target) and `src/Config_Env.js` (runtime `SPREADSHEET_ID` / drive defaults). Then `npm run push:dev` / `push:prod` use the selected environment’s IDs.
+
+**Stable web app URL:** `npm run deploy:dev` / `deploy:prod` updates the existing `deploymentId` so the `/exec` link does **not** change. Share that URL once. If `deploymentId` is empty, the first deploy creates one and saves it into `config/env.json` automatically.
+
 ## Feature areas
 
 The current application includes these feature modules:
@@ -28,6 +40,14 @@ Member Payment Insights, Dashboard collected-revenue KPIs, and collection charts
 ## Modal form validation
 
 Member, staff, expense, payment, staff salary, and Settings add/edit forms validate every visible required field when Save is clicked. Missing or invalid fields are highlighted and show an inline message; the form is not submitted until those fields are corrected. Conditional fields, such as expense misc details, exit dates, salary coverage dates, and optional initial-payment details, are validated when their corresponding form state makes them visible and required. Expense amount edits use the same validation as the expense form.
+
+## Mobile modal clearance
+
+On phones, dialogs and bottom sheets (login/access, Settings user editor and notification editors, schema/option modals, member/staff/expense/payment forms, delete confirms, WhatsApp notify, chart expand, and side drawers) keep padding and max-height above the bottom navigation and safe-area inset so actions are not cut off or covered by the nav. Overlays scroll when content is taller than the remaining viewport.
+
+## Mobile layout and type scale
+
+The app is meant for portrait and landscape phones of any common width without page-level horizontal scrolling. Narrow viewports use a slightly smaller root type scale (further reduced under ~380px and in landscape), KPI labels truncate instead of forcing width, metric tips stay within the viewport, and wide tables scroll inside their own containers. Charts and module roots are constrained to the available width.
 
 ## Member filters, payments, and exit dates
 
@@ -74,11 +94,12 @@ The web app requires a Google sign-in (`Anyone` access, execute as the deployer)
 
 ## Settings and dropdown configuration
 
-The Settings module provides a responsive, device-compatible interface organized into three main tabs:
+The Settings module provides a responsive, device-compatible interface organized into four main tabs:
 
 - **General:** Configures gym identity (gym name, owner name, owner email, and gym logo upload with LSC fallback), setup/authorization, financial policies (revenue recognition and currency numbering), database IDs (Spreadsheet and Drive folder with compact copy/open actions), and automated notifications. Mobile general settings use denser two-column rows and a single header Save. Notifications support editable receipt/weekly templates, sample HTML previews, weekly CC recipients, day/time/days-ahead schedule, and selectable report table columns.
 - **Users:** Invite Google accounts and configure per-module View / Create / Edit / Delete access stored in the `USERS` sheet.
 - **Dropdowns:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
+- **Guide:** In-app product walkthrough (`View_Guide.html`) with search, sticky section chips, and expand/collapse cards. Covers architecture (web app ↔ Sheets ↔ Drive ↔ Mail), getting started, sign-in/invites/roles, every module, Dashboard metric formulas, money rules (Anchor/Split, currency, Paid status), notifications, everyday UX, and admin notes. Readable on mobile and desktop. No Save action — documentation only. When user-facing behavior changes, update this Guide in the same change as `docs/features.md`.
 
 ## Mock Data Generator
 

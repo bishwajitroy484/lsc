@@ -39,6 +39,10 @@
         <span class="material-symbols-rounded text-[16px]">dataset</span>
         <span>Dropdowns</span>
       </button>
+      <button id="tab-btn-guide" type="button" onclick="SettingsApp.switchTab('guide')" class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 text-slate-600 hover:text-slate-900 rounded-lg font-medium text-[11px] sm:text-xs transition-all cursor-pointer whitespace-nowrap">
+        <span class="material-symbols-rounded text-[16px]">menu_book</span>
+        <span>Guide</span>
+      </button>
     </div>
   </header>
 
@@ -583,8 +587,8 @@
     </div>
 
     <!-- User editor modal -->
-    <div id="user-editor-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[130] flex items-center justify-center p-3 overflow-y-auto">
-      <div id="user-editor-modal-content" class="bg-white w-full max-w-lg rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col my-auto border border-slate-200 overflow-hidden max-h-[90vh]">
+    <div id="user-editor-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[130] flex lsc-modal-overlay">
+      <div id="user-editor-modal-content" class="bg-white w-full max-w-lg rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col border border-slate-200 overflow-hidden lsc-modal-panel">
         <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50 shrink-0">
           <h2 id="user-editor-title" class="text-sm font-bold text-slate-800">Add user</h2>
           <button type="button" onclick="SettingsApp.closeUserEditor()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 bg-slate-100 rounded-full cursor-pointer">
@@ -777,6 +781,13 @@
         </div>
       </div>
     </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: PRODUCT GUIDE                       -->
+    <!-- ========================================== -->
+    <div id="pane-guide" class="flex-1 flex-col h-full overflow-hidden bg-slate-50 hidden">
+      <?!= include('View_Guide'); ?>
+    </div>
   </div>
 
   <!-- ========================================== -->
@@ -784,8 +795,8 @@
   <!-- ========================================== -->
 
   <!-- 1. Schema Builder Modal -->
-  <div id="schema-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-    <div id="schema-modal-content" class="bg-white w-full max-w-xl rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col my-auto border border-slate-200 overflow-hidden">
+  <div id="schema-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[100] flex lsc-modal-overlay">
+    <div id="schema-modal-content" class="bg-white w-full max-w-xl rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col border border-slate-200 overflow-hidden lsc-modal-panel">
       
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
         <div class="flex items-center gap-2.5">
@@ -866,8 +877,8 @@
   </div>
 
   <!-- 2. Option Modal -->
-  <div id="option-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[110] flex items-center justify-center p-4">
-    <div id="option-modal-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col border border-slate-200 overflow-hidden">
+  <div id="option-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[110] flex lsc-modal-overlay">
+    <div id="option-modal-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col border border-slate-200 overflow-hidden lsc-modal-panel">
       
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
         <h2 id="modal-opt-title" class="text-base font-bold text-slate-800">Add Option</h2>
@@ -891,8 +902,8 @@
   </div>
 
   <!-- 3. Delete Confirmation Modal -->
-  <div id="delete-opt-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[120] flex items-center justify-center p-4">
-    <div id="delete-opt-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 p-6 text-center border border-slate-200">
+  <div id="delete-opt-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[120] flex lsc-modal-overlay">
+    <div id="delete-opt-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 p-6 text-center border border-slate-200 lsc-modal-panel">
       <div class="w-14 h-14 rounded-2xl bg-red-50 text-red-500 border border-red-100 flex items-center justify-center mx-auto mb-3.5">
         <span class="material-symbols-rounded text-3xl">delete_forever</span>
       </div>
@@ -907,8 +918,8 @@
   </div>
 
   <!-- Message editor modal -->
-  <div id="notification-message-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[130] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-    <div id="notification-message-modal-content" class="bg-white w-full max-w-lg rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col my-auto border border-slate-200 overflow-hidden">
+  <div id="notification-message-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[130] flex lsc-modal-overlay">
+    <div id="notification-message-modal-content" class="bg-white w-full max-w-lg rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col border border-slate-200 overflow-hidden lsc-modal-panel">
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
         <div class="min-w-0">
           <h2 id="notif-editor-title" class="text-sm md:text-base font-bold text-slate-800">Edit message</h2>
@@ -940,8 +951,8 @@
   </div>
 
   <!-- Email preview modal -->
-  <div id="notification-preview-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[140] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-    <div id="notification-preview-modal-content" class="bg-white w-full max-w-xl rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col my-auto border border-slate-200 overflow-hidden max-h-[90vh]">
+  <div id="notification-preview-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[140] flex lsc-modal-overlay">
+    <div id="notification-preview-modal-content" class="bg-white w-full max-w-xl rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col border border-slate-200 overflow-hidden lsc-modal-panel">
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
         <div class="min-w-0">
           <h2 class="text-sm md:text-base font-bold text-slate-800">Email preview</h2>
