@@ -4,6 +4,56 @@
  * No mock data. Strictly relies on the DB utility.
  */
 
+function deactivateExpiredMemberStatuses(members, plans, memberStatuses, asOfDate) {
+  const statusName = (status) => {
+    const option = memberStatuses.find(item => String(item.id) === String(status));
+    return String(option ? (option.name || option.label || option.id) : status || '').trim().toLowerCase();
+  };
+  const inactiveStatus = memberStatuses.find(item =>
+    String(item.name || item.label || item.id || '').trim().toLowerCase() === 'inactive'
+  );
+  const today = new Date(asOfDate || new Date());
+  today.setHours(0, 0, 0, 0);
+
+  members.forEach(member => {
+    const plan = plans.find(item => String(item.id) === String(member.membershipId));
+    const planName = String(plan && plan.name || '').toUpperCase();
+    const frequency = String(plan && plan.frequency || '').toUpperCase();
+    const isAdHocOrTrial = /AD[\s-]?HOC|TRIAL/.test(`${frequency} ${planName}`);
+    if (!isAdHocOrTrial || !member.exitDate || statusName(member.status) !== 'active') return;
+
+    const exitDate = parseSafeDate(member.exitDate);
+    if (isNaN(exitDate)) return;
+    exitDate.setHours(0, 0, 0, 0);
+    if (exitDate <= today) {
+      member.status = inactiveStatus ? inactiveStatus.id : 'Inactive';
+      DB.update('MEMBERS', member.memberId, { status: member.status });
+    }
+  });
+}
+
+function runDailyMemberExitDateCheck() {
+  const members = DB.read('MEMBERS');
+  const globalData = api_getGlobalDropdowns();
+  if (!globalData || !globalData.success || !globalData.data || !globalData.data.options) {
+    throw new Error(globalData && globalData.error ? globalData.error : 'Failed to load member dropdown options.');
+  }
+
+  const options = globalData.data.options;
+  deactivateExpiredMemberStatuses(members, options.membership || [], options.status || []);
+}
+
+function setupMemberExitDateTrigger() {
+  const handlerName = 'runDailyMemberExitDateCheck';
+  const alreadyScheduled = ScriptApp.getProjectTriggers().some(trigger =>
+    trigger.getHandlerFunction() === handlerName
+  );
+  if (alreadyScheduled) return { success: true, message: 'Daily member exit-date check is already scheduled.' };
+
+  ScriptApp.newTrigger(handlerName).timeBased().everyDays(1).atHour(1).create();
+  return { success: true, message: 'Daily member exit-date check scheduled.' };
+}
+
 function api_getMembers() {
   try {
     // 1. Batch read for performance, including SETTINGS
@@ -36,9 +86,14 @@ function api_getMembers() {
     const plans = (globalData && globalData.success && globalData.data && globalData.data.options && globalData.data.options.membership)
       ? globalData.data.options.membership
       : [];
+    const memberStatuses = (globalData && globalData.success && globalData.data && globalData.data.options)
+      ? globalData.data.options.status || []
+      : [];
     const paymentStatuses = (globalData && globalData.success && globalData.data && globalData.data.options)
       ? globalData.data.options.paymentstatus || globalData.data.options.status || []
       : [];
+
+    deactivateExpiredMemberStatuses(members, plans, memberStatuses);
 
     const paymentsByMember = {};
     payments.forEach(p => {
@@ -116,6 +171,7 @@ function api_getMembers() {
 function api_saveMember(memberData) {
   try {
     if (!memberData.fullName || !memberData.phone) throw new Error("Name and Phone are required.");
+    if (!/^\d{10}$/.test(String(memberData.phone))) throw new Error("Phone number must contain exactly 10 digits.");
     const now = new Date().toISOString();
     const userEmail = Session.getActiveUser().getEmail();
 

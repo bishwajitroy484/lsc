@@ -352,14 +352,14 @@
       safeSetText('kpi-total-exp', formatCurrency(data.kpis.totalOperatingExpenses));
       safeSetText('kpi-net', formatCurrency(data.kpis.netInHand));
 
-      const projNet = data.kpis.projectedNet != null ? data.kpis.projectedNet : data.kpis.netInHand;
-      safeSetText('kpi-net-forecast', formatCurrency(projNet));
+      const remainingNet = data.kpis.remainingForecastNet || 0;
+      safeSetText('kpi-net-forecast', formatCurrency(remainingNet));
       const forecastEl = document.getElementById('kpi-net-forecast');
       if (forecastEl) {
-        const rem = data.kpis.remainingForecastNet || 0;
-        forecastEl.title = `Actual: ${formatCurrency(data.kpis.netInHand)} | Remaining Forecast: ${rem >= 0 ? '+' : ''}${formatCurrency(rem)}`;
+        forecastEl.title = `Actual: ${formatCurrency(data.kpis.netInHand)} | Remaining Forecast: ${remainingNet >= 0 ? '+' : ''}${formatCurrency(remainingNet)}`;
       }
 
+      const projNet = data.kpis.projectedNet != null ? data.kpis.projectedNet : data.kpis.netInHand;
       const predActual = (data.charts.prediction && data.charts.prediction.actualNet != null) ? data.charts.prediction.actualNet : data.kpis.netInHand;
       const predRemaining = (data.charts.prediction && data.charts.prediction.remainingForecastNet != null) ? data.charts.prediction.remainingForecastNet : (data.kpis.remainingForecastNet || 0);
       const predTotal = (data.charts.prediction && data.charts.prediction.projectedNet != null) ? data.charts.prediction.projectedNet : projNet;

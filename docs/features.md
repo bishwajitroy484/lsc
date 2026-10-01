@@ -29,12 +29,16 @@ Member Payment Insights, Dashboard collected-revenue KPIs, and collection charts
 
 Member, staff, expense, payment, staff salary, and Settings add/edit forms validate every visible required field when Save is clicked. Missing or invalid fields are highlighted and show an inline message; the form is not submitted until those fields are corrected. Conditional fields, such as expense misc details, exit dates, salary coverage dates, and optional initial-payment details, are validated when their corresponding form state makes them visible and required. Expense amount edits use the same validation as the expense form.
 
+## Member filters, payments, and exit dates
+
+The Members module's status, batch, and membership filters keep their selected values visible while filtering the member list. Member phone numbers must contain exactly 10 digits when adding or editing a record. Adding a member can optionally capture an initial payment; its payment mode and status choices are populated from the configured dropdown options and shown when Record Now is selected. Ad-hoc and trial members require an exit date and are changed to Inactive when that date is reached, both during member-list loading and by a daily scheduled check. Trial fees use the configured daily rate multiplied by the inclusive number of days between join and exit dates, and recalculate when the plan or dates change.
+
 ## Dashboard Net-In-Hand forecast
 
 The Dashboard Net-In-Hand Prediction chart always uses an area chart, showing recognized actual collection less actual expenses through the current period, followed by an estimated trend for future periods. For future periods, projected net-in-hand accounts for both recognized revenue from active prepaid subscriptions extending into those periods (essential in Split/Accrual mode) as well as forecasted renewal collections based on active members' next payment due dates and amounts. Overdue members and ad-hoc or trial plans are not counted as upcoming renewal payments. Forecast expenses use the trailing 12 completed months of recorded operating expenses, combined with the nominal monthly salary run rate of all active staff members (with fallback to the trailing 12-month salary average if nominal staff salaries are unavailable). Both actuals and forecasts respect the configured Anchor (cash) or Split (accrual) revenue-recognition mode and the selected year and period filters. A green dotted line and Forecast label identify projected values; tooltips distinguish actual from predicted points.
 
 To eliminate manual calculations, cumulative projected sums are surfaced in two complementary locations:
-- **Net-In Hand KPI Card:** Displays the primary Actual Net In Hand achieved to date alongside an integrated bottom summary badge showing the total projected year-end / period net (`Projected: ₹XX.Xk`), with detailed tooltip breakdown of actual plus remaining forecast.
+- **Net-In Hand KPI Card:** Displays the primary Actual Net In Hand achieved to date alongside an integrated bottom summary badge showing the remaining forecast (`Remaining: ₹XX.Xk`), with a tooltip breakdown of actual and remaining forecast.
 - **Net-In-Hand Chart Summary Bar:** Directly above the chart curve, a persistent metrics strip breaks down `Actual: ₹XX.Xk`, `Remaining: ±₹YY.Yk`, and `Total: ₹ZZ.Zk`, allowing instantaneous analysis of upcoming cash flow and final bottom-line earnings without summing individual chart points.
 
 ## Dashboard period filters
@@ -82,5 +86,3 @@ The application provides configurable currency numbering styles under **Settings
 - **Standard Metric System:** Formats amounts using international compact metric notations (`₹10k`, `₹1.3M`, `₹1B`).
 - **Charts Data Points Exception:** To prevent visual clutter and overlapping labels on dense chart bars and points, chart data labels (`dataLabels`) plotted directly on ApexChart series always render using compact metric format (e.g. `₹30k`, `₹18.6k`), while chart tooltips, y-axis labels, KPI cards, and summary bars display the user-selected format.
 - **Client Caching & Persistence:** The selected format is persisted to Google Sheets and mirrored locally in browser storage (`localStorage`) so formatting applies immediately across all pages without layout shift or waiting for network round-trips.
-
-
