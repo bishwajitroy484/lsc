@@ -45,6 +45,10 @@ Member, staff, expense, payment, staff salary, and Settings add/edit forms valid
 
 On phones, dialogs and bottom sheets (login/access, Settings user editor and notification editors, schema/option modals, member/staff/expense/payment forms, delete confirms, WhatsApp notify, chart expand, and side drawers) keep padding and max-height above the bottom navigation and safe-area inset so actions are not cut off or covered by the nav. Overlays scroll when content is taller than the remaining viewport.
 
+## Mobile layout and type scale
+
+The app is meant for portrait and landscape phones of any common width without page-level horizontal scrolling. Narrow viewports use a slightly smaller root type scale (further reduced under ~380px and in landscape), KPI labels truncate instead of forcing width, metric tips stay within the viewport, and wide tables scroll inside their own containers. Charts and module roots are constrained to the available width.
+
 ## Member filters, payments, and exit dates
 
 The Members module's status, batch, and membership filters keep their selected values visible while filtering the member list. Member phone numbers must contain exactly 10 digits when adding or editing a record. Adding a member can optionally capture an initial payment; its payment mode and status choices are populated from the configured dropdown options and shown when Record Now is selected. Ad-hoc and trial members require an exit date and are changed to Inactive when that date is reached, both during member-list loading and by a daily scheduled check. Trial fees use the configured daily rate multiplied by the inclusive number of days between join and exit dates, and recalculate when the plan or dates change.
