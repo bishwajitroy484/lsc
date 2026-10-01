@@ -525,7 +525,8 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                let displayAmt = totalUnpaidForMember > 0 ? totalUnpaidForMember : amt;
                overdueList.push({ 
                    memberId: m.memberId || '',
-                   name: m.fullName || 'Unknown', 
+                   name: m.fullName || 'Unknown',
+                   phone: m.phone || '',
                    plan: pNameLabel, 
                    amount: displayAmt, 
                    date: formattedDate, 
@@ -536,7 +537,8 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                // UPCOMING (0 to 7 days from today)
                upcomingList.push({ 
                    memberId: m.memberId || '',
-                   name: m.fullName || 'Unknown', 
+                   name: m.fullName || 'Unknown',
+                   phone: m.phone || '',
                    plan: pNameLabel, 
                    amount: amt, 
                    date: formattedDate, 

@@ -45,6 +45,10 @@ To eliminate manual calculations, cumulative projected sums are surfaced in two 
 
 The Dashboard year, monthly/quarterly mode, and selected months or quarters filter the KPI totals and charts. Expense Breakdown follows those same selected periods, grouping recognized operating expenses and paid staff costs by category; misc expense details use the same period selection.
 
+## Dashboard WhatsApp renewal notify
+
+The Dashboard Overdue and Upcoming member tables include a compact Notify/WA action with a WhatsApp icon. Tapping it opens a mobile-friendly preview sheet with a prefilled overdue or upcoming renewal message (gym name, member, plan, amount, due date, and days). The message can be edited, copied, or opened in WhatsApp via a `wa.me` link with the member’s phone number and the edited text prefilled. Members without a phone number show a disabled action. No WhatsApp Business API is used; sending still happens in the WhatsApp app after the user confirms.
+
 ## Settings and dropdown configuration
 
 The Settings module provides a responsive, device-compatible interface organized into two main tabs:
