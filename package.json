@@ -7,8 +7,8 @@
     "use:prod": "node scripts/prepare-env.js prod",
     "push:dev": "npm run use:dev && clasp push --force",
     "push:prod": "npm run use:prod && clasp push --force",
-    "deploy:dev": "npm run push:dev && clasp create-deployment",
-    "deploy:prod": "npm run push:prod && clasp create-deployment",
+    "deploy:dev": "npm run push:dev && node scripts/deploy-env.js dev",
+    "deploy:prod": "npm run push:prod && node scripts/deploy-env.js prod",
     "pretest": "node scripts/prepare-env.js dev"
   },
   "devDependencies": {

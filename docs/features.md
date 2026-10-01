@@ -6,13 +6,15 @@ Update the relevant section whenever a feature is added or its user-visible beha
 
 ## Local environment IDs (dev / prod)
 
-Developers keep spreadsheet, Drive folder, and Apps Script IDs in a local file that is **not** committed:
+Developers keep spreadsheet, Drive folder, Apps Script, and **stable web-app deployment** IDs in a local file that is **not** committed:
 
 1. Copy `config/env.example.json` → `config/env.json`
-2. Fill `dev` and `prod` blocks (`scriptId`, `spreadsheetId`, `driveId`)
+2. Fill `dev` and `prod` blocks (`scriptId`, `spreadsheetId`, `driveId`, `deploymentId`)
 3. Run `npm run use:dev` or `npm run use:prod` before push/deploy
 
-Those commands write `.clasp.json` (script target) and `src/Config_Env.js` (runtime `SPREADSHEET_ID` / drive defaults). Then `npm run push:dev` / `push:prod` / `deploy:dev` / `deploy:prod` use the selected environment’s IDs.
+Those commands write `.clasp.json` (script target) and `src/Config_Env.js` (runtime `SPREADSHEET_ID` / drive defaults). Then `npm run push:dev` / `push:prod` use the selected environment’s IDs.
+
+**Stable web app URL:** `npm run deploy:dev` / `deploy:prod` updates the existing `deploymentId` so the `/exec` link does **not** change. Share that URL once. If `deploymentId` is empty, the first deploy creates one and saves it into `config/env.json` automatically.
 
 ## Feature areas
 
