@@ -14,6 +14,7 @@ function authorizeLscScriptPermissions() {
   }
   ScriptApp.getProjectTriggers();
   MailApp.getRemainingDailyQuota();
+  try { CalendarApp.getDefaultCalendar().getName(); } catch (e) { /* re-auth via UI */ }
   return 'LSC permissions authorized. Save Settings again to create the weekly report trigger.';
 }
 

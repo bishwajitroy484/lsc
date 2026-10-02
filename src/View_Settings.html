@@ -490,6 +490,70 @@
           </div>
         </div>
 
+        <!-- Section 5: Google Calendar due reminders -->
+        <div class="settings-section bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300" data-section="calendar-due">
+          <button type="button" onclick="SettingsApp.toggleSection(this)" aria-expanded="true" class="w-full px-4 md:px-5 py-3.5 md:py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-slate-50 transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100">
+                <span class="material-symbols-rounded text-[20px]">event_upcoming</span>
+              </div>
+              <div class="min-w-0">
+                <h3 class="font-bold text-sm text-slate-800 leading-tight">Google Calendar due reminders</h3>
+                <p class="text-[11px] text-slate-500 truncate">Timed events on the owner calendar for quarterly renewals.</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span id="calendar-due-status-badge" class="text-[10px] font-semibold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Disabled</span>
+              <span class="settings-section-chevron material-symbols-rounded text-slate-500 text-[22px] transition-transform">expand_less</span>
+            </div>
+          </button>
+
+          <div class="settings-section-body p-3.5 md:p-6 space-y-2.5 md:space-y-3">
+            <div class="flex items-center justify-between gap-3 px-3 py-2.5 bg-slate-50/70 border border-slate-200/80 rounded-xl">
+              <div class="min-w-0">
+                <span class="text-[11px] md:text-xs font-bold text-slate-800">Enable calendar due events</span>
+                <p class="text-[10px] text-slate-500 mt-0.5">Quarterly plans only. Creates/replaces an event when a paid payment is saved. No backfill.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                <input type="checkbox" id="gen-ENABLE_CALENDAR_DUE_EVENTS" onchange="SettingsApp.toggleCalendarDueView()" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+              </label>
+            </div>
+
+            <div id="calendar-due-config-area" class="hidden space-y-2.5">
+              <div class="grid grid-cols-2 gap-1.5">
+                <div>
+                  <label for="gen-CALENDAR_DUE_HOUR" class="block text-[10px] font-semibold text-slate-500 mb-0.5">Event start time</label>
+                  <select id="gen-CALENDAR_DUE_HOUR" class="w-full px-1.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800 outline-none">
+                    <option value="6">06:00 AM</option>
+                    <option value="7">07:00 AM</option>
+                    <option value="8">08:00 AM</option>
+                    <option value="9" selected>09:00 AM</option>
+                    <option value="10">10:00 AM</option>
+                    <option value="11">11:00 AM</option>
+                    <option value="12">12:00 PM</option>
+                    <option value="14">02:00 PM</option>
+                    <option value="16">04:00 PM</option>
+                    <option value="18">06:00 PM</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="gen-CALENDAR_DUE_DURATION_MIN" class="block text-[10px] font-semibold text-slate-500 mb-0.5">Duration</label>
+                  <select id="gen-CALENDAR_DUE_DURATION_MIN" class="w-full px-1.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800 outline-none">
+                    <option value="15">15 minutes</option>
+                    <option value="30" selected>30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">60 minutes</option>
+                  </select>
+                </div>
+              </div>
+              <p class="text-[10px] text-teal-900 px-0.5 leading-relaxed">
+                Events are added to the <strong>deployer / owner Google Calendar</strong> (not all-day). Title includes member name and ID. Re-authorize Google services in Setup after first deploy if Calendar access was not granted yet.
+              </p>
+            </div>
+          </div>
+        </div>
+
         </div>
       </div>
 

@@ -935,7 +935,7 @@ function api_sendInvitation(userId) {
 }
 
 /**
- * Triggers Google OAuth consent for Mail / ScriptApp / Sheets / Drive by touching services.
+ * Triggers Google OAuth consent for Mail / ScriptApp / Sheets / Drive / Calendar by touching services.
  */
 function api_authorizeServices() {
   try {
@@ -947,7 +947,7 @@ function api_authorizeServices() {
     if (effective && active !== effective) {
       return {
         success: false,
-        error: 'Only the Google account that deployed this app can grant Mail, Drive, and trigger permissions.'
+        error: 'Only the Google account that deployed this app can grant Mail, Drive, Calendar, and trigger permissions.'
       };
     }
 
@@ -955,6 +955,12 @@ function api_authorizeServices() {
     ensureUsersSheet_();
     MailApp.getRemainingDailyQuota();
     ScriptApp.getProjectTriggers();
+    try {
+      CalendarApp.getDefaultCalendar().getName();
+    } catch (calError) {
+      // Calendar may need a fresh consent pass after scope add; surface via outer catch if hard-fail
+      throw calError;
+    }
 
     const settings = readSettingsMapForAccess_();
     if (settings.DRIVE_ID) {
