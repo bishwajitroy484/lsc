@@ -47,6 +47,10 @@ var USERS_HEADERS_ = [
   'updatedAt'
 ];
 
+/** Request-scoped caches (Apps Script keeps globals for one execution). */
+var USERS_SHEET_CACHE_ = null;
+var USERS_RECORDS_CACHE_ = null;
+
 /** Request-scoped email for invitee sessions (Execute-as-Me hides Session.getActiveUser email). */
 var REQUEST_AUTH_EMAIL_ = '';
 
@@ -203,6 +207,7 @@ function ensureUserInviteToken_(userRow) {
   try {
     DB.update('USERS', userRow.userId, { loginToken: token });
     userRow.loginToken = token;
+    invalidateUsersCache_();
   } catch (error) {
     return '';
   }
@@ -213,11 +218,20 @@ function buildSessionPayload_(context) {
   const effectiveEmail = getEffectiveUserEmail_();
   const needsLogin = !context.email;
   let setup = null;
+  let branding = null;
   try {
-    // Avoid expensive/auth-touching setup probes during anonymous bootstrap.
-    setup = needsLogin ? null : getSetupStatus_();
+    // Boot path: SETTINGS flags only (skip MailApp / ScriptApp trigger probes).
+    setup = needsLogin ? null : getSetupStatus_({ quick: true });
+    if (setup) {
+      branding = {
+        gymName: setup.gymName || '',
+        logoId: setup.logoId || '',
+        currencyFormat: setup.currencyFormat || 'Indian'
+      };
+    }
   } catch (error) {
     setup = null;
+    branding = null;
   }
   const fix = needsLogin
     ? 'Open the personal link from your invitation email. If you cannot find it, ask your admin to resend it.'
@@ -238,6 +252,7 @@ function buildSessionPayload_(context) {
     needsLogin: needsLogin,
     isDeployer: !!(context.email && effectiveEmail && context.email === effectiveEmail),
     setup: setup,
+    branding: branding,
     webAppUrl: getWebAppUrl_(),
     modules: ACCESS_MODULES
   };
@@ -306,7 +321,13 @@ function readSettingsMapForAccess_() {
   }
 }
 
+function invalidateUsersCache_() {
+  USERS_SHEET_CACHE_ = null;
+  USERS_RECORDS_CACHE_ = null;
+}
+
 function ensureUsersSheet_() {
+  if (USERS_SHEET_CACHE_) return USERS_SHEET_CACHE_;
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   let sheet = ss.getSheetByName('USERS');
   if (!sheet) {
@@ -331,16 +352,19 @@ function ensureUsersSheet_() {
       present[header] = true;
     });
   }
+  USERS_SHEET_CACHE_ = sheet;
   return sheet;
 }
 
 function listUsersRecords_() {
+  if (USERS_RECORDS_CACHE_) return USERS_RECORDS_CACHE_;
   ensureUsersSheet_();
   try {
-    return DB.read('USERS') || [];
+    USERS_RECORDS_CACHE_ = DB.read('USERS') || [];
   } catch (error) {
-    return [];
+    USERS_RECORDS_CACHE_ = [];
   }
+  return USERS_RECORDS_CACHE_;
 }
 
 function findUserByEmail_(email) {
@@ -392,6 +416,7 @@ function seedOwnerIfEmpty_(email) {
 
   ensureUsersSheet_();
   DB.create('USERS', record);
+  invalidateUsersCache_();
   return record;
 }
 
@@ -402,6 +427,7 @@ function activateInvitedUser_(userRow) {
   try {
     DB.update('USERS', userRow.userId, { status: 'Active' });
     userRow.status = 'Active';
+    invalidateUsersCache_();
   } catch (error) {
     // non-fatal
   }
@@ -524,44 +550,51 @@ function requireAnyViewPermission_() {
   return { ok: true, context: context };
 }
 
-function getSetupStatus_() {
+function getSetupStatus_(options) {
+  const opts = options || {};
+  const quick = !!opts.quick;
   const settings = readSettingsMapForAccess_();
   const spreadsheetOk = !!SPREADSHEET_ID;
-  let settingsOk = false;
-  let driveOk = false;
-  try {
-    const rows = DB.read('SETTINGS') || [];
-    settingsOk = rows.length > 0;
-  } catch (error) {
-    settingsOk = false;
-  }
-  driveOk = !!String(settings.DRIVE_ID || '').trim();
+  // settings map already loaded — avoid a second SETTINGS sheet read
+  const settingsOk = Object.keys(settings).length > 0;
+  const driveOk = !!String(settings.DRIVE_ID || '').trim();
+  const gymName = String(settings.GYM_NAME || '').trim();
+  const logoId = String(settings.LOGO_ID || settings.LOGO || '').trim();
+  const currencyFormat = String(settings.CURRENCY_FORMAT || settings.CURRENCY_STYLE || 'Indian').trim() || 'Indian';
+  const setupComplete = isYes_(settings.SETUP_COMPLETE);
+  const servicesFlag = isYes_(settings.SERVICES_AUTHORIZED);
 
   let mailOk = false;
   let scriptAppOk = false;
   let triggerOk = false;
   let authError = '';
+  let servicesAuthorized = false;
 
-  try {
-    MailApp.getRemainingDailyQuota();
-    mailOk = true;
-  } catch (error) {
-    authError = error && error.message ? error.message : String(error);
+  if (quick) {
+    // Boot: trust SETTINGS flags; full MailApp/trigger probes run in Settings/setup APIs.
+    mailOk = servicesFlag;
+    scriptAppOk = servicesFlag;
+    servicesAuthorized = servicesFlag || (setupComplete && driveOk);
+  } else {
+    try {
+      MailApp.getRemainingDailyQuota();
+      mailOk = true;
+    } catch (error) {
+      authError = error && error.message ? error.message : String(error);
+    }
+
+    try {
+      const triggers = ScriptApp.getProjectTriggers() || [];
+      scriptAppOk = true;
+      triggerOk = triggers.some(function(t) {
+        return t.getHandlerFunction() === 'runWeeklyMemberDueReport';
+      });
+    } catch (error) {
+      scriptAppOk = false;
+      if (!authError) authError = error && error.message ? error.message : String(error);
+    }
+    servicesAuthorized = mailOk && scriptAppOk;
   }
-
-  try {
-    const triggers = ScriptApp.getProjectTriggers() || [];
-    scriptAppOk = true;
-    triggerOk = triggers.some(function(t) {
-      return t.getHandlerFunction() === 'runWeeklyMemberDueReport';
-    });
-  } catch (error) {
-    scriptAppOk = false;
-    if (!authError) authError = error && error.message ? error.message : String(error);
-  }
-
-  const setupComplete = isYes_(settings.SETUP_COMPLETE);
-  const servicesAuthorized = mailOk && scriptAppOk;
 
   return {
     spreadsheetOk: spreadsheetOk,
@@ -573,7 +606,9 @@ function getSetupStatus_() {
     servicesAuthorized: servicesAuthorized,
     setupComplete: setupComplete,
     authError: authError,
-    gymName: String(settings.GYM_NAME || '').trim(),
+    gymName: gymName,
+    logoId: logoId,
+    currencyFormat: currencyFormat,
     ownerEmail: String(settings.OWNER_EMAIL || '').trim(),
     needsSetup: !setupComplete || !servicesAuthorized || !driveOk
   };
@@ -717,6 +752,7 @@ function rotateUserInviteToken_(userRow) {
   const token = newInviteToken_();
   DB.update('USERS', userRow.userId, { loginToken: token });
   userRow.loginToken = token;
+  invalidateUsersCache_();
   return token;
 }
 
@@ -1073,6 +1109,7 @@ function api_saveUser(userData) {
       DB.create('USERS', record);
       savedUserId = record.userId;
     }
+    invalidateUsersCache_();
 
     let message = existing ? 'User updated.' : 'User added.';
     let warning = '';
@@ -1119,6 +1156,7 @@ function api_deleteUser(userId) {
     }
 
     DB.remove('USERS', userId);
+    invalidateUsersCache_();
 
     return { success: true, message: 'User removed. Their link no longer works.' };
   } catch (error) {

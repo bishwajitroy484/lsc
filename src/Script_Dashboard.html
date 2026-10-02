@@ -332,9 +332,11 @@
         }
       };
       document.addEventListener('click', window.closeMultiSelectMenu);
+      // Don't wait on available-years: seed current year and fetch metrics immediately.
+      this.populateYears();
+      this.fetchData();
       AppUtils.loadAvailableYears(() => {
         this.populateYears();
-        this.fetchData();
       });
     },
 

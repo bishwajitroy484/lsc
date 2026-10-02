@@ -6,6 +6,22 @@ function api_getAvailableYears() {
   try {
     const gate = requireAnyViewPermission_();
     if (!gate.ok) return gate.response;
+
+    const cacheKey = 'lsc_available_years_v1';
+    try {
+      if (typeof CacheService !== 'undefined' && CacheService.getScriptCache) {
+        const cached = CacheService.getScriptCache().get(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length) {
+            return { success: true, data: parsed };
+          }
+        }
+      }
+    } catch (cacheReadError) {
+      // Ignore cache failures and compute fresh.
+    }
+
     const dbData = DB.batchRead(['MEMBERS', 'PAYMENTS', 'EXPENSES', 'STAFF', 'SALARY']);
     const datesBySheet = {
       MEMBERS: ['joinDate'],
@@ -25,7 +41,15 @@ function api_getAvailableYears() {
       });
     });
 
-    return { success: true, data: Array.from(years).sort((a, b) => Number(b) - Number(a)) };
+    const sorted = Array.from(years).sort((a, b) => Number(b) - Number(a));
+    try {
+      if (typeof CacheService !== 'undefined' && CacheService.getScriptCache) {
+        CacheService.getScriptCache().put(cacheKey, JSON.stringify(sorted), 300);
+      }
+    } catch (cacheWriteError) {
+      // Non-fatal.
+    }
+    return { success: true, data: sorted };
   } catch (error) {
     return { success: false, error: error.toString() };
   }

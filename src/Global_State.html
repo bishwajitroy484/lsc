@@ -157,7 +157,7 @@
 
   const AppUtils = {
     currencyFormat: (typeof localStorage !== 'undefined' && localStorage.getItem('LSC_CURRENCY_FORMAT')) || 'Indian',
-    availableYears: [],
+    availableYears: [String(new Date().getFullYear())],
     availableYearsLoaded: false,
     availableYearsLoading: false,
     availableYearsCallbacks: [],
@@ -527,7 +527,22 @@
       logoImg.src = safeUrl;
     },
 
+    applySessionBranding: function(session) {
+      const branding = (session && session.branding) || {};
+      const setup = (session && session.setup) || {};
+      const gymName = branding.gymName || setup.gymName || '';
+      const logoId = branding.logoId || setup.logoId || '';
+      const currencyFormat = branding.currencyFormat || setup.currencyFormat || '';
+      if (currencyFormat) this.setCurrencyFormat(currencyFormat);
+      this.applyAppBranding(logoId, gymName);
+    },
+
     loadAppBranding: function() {
+      // Prefer branding already returned with the session payload (no extra RTT).
+      if (window.LSC_SESSION && (window.LSC_SESSION.branding || window.LSC_SESSION.setup)) {
+        this.applySessionBranding(window.LSC_SESSION);
+        return;
+      }
       if (typeof google !== 'undefined' && google.script && google.script.run && typeof google.script.run.api_getGeneralSettings === 'function') {
         google.script.run
           .withSuccessHandler((res) => {
@@ -852,6 +867,7 @@
       if (!session || !session.allowed) return;
       this.booted = true;
 
+        // Prefetch years in the background (modules can render with current year immediately).
         AppUtils.loadAvailableYears();
 
         // 1. Inject static layout components from templates
@@ -859,8 +875,8 @@
         this.injectTemplate('tpl-comp-bottom-nav', 'mobile-nav-container');
         AccessControl.applyNavVisibility();
 
-        // Load app branding into sidebar
-        AppUtils.loadAppBranding();
+        // Branding comes with the session payload — no extra API round-trip.
+        AppUtils.applySessionBranding(session);
 
         const openSetupBtn = document.getElementById('btn-open-setup');
         if (openSetupBtn) {
