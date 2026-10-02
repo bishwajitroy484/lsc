@@ -209,6 +209,8 @@
       this.populateSelect('mem-status', statuses);
       this.populateSelect('pay-mode', modes);
       this.populateSelect('pay-status', payStatuses, null, 'Select Status...');
+      this.populateSelect('mem-pay-mode', modes);
+      this.populateSelect('mem-pay-status', payStatuses);
       
       this.populateFilterStatus(statuses);
       this.populateSelect('filter-batch', batches, null, 'All Batches', true);
@@ -275,6 +277,7 @@
     populateSelect: function(elementId, optionsArray, secondaryLabel = null, defaultText = "Select Option...", isFilter = false) {
       const el = document.getElementById(elementId);
       if(!el) return;
+      const currentValue = isFilter ? el.value : '';
       let html = isFilter ? `<option value="All">${defaultText}</option>` : `<option value="" disabled selected>${defaultText}</option>`;
       if (Array.isArray(optionsArray)) {
         optionsArray.forEach(opt => {
@@ -283,6 +286,9 @@
         });
       }
       el.innerHTML = html;
+      if (isFilter && Array.from(el.options).some(option => option.value === currentValue)) {
+        el.value = currentValue;
+      }
     },
 
     getName: function(type, id) {
@@ -364,7 +370,6 @@
 
       const dobStr = member.dob ? member.dob : 'N/A';
       const genderStr = member.gender || 'N/A';
-      const notesStr = member.notes ? (member.notes.length > 25 ? member.notes.substring(0, 25) + '...' : member.notes) : '--';
       const phoneStr = member.phone || 'No Phone';
       const joinStr = member.joinDate ? member.joinDate : '--';
       
@@ -400,7 +405,6 @@
              <div><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${dueInfo.class} uppercase tracking-wider">${dueInfo.text}</span></div>
           </td>
           <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} uppercase tracking-wider">${sName}</span></td>
-          <td class="px-4 py-3 text-xs text-slate-600 max-w-[140px] truncate" title="${member.notes || ''}">${notesStr}</td>
           <td class="px-4 py-3 text-right">
             <button onclick="event.stopPropagation(); MembersApp.openModal(${memberJson})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-full transition-colors">
                <span class="material-symbols-rounded text-[18px]">edit</span>
@@ -991,7 +995,6 @@
       document.getElementById('mem-phone').value = member ? member.phone : '';
       document.getElementById('mem-gender').value = member && member.gender ? member.gender : 'Male';
       document.getElementById('mem-email').value = member && member.email ? member.email : '';
-      document.getElementById('mem-notes').value = member && member.notes ? member.notes : '';
       
       document.getElementById('mem-plan').value = member ? member.membershipId : 'All';
       
@@ -1004,12 +1007,6 @@
 
       const rawAmt = member && member.membershipAmount ? member.membershipAmount.toString().replace(/[^0-9.-]+/g,"") : '';
       document.getElementById('mem-amount').value = rawAmt;
-
-      if (member && member.notes && member.notes.trim() !== '') {
-          document.getElementById('mem-notes-wrapper').classList.remove('hidden');
-      } else {
-          document.getElementById('mem-notes-wrapper').classList.add('hidden');
-      }
       
       const payContainer = document.getElementById('upfront-payment-container');
       if (payContainer) {
@@ -1043,6 +1040,12 @@
     saveMember: async function(e) {
       e.preventDefault();
       if (!AppUtils.validateRequiredFields('member-form')) return;
+
+      const phone = document.getElementById('mem-phone').value;
+      if (!/^\d{10}$/.test(phone)) {
+        document.getElementById('mem-phone').focus();
+        return Toast.error('Phone number must contain exactly 10 digits.');
+      }
 
       const planVal = document.getElementById('mem-plan').value;
       const batchVal = document.getElementById('mem-batch').value;
@@ -1078,12 +1081,11 @@
         base64Image: base64Image,
         imageName: imageName,
         fullName: document.getElementById('mem-name').value,
-        phone: document.getElementById('mem-phone').value,
+        phone: phone,
         dob: dobFmt,
         gender: document.getElementById('mem-gender').value,
         email: document.getElementById('mem-email').value,
         status: document.getElementById('mem-status').value,
-        notes: document.getElementById('mem-notes').value,          
         membershipId: planVal,
         batchId: batchVal,
         joinDate: joinFmt,
@@ -1155,15 +1157,13 @@
     onPlanOrBatchChange: function() {
       const planId = document.getElementById('mem-plan').value;
       const batchId = document.getElementById('mem-batch').value;
-
-      if (planId === 'All' || batchId === 'All') return;
-
       const plans = this.dropdowns.membership || [];
       const batches = this.dropdowns.batch || [];
       const prices = this.dropdowns.price || this.dropdowns.price_options || this.dropdowns.prices || []; 
 
       const planMatch = plans.find(p => p.id === planId);
       const batchMatch = batches.find(b => b.id === batchId);
+      const amountField = document.getElementById('mem-amount');
 
       const groupName = batchMatch ? (batchMatch.groups || batchMatch.group || batchMatch.name || '') : '';
       const badge = document.getElementById('batch-type-badge');
@@ -1180,32 +1180,36 @@
           badge.classList.add('hidden');
       }
 
-      let suggestedAmount = '';
+      const planName = String(planMatch && planMatch.name || '');
+      const frequency = String(planMatch && planMatch.frequency || '');
+      const isTrial = /TRIAL/i.test(`${planName} ${frequency}`);
+      const matchingPlanPrices = prices.filter(price =>
+        String(price.name || '').trim().toLowerCase() === planName.trim().toLowerCase()
+      );
+      const price = matchingPlanPrices.find(item =>
+        String(item.group || '').trim().toLowerCase() === String(groupName).trim().toLowerCase()
+      ) || matchingPlanPrices.find(item => {
+        const group = String(item.group || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+        return ['', 'all', 'allgroups', 'allbatches', 'any', '*'].includes(group);
+      });
+      const rawDailyAmount = price && price.base_price != null && price.base_price !== ''
+        ? price.base_price
+        : (planMatch && (planMatch.baseamount || planMatch.baseAmount || planMatch.amount));
+      let amount = rawDailyAmount == null || rawDailyAmount === ''
+        ? ''
+        : Number(String(rawDailyAmount).replace(/[^0-9.-]+/g, ''));
 
-      if (planMatch && groupName) {
-          const exactPrice = prices.find(p => {
-              const pPlan = (p.name || '').toLowerCase();
-              const pGroup = (p.group || '').toLowerCase();
-              
-              const targetPlanName = (planMatch.name || '').toLowerCase();
-              const targetGroup = groupName.toLowerCase();
-
-              return (pPlan === targetPlanName) && (pGroup === targetGroup);
-          });
-
-          if (exactPrice && exactPrice.base_price) {
-              suggestedAmount = exactPrice.base_price;
-          }
+      if (isTrial) {
+        const startDate = AppUtils.parseToISODate(document.getElementById('mem-join').value);
+        const exitDate = AppUtils.parseToISODate(document.getElementById('mem-exit-date').value);
+        const startTime = startDate ? Date.parse(`${startDate}T00:00:00Z`) : NaN;
+        const exitTime = exitDate ? Date.parse(`${exitDate}T00:00:00Z`) : NaN;
+        amount = Number.isFinite(amount) && Number.isFinite(startTime) && Number.isFinite(exitTime) && exitTime >= startTime
+          ? amount * (Math.floor((exitTime - startTime) / 86400000) + 1)
+          : '';
       }
 
-      if (!suggestedAmount && planMatch) {
-          suggestedAmount = planMatch.baseamount || planMatch.baseAmount || planMatch.amount || '';
-      }
-
-      if (suggestedAmount) {
-          document.getElementById('mem-amount').value = suggestedAmount.toString().replace(/[^0-9.-]+/g, "");
-      }
-
+      amountField.value = amount === '' || !Number.isFinite(amount) ? '' : String(amount);
       this.onStatusChange();
     },
 
@@ -1228,7 +1232,6 @@
           
           document.getElementById('pay-txn').value = '';
           document.getElementById('pay-receipt').value = '';
-          document.getElementById('pay-notes').value = '';
 
           this.setDatePicker('pay-date', new Date());
           this.setDatePicker('pay-start', new Date(payment.virtualStartDate));
@@ -1251,7 +1254,6 @@
           
           document.getElementById('pay-txn').value = payment && payment.txnId ? payment.txnId : '';
           document.getElementById('pay-receipt').value = payment && payment.receiptUrl ? payment.receiptUrl : '';
-          document.getElementById('pay-notes').value = payment && payment.notes ? payment.notes : '';
 
           const plans = this.dropdowns.membership || [];
           const planMatch = plans.find(p => p.id === m.membershipId);
@@ -1316,8 +1318,7 @@
         paymentStatus: statusVal, 
         startDate: this.formatDateDDMMMYYYY(document.getElementById('pay-start').value),
         endDate: this.formatDateDDMMMYYYY(document.getElementById('pay-end').value),
-        receiptUrl: document.getElementById('pay-receipt').value,
-        notes: document.getElementById('pay-notes').value
+        receiptUrl: document.getElementById('pay-receipt').value
       };
       
       const txnField = document.getElementById('pay-txn').value;

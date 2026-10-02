@@ -70,6 +70,8 @@ function createSettingsApi(overrides = {}) {
     url: 'https://drive.google.com/uc?export=view&id=DRIVE_FILE_LOGO_123'
   }));
 
+  const allowGate = () => ({ ok: true, context: { email: 'admin@gym.com', isOwner: true, allowed: true } });
+
   const api = new Function(
     'DB',
     'SpreadsheetApp',
@@ -77,6 +79,8 @@ function createSettingsApi(overrides = {}) {
     'SPREADSHEET_ID',
     '_colToLetter',
     'api_uploadImageToDrive',
+    'requirePermission_',
+    'requireAnyViewPermission_',
     `
       ${source};
       return { 
@@ -94,7 +98,9 @@ function createSettingsApi(overrides = {}) {
     overrides.Sheets || defaultSheets,
     'spreadsheet-id-123',
     _colToLetter,
-    mockUploadImage
+    mockUploadImage,
+    overrides.requirePermission_ || allowGate,
+    overrides.requireAnyViewPermission_ || allowGate
   );
 
   return { api, sheet: defaultSheet, sheetsService: defaultSheets.Spreadsheets, dummyRange, mockUploadImage };
@@ -370,22 +376,29 @@ describe('Settings Module', () => {
 
       // Tab navigation pills
       expect(viewHtml).toContain('id="tab-btn-general"');
+      expect(viewHtml).toContain('id="tab-btn-users"');
       expect(viewHtml).toContain('id="tab-btn-dropdowns"');
+      expect(viewHtml).toContain('id="tab-btn-guide"');
+      expect(viewHtml).toContain('id="pane-guide"');
+      expect(viewHtml).toContain("include('View_Guide')");
 
       // Core inputs
       expect(viewHtml).toContain('id="gen-GYM_NAME"');
+      expect(viewHtml).toContain('id="gen-OWNER_NAME"');
       expect(viewHtml).toContain('id="gen-OWNER_EMAIL"');
+      expect(viewHtml).toContain('id="gen-NOTIFY_WEEKLY_CC"');
       expect(viewHtml).toContain('id="gen-Revenue_Recognition"');
-      expect(viewHtml).toContain('id="gen-REMINDER_BUFFER"');
       expect(viewHtml).toContain('id="gen-SPREADSHEET_ID"');
       expect(viewHtml).toContain('id="gen-DRIVE_ID"');
       expect(viewHtml).toContain('id="gen-LOGO_ID"');
       expect(viewHtml).toContain('id="gen-ENABLE_NOTIFICATION"');
+      expect(viewHtml).toContain('id="gen-NOTIFY_REPORT_DAYS"');
+      expect(viewHtml).not.toContain('id="gen-REMINDER_BUFFER"');
 
-      // Fixed bottom action bar for general settings (desktop/tablet) & mobile actions
+      // Fixed bottom action bar for general settings (desktop/tablet) & mobile header save
       expect(viewHtml).toContain('id="general-bottom-bar"');
       expect(viewHtml).toContain('id="btn-save-general"');
-      expect(viewHtml).toContain('id="btn-save-general-mobile"');
+      expect(viewHtml).not.toContain('id="btn-save-general-mobile"');
       expect(viewHtml).toContain('id="btn-save-general-header"');
 
       // Custom key addition option is removed
@@ -401,7 +414,47 @@ describe('Settings Module', () => {
       expect(viewHtml).toContain('id="schema-modal"');
       expect(viewHtml).toContain('id="option-modal"');
       expect(viewHtml).toContain('id="delete-opt-modal"');
-      expect(viewHtml).toContain('id="notification-modal"');
+      expect(viewHtml).toContain('id="notification-message-modal"');
+      expect(viewHtml).toContain('id="notification-preview-modal"');
+      expect(viewHtml).toContain('id="btn-test-receipt-email"');
+      expect(viewHtml).toContain('id="btn-test-weekly-email"');
+      expect(viewHtml).toContain('sendTestNotificationEmail');
+      expect(viewHtml).toContain('id="gen-ENABLE_CALENDAR_DUE_EVENTS"');
+      expect(viewHtml).toContain('id="gen-CALENDAR_DUE_HOUR"');
+      expect(viewHtml).toContain('id="gen-CALENDAR_DUE_DURATION_MIN"');
+      expect(viewHtml).toContain('id="calendar-due-config-area"');
+      expect(viewHtml).not.toContain('id="notification-modal"');
+
+      const settingsScript = fs.readFileSync(path.join(__dirname, '../src/Script_Settings.html'), 'utf8');
+      expect(settingsScript).toContain('sendTestNotificationEmail');
+      expect(settingsScript).toContain('api_sendTestNotificationEmail');
+      expect(settingsScript).toContain('ENABLE_CALENDAR_DUE_EVENTS');
+      expect(settingsScript).toContain('toggleCalendarDueView');
+    });
+
+    test('View_Guide.html includes searchable walkthrough sections and chips', () => {
+      const guideHtml = fs.readFileSync(path.join(__dirname, '../src/View_Guide.html'), 'utf8');
+      const scriptHtml = fs.readFileSync(path.join(__dirname, '../src/Script_Guide.html'), 'utf8');
+
+      expect(guideHtml).toContain('id="guide-root"');
+      expect(guideHtml).toContain('id="guide-search"');
+      expect(guideHtml).toContain('id="guide-scroll"');
+      [
+        'overview', 'start', 'access', 'dashboard', 'members', 'staff',
+        'expenses', 'calendar', 'settings', 'money', 'notifications', 'ux', 'ops'
+      ].forEach((id) => {
+        expect(guideHtml).toContain(`id="guide-sec-${id}"`);
+        expect(guideHtml).toContain(`data-guide-section="${id}"`);
+        expect(guideHtml).toContain(`data-guide-chip="${id}"`);
+      });
+
+      expect(guideHtml).toContain('Net-In Hand');
+      expect(guideHtml).toContain('LSC-MEM-');
+      expect(guideHtml).toContain('Anchor');
+      expect(guideHtml).toContain('login code');
+
+      expect(scriptHtml).toContain('const GuideApp');
+      expect(scriptHtml).toContain('onShow');
     });
   });
 

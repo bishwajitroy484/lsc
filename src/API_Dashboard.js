@@ -4,6 +4,24 @@
  */
 function api_getAvailableYears() {
   try {
+    const gate = requireAnyViewPermission_();
+    if (!gate.ok) return gate.response;
+
+    const cacheKey = 'lsc_available_years_v1';
+    try {
+      if (typeof CacheService !== 'undefined' && CacheService.getScriptCache) {
+        const cached = CacheService.getScriptCache().get(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length) {
+            return { success: true, data: parsed };
+          }
+        }
+      }
+    } catch (cacheReadError) {
+      // Ignore cache failures and compute fresh.
+    }
+
     const dbData = DB.batchRead(['MEMBERS', 'PAYMENTS', 'EXPENSES', 'STAFF', 'SALARY']);
     const datesBySheet = {
       MEMBERS: ['joinDate'],
@@ -23,7 +41,15 @@ function api_getAvailableYears() {
       });
     });
 
-    return { success: true, data: Array.from(years).sort((a, b) => Number(b) - Number(a)) };
+    const sorted = Array.from(years).sort((a, b) => Number(b) - Number(a));
+    try {
+      if (typeof CacheService !== 'undefined' && CacheService.getScriptCache) {
+        CacheService.getScriptCache().put(cacheKey, JSON.stringify(sorted), 300);
+      }
+    } catch (cacheWriteError) {
+      // Non-fatal.
+    }
+    return { success: true, data: sorted };
   } catch (error) {
     return { success: false, error: error.toString() };
   }
@@ -31,6 +57,8 @@ function api_getAvailableYears() {
 
 function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mode = 'Monthly', periods = []) {
   try {
+    const gate = requirePermission_('dashboard', 'view');
+    if (!gate.ok) return gate.response;
     const targetYear = parseInt(year);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -525,7 +553,8 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                let displayAmt = totalUnpaidForMember > 0 ? totalUnpaidForMember : amt;
                overdueList.push({ 
                    memberId: m.memberId || '',
-                   name: m.fullName || 'Unknown', 
+                   name: m.fullName || 'Unknown',
+                   phone: m.phone || '',
                    plan: pNameLabel, 
                    amount: displayAmt, 
                    date: formattedDate, 
@@ -536,7 +565,8 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                // UPCOMING (0 to 7 days from today)
                upcomingList.push({ 
                    memberId: m.memberId || '',
-                   name: m.fullName || 'Unknown', 
+                   name: m.fullName || 'Unknown',
+                   phone: m.phone || '',
                    plan: pNameLabel, 
                    amount: amt, 
                    date: formattedDate, 

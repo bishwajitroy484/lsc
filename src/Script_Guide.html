@@ -1,0 +1,136 @@
+<script>
+/**
+ * In-app product Guide (Settings → Guide).
+ * Search, accordion sections, sticky chips, scroll-spy.
+ */
+const GuideApp = {
+  _bound: false,
+  _observer: null,
+
+  onShow: function() {
+    this.init();
+    const scroller = document.getElementById('guide-scroll');
+    if (scroller) scroller.scrollTop = 0;
+  },
+
+  init: function() {
+    if (this._bound) {
+      this._refreshObserver();
+      return;
+    }
+    this._bound = true;
+
+    const search = document.getElementById('guide-search');
+    if (search) {
+      search.addEventListener('input', () => this.filter(search.value));
+    }
+
+    document.querySelectorAll('[data-guide-chip]').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const id = chip.getAttribute('data-guide-chip');
+        this.scrollTo(id);
+        this.expandSection(id, true);
+      });
+    });
+
+    document.querySelectorAll('[data-guide-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-guide-toggle');
+        this.toggleSection(id);
+      });
+    });
+
+    const expandAll = document.getElementById('guide-expand-all');
+    const collapseAll = document.getElementById('guide-collapse-all');
+    if (expandAll) expandAll.addEventListener('click', () => this.setAll(true));
+    if (collapseAll) collapseAll.addEventListener('click', () => this.setAll(false));
+
+    this._refreshObserver();
+  },
+
+  _refreshObserver: function() {
+    const scroller = document.getElementById('guide-scroll');
+    if (!scroller) return;
+    if (this._observer) {
+      this._observer.disconnect();
+      this._observer = null;
+    }
+    const sections = Array.from(scroller.querySelectorAll('[data-guide-section]'));
+    if (!sections.length || typeof IntersectionObserver === 'undefined') return;
+
+    this._observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((e) => e.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+      if (!visible.length) return;
+      const id = visible[0].target.getAttribute('data-guide-section');
+      this._setActiveChip(id);
+    }, { root: scroller, rootMargin: '-10% 0px -55% 0px', threshold: [0.1, 0.35, 0.6] });
+
+    sections.forEach((el) => this._observer.observe(el));
+  },
+
+  _setActiveChip: function(id) {
+    document.querySelectorAll('[data-guide-chip]').forEach((chip) => {
+      const active = chip.getAttribute('data-guide-chip') === id;
+      chip.classList.toggle('bg-brand-primary', active);
+      chip.classList.toggle('text-white', active);
+      chip.classList.toggle('border-brand-primary', active);
+      chip.classList.toggle('bg-white', !active);
+      chip.classList.toggle('text-slate-600', !active);
+      chip.classList.toggle('border-slate-200', !active);
+    });
+  },
+
+  scrollTo: function(id) {
+    const scroller = document.getElementById('guide-scroll');
+    const el = document.getElementById('guide-sec-' + id);
+    if (!scroller || !el) return;
+    const top = el.offsetTop - 8;
+    scroller.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    this._setActiveChip(id);
+  },
+
+  toggleSection: function(id) {
+    const body = document.getElementById('guide-body-' + id);
+    const chevron = document.getElementById('guide-chevron-' + id);
+    if (!body) return;
+    const open = body.classList.contains('hidden');
+    body.classList.toggle('hidden', !open);
+    if (chevron) chevron.textContent = open ? 'expand_less' : 'expand_more';
+  },
+
+  expandSection: function(id, open) {
+    const body = document.getElementById('guide-body-' + id);
+    const chevron = document.getElementById('guide-chevron-' + id);
+    if (!body) return;
+    body.classList.toggle('hidden', !open);
+    if (chevron) chevron.textContent = open ? 'expand_less' : 'expand_more';
+  },
+
+  setAll: function(open) {
+    document.querySelectorAll('[data-guide-section]').forEach((sec) => {
+      const id = sec.getAttribute('data-guide-section');
+      this.expandSection(id, open);
+    });
+  },
+
+  filter: function(raw) {
+    const q = String(raw || '').trim().toLowerCase();
+    const sections = document.querySelectorAll('[data-guide-section]');
+    let any = false;
+    sections.forEach((sec) => {
+      const id = sec.getAttribute('data-guide-section');
+      const text = (sec.getAttribute('data-guide-search') || sec.textContent || '').toLowerCase();
+      const match = !q || text.indexOf(q) !== -1;
+      sec.classList.toggle('hidden', !match);
+      if (match) {
+        any = true;
+        if (q) this.expandSection(id, true);
+      }
+    });
+    const empty = document.getElementById('guide-empty');
+    if (empty) empty.classList.toggle('hidden', any);
+  }
+};
+</script>

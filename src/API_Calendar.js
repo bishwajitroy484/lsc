@@ -4,6 +4,8 @@
  */
 function api_getCalendarData(month, year) {
   try {
+    const gate = requirePermission_('calendar', 'view');
+    if (!gate.ok) return gate.response;
     const targetMonth = Number(month);
     const targetYear = Number(year);
     const monthStart = new Date(targetYear, targetMonth, 1);

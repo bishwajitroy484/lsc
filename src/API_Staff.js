@@ -5,6 +5,8 @@
 
 function api_getStaff() {
   try {
+    const gate = requirePermission_('staff', 'view');
+    if (!gate.ok) return gate.response;
     const dbData = DB.batchRead(['STAFF', 'SALARY', 'SETTINGS']);
     const staff = dbData['STAFF'] || [];
     const payments = dbData['SALARY'] || [];
@@ -65,6 +67,9 @@ function api_getStaff() {
 
 function api_saveStaff(staffData) {
   try {
+    const isNew = !(staffData && staffData.staffId);
+    const gate = requirePermission_('staff', isNew ? 'create' : 'edit');
+    if (!gate.ok) return gate.response;
     if (!staffData.fullName || !staffData.phone) throw new Error("Name and Phone are required.");
     const now = new Date().toISOString();
     const userEmail = Session.getActiveUser().getEmail(); 
@@ -75,9 +80,10 @@ function api_saveStaff(staffData) {
 
     staffData.updatedAt = now;
     staffData.updatedBy = userEmail;
+    delete staffData.notes;
     
     let savedData;
-    if (staffData.staffId) {
+    if (!isNew) {
       savedData = DB.update('STAFF', staffData.staffId, staffData);
     } else {
       staffData.staffId = generateId('STF');
@@ -94,6 +100,8 @@ function api_saveStaff(staffData) {
 
 function api_deleteStaff(staffId) {
   try {
+    const gate = requirePermission_('staff', 'delete');
+    if (!gate.ok) return gate.response;
     if (!staffId) throw new Error("Staff ID is missing.");
     DB.remove('STAFF', staffId);
     return { success: true, message: "Staff member deleted successfully." };
@@ -106,6 +114,8 @@ function api_deleteStaff(staffId) {
 
 function api_getStaffTransactions(staffId) {
   try {
+    const gate = requirePermission_('staff', 'view');
+    if (!gate.ok) return gate.response;
     if (!staffId) throw new Error("Staff ID is missing.");
     
     // Batch read and pull settings for individual staff charts
@@ -163,6 +173,9 @@ function api_getStaffTransactions(staffId) {
 
 function api_recordStaffTransaction(txnData) {
   try {
+    const isNew = !(txnData && txnData.paymentId);
+    const gate = requirePermission_('staff', isNew ? 'create' : 'edit');
+    if (!gate.ok) return gate.response;
     if (!txnData.staffId || !txnData.amount || !txnData.paidDate || !txnData.startDate || !txnData.endDate) {
       throw new Error("Staff ID, Amount, Paid Date, Start Date, and End Date are strictly required for accurate expense tracking.");
     }
@@ -172,6 +185,7 @@ function api_recordStaffTransaction(txnData) {
     
     txnData.updatedAt = now;
     txnData.updatedBy = userEmail;
+    delete txnData.notes;
     
     let savedData;
     if (txnData.paymentId) {
@@ -190,6 +204,8 @@ function api_recordStaffTransaction(txnData) {
 
 function api_deleteStaffTransaction(paymentId) {
   try {
+    const gate = requirePermission_('staff', 'delete');
+    if (!gate.ok) return gate.response;
     if (!paymentId) throw new Error("Payment ID is missing.");
     DB.remove('SALARY', paymentId);
     return { success: true, message: "Transaction deleted successfully." };

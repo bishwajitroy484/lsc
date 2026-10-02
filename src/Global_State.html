@@ -1,7 +1,163 @@
 <script>
+  const ActionProgress = {
+    _timer: null,
+    _pct: 0,
+    _circumference: 2 * Math.PI * 15.5,
+
+    _els: function() {
+      return {
+        overlay: document.getElementById('action-progress-overlay'),
+        ring: document.getElementById('action-progress-ring'),
+        pct: document.getElementById('action-progress-pct'),
+        label: document.getElementById('action-progress-label')
+      };
+    },
+
+    _paint: function() {
+      const els = this._els();
+      if (els.pct) els.pct.textContent = Math.round(this._pct) + '%';
+      if (els.ring) {
+        const offset = this._circumference * (1 - Math.min(100, Math.max(0, this._pct)) / 100);
+        els.ring.style.strokeDasharray = String(this._circumference);
+        els.ring.style.strokeDashoffset = String(offset);
+      }
+    },
+
+    show: function(label) {
+      const els = this._els();
+      if (!els.overlay) return;
+      if (els.label) els.label.textContent = label || 'Working…';
+      els.overlay.classList.remove('hidden');
+      this._pct = 8;
+      this._paint();
+      if (this._timer) clearInterval(this._timer);
+      this._timer = setInterval(() => {
+        if (this._pct >= 90) return;
+        this._pct = Math.min(90, this._pct + (2 + Math.random() * 6));
+        this._paint();
+      }, 220);
+    },
+
+    success: function() {
+      if (this._timer) { clearInterval(this._timer); this._timer = null; }
+      this._pct = 100;
+      this._paint();
+      const els = this._els();
+      if (els.label) els.label.textContent = 'Done';
+      setTimeout(() => this.hide(), 280);
+    },
+
+    error: function() {
+      this.hide();
+    },
+
+    hide: function() {
+      if (this._timer) { clearInterval(this._timer); this._timer = null; }
+      const els = this._els();
+      if (els.overlay) els.overlay.classList.add('hidden');
+      this._pct = 0;
+      this._paint();
+    },
+
+    labelForApi: function(name) {
+      const n = String(name || '');
+      if (/delete|remove/i.test(n)) return 'Deleting…';
+      if (/authorize/i.test(n)) return 'Authorizing…';
+      if (/redeemInvite/i.test(n)) return 'Opening…';
+      if (/record|payment|transaction/i.test(n)) return 'Saving…';
+      if (/markSetup/i.test(n)) return 'Updating setup…';
+      if (/save|create|update|add/i.test(n)) return 'Saving…';
+      return 'Working…';
+    },
+
+    shouldTrack: function(name) {
+      return /^(api_save|api_delete|api_remove|api_record|api_authorize|api_mark|api_create|api_update|api_redeemInvite|api_sendInvitation|api_sendTestNotificationEmail)/.test(String(name || ''));
+    }
+  };
+
+  (function installAuthScriptRunBridge() {
+    if (typeof google === 'undefined' || !google.script || !google.script.run) return;
+    const nativeRun = google.script.run;
+    const AUTH_KEY = 'lsc_auth_token';
+    const OPEN_APIS = {
+      api_redeemInviteToken: true,
+      api_invoke: true
+    };
+
+    function getToken() {
+      try { return sessionStorage.getItem(AUTH_KEY) || ''; } catch (e) { return ''; }
+    }
+
+    function createRunner(success, failure, userObj) {
+      return new Proxy({}, {
+        get: function(_target, prop) {
+          if (prop === 'withSuccessHandler') {
+            return function(cb) { return createRunner(cb, failure, userObj); };
+          }
+          if (prop === 'withFailureHandler') {
+            return function(cb) { return createRunner(success, cb, userObj); };
+          }
+          if (prop === 'withUserObject') {
+            return function(obj) { return createRunner(success, failure, obj); };
+          }
+          return function() {
+            const args = Array.prototype.slice.call(arguments);
+            const token = getToken();
+            const trackedName = (prop === 'api_invoke' && args[1]) ? args[1] : prop;
+            const track = ActionProgress.shouldTrack(trackedName);
+            if (track) ActionProgress.show(ActionProgress.labelForApi(trackedName));
+
+            const wrappedSuccess = function(res) {
+              if (track) {
+                if (res && res.success === false) ActionProgress.error();
+                else ActionProgress.success();
+              }
+              if (typeof success === 'function') success(res);
+            };
+            const wrappedFailure = function(err) {
+              if (track) ActionProgress.error();
+              if (typeof failure === 'function') failure(err);
+            };
+
+            let runner = nativeRun;
+            runner = runner.withSuccessHandler(wrappedSuccess);
+            runner = runner.withFailureHandler(wrappedFailure);
+            if (userObj !== undefined) runner = runner.withUserObject(userObj);
+
+            // Prefer invoke whenever we have a session token so invitee identity sticks.
+            if (token && !OPEN_APIS[prop] && typeof runner.api_invoke === 'function') {
+              return runner.api_invoke(token, prop, args);
+            }
+            if (typeof runner[prop] !== 'function') {
+              if (track) ActionProgress.error();
+              throw new Error('Unknown server function: ' + String(prop));
+            }
+            return runner[prop].apply(runner, args);
+          };
+        }
+      });
+    }
+
+    google.script.run = createRunner(null, null, undefined);
+    window.LSC_AUTH = {
+      key: AUTH_KEY,
+      getToken: getToken,
+      setToken: function(token) {
+        try {
+          if (token) sessionStorage.setItem(AUTH_KEY, token);
+          else sessionStorage.removeItem(AUTH_KEY);
+        } catch (e) { /* ignore */ }
+      },
+      clear: function() {
+        try { sessionStorage.removeItem(AUTH_KEY); } catch (e) { /* ignore */ }
+      }
+    };
+    window.ActionProgress = ActionProgress;
+  })();
+
   const AppUtils = {
     currencyFormat: (typeof localStorage !== 'undefined' && localStorage.getItem('LSC_CURRENCY_FORMAT')) || 'Indian',
-    availableYears: [],
+    availableYears: [String(new Date().getFullYear())],
     availableYearsLoaded: false,
     availableYearsLoading: false,
     availableYearsCallbacks: [],
@@ -371,7 +527,22 @@
       logoImg.src = safeUrl;
     },
 
+    applySessionBranding: function(session) {
+      const branding = (session && session.branding) || {};
+      const setup = (session && session.setup) || {};
+      const gymName = branding.gymName || setup.gymName || '';
+      const logoId = branding.logoId || setup.logoId || '';
+      const currencyFormat = branding.currencyFormat || setup.currencyFormat || '';
+      if (currencyFormat) this.setCurrencyFormat(currencyFormat);
+      this.applyAppBranding(logoId, gymName);
+    },
+
     loadAppBranding: function() {
+      // Prefer branding already returned with the session payload (no extra RTT).
+      if (window.LSC_SESSION && (window.LSC_SESSION.branding || window.LSC_SESSION.setup)) {
+        this.applySessionBranding(window.LSC_SESSION);
+        return;
+      }
       if (typeof google !== 'undefined' && google.script && google.script.run && typeof google.script.run.api_getGeneralSettings === 'function') {
         google.script.run
           .withSuccessHandler((res) => {
@@ -436,42 +607,313 @@
     }
   };
   
+  const AccessControl = {
+    session: null,
+
+    can: function(moduleName, action) {
+      const s = this.session;
+      if (!s || !s.allowed) return false;
+      if (s.isOwner) return true;
+      const row = s.permissions && s.permissions[moduleName];
+      return !!(row && row[action]);
+    },
+
+    firstAllowedRoute: function() {
+      const order = ['dashboard', 'members', 'staff', 'expenses', 'calendar', 'settings'];
+      for (let i = 0; i < order.length; i++) {
+        if (this.can(order[i], 'view')) return order[i];
+      }
+      return '';
+    },
+
+    applyNavVisibility: function() {
+      document.querySelectorAll('.nav-btn[data-route]').forEach(btn => {
+        const route = btn.getAttribute('data-route');
+        if (!route) return;
+        if (this.can(route, 'view')) btn.classList.remove('hidden');
+        else btn.classList.add('hidden');
+      });
+    },
+
+    applyActionGates: function(root, moduleName) {
+      if (!root || !moduleName) return;
+      root.querySelectorAll('[data-perm]').forEach(el => {
+        const spec = String(el.getAttribute('data-perm') || '');
+        const parts = spec.split(':');
+        const mod = parts[0] || moduleName;
+        const action = parts[1] || 'edit';
+        if (this.can(mod, action)) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
+      if (!this.can(moduleName, 'create')) {
+        root.querySelectorAll(
+          'button[onclick*="openModal("], button[onclick*="openModal()"], button[onclick*="MembersApp.openModal"], button[onclick*="StaffApp.openModal"], button[onclick*="ExpensesApp.openModal"], [data-action="create"]'
+        ).forEach(el => el.classList.add('hidden'));
+      }
+      if (!this.can(moduleName, 'edit')) {
+        root.querySelectorAll(
+          'button[onclick*="editCurrent"], button[onclick*="openTransactionModal"], button[onclick*="openPayment"], [data-action="edit"]'
+        ).forEach(el => el.classList.add('hidden'));
+      }
+      if (!this.can(moduleName, 'delete')) {
+        root.querySelectorAll(
+          'button[onclick*="deleteCurrent"], button[onclick*="confirmDelete"], button[onclick*="openDelete"], [data-action="delete"]'
+        ).forEach(el => el.classList.add('hidden'));
+      }
+    },
+
+    showDenied: function(message, email, opts) {
+      const options = opts || {};
+      const boot = document.getElementById('app-boot-overlay');
+      const denied = document.getElementById('app-access-denied');
+      const msg = document.getElementById('access-denied-message');
+      const emailEl = document.getElementById('access-denied-email');
+      const title = document.getElementById('access-denied-title');
+      const icon = document.getElementById('access-denied-icon');
+      const fixBox = document.getElementById('access-denied-fix');
+      const fixText = document.getElementById('access-denied-fix-text');
+      if (boot) boot.classList.add('hidden');
+      if (denied) denied.classList.remove('hidden');
+      if (msg) msg.textContent = message || 'You do not have access to this application.';
+      if (emailEl) emailEl.textContent = email ? ('Account: ' + email) : '';
+
+      const needsLink = !!options.showLogin;
+      if (title) title.textContent = needsLink ? 'Open your invitation link' : 'Access denied';
+      if (icon) {
+        icon.className = needsLink
+          ? 'w-12 h-12 mx-auto rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center'
+          : 'w-12 h-12 mx-auto rounded-xl bg-red-50 text-red-500 flex items-center justify-center';
+        icon.innerHTML = '<span class="material-symbols-rounded text-[26px]">' + (needsLink ? 'mail' : 'lock') + '</span>';
+      }
+      if (fixBox && fixText) {
+        if (options.fix) {
+          fixText.textContent = options.fix;
+          fixBox.classList.remove('hidden');
+        } else {
+          fixBox.classList.add('hidden');
+        }
+      }
+    },
+
+    hideBoot: function() {
+      const boot = document.getElementById('app-boot-overlay');
+      if (boot) boot.classList.add('hidden');
+      const denied = document.getElementById('app-access-denied');
+      if (denied) denied.classList.add('hidden');
+    },
+
+    updateSetupBanner: function() {
+      const banner = document.getElementById('app-setup-banner');
+      if (!banner) return;
+      const setup = this.session && this.session.setup;
+      const show = !!(this.session && this.session.allowed && this.can('settings', 'edit') && setup && setup.needsSetup);
+      if (show) banner.classList.remove('hidden');
+      else banner.classList.add('hidden');
+    },
+
+    applySession: function(data, callback) {
+      if (!data) {
+        this.showDenied('Could not load session.', '', {
+          showLogin: true,
+          fix: 'Hard-refresh the latest /exec URL. If this continues, ask the owner to redeploy the web app.'
+        });
+        if (callback) callback(null);
+        return;
+      }
+      if (data.sessionToken && window.LSC_AUTH) {
+        window.LSC_AUTH.setToken(data.sessionToken);
+      }
+      this.session = data;
+      window.LSC_SESSION = data;
+      if (!data.allowed) {
+        this.showDenied(data.error, data.email, {
+          showLogin: !!data.needsLogin || !data.email,
+          fix: data.fix || ''
+        });
+        if (callback) callback(data);
+        return;
+      }
+      this.hideBoot();
+      this.updateSetupBanner();
+      if (callback) callback(data);
+    },
+
+    INVITE_KEY: 'lsc_invite_token',
+
+    getStoredInvite: function() {
+      try { return localStorage.getItem(this.INVITE_KEY) || ''; } catch (e) { return ''; }
+    },
+
+    storeInvite: function(token) {
+      try {
+        if (token) localStorage.setItem(this.INVITE_KEY, token);
+        else localStorage.removeItem(this.INVITE_KEY);
+      } catch (e) { /* storage unavailable */ }
+    },
+
+    // Opens the app from the personal link (?t=...) or from the link remembered on this device.
+    redeemInvite: function(token, fromUrl, callback) {
+      const done = (ok) => { if (callback) callback(ok); };
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (res && res.success && res.data && res.data.allowed) {
+            this.storeInvite(token);
+            this.applySession(res.data, () => done(true));
+            return;
+          }
+          this.storeInvite('');
+          if (fromUrl) {
+            this.showDenied(
+              (res && res.error) || 'This invitation link could not be used.',
+              '',
+              { showLogin: true, fix: (res && res.fix) || 'Ask your admin to send you a new invitation.' }
+            );
+          }
+          done(false);
+        })
+        .withFailureHandler((err) => {
+          if (fromUrl) {
+            this.showDenied(
+              err && err.message ? err.message : 'This invitation link could not be used.',
+              '',
+              { showLogin: true, fix: 'Check your connection and open the link again.' }
+            );
+          }
+          done(false);
+        })
+        .api_redeemInviteToken(token);
+    },
+
+    loadSession: function(callback) {
+      const finish = (session) => {
+        if (callback) callback(session);
+      };
+
+      const loadNormal = () => {
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (!res || !res.success || !res.data) {
+              this.showDenied((res && res.error) || 'Could not load session.', '', {
+                showLogin: true,
+                fix: (res && res.fix) || 'Open the link from your invitation email.'
+              });
+              finish(null);
+              return;
+            }
+            if (!res.data.allowed && res.data.needsLogin) {
+              const stored = this.getStoredInvite();
+              if (stored) {
+                this.redeemInvite(stored, false, (ok) => {
+                  if (ok) finish(this.session);
+                  else this.applySession(res.data, finish);
+                });
+                return;
+              }
+            }
+            this.applySession(res.data, finish);
+          })
+          .withFailureHandler((err) => {
+            this.showDenied(err && err.message ? err.message : 'Session check failed.', '', {
+              showLogin: true,
+              fix: 'Open the link from your invitation email. If you see a Google “need access” page, ask your admin to resend the invitation.'
+            });
+            finish(null);
+          })
+          .api_getSession();
+      };
+
+      const params = window.LSC_PAGE_PARAMS || {};
+      const urlToken = String(params.t || params.invite || '').trim();
+      if (urlToken) {
+        this.redeemInvite(urlToken, true, (ok) => finish(ok ? this.session : null));
+        return;
+      }
+
+      if (window.LSC_AUTH && window.LSC_AUTH.getToken()) {
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (res && res.success && res.data && res.data.allowed) {
+              this.applySession(res.data, finish);
+              return;
+            }
+            if (window.LSC_AUTH) window.LSC_AUTH.clear();
+            loadNormal();
+          })
+          .withFailureHandler(() => {
+            if (window.LSC_AUTH) window.LSC_AUTH.clear();
+            loadNormal();
+          })
+          .api_getSession();
+        return;
+      }
+
+      loadNormal();
+    }
+  };
+
   const AppState = {
     currentView: '',
+    booted: false,
     
     init: function() {
-      AppUtils.loadAvailableYears();
-
-      // 1. Inject static layout components from templates
-      this.injectTemplate('tpl-comp-sidebar', 'desktop-nav-container');
-      this.injectTemplate('tpl-comp-bottom-nav', 'mobile-nav-container');
-
-      // Load app branding into sidebar
-      AppUtils.loadAppBranding();
-
-      // 2. Delegate click handler on .nav-btn for instant SPA navigation & highlighting
-      document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.nav-btn');
-        if (btn) {
-          const route = btn.getAttribute('data-route');
-          if (route) {
-            e.preventDefault();
-            if (window.location.hash !== '#' + route) {
-              window.location.hash = '#' + route;
-            }
-            this.route(route);
-          }
-        }
+      AccessControl.loadSession((session) => {
+        if (!session || !session.allowed) return;
+        this.bootFromSession(session);
       });
+    },
 
-      // 3. Listen for URL hash changes for browser history & external triggers
-      window.addEventListener('hashchange', () => this.route());
-      
-      // 4. Trigger initial route or default to dashboard
-      if (!window.location.hash) {
-        window.location.hash = '#dashboard';
-      }
-      this.route();
+    bootFromSession: function(session) {
+      if (this.booted) return;
+      if (!session || !session.allowed) return;
+      this.booted = true;
+
+        // Prefetch years in the background (modules can render with current year immediately).
+        AppUtils.loadAvailableYears();
+
+        // 1. Inject static layout components from templates
+        this.injectTemplate('tpl-comp-sidebar', 'desktop-nav-container');
+        this.injectTemplate('tpl-comp-bottom-nav', 'mobile-nav-container');
+        AccessControl.applyNavVisibility();
+
+        // Branding comes with the session payload — no extra API round-trip.
+        AppUtils.applySessionBranding(session);
+
+        const openSetupBtn = document.getElementById('btn-open-setup');
+        if (openSetupBtn) {
+          openSetupBtn.onclick = () => {
+            window.location.hash = '#settings';
+            this.route('settings');
+          };
+        }
+
+        // 2. Delegate click handler on .nav-btn for instant SPA navigation & highlighting
+        document.addEventListener('click', (e) => {
+          const btn = e.target.closest('.nav-btn');
+          if (btn) {
+            const route = btn.getAttribute('data-route');
+            if (route) {
+              e.preventDefault();
+              if (!AccessControl.can(route, 'view')) {
+                if (typeof Toast !== 'undefined') Toast.error('You do not have access to this page.');
+                return;
+              }
+              if (window.location.hash !== '#' + route) {
+                window.location.hash = '#' + route;
+              }
+              this.route(route);
+            }
+          }
+        });
+
+        // 3. Listen for URL hash changes for browser history & external triggers
+        window.addEventListener('hashchange', () => this.route());
+        
+        // 4. Trigger initial route or default to first allowed module
+        const preferred = AccessControl.firstAllowedRoute() || 'dashboard';
+        if (!window.location.hash) {
+          window.location.hash = '#' + preferred;
+        }
+        this.route();
     },
     
     injectTemplate: function(templateId, targetId) {
@@ -484,7 +926,21 @@
 
     route: function(forcedView) {
       const hash = forcedView ? ('#' + forcedView) : (window.location.hash || '#dashboard');
-      const viewName = hash.replace('#', '') || 'dashboard';
+      let viewName = hash.replace('#', '') || 'dashboard';
+
+      if (typeof AccessControl !== 'undefined' && AccessControl.session && AccessControl.session.allowed) {
+        if (!AccessControl.can(viewName, 'view')) {
+          const fallback = AccessControl.firstAllowedRoute();
+          if (!fallback) {
+            AccessControl.showDenied('You do not have permission to view any modules.', AccessControl.session.email);
+            return;
+          }
+          viewName = fallback;
+          if (window.location.hash !== '#' + fallback) {
+            window.location.hash = '#' + fallback;
+          }
+        }
+      }
 
       // Always update navigation highlight immediately for fast UI feedback
       this.updateNavHighlight(viewName);
@@ -512,6 +968,9 @@
          });
 
          this.executeScripts(root);
+         if (typeof AccessControl !== 'undefined') {
+           AccessControl.applyActionGates(root, viewName);
+         }
       } else if (root) {
          root.innerHTML = `
           <div class="h-full flex flex-col items-center justify-center text-slate-400">

@@ -14,7 +14,7 @@ Before changing code, consult the relevant project rules:
 
 ## Working principles
 
-- Follow the documentation update requirements for every codebase change.
+- Follow the documentation update requirements for every codebase change, including the in-app Settings → Guide (`src/View_Guide.html`) whenever user-facing behavior changes.
 - Do not add runtime NPM dependencies. Development and test tools, such as the project's Jest dependency, are permitted.
 - Work on a descriptive branch based on `develop`; do not commit directly to `main` or `develop`.
 - Run the relevant existing tests and add tests for new or changed behavior.

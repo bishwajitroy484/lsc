@@ -31,10 +31,11 @@
       this.isYearsLoaded = false;
       this.selectedPeriods = [...this.months];
 
+      // Seed year select immediately; refresh list when full years arrive.
+      AppUtils.populateYearSelect('exp-filter-year');
+      this.isYearsLoaded = true;
       AppUtils.loadAvailableYears(() => {
         AppUtils.populateYearSelect('exp-filter-year');
-        this.isYearsLoaded = true;
-        this.checkAndRender();
       });
       
       this.renderCheckboxes();

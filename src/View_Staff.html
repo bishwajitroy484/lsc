@@ -39,7 +39,7 @@
   <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
     
     
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
       <div class="bg-cyan-50/50 p-4 rounded-xl border border-cyan-100 flex flex-col justify-center">
         <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[14px]">group</span><p class="text-[10px] text-slate-500 font-bold uppercase">Total Staff</p></div>
         <h2 id="kpi-total-staff" class="text-xl font-bold text-slate-800">--</h2>
@@ -48,7 +48,7 @@
         <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center material-symbols-rounded text-[14px]">account_balance_wallet</span><p class="text-[10px] text-slate-500 font-bold uppercase">Total Staff Cost</p></div>
         <h2 id="kpi-total-cost" class="text-xl font-bold text-slate-800">--</h2>
       </div>
-      <div onclick="StaffApp.scrollToActionNeeded()" class="bg-amber-50/50 p-4 rounded-xl border border-amber-200/80 flex flex-col justify-between cursor-pointer hover:border-amber-300 hover:shadow-sm transition-all group">
+      <div onclick="StaffApp.scrollToActionNeeded()" class="bg-amber-50/50 p-4 rounded-xl border border-amber-200/80 flex flex-col justify-between cursor-pointer hover:border-amber-300 hover:shadow-sm transition-all group col-span-2 lg:col-span-1">
         <div class="flex items-center justify-between mb-1">
           <div class="flex items-center gap-2">
             <span class="w-6 h-6 rounded bg-amber-100 text-amber-700 flex items-center justify-center material-symbols-rounded text-[14px]">pending_actions</span>
@@ -59,28 +59,6 @@
         <div>
           <h2 id="kpi-action-needed" class="text-xl font-bold text-amber-700 leading-tight">--</h2>
           <p id="kpi-action-needed-sub" class="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">--</p>
-        </div>
-      </div>
-      <div class="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex flex-col justify-between">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[14px]">swap_vert</span>
-          <p class="text-[10px] text-slate-500 font-bold uppercase">Salary Range</p>
-        </div>
-        <div class="grid grid-cols-2 gap-2 divide-x divide-purple-200/60 pt-0.5">
-          <div class="min-w-0 pr-1">
-            <div class="flex items-center gap-1 text-[9px] text-purple-700 font-bold uppercase tracking-wider">
-              <span class="material-symbols-rounded text-[12px]">arrow_upward</span> High
-            </div>
-            <h2 id="kpi-high-amt" class="text-sm md:text-base font-bold text-slate-800 truncate mt-0.5">--</h2>
-            <p id="kpi-high-name" class="text-[9px] font-medium text-slate-500 truncate mt-0.5 leading-tight" title="">--</p>
-          </div>
-          <div class="min-w-0 pl-2">
-            <div class="flex items-center gap-1 text-[9px] text-emerald-700 font-bold uppercase tracking-wider">
-              <span class="material-symbols-rounded text-[12px]">arrow_downward</span> Low
-            </div>
-            <h2 id="kpi-low-amt" class="text-sm md:text-base font-bold text-slate-800 truncate mt-0.5">--</h2>
-            <p id="kpi-low-name" class="text-[9px] font-medium text-slate-500 truncate mt-0.5 leading-tight" title="">--</p>
-          </div>
         </div>
       </div>
     </div>
@@ -134,7 +112,7 @@
         </div>
       </div>
       
-      <div id="staff-table-container" class="hidden md:block overflow-y-auto no-scrollbar max-h-[460px]">
+      <div id="staff-table-container" class="hidden md:block overflow-auto no-scrollbar max-h-[460px]">
         <table class="w-full text-left border-collapse min-w-[750px]">
           <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
             <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider select-none">
@@ -157,7 +135,7 @@
 
   
   <div id="staff-drawer-backdrop" onclick="StaffApp.closeDetails()" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[120]"></div>
-  <div id="staff-drawer" class="fixed top-0 bottom-0 right-0 w-full md:w-[450px] bg-slate-50 shadow-2xl z-[130] transform translate-x-full transition-transform duration-300 flex flex-col overflow-hidden">
+  <div id="staff-drawer" class="fixed top-0 bottom-0 right-0 w-full md:w-[450px] bg-slate-50 shadow-2xl z-[130] transform translate-x-full transition-transform duration-300 flex flex-col overflow-hidden lsc-drawer-panel">
     <header class="bg-white px-4 py-3 flex items-center justify-between border-b border-slate-100 shrink-0">
       <div class="flex items-center gap-3">
         <button onclick="StaffApp.closeDetails()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-full transition-colors"><span class="material-symbols-rounded">arrow_back</span></button>
@@ -169,7 +147,7 @@
       </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto no-scrollbar flex flex-col">
+    <div class="flex-1 min-h-0 overflow-hidden flex flex-col">
       <div class="bg-white px-6 py-5 border-b border-slate-100 shrink-0">
         <div class="flex items-start gap-4">
           <div id="det-stf-avatar" class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xl text-slate-500 shadow-inner shrink-0">--</div>
@@ -190,7 +168,7 @@
         </div>
       </div>
 
-      <div id="det-tab-overview" class="p-4 md:p-6 space-y-6">
+      <div id="det-tab-overview" class="flex-1 min-h-0 overflow-y-auto no-scrollbar p-4 md:p-6 pb-24 md:pb-6 space-y-6">
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div class="px-4 py-3 border-b border-slate-100"><h4 class="font-bold text-sm text-slate-800">Staff Information</h4></div>
           <div class="p-4 grid grid-cols-2 gap-y-4 text-xs">
@@ -200,24 +178,23 @@
             <div><p class="text-slate-500 font-medium mb-1">Status</p><p id="det-stf-info-status" class="font-bold text-slate-800">--</p></div>
             <div><p class="text-slate-500 font-medium mb-1">Join Date</p><p id="det-stf-join" class="font-bold text-slate-800">--</p></div>
             <div><p class="text-slate-500 font-medium mb-1">Date of Birth</p><p id="det-stf-dob" class="font-bold text-slate-800">--</p></div>
-            <div class="col-span-2"><p class="text-slate-500 font-medium mb-1">Notes</p><p id="det-stf-notes" class="text-slate-800">--</p></div>
           </div>
         </div>
       </div>
 
-      <div id="det-tab-payments" class="hidden p-4 md:p-6 space-y-4">
-        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 flex items-center justify-between">
+      <div id="det-tab-payments" class="hidden flex-1 min-h-0 flex-col p-3 md:p-6 pb-24 md:pb-6 gap-3 overflow-hidden">
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-3.5 md:p-4 flex items-center justify-between shrink-0">
            <div><p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Total Salary Paid</p><h3 id="det-stf-total-paid" class="text-xl font-bold text-emerald-600">₹0</h3></div>
-           <button onclick="StaffApp.openTransactionModal()" class="h-9 px-4 bg-brand-primary text-white rounded-lg flex items-center justify-center gap-1.5 shadow-sm hover:bg-blue-700 text-xs font-semibold"><span class="material-symbols-rounded text-[16px]">add</span> Record Salary</button>
+           <button onclick="StaffApp.openTransactionModal()" class="h-9 px-3 md:px-4 bg-brand-primary text-white rounded-lg flex items-center justify-center gap-1.5 shadow-sm hover:bg-blue-700 text-xs font-semibold"><span class="material-symbols-rounded text-[16px]">add</span> Record Salary</button>
         </div>
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+          <div class="px-4 py-2.5 md:py-3 border-b border-slate-100 flex items-center justify-between shrink-0">
             <h4 class="font-bold text-sm text-slate-800">Salary Records</h4>
             <span class="text-[10px] text-slate-400 font-medium">Paid & Action Needed</span>
           </div>
-          <div class="max-h-[300px] overflow-y-auto no-scrollbar">
+          <div class="flex-1 min-h-0 overflow-y-auto no-scrollbar">
             <table class="w-full text-left border-collapse">
-              <thead class="bg-slate-50 border-b border-slate-100 sticky top-0">
+              <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-[1]">
                 <tr class="text-[9px] uppercase text-slate-500 font-bold">
                   <th class="px-4 py-2">Cycle / Date</th>
                   <th class="px-4 py-2">Amount & Status</th>
@@ -234,8 +211,8 @@
   </div>
 
   
-  <div id="staff-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[140] flex items-end md:items-center justify-center sm:p-4 pb-20 md:pb-4">
-    <div id="staff-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh]">
+  <div id="staff-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[140] flex items-end md:items-center justify-center sm:p-4 lsc-modal-sheet">
+    <div id="staff-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh] lsc-modal-sheet-panel">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
         <h2 id="stf-modal-title" class="text-lg font-bold text-slate-800">Add Staff</h2>
         <button onclick="StaffApp.closeModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200 transition-colors"><span class="material-symbols-rounded text-lg">close</span></button>
@@ -277,17 +254,6 @@
                <div class="relative"><span class="material-symbols-rounded absolute right-2.5 top-1.5 text-[16px] text-red-400 pointer-events-none">calendar_month</span><input type="text" id="stf-exit-date" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-red-50/30 border border-red-200 rounded-lg text-xs font-bold text-slate-700 focus:border-red-400 outline-none shadow-sm"></div>
             </div>
             
-            <div class="col-span-2">
-              <div class="border border-slate-200 rounded-lg overflow-hidden bg-slate-50 transition-all mt-1">
-                <button type="button" onclick="document.getElementById('stf-notes-wrapper').classList.toggle('hidden')" class="w-full px-3 py-2 flex items-center justify-between text-[9px] font-bold text-slate-600 uppercase tracking-wide hover:bg-slate-100 transition-colors">
-                  <span class="flex items-center gap-1.5"><span class="material-symbols-rounded text-[14px]">notes</span> Additional Notes</span>
-                  <span class="material-symbols-rounded text-[14px] text-slate-400">expand_more</span>
-                </button>
-                <div id="stf-notes-wrapper" class="hidden p-2 pt-0 bg-white border-t border-slate-100">
-                  <textarea id="stf-notes" rows="2" class="w-full mt-2 px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm resize-none" placeholder="Role expectations, qualifications, certifications, etc..."></textarea>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -300,8 +266,8 @@
   </div>
 
   
-  <div id="txn-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[150] flex items-end md:items-center justify-center sm:p-4 pb-20 md:pb-4">
-    <div id="txn-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh]">
+  <div id="txn-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[150] flex items-end md:items-center justify-center sm:p-4 lsc-modal-sheet">
+    <div id="txn-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh] lsc-modal-sheet-panel">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
         <h2 id="txn-modal-title" class="text-lg font-bold text-slate-800">Record Salary</h2>
         <button onclick="StaffApp.closeTransactionModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200"><span class="material-symbols-rounded text-lg">close</span></button>
@@ -345,17 +311,6 @@
               <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt URL</label>
               <div class="relative"><span class="material-symbols-rounded absolute left-2 top-1.5 text-[16px] text-slate-400">link</span><input type="url" id="txn-receiptUrl" placeholder="https://..." class="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700"></div>
             </div>
-            <div class="col-span-2">
-              <div class="border border-slate-200 rounded-lg overflow-hidden bg-slate-50 transition-all mt-1">
-                <button type="button" onclick="document.getElementById('txn-notes-wrapper').classList.toggle('hidden')" class="w-full px-3 py-2 flex items-center justify-between text-[9px] font-bold text-slate-600 uppercase tracking-wide hover:bg-slate-100 transition-colors">
-                  <span class="flex items-center gap-1.5"><span class="material-symbols-rounded text-[14px]">notes</span> Additional Notes</span>
-                  <span class="material-symbols-rounded text-[14px] text-slate-400">expand_more</span>
-                </button>
-                <div id="txn-notes-wrapper" class="hidden p-2 pt-0 bg-white border-t border-slate-100">
-                  <textarea id="txn-notes" rows="2" class="w-full mt-2 px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm resize-none" placeholder="Transaction ref, remarks, deductions, etc..."></textarea>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
         <div class="p-4 bg-white border-t border-slate-100 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
@@ -365,8 +320,8 @@
     </div>
   </div>
 
-  <div id="delete-stf-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[160] flex items-center justify-center p-4">
-    <div id="delete-stf-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 p-6 text-center">
+  <div id="delete-stf-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[160] flex lsc-modal-overlay">
+    <div id="delete-stf-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 p-6 text-center lsc-modal-panel">
       <div class="w-16 h-16 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4"><span class="material-symbols-rounded text-3xl">delete_forever</span></div>
       <h3 id="delete-title" class="text-lg font-bold text-slate-800 mb-2">Confirm Delete</h3>
       <p class="text-sm text-slate-500 mb-6">Are you sure you want to delete <strong id="delete-stf-name"></strong>? This action cannot be undone.</p>

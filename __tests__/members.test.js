@@ -29,6 +29,22 @@ function loadMembersApi(dbData = {
   }
 }) {
   const source = fs.readFileSync(path.join(__dirname, '../src/API_Members.js'), 'utf8');
+  const db = {
+    batchRead: jest.fn(() => dbData),
+    create: jest.fn(record => record),
+    update: jest.fn(() => true)
+  };
+  const trigger = {
+    timeBased: jest.fn(() => trigger),
+    everyDays: jest.fn(() => trigger),
+    atHour: jest.fn(() => trigger),
+    create: jest.fn()
+  };
+  const scriptApp = {
+    getProjectTriggers: jest.fn(() => []),
+    newTrigger: jest.fn(() => trigger),
+    trigger
+  };
 
   return new Function(
     'DB',
@@ -37,14 +53,13 @@ function loadMembersApi(dbData = {
     'generateId',
     'parseSafeDate',
     'distributeDailyProration',
+    'ScriptApp',
     `
       ${source};
-      return { api_getMembers, api_getMemberPayments };
+      return { api_getMembers, api_getMemberPayments, api_saveMember, setupMemberExitDateTrigger, db: DB, scriptApp: ScriptApp, trigger: ScriptApp.trigger };
     `
   )(
-    {
-      batchRead: jest.fn(() => dbData)
-    },
+    db,
     () => dropdownResponse,
     { getActiveUser: () => ({ getEmail: () => 'admin@gym.com' }) },
     (prefix) => `${prefix}-TEST123`,
@@ -54,11 +69,28 @@ function loadMembersApi(dbData = {
       if (!isNaN(start)) {
         onInterval(start.getFullYear(), start.getMonth(), totalAmt);
       }
-    }
+    },
+    scriptApp
   );
 }
 
 describe('Members Module', () => {
+  test('generateNextMemberId_ returns sequential LSC-MEM-N ids', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../src/Utils_DB.js'), 'utf8');
+    const start = source.indexOf('function generateNextMemberId_');
+    const end = source.indexOf('\nfunction api_uploadImageToDrive', start);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const fnSource = source.slice(start, end);
+    const make = (rows) => new Function('DB', `${fnSource}; return generateNextMemberId_;`)({
+      read: jest.fn(() => rows)
+    });
+
+    expect(make([])()).toBe('LSC-MEM-1');
+    expect(make([{ memberId: 'LSC-MEM-1' }, { memberId: 'LSC-MEM-3' }])()).toBe('LSC-MEM-4');
+    expect(make([{ memberId: 'MEM-7' }, { memberId: 'LSC-MEM-2' }])()).toBe('LSC-MEM-8');
+  });
+
   test('api_getMembers returns enriched member records with dueDate and accrual mode', () => {
     const membersApi = loadMembersApi();
     const response = membersApi.api_getMembers();
@@ -144,6 +176,119 @@ describe('Members Module', () => {
 
     expect(response.success).toBe(true);
     expect(response.data[0].dueDate).toBe('10-Jan-2024');
+  });
+
+  test('api_getMembers persists inactive status for expired ad-hoc and trial memberships', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-01T12:00:00Z'));
+    try {
+      const membersApi = loadMembersApi({
+        MEMBERS: [
+          { memberId: 'MEM-PAST-TRIAL', membershipId: 'PLAN-TRIAL', status: 'STATUS-ACTIVE', exitDate: '30-Sep-2026' },
+          { memberId: 'MEM-TODAY-ADHOC', membershipId: 'PLAN-ADHOC', status: 'STATUS-ACTIVE', exitDate: '01-Oct-2026' },
+          { memberId: 'MEM-FUTURE-TRIAL', membershipId: 'PLAN-TRIAL', status: 'STATUS-ACTIVE', exitDate: '02-Oct-2026' },
+          { memberId: 'MEM-PAST-QUARTERLY', membershipId: 'PLAN-QUARTERLY', status: 'STATUS-ACTIVE', exitDate: '30-Sep-2026' }
+        ],
+        PAYMENTS: [],
+        SETTINGS: []
+      }, {
+        success: true,
+        data: {
+          options: {
+            membership: [
+              { id: 'PLAN-TRIAL', name: 'Trial', frequency: 'Trial' },
+              { id: 'PLAN-ADHOC', name: 'Ad Hoc', frequency: 'Ad Hoc' },
+              { id: 'PLAN-QUARTERLY', name: 'Quarterly', frequency: 'Quarterly' }
+            ],
+            status: [
+              { id: 'STATUS-ACTIVE', name: 'Active' },
+              { id: 'STATUS-INACTIVE', name: 'Inactive' }
+            ]
+          }
+        }
+      });
+
+      const response = membersApi.api_getMembers();
+
+      expect(response.success).toBe(true);
+      expect(response.data.map(member => member.status)).toEqual([
+        'STATUS-INACTIVE',
+        'STATUS-INACTIVE',
+        'STATUS-ACTIVE',
+        'STATUS-ACTIVE'
+      ]);
+      expect(membersApi.db.update).toHaveBeenCalledTimes(2);
+      expect(membersApi.db.update).toHaveBeenNthCalledWith(1, 'MEMBERS', 'MEM-PAST-TRIAL', { status: 'STATUS-INACTIVE' });
+      expect(membersApi.db.update).toHaveBeenNthCalledWith(2, 'MEMBERS', 'MEM-TODAY-ADHOC', { status: 'STATUS-INACTIVE' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('api_getMembers heals legacy inactive labels to the dropdown key', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-01T12:00:00Z'));
+    try {
+      const membersApi = loadMembersApi({
+        MEMBERS: [
+          { memberId: 'MEM-LABEL', membershipId: 'PLAN-TRIAL', status: 'Inactive', exitDate: '02-Oct-2026' }
+        ],
+        PAYMENTS: [],
+        SETTINGS: []
+      }, {
+        success: true,
+        data: {
+          options: {
+            membership: [
+              { id: 'PLAN-TRIAL', name: 'Trial', frequency: 'Trial' }
+            ],
+            status: [
+              { id: 'STA-INACTIVE', name: 'In-Active' },
+              { id: 'STA-ACTIVE', name: 'Active' }
+            ]
+          }
+        }
+      });
+
+      const response = membersApi.api_getMembers();
+      expect(response.success).toBe(true);
+      expect(response.data[0].status).toBe('STA-INACTIVE');
+      expect(membersApi.db.update).toHaveBeenCalledWith('MEMBERS', 'MEM-LABEL', { status: 'STA-INACTIVE' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('api_saveMember rejects phone numbers that are not exactly 10 digits', () => {
+    const membersApi = loadMembersApi();
+
+    expect(membersApi.api_saveMember({ fullName: 'Dana Ross', phone: '123456789' })).toEqual({
+      success: false,
+      error: 'Error: Phone number must contain exactly 10 digits.'
+    });
+    expect(membersApi.db.create).not.toHaveBeenCalled();
+    expect(membersApi.db.update).not.toHaveBeenCalled();
+  });
+
+  test('setupMemberExitDateTrigger creates a daily trigger once and remains idempotent', () => {
+    const membersApi = loadMembersApi();
+
+    expect(membersApi.setupMemberExitDateTrigger()).toEqual({
+      success: true,
+      message: 'Daily member exit-date check scheduled.'
+    });
+    expect(membersApi.scriptApp.newTrigger).toHaveBeenCalledWith('runDailyMemberExitDateCheck');
+    expect(membersApi.trigger.timeBased).toHaveBeenCalledTimes(1);
+    expect(membersApi.trigger.everyDays).toHaveBeenCalledWith(1);
+    expect(membersApi.trigger.atHour).toHaveBeenCalledWith(1);
+    expect(membersApi.trigger.create).toHaveBeenCalledTimes(1);
+
+    membersApi.scriptApp.getProjectTriggers.mockReturnValue([
+      { getHandlerFunction: () => 'runDailyMemberExitDateCheck' }
+    ]);
+    expect(membersApi.setupMemberExitDateTrigger()).toEqual({
+      success: true,
+      message: 'Daily member exit-date check is already scheduled.'
+    });
+    expect(membersApi.scriptApp.newTrigger).toHaveBeenCalledTimes(1);
   });
 
   describe('MembersApp Frontend Lazy Loading', () => {
@@ -237,6 +382,91 @@ describe('Members Module', () => {
       expect(MembersApp.renderedCount).toBe(140);
       jest.useRealTimers();
     });
+
+    it('populates initial payment dropdowns and preserves selected batch filters', () => {
+      const originalDropdowns = MembersApp.dropdowns;
+      const batchFilter = document.getElementById('filter-batch');
+      const planFilter = document.getElementById('filter-plan');
+      batchFilter.value = 'BATCH-1';
+      batchFilter.options = [{ value: 'All' }, { value: 'BATCH-1' }];
+      planFilter.value = 'PLAN-1';
+      planFilter.options = [{ value: 'All' }, { value: 'PLAN-1' }];
+
+      MembersApp.onDropdownsLoaded({
+        success: true,
+        data: {
+          options: {
+            membership: [{ id: 'PLAN-1', name: 'Quarterly' }],
+            batch: [{ id: 'BATCH-1', name: 'Morning', groups: 'Adult' }],
+            status: [{ id: 'STATUS-ACTIVE', name: 'Active' }],
+            paymentmode: [{ id: 'MODE-CASH', name: 'Cash' }],
+            paymentstatus: [{ id: 'PAY-PAID', name: 'Paid' }]
+          },
+          schemas: {}
+        }
+      });
+
+      expect(batchFilter.innerHTML).toContain('All Batches');
+      expect(batchFilter.innerHTML).toContain('Morning');
+      expect(batchFilter.value).toBe('BATCH-1');
+      expect(planFilter.innerHTML).toContain('All Memberships');
+      expect(planFilter.value).toBe('PLAN-1');
+      expect(document.getElementById('mem-pay-mode').innerHTML).toContain('MODE-CASH');
+      expect(document.getElementById('mem-pay-status').innerHTML).toContain('PAY-PAID');
+
+      const payFields = document.getElementById('mem-pay-fields');
+      MembersApp.toggleInitialPaymentFields();
+      expect(payFields.classList.toggle).toHaveBeenCalledWith('hidden', true);
+
+      document.getElementById('mem-record-pay').checked = true;
+      MembersApp.toggleInitialPaymentFields();
+      expect(payFields.classList.toggle).toHaveBeenCalledWith('hidden', false);
+      MembersApp.dropdowns = originalDropdowns;
+    });
+
+    it('recalculates trial member fees per day when plan or trial dates change', () => {
+      const originalDropdowns = MembersApp.dropdowns;
+      MembersApp.dropdowns = {
+        membership: [
+          { id: 'PLAN-QUARTERLY', name: 'Quarterly', frequency: 'Quarterly' },
+          { id: 'PLAN-TRIAL', name: 'Trial', frequency: 'Trial' }
+        ],
+        batch: [
+          { id: 'BATCH-ADULT', name: 'Morning', groups: 'Adult' },
+          { id: 'BATCH-KID', name: 'Kids', groups: 'Kid' }
+        ],
+        price: [
+          { name: 'Quarterly', group: 'Adult', base_price: 30000 },
+          { name: 'Quarterly', group: 'Kid', base_price: 25000 },
+          { name: 'Trial', group: 'All Groups', base_price: 1000 }
+        ],
+        status: [{ id: 'STATUS-ACTIVE', name: 'Active' }]
+      };
+      document.getElementById('mem-batch').value = 'BATCH-ADULT';
+      document.getElementById('mem-join').value = '01-Oct-2026';
+      document.getElementById('mem-exit-date').value = '03-Oct-2026';
+
+      document.getElementById('mem-plan').value = 'PLAN-QUARTERLY';
+      MembersApp.onPlanOrBatchChange();
+      expect(document.getElementById('mem-amount').value).toBe('30000');
+
+      document.getElementById('mem-plan').value = 'PLAN-TRIAL';
+      MembersApp.onPlanOrBatchChange();
+      expect(document.getElementById('mem-amount').value).toBe('3000');
+
+      document.getElementById('mem-join').value = '01-Oct-2026';
+      document.getElementById('mem-exit-date').value = '04-Oct-2026';
+      MembersApp.onPlanOrBatchChange();
+      expect(document.getElementById('mem-amount').value).toBe('4000');
+
+      document.getElementById('mem-batch').value = 'BATCH-KID';
+      MembersApp.onPlanOrBatchChange();
+      expect(document.getElementById('mem-amount').value).toBe('4000');
+
+      document.getElementById('mem-plan').value = 'PLAN-QUARTERLY';
+      MembersApp.onPlanOrBatchChange();
+      expect(document.getElementById('mem-amount').value).toBe('25000');
+      MembersApp.dropdowns = originalDropdowns;
+    });
   });
 });
-

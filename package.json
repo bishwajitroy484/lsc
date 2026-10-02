@@ -3,12 +3,16 @@
   "version": "1.0.0",
   "scripts": {
     "test": "jest",
-    "push:dev": "cp .clasp-dev.json .clasp.json && clasp push",
-    "push:prod": "cp .clasp-prod.json .clasp.json && clasp push",
-    "deploy:dev": "npm run push:dev && clasp create-deployment",
-    "deploy:prod": "npm run push:prod && clasp create-deployment"
+    "use:dev": "node scripts/prepare-env.js dev",
+    "use:prod": "node scripts/prepare-env.js prod",
+    "push:dev": "npm run use:dev && clasp push --force",
+    "push:prod": "npm run use:prod && clasp push --force",
+    "deploy:dev": "npm run push:dev && node scripts/deploy-env.js dev",
+    "deploy:prod": "npm run push:prod && node scripts/deploy-env.js prod",
+    "pretest": "node scripts/prepare-env.js dev"
   },
   "devDependencies": {
+    "@google/clasp": "^3.4.1",
     "jest": "^29.0.0"
   },
   "jest": {
