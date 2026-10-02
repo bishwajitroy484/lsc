@@ -370,7 +370,6 @@
 
       const dobStr = member.dob ? member.dob : 'N/A';
       const genderStr = member.gender || 'N/A';
-      const notesStr = member.notes ? (member.notes.length > 25 ? member.notes.substring(0, 25) + '...' : member.notes) : '--';
       const phoneStr = member.phone || 'No Phone';
       const joinStr = member.joinDate ? member.joinDate : '--';
       
@@ -406,7 +405,6 @@
              <div><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${dueInfo.class} uppercase tracking-wider">${dueInfo.text}</span></div>
           </td>
           <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} uppercase tracking-wider">${sName}</span></td>
-          <td class="px-4 py-3 text-xs text-slate-600 max-w-[140px] truncate" title="${member.notes || ''}">${notesStr}</td>
           <td class="px-4 py-3 text-right">
             <button onclick="event.stopPropagation(); MembersApp.openModal(${memberJson})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-full transition-colors">
                <span class="material-symbols-rounded text-[18px]">edit</span>
@@ -997,7 +995,6 @@
       document.getElementById('mem-phone').value = member ? member.phone : '';
       document.getElementById('mem-gender').value = member && member.gender ? member.gender : 'Male';
       document.getElementById('mem-email').value = member && member.email ? member.email : '';
-      document.getElementById('mem-notes').value = member && member.notes ? member.notes : '';
       
       document.getElementById('mem-plan').value = member ? member.membershipId : 'All';
       
@@ -1010,12 +1007,6 @@
 
       const rawAmt = member && member.membershipAmount ? member.membershipAmount.toString().replace(/[^0-9.-]+/g,"") : '';
       document.getElementById('mem-amount').value = rawAmt;
-
-      if (member && member.notes && member.notes.trim() !== '') {
-          document.getElementById('mem-notes-wrapper').classList.remove('hidden');
-      } else {
-          document.getElementById('mem-notes-wrapper').classList.add('hidden');
-      }
       
       const payContainer = document.getElementById('upfront-payment-container');
       if (payContainer) {
@@ -1095,7 +1086,6 @@
         gender: document.getElementById('mem-gender').value,
         email: document.getElementById('mem-email').value,
         status: document.getElementById('mem-status').value,
-        notes: document.getElementById('mem-notes').value,          
         membershipId: planVal,
         batchId: batchVal,
         joinDate: joinFmt,
@@ -1242,7 +1232,6 @@
           
           document.getElementById('pay-txn').value = '';
           document.getElementById('pay-receipt').value = '';
-          document.getElementById('pay-notes').value = '';
 
           this.setDatePicker('pay-date', new Date());
           this.setDatePicker('pay-start', new Date(payment.virtualStartDate));
@@ -1265,7 +1254,6 @@
           
           document.getElementById('pay-txn').value = payment && payment.txnId ? payment.txnId : '';
           document.getElementById('pay-receipt').value = payment && payment.receiptUrl ? payment.receiptUrl : '';
-          document.getElementById('pay-notes').value = payment && payment.notes ? payment.notes : '';
 
           const plans = this.dropdowns.membership || [];
           const planMatch = plans.find(p => p.id === m.membershipId);
@@ -1330,8 +1318,7 @@
         paymentStatus: statusVal, 
         startDate: this.formatDateDDMMMYYYY(document.getElementById('pay-start').value),
         endDate: this.formatDateDDMMMYYYY(document.getElementById('pay-end').value),
-        receiptUrl: document.getElementById('pay-receipt').value,
-        notes: document.getElementById('pay-notes').value
+        receiptUrl: document.getElementById('pay-receipt').value
       };
       
       const txnField = document.getElementById('pay-txn').value;

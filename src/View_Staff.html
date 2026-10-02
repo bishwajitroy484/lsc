@@ -178,7 +178,6 @@
             <div><p class="text-slate-500 font-medium mb-1">Status</p><p id="det-stf-info-status" class="font-bold text-slate-800">--</p></div>
             <div><p class="text-slate-500 font-medium mb-1">Join Date</p><p id="det-stf-join" class="font-bold text-slate-800">--</p></div>
             <div><p class="text-slate-500 font-medium mb-1">Date of Birth</p><p id="det-stf-dob" class="font-bold text-slate-800">--</p></div>
-            <div class="col-span-2"><p class="text-slate-500 font-medium mb-1">Notes</p><p id="det-stf-notes" class="text-slate-800">--</p></div>
           </div>
         </div>
       </div>
@@ -255,17 +254,6 @@
                <div class="relative"><span class="material-symbols-rounded absolute right-2.5 top-1.5 text-[16px] text-red-400 pointer-events-none">calendar_month</span><input type="text" id="stf-exit-date" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-red-50/30 border border-red-200 rounded-lg text-xs font-bold text-slate-700 focus:border-red-400 outline-none shadow-sm"></div>
             </div>
             
-            <div class="col-span-2">
-              <div class="border border-slate-200 rounded-lg overflow-hidden bg-slate-50 transition-all mt-1">
-                <button type="button" onclick="document.getElementById('stf-notes-wrapper').classList.toggle('hidden')" class="w-full px-3 py-2 flex items-center justify-between text-[9px] font-bold text-slate-600 uppercase tracking-wide hover:bg-slate-100 transition-colors">
-                  <span class="flex items-center gap-1.5"><span class="material-symbols-rounded text-[14px]">notes</span> Additional Notes</span>
-                  <span class="material-symbols-rounded text-[14px] text-slate-400">expand_more</span>
-                </button>
-                <div id="stf-notes-wrapper" class="hidden p-2 pt-0 bg-white border-t border-slate-100">
-                  <textarea id="stf-notes" rows="2" class="w-full mt-2 px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm resize-none" placeholder="Role expectations, qualifications, certifications, etc..."></textarea>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -322,17 +310,6 @@
             <div>
               <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt URL</label>
               <div class="relative"><span class="material-symbols-rounded absolute left-2 top-1.5 text-[16px] text-slate-400">link</span><input type="url" id="txn-receiptUrl" placeholder="https://..." class="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700"></div>
-            </div>
-            <div class="col-span-2">
-              <div class="border border-slate-200 rounded-lg overflow-hidden bg-slate-50 transition-all mt-1">
-                <button type="button" onclick="document.getElementById('txn-notes-wrapper').classList.toggle('hidden')" class="w-full px-3 py-2 flex items-center justify-between text-[9px] font-bold text-slate-600 uppercase tracking-wide hover:bg-slate-100 transition-colors">
-                  <span class="flex items-center gap-1.5"><span class="material-symbols-rounded text-[14px]">notes</span> Additional Notes</span>
-                  <span class="material-symbols-rounded text-[14px] text-slate-400">expand_more</span>
-                </button>
-                <div id="txn-notes-wrapper" class="hidden p-2 pt-0 bg-white border-t border-slate-100">
-                  <textarea id="txn-notes" rows="2" class="w-full mt-2 px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm resize-none" placeholder="Transaction ref, remarks, deductions, etc..."></textarea>
-                </div>
-              </div>
             </div>
           </div>
         </div>

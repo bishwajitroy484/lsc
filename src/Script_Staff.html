@@ -1044,7 +1044,6 @@
       this.safeSetText('det-stf-join', exitStr ? `${dateStr} (Left: ${exitStr})` : dateStr);
       this.safeSetText('det-stf-dob', dobStr);
       this.safeSetText('det-stf-info-status', sName);
-      this.safeSetText('det-stf-notes', stf.notes || '--');
 
       this.switchTab('overview');
       this.generatePaymentHistory();
@@ -1209,13 +1208,6 @@
       this.setDatePicker('stf-exit-date', stf && stf.exitDate ? stf.exitDate : '');
       
       this.safeSetValue('stf-status', stf ? stf.status : '');
-      this.safeSetValue('stf-notes', stf && stf.notes ? stf.notes : '');
-
-      if (stf && stf.notes && stf.notes.trim() !== '') {
-          document.getElementById('stf-notes-wrapper')?.classList.remove('hidden');
-      } else {
-          document.getElementById('stf-notes-wrapper')?.classList.add('hidden');
-      }
 
       this.onStatusChange();
 
@@ -1255,8 +1247,7 @@
         salary: Number(document.getElementById('stf-salary')?.value || 0),
         joinDate: this.formatDateDDMMMYYYY(document.getElementById('stf-join')?.value),
         exitDate: this.formatDateDDMMMYYYY(document.getElementById('stf-exit-date')?.value),
-        status: document.getElementById('stf-status')?.value,
-        notes: document.getElementById('stf-notes')?.value
+        status: document.getElementById('stf-status')?.value
       };
 
       google.script.run
@@ -1316,13 +1307,6 @@
       this.safeSetValue('txn-creditType', txn && !txn.isVirtual && txn.creditType ? txn.creditType : (salOpt ? salOpt.value : ''));
 
       this.safeSetValue('txn-receiptUrl', txn && !txn.isVirtual && txn.receiptUrl ? txn.receiptUrl : '');
-      this.safeSetValue('txn-notes', txn && !txn.isVirtual && txn.notes ? txn.notes : '');
-
-      if (txn && !txn.isVirtual && txn.notes && txn.notes.trim() !== '') {
-          document.getElementById('txn-notes-wrapper')?.classList.remove('hidden');
-      } else {
-          document.getElementById('txn-notes-wrapper')?.classList.add('hidden');
-      }
 
       if (txn && txn.isVirtual) {
           this.setDatePicker('txn-startDate', txn.virtualStartDate);
@@ -1381,8 +1365,7 @@
         paidDate: this.formatDateDDMMMYYYY(document.getElementById('txn-paidDate')?.value),
         paymentMode: document.getElementById('txn-paymentMode')?.value,
         paymentStatus: document.getElementById('txn-paymentStatus')?.value,
-        receiptUrl: document.getElementById('txn-receiptUrl')?.value,
-        notes: document.getElementById('txn-notes')?.value
+        receiptUrl: document.getElementById('txn-receiptUrl')?.value
       };
 
       const startVal = document.getElementById('txn-startDate')?.value;

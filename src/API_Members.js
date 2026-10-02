@@ -267,6 +267,7 @@ function api_saveMember(memberData) {
     // Clean payload before DB save
     delete memberData.base64Image;
     delete memberData.imageName;
+    delete memberData.notes;
 
     // 3. Save Member to DB
     let savedData;
@@ -283,6 +284,7 @@ function api_saveMember(memberData) {
           initialPayment.createdBy = userEmail;
           initialPayment.updatedAt = now;
           initialPayment.updatedBy = userEmail;
+          delete initialPayment.notes;
           DB.create('PAYMENTS', initialPayment);
           if (typeof maybeSendPaymentReceipt_ === 'function') {
             maybeSendPaymentReceipt_(initialPayment);
@@ -395,6 +397,7 @@ function api_recordPayment(paymentData) {
 
     paymentData.updatedAt = now;
     paymentData.updatedBy = userEmail;
+    delete paymentData.notes;
 
     let savedData;
     if (paymentData.paymentId) {
