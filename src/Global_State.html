@@ -63,7 +63,7 @@
       const n = String(name || '');
       if (/delete|remove/i.test(n)) return 'Deleting…';
       if (/authorize/i.test(n)) return 'Authorizing…';
-      if (/requestLogin|verifyLogin|redeemInvite/i.test(n)) return 'Signing in…';
+      if (/redeemInvite/i.test(n)) return 'Opening…';
       if (/record|payment|transaction/i.test(n)) return 'Saving…';
       if (/markSetup/i.test(n)) return 'Updating setup…';
       if (/save|create|update|add/i.test(n)) return 'Saving…';
@@ -71,7 +71,7 @@
     },
 
     shouldTrack: function(name) {
-      return /^(api_save|api_delete|api_remove|api_record|api_authorize|api_mark|api_create|api_update|api_verifyLogin|api_requestLogin|api_redeemInvite)/.test(String(name || ''));
+      return /^(api_save|api_delete|api_remove|api_record|api_authorize|api_mark|api_create|api_update|api_redeemInvite|api_sendInvitation|api_sendTestNotificationEmail)/.test(String(name || ''));
     }
   };
 
@@ -80,8 +80,6 @@
     const nativeRun = google.script.run;
     const AUTH_KEY = 'lsc_auth_token';
     const OPEN_APIS = {
-      api_requestLoginCode: true,
-      api_verifyLoginCode: true,
       api_redeemInviteToken: true,
       api_invoke: true
     };
@@ -159,7 +157,7 @@
 
   const AppUtils = {
     currencyFormat: (typeof localStorage !== 'undefined' && localStorage.getItem('LSC_CURRENCY_FORMAT')) || 'Indian',
-    availableYears: [],
+    availableYears: [String(new Date().getFullYear())],
     availableYearsLoaded: false,
     availableYearsLoading: false,
     availableYearsCallbacks: [],
@@ -529,7 +527,22 @@
       logoImg.src = safeUrl;
     },
 
+    applySessionBranding: function(session) {
+      const branding = (session && session.branding) || {};
+      const setup = (session && session.setup) || {};
+      const gymName = branding.gymName || setup.gymName || '';
+      const logoId = branding.logoId || setup.logoId || '';
+      const currencyFormat = branding.currencyFormat || setup.currencyFormat || '';
+      if (currencyFormat) this.setCurrencyFormat(currencyFormat);
+      this.applyAppBranding(logoId, gymName);
+    },
+
     loadAppBranding: function() {
+      // Prefer branding already returned with the session payload (no extra RTT).
+      if (window.LSC_SESSION && (window.LSC_SESSION.branding || window.LSC_SESSION.setup)) {
+        this.applySessionBranding(window.LSC_SESSION);
+        return;
+      }
       if (typeof google !== 'undefined' && google.script && google.script.run && typeof google.script.run.api_getGeneralSettings === 'function') {
         google.script.run
           .withSuccessHandler((res) => {
@@ -657,55 +670,29 @@
       const emailEl = document.getElementById('access-denied-email');
       const title = document.getElementById('access-denied-title');
       const icon = document.getElementById('access-denied-icon');
-      const loginPanel = document.getElementById('access-login-panel');
-      const help = document.getElementById('access-denied-help');
       const fixBox = document.getElementById('access-denied-fix');
       const fixText = document.getElementById('access-denied-fix-text');
       if (boot) boot.classList.add('hidden');
       if (denied) denied.classList.remove('hidden');
-      if (msg) msg.textContent = message || 'Your Google account is not authorized to use this app.';
+      if (msg) msg.textContent = message || 'You do not have access to this application.';
       if (emailEl) emailEl.textContent = email ? ('Account: ' + email) : '';
 
-      const showLogin = !!options.showLogin;
-      if (title) title.textContent = showLogin ? 'Sign in to LSC' : 'Access denied';
+      const needsLink = !!options.showLogin;
+      if (title) title.textContent = needsLink ? 'Open your invitation link' : 'Access denied';
       if (icon) {
-        icon.className = showLogin
+        icon.className = needsLink
           ? 'w-12 h-12 mx-auto rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center'
           : 'w-12 h-12 mx-auto rounded-xl bg-red-50 text-red-500 flex items-center justify-center';
-        icon.innerHTML = '<span class="material-symbols-rounded text-[26px]">' + (showLogin ? 'login' : 'lock') + '</span>';
-      }
-      if (loginPanel) loginPanel.classList.toggle('hidden', !showLogin);
-      if (help) {
-        help.textContent = showLogin
-          ? 'The owner must add your Google email under Settings → Users first.'
-          : 'Ask the gym owner to add your Google email under Settings → Users & Access.';
+        icon.innerHTML = '<span class="material-symbols-rounded text-[26px]">' + (needsLink ? 'mail' : 'lock') + '</span>';
       }
       if (fixBox && fixText) {
         if (options.fix) {
           fixText.textContent = options.fix;
           fixBox.classList.remove('hidden');
-        } else if (showLogin) {
-          fixText.textContent = 'Google hides invitee emails from Execute-as-Me apps. Use login code or your personal invite link — being listed in Users alone is not enough until you verify once.';
-          fixBox.classList.remove('hidden');
         } else {
           fixBox.classList.add('hidden');
         }
       }
-    },
-
-    showLoginError: function(error, fix) {
-      const box = document.getElementById('login-error-box');
-      const errEl = document.getElementById('login-error-text');
-      const fixEl = document.getElementById('login-fix-text');
-      if (!box) return;
-      if (errEl) errEl.textContent = error || 'Something went wrong.';
-      if (fixEl) fixEl.textContent = fix || '';
-      box.classList.remove('hidden');
-    },
-
-    clearLoginError: function() {
-      const box = document.getElementById('login-error-box');
-      if (box) box.classList.add('hidden');
     },
 
     hideBoot: function() {
@@ -751,103 +738,48 @@
       if (callback) callback(data);
     },
 
-    requestLoginCode: function() {
-      const emailInput = document.getElementById('login-email');
-      const status = document.getElementById('login-status');
-      const codeWrap = document.getElementById('login-code-wrap');
-      const verifyBtn = document.getElementById('btn-verify-login-code');
-      const email = emailInput ? String(emailInput.value || '').trim() : '';
-      this.clearLoginError();
-      if (!email) {
-        this.showLoginError('Email is required.', 'Enter the exact Google email the owner added in Users.');
-        return;
-      }
-      if (status) status.textContent = 'Sending login code…';
-      google.script.run
-        .withSuccessHandler((res) => {
-          if (!res || !res.success) {
-            if (status) status.textContent = '';
-            this.showLoginError((res && res.error) || 'Could not send code.', (res && res.fix) || '');
-            return;
-          }
-          this.clearLoginError();
-          if (status) status.textContent = res.message || 'Code sent. Check your inbox.';
-          if (res.fix && status) status.textContent += ' ' + res.fix;
-          if (codeWrap) codeWrap.classList.remove('hidden');
-          if (verifyBtn) verifyBtn.classList.remove('hidden');
-          const codeInput = document.getElementById('login-code');
-          if (codeInput) codeInput.focus();
-        })
-        .withFailureHandler((err) => {
-          if (status) status.textContent = '';
-          this.showLoginError(err && err.message ? err.message : 'Could not send code.', 'Check your connection, then try again. Or ask the owner for your invite link.');
-        })
-        .api_requestLoginCode(email);
+    INVITE_KEY: 'lsc_invite_token',
+
+    getStoredInvite: function() {
+      try { return localStorage.getItem(this.INVITE_KEY) || ''; } catch (e) { return ''; }
     },
 
-    verifyLoginCode: function() {
-      const emailInput = document.getElementById('login-email');
-      const codeInput = document.getElementById('login-code');
-      const status = document.getElementById('login-status');
-      const email = emailInput ? String(emailInput.value || '').trim() : '';
-      const code = codeInput ? String(codeInput.value || '').trim() : '';
-      this.clearLoginError();
-      if (!email || !code) {
-        this.showLoginError('Email and login code are required.', 'Request a code first, then enter the 6-digit value from the email.');
-        return;
-      }
-      if (status) status.textContent = 'Verifying…';
-      google.script.run
-        .withSuccessHandler((res) => {
-          if (!res || !res.success || !res.data) {
-            if (status) status.textContent = '';
-            this.showLoginError((res && res.error) || 'Login failed.', (res && res.fix) || '');
-            return;
-          }
-          if (status) status.textContent = 'Signed in. Loading…';
-          this.applySession(res.data, (session) => {
-            if (session && session.allowed && typeof AppState !== 'undefined') {
-              AppState.bootFromSession(session);
-            }
-          });
-        })
-        .withFailureHandler((err) => {
-          if (status) status.textContent = '';
-          this.showLoginError(err && err.message ? err.message : 'Login failed.', 'Request a new code and try again.');
-        })
-        .api_verifyLoginCode(email, code);
+    storeInvite: function(token) {
+      try {
+        if (token) localStorage.setItem(this.INVITE_KEY, token);
+        else localStorage.removeItem(this.INVITE_KEY);
+      } catch (e) { /* storage unavailable */ }
     },
 
-    redeemInviteFromUrl: function(callback) {
-      const params = window.LSC_PAGE_PARAMS || {};
-      const token = String(params.t || params.invite || '').trim();
-      if (!token) {
-        if (callback) callback(false);
-        return;
-      }
+    // Opens the app from the personal link (?t=...) or from the link remembered on this device.
+    redeemInvite: function(token, fromUrl, callback) {
+      const done = (ok) => { if (callback) callback(ok); };
       google.script.run
         .withSuccessHandler((res) => {
           if (res && res.success && res.data && res.data.allowed) {
-            this.applySession(res.data, callback ? () => callback(true) : null);
+            this.storeInvite(token);
+            this.applySession(res.data, () => done(true));
             return;
           }
-          this.showDenied(
-            (res && res.error) || 'Invite link could not sign you in.',
-            '',
-            {
-              showLogin: true,
-              fix: (res && res.fix) || 'Ask the owner for a fresh invite link, or use email + login code below.'
-            }
-          );
-          if (callback) callback(false);
+          this.storeInvite('');
+          if (fromUrl) {
+            this.showDenied(
+              (res && res.error) || 'This invitation link could not be used.',
+              '',
+              { showLogin: true, fix: (res && res.fix) || 'Ask your admin to send you a new invitation.' }
+            );
+          }
+          done(false);
         })
         .withFailureHandler((err) => {
-          this.showDenied(
-            err && err.message ? err.message : 'Invite link failed.',
-            '',
-            { showLogin: true, fix: 'Ask the owner for a fresh invite link, or use email + login code.' }
-          );
-          if (callback) callback(false);
+          if (fromUrl) {
+            this.showDenied(
+              err && err.message ? err.message : 'This invitation link could not be used.',
+              '',
+              { showLogin: true, fix: 'Check your connection and open the link again.' }
+            );
+          }
+          done(false);
         })
         .api_redeemInviteToken(token);
     },
@@ -863,34 +795,40 @@
             if (!res || !res.success || !res.data) {
               this.showDenied((res && res.error) || 'Could not load session.', '', {
                 showLogin: true,
-                fix: (res && res.fix) || 'Hard-refresh the latest deployment URL. Owner may need to redeploy (Execute as Me, Anyone).'
+                fix: (res && res.fix) || 'Open the link from your invitation email.'
               });
               finish(null);
               return;
             }
             if (!res.data.allowed && res.data.needsLogin) {
-              this.redeemInviteFromUrl((redeemed) => {
-                if (redeemed) {
-                  finish(this.session);
-                  return;
-                }
-                this.applySession(res.data, finish);
-              });
-              return;
+              const stored = this.getStoredInvite();
+              if (stored) {
+                this.redeemInvite(stored, false, (ok) => {
+                  if (ok) finish(this.session);
+                  else this.applySession(res.data, finish);
+                });
+                return;
+              }
             }
             this.applySession(res.data, finish);
           })
           .withFailureHandler((err) => {
             this.showDenied(err && err.message ? err.message : 'Session check failed.', '', {
               showLogin: true,
-              fix: 'Hard-refresh. If the Google “need access” page appears, you are on the wrong URL — use the published /exec link, not /dev or the script editor.'
+              fix: 'Open the link from your invitation email. If you see a Google “need access” page, ask your admin to resend the invitation.'
             });
             finish(null);
           })
           .api_getSession();
       };
 
-      // Rehydrate invitee session (token + server-side temporary user key binding).
+      const params = window.LSC_PAGE_PARAMS || {};
+      const urlToken = String(params.t || params.invite || '').trim();
+      if (urlToken) {
+        this.redeemInvite(urlToken, true, (ok) => finish(ok ? this.session : null));
+        return;
+      }
+
       if (window.LSC_AUTH && window.LSC_AUTH.getToken()) {
         google.script.run
           .withSuccessHandler((res) => {
@@ -929,6 +867,7 @@
       if (!session || !session.allowed) return;
       this.booted = true;
 
+        // Prefetch years in the background (modules can render with current year immediately).
         AppUtils.loadAvailableYears();
 
         // 1. Inject static layout components from templates
@@ -936,8 +875,8 @@
         this.injectTemplate('tpl-comp-bottom-nav', 'mobile-nav-container');
         AccessControl.applyNavVisibility();
 
-        // Load app branding into sidebar
-        AppUtils.loadAppBranding();
+        // Branding comes with the session payload — no extra API round-trip.
+        AppUtils.applySessionBranding(session);
 
         const openSetupBtn = document.getElementById('btn-open-setup');
         if (openSetupBtn) {

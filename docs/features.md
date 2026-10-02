@@ -37,6 +37,10 @@ The Calendar year selector is a dropdown populated from years found in member, p
 
 Member Payment Insights, Dashboard collected-revenue KPIs, and collection charts count only payments with a Paid or Completed status. Overdue, unpaid, pending, and failed payments remain visible in payment history where applicable, but are not counted as collected revenue or member earnings. The same status handling applies whether a payment status is stored as its display label or as a dropdown ID.
 
+## Notes fields
+
+Member, payment, staff, and salary forms do not collect Notes / Additional Notes. Those fields are omitted from the UI and stripped from save/payment APIs so new or edited records do not log notes.
+
 ## Modal form validation
 
 Member, staff, expense, payment, staff salary, and Settings add/edit forms validate every visible required field when Save is clicked. Missing or invalid fields are highlighted and show an inline message; the form is not submitted until those fields are corrected. Conditional fields, such as expense misc details, exit dates, salary coverage dates, and optional initial-payment details, are validated when their corresponding form state makes them visible and required. Expense amount edits use the same validation as the expense form.
@@ -75,13 +79,13 @@ The Dashboard Overdue and Upcoming member tables include a compact Notify/WA act
 
 ## Sign-in, authorization, and multi-user access
 
-The web app requires a Google sign-in (`Anyone` access, execute as the deployer). Data still reads/writes through the deploying account’s Spreadsheet, Drive, Mail, and triggers.
+The web app is published with `Anyone` access and executes as the deployer. Data reads/writes through the deploying account’s Spreadsheet, Drive, Mail, and triggers, so invited users never need access to those files. Users get in through a personal link sent by email.
 
 - **First-run setup:** Owners use **Settings → Setup & Authorization** and click **Authorize Google services** in the UI (no Apps Script editor). Status checks cover Spreadsheet, Settings, Drive, Mail, ScriptApp, and the weekly trigger. **Mark setup complete** stores `SETUP_COMPLETE=YES`.
 - **USERS sheet:** A dedicated `USERS` spreadsheet tab stores `userId`, email, name, status (`Active` / `Invited` / `Disabled`), owner flag, role preset, and a JSON permissions matrix (View / Create / Edit / Delete) for dashboard, members, staff, expenses, calendar, and settings.
-- **Users & Access:** Settings tab to invite Google emails, apply Admin / Manager / Viewer presets, and edit the permission matrix.
-- **Why invitees see a login screen:** With **Execute as: Me**, Google does **not** give the app the visitor’s email for consumer Gmail accounts. Adding someone in USERS is not enough by itself — they must verify identity via a **login code** emailed to that address, or open a **per-user invite link** (`?t=…`).
-- **Share link / QR:** Users tab shows the published `/exec` URL (copy / share / QR). Each user also has a **copy invite link** action. Do not share the Apps Script editor or `/dev` URL.
+- **Users & Access:** Settings tab to add people, apply Admin / Manager / Viewer presets, and edit the per-page permission matrix. Saving a new user can email them a professional message saying they have been given access, with a button to open the app and the list of pages they can use. Nothing about the underlying Sheet, Drive, or script is shared or mentioned.
+- **How invitees sign in:** No password or one-time code. Each user has a **personal link** (`?t=…`). Opening it signs them in, and the device remembers them. Disabling or deleting a user stops the link; **New link** replaces it.
+- **Link / QR:** Each user in the Users tab has a mail icon (send or resend the email) and a QR icon (personal link, QR code, copy, share, new link). Do not share the Apps Script editor or `/dev` URL.
 - **Enforcement:** Navigation and write actions hide when denied; every server API also checks permissions.
 
 ### Client handover checklist
@@ -89,15 +93,15 @@ The web app requires a Google sign-in (`Anyone` access, execute as the deployer)
 1. Share ownership of the Spreadsheet, Apps Script project, and Drive folder with the client.
 2. Client creates a **new web app deployment** (`Execute as: Me`, `Who has access: Anyone`). `clasp push` alone does not change live access — redeploy after changing access.
 3. Client opens the **/exec** URL, signs in, authorizes Google services, completes gym settings, and adds staff users.
-4. Share the Users-tab QR / copy link with invitees (same `/exec` URL). They must use the invited Google account.
+4. Each invited user receives an email with their personal link (or the client shares the link/QR from the Users tab).
 5. Developer may keep Editor access for clasp pushes; the client remains the deployer for Mail/triggers.
 
 ## Settings and dropdown configuration
 
 The Settings module provides a responsive, device-compatible interface organized into four main tabs:
 
-- **General:** Configures gym identity (gym name, owner name, owner email, and gym logo upload with LSC fallback), setup/authorization, financial policies (revenue recognition and currency numbering), database IDs (Spreadsheet and Drive folder with compact copy/open actions), and automated notifications. Mobile general settings use denser two-column rows and a single header Save. Notifications support editable receipt/weekly templates, sample HTML previews, weekly CC recipients, day/time/days-ahead schedule, and selectable report table columns.
-- **Users:** Invite Google accounts and configure per-module View / Create / Edit / Delete access stored in the `USERS` sheet.
+- **General:** Configures gym identity (gym name, owner name, owner email, and gym logo upload with LSC fallback), setup/authorization, financial policies (revenue recognition and currency numbering), database IDs (Spreadsheet and Drive folder with compact copy/open actions), and automated notifications. Mobile general settings use denser two-column rows and a single header Save. Notifications support editable receipt/weekly templates, sample HTML previews, **Send test** (delivers a sample receipt or weekly report to the signed-in admin inbox, without emailing members or CC), weekly CC recipients, day/time/days-ahead schedule, and selectable report table columns.
+- **Users:** Add people and configure per-page View / Create / Edit / Delete access stored in the `USERS` sheet. Invitees only need their personal link; they are never given access to the Spreadsheet, Drive folder, or Apps Script project, because the app reads and writes data on their behalf.
 - **Dropdowns:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
 - **Guide:** In-app product walkthrough (`View_Guide.html`) with search, sticky section chips, and expand/collapse cards. Covers architecture (web app ↔ Sheets ↔ Drive ↔ Mail), getting started, sign-in/invites/roles, every module, Dashboard metric formulas, money rules (Anchor/Split, currency, Paid status), notifications, everyday UX, and admin notes. Readable on mobile and desktop. No Save action — documentation only. When user-facing behavior changes, update this Guide in the same change as `docs/features.md`.
 

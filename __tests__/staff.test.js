@@ -374,29 +374,14 @@ describe('Staff Module - Action Needed & Salary Cycle Calculations', () => {
       expect(StaffApp.parseDateRobust('2026-05-20')).toEqual(new Date(Date.UTC(2026, 4, 20)));
     });
 
-    test('collapsible notes wrapper toggles based on note content', () => {
-      const origGetElementById = global.document.getElementById;
-      try {
-        const mockClassList = { remove: jest.fn(), add: jest.fn() };
-        global.document.getElementById = jest.fn((id) => {
-          if (id === 'stf-notes-wrapper' || id === 'txn-notes-wrapper') {
-            return { classList: mockClassList };
-          }
-          return getMockElement(id);
-        });
-
-        // When opening modal with notes
-        StaffApp.openModal({ staffId: 'STF-1', fullName: 'John', notes: 'Great trainer' });
-        expect(mockClassList.remove).toHaveBeenCalledWith('hidden');
-
-        // When opening modal without notes
-        mockClassList.remove.mockClear();
-        mockClassList.add.mockClear();
-        StaffApp.openModal({ staffId: 'STF-2', fullName: 'Jane', notes: '' });
-        expect(mockClassList.add).toHaveBeenCalledWith('hidden');
-      } finally {
-        global.document.getElementById = origGetElementById;
-      }
+    test('staff and salary forms omit notes fields from the UI', () => {
+      const viewHtml = fs.readFileSync(path.join(__dirname, '../src/View_Staff.html'), 'utf8');
+      const scriptHtml = fs.readFileSync(path.join(__dirname, '../src/Script_Staff.html'), 'utf8');
+      expect(viewHtml).not.toContain('id="stf-notes"');
+      expect(viewHtml).not.toContain('id="txn-notes"');
+      expect(viewHtml).not.toContain('Additional Notes');
+      expect(scriptHtml).not.toContain("notes: document.getElementById('stf-notes')");
+      expect(scriptHtml).not.toContain("notes: document.getElementById('txn-notes')");
     });
 
     test('adjusted amount payment for joining month marks cycle paid without duplicate pending cycle', () => {

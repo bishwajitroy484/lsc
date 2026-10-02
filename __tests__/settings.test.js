@@ -416,7 +416,14 @@ describe('Settings Module', () => {
       expect(viewHtml).toContain('id="delete-opt-modal"');
       expect(viewHtml).toContain('id="notification-message-modal"');
       expect(viewHtml).toContain('id="notification-preview-modal"');
+      expect(viewHtml).toContain('id="btn-test-receipt-email"');
+      expect(viewHtml).toContain('id="btn-test-weekly-email"');
+      expect(viewHtml).toContain('sendTestNotificationEmail');
       expect(viewHtml).not.toContain('id="notification-modal"');
+
+      const settingsScript = fs.readFileSync(path.join(__dirname, '../src/Script_Settings.html'), 'utf8');
+      expect(settingsScript).toContain('sendTestNotificationEmail');
+      expect(settingsScript).toContain('api_sendTestNotificationEmail');
     });
 
     test('View_Guide.html includes searchable walkthrough sections and chips', () => {

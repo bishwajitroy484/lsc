@@ -80,6 +80,7 @@ function api_saveStaff(staffData) {
 
     staffData.updatedAt = now;
     staffData.updatedBy = userEmail;
+    delete staffData.notes;
     
     let savedData;
     if (!isNew) {
@@ -184,6 +185,7 @@ function api_recordStaffTransaction(txnData) {
     
     txnData.updatedAt = now;
     txnData.updatedBy = userEmail;
+    delete txnData.notes;
     
     let savedData;
     if (txnData.paymentId) {

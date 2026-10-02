@@ -19,9 +19,8 @@ describe('Access control foundation', () => {
     expect(accessSrc).toContain('function api_authorizeServices');
     expect(accessSrc).toContain('function api_listUsers');
     expect(accessSrc).toContain('function api_saveUser');
-    expect(accessSrc).toContain('function api_getWebAppShareInfo');
-    expect(accessSrc).toContain('function api_requestLoginCode');
-    expect(accessSrc).toContain('function api_verifyLoginCode');
+    expect(accessSrc).toContain('function api_deleteUser');
+    expect(accessSrc).toContain('function api_sendInvitation');
     expect(accessSrc).toContain('function api_redeemInviteToken');
     expect(accessSrc).toContain('function api_invoke');
     expect(accessSrc).toContain('bindIdentityToTemporaryKey_');
@@ -31,13 +30,14 @@ describe('Access control foundation', () => {
     expect(accessSrc).toContain("insertSheet('USERS')");
   });
 
-  test('Index exposes invitee login panel when Google email is unavailable', () => {
-    expect(indexHtml).toContain('id="access-login-panel"');
-    expect(indexHtml).toContain('id="btn-send-login-code"');
+  test('Index shows a simple access screen without a code login form', () => {
+    expect(indexHtml).not.toContain('access-login-panel');
+    expect(indexHtml).not.toContain('login-code');
     expect(indexHtml).toContain('id="access-denied-fix"');
     expect(indexHtml).toContain('id="action-progress-overlay"');
     expect(globalState).toContain('installAuthScriptRunBridge');
-    expect(globalState).toContain('requestLoginCode');
+    expect(globalState).toContain('redeemInvite');
+    expect(globalState).not.toContain('requestLoginCode');
     expect(globalState).toContain('ActionProgress');
   });
 
@@ -63,7 +63,50 @@ describe('Access control foundation', () => {
     expect(viewSettings).toContain('id="tab-btn-users"');
     expect(viewSettings).toContain('id="pane-users"');
     expect(viewSettings).toContain('id="user-perm-matrix"');
-    expect(viewSettings).toContain('id="users-share-card"');
-    expect(viewSettings).toContain('id="users-share-qr"');
+    expect(viewSettings).toContain('id="user-invite-modal"');
+    expect(viewSettings).toContain('id="user-edit-send"');
+    expect(viewSettings).not.toMatch(/Spreadsheet, Drive folder, and Script/i);
+  });
+
+  test('inviting a user never shares the Sheet, Drive folder, or script', () => {
+    expect(accessSrc).not.toMatch(/addEditor|addViewer|removeEditor|removeViewer/);
+    expect(accessSrc).not.toContain('syncUserGoogleResources_');
+    expect(accessSrc).not.toContain('putLoginOtp_');
+    expect(accessSrc).not.toContain('api_requestLoginCode');
+    expect(accessSrc).not.toContain('api_verifyLoginCode');
+  });
+
+  describe('invitation email', () => {
+    const vm = require('vm');
+    let ctx;
+    beforeAll(() => {
+      ctx = vm.createContext({ console });
+      vm.runInContext(accessSrc, ctx);
+    });
+
+    test('lists only viewable pages with their level', () => {
+      const rows = ctx.describeAccess_(ctx.getPresetPermissions_('manager'));
+      const byPage = Object.fromEntries(rows.map(r => [r.page, r.level]));
+      expect(byPage.Members).toBe('View, add, edit');
+      expect(byPage.Calendar).toBe('View only');
+      expect(byPage.Settings).toBeUndefined();
+    });
+
+    test('email greets the user, links to the app, and never mentions Sheet/Drive/Script', () => {
+      const mail = ctx.buildInvitationEmail_({
+        appName: 'Acme Gym',
+        name: 'Riya <b>',
+        invitedBy: 'Sam',
+        url: 'https://script.google.com/macros/s/ID/exec?t=inv_abc',
+        access: ctx.describeAccess_(ctx.getPresetPermissions_('viewer'))
+      });
+      expect(mail.subject).toBe('You now have access to Acme Gym');
+      expect(mail.html).toContain('href="https://script.google.com/macros/s/ID/exec?t=inv_abc"');
+      expect(mail.html).toContain('Riya &lt;b&gt;');
+      expect(mail.html).toContain('Sam has granted you access to the <strong>Acme Gym</strong> application');
+      expect(mail.html).toContain('View only');
+      expect(mail.text).toContain('Dashboard: View only');
+      expect(mail.html + mail.text).not.toMatch(/spreadsheet|google sheet|drive|script editor|code/i);
+    });
   });
 });

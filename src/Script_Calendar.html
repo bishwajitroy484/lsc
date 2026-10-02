@@ -14,6 +14,7 @@
       this.currentDate = new Date(this.today.getFullYear(), this.today.getMonth(), 1);
       this.selectedDate = this.today.getDate();
       this.bindControls();
+      AppUtils.populateYearSelect('cal-year-select', String(this.currentDate.getFullYear()));
       AppUtils.loadAvailableYears(() => {
         AppUtils.populateYearSelect('cal-year-select', String(this.currentDate.getFullYear()));
       });
