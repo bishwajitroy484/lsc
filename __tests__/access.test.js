@@ -17,6 +17,10 @@ describe('Access control foundation', () => {
   test('API_Access exposes session, authorize, and user management APIs', () => {
     expect(accessSrc).toContain('function api_getSession');
     expect(accessSrc).toContain('function api_authorizeServices');
+    expect(accessSrc).toContain('calendarOk');
+    expect(accessSrc).toContain('probeCalendarAccess_');
+    expect(accessSrc).toContain('getAuthorizationUrlIfNeeded_');
+    expect(accessSrc).toContain('authorizationUrl');
     expect(accessSrc).toContain('function api_listUsers');
     expect(accessSrc).toContain('function api_saveUser');
     expect(accessSrc).toContain('function api_deleteUser');

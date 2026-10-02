@@ -102,7 +102,7 @@
       const list = document.getElementById('setup-status-list');
       if (list) {
         let shm = '';
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 8; i++) {
           shm += '<div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>';
         }
         list.innerHTML = shm;
@@ -133,6 +133,7 @@
         ['Drive', setup.driveOk],
         ['Mail', setup.mailOk],
         ['ScriptApp', setup.scriptAppOk],
+        ['Google Calendar', setup.calendarOk],
         ['Weekly trigger', setup.triggerOk],
         ['Setup done', setup.setupComplete]
       ];
@@ -145,7 +146,26 @@
           (ok ? 'check_circle' : 'error') + '</span></div>';
       }).join('');
       const hint = document.getElementById('setup-auth-hint');
-      if (hint && setup.authError) hint.textContent = setup.authError;
+      if (hint) {
+        if (setup.authError) {
+          hint.textContent = setup.authError;
+        } else if (!setup.calendarOk) {
+          hint.textContent = 'Google Calendar permission is missing. Click Authorize — if prompted, allow Calendar, then click Authorize again.';
+        } else {
+          hint.textContent = 'Sign in as the deployer Google account, then authorize once (Mail, ScriptApp, Calendar).';
+        }
+      }
+    },
+
+    openAuthorizationUrl: function(url) {
+      const href = String(url || '').trim();
+      if (!href) return false;
+      try {
+        window.open(href, '_blank', 'noopener');
+        return true;
+      } catch (e) {
+        return false;
+      }
     },
 
     authorizeServices: function() {
@@ -162,7 +182,12 @@
             btn.innerHTML = authBtnHtml;
           }
           if (!res || !res.success) {
-            this.showToast((res && res.error) || 'Authorization failed.', true);
+            if (res && res.authorizationUrl) {
+              this.openAuthorizationUrl(res.authorizationUrl);
+              this.showToast('Complete the Google consent screen (allow Calendar), then click Authorize again.', true);
+            } else {
+              this.showToast((res && res.error) || 'Authorization failed.', true);
+            }
             if (res && res.data) this.renderSetupStatus(res.data);
             return;
           }
@@ -175,7 +200,8 @@
             btn.disabled = false;
             btn.innerHTML = authBtnHtml;
           }
-          this.showToast(err && err.message ? err.message : 'Authorization failed.', true);
+          const msg = err && err.message ? err.message : 'Authorization failed.';
+          this.showToast(msg, true);
         })
         .api_authorizeServices();
     },
