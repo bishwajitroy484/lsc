@@ -550,6 +550,30 @@ function requireAnyViewPermission_() {
   return { ok: true, context: context };
 }
 
+function getAuthorizationUrlIfNeeded_() {
+  try {
+    const info = ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL);
+    if (info && info.getAuthorizationStatus() === ScriptApp.AuthorizationStatus.REQUIRED) {
+      return String(info.getAuthorizationUrl() || '');
+    }
+  } catch (error) {
+    // Ignore — caller will fall back to a generic consent message.
+  }
+  return '';
+}
+
+function probeCalendarAccess_() {
+  try {
+    CalendarApp.getDefaultCalendar().getName();
+    return { ok: true, error: '' };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error && error.message ? error.message : String(error)
+    };
+  }
+}
+
 function getSetupStatus_(options) {
   const opts = options || {};
   const quick = !!opts.quick;
@@ -566,14 +590,17 @@ function getSetupStatus_(options) {
 
   let mailOk = false;
   let scriptAppOk = false;
+  let calendarOk = false;
   let triggerOk = false;
   let authError = '';
+  let authorizationUrl = '';
   let servicesAuthorized = false;
 
   if (quick) {
-    // Boot: trust SETTINGS flags; full MailApp/trigger probes run in Settings/setup APIs.
+    // Boot: trust SETTINGS flags; full MailApp/trigger/calendar probes run in Settings/setup APIs.
     mailOk = servicesFlag;
     scriptAppOk = servicesFlag;
+    calendarOk = servicesFlag;
     servicesAuthorized = servicesFlag || (setupComplete && driveOk);
   } else {
     try {
@@ -593,7 +620,15 @@ function getSetupStatus_(options) {
       scriptAppOk = false;
       if (!authError) authError = error && error.message ? error.message : String(error);
     }
-    servicesAuthorized = mailOk && scriptAppOk;
+
+    const calendarProbe = probeCalendarAccess_();
+    calendarOk = calendarProbe.ok;
+    if (!calendarOk) {
+      if (!authError) authError = calendarProbe.error || 'Google Calendar permission is missing.';
+      authorizationUrl = getAuthorizationUrlIfNeeded_();
+    }
+
+    servicesAuthorized = mailOk && scriptAppOk && calendarOk;
   }
 
   return {
@@ -602,10 +637,12 @@ function getSetupStatus_(options) {
     driveOk: driveOk,
     mailOk: mailOk,
     scriptAppOk: scriptAppOk,
+    calendarOk: calendarOk,
     triggerOk: triggerOk,
     servicesAuthorized: servicesAuthorized,
     setupComplete: setupComplete,
     authError: authError,
+    authorizationUrl: authorizationUrl,
     gymName: gymName,
     logoId: logoId,
     currencyFormat: currencyFormat,
@@ -935,7 +972,8 @@ function api_sendInvitation(userId) {
 }
 
 /**
- * Triggers Google OAuth consent for Mail / ScriptApp / Sheets / Drive by touching services.
+ * Triggers Google OAuth consent for Mail / ScriptApp / Sheets / Drive / Calendar by touching services.
+ * When a new scope (e.g. Calendar) is missing, returns authorizationUrl so the UI can open Google consent.
  */
 function api_authorizeServices() {
   try {
@@ -947,7 +985,18 @@ function api_authorizeServices() {
     if (effective && active !== effective) {
       return {
         success: false,
-        error: 'Only the Google account that deployed this app can grant Mail, Drive, and trigger permissions.'
+        error: 'Only the Google account that deployed this app can grant Mail, Drive, Calendar, and trigger permissions.'
+      };
+    }
+
+    // If Apps Script already knows consent is incomplete, send the user to Google first.
+    const pendingAuthUrl = getAuthorizationUrlIfNeeded_();
+    if (pendingAuthUrl) {
+      return {
+        success: false,
+        error: 'Additional Google permission is required (Calendar). Complete the consent screen, then click Authorize again.',
+        authorizationUrl: pendingAuthUrl,
+        data: getSetupStatus_()
       };
     }
 
@@ -955,6 +1004,17 @@ function api_authorizeServices() {
     ensureUsersSheet_();
     MailApp.getRemainingDailyQuota();
     ScriptApp.getProjectTriggers();
+
+    const calendarProbe = probeCalendarAccess_();
+    if (!calendarProbe.ok) {
+      const authUrl = getAuthorizationUrlIfNeeded_();
+      return {
+        success: false,
+        error: 'Google Calendar permission is missing. Open Google consent, allow Calendar access for this app, then click Authorize again.',
+        authorizationUrl: authUrl || '',
+        data: getSetupStatus_()
+      };
+    }
 
     const settings = readSettingsMapForAccess_();
     if (settings.DRIVE_ID) {
@@ -968,13 +1028,15 @@ function api_authorizeServices() {
     upsertSettingKey_('SERVICES_AUTHORIZED', 'YES');
     return {
       success: true,
-      message: 'Google services authorized successfully.',
+      message: 'Google services authorized successfully (Mail, ScriptApp, Calendar).',
       data: getSetupStatus_()
     };
   } catch (error) {
+    const authUrl = getAuthorizationUrlIfNeeded_();
     return {
       success: false,
       error: error.message || String(error),
+      authorizationUrl: authUrl || '',
       data: getSetupStatus_()
     };
   }

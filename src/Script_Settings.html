@@ -23,9 +23,13 @@
       'NOTIFY_PAYMENT_RECEIPT', 'NOTIFY_WEEKLY_REPORT', 'NOTIFY_REPORT_DAY', 'NOTIFY_REPORT_HOUR',
       'NOTIFY_REPORT_DAYS', 'NOTIFY_WEEKLY_CC', 'NOTIFY_WEEKLY_FIELDS',
       'NOTIFY_RECEIPT_SUBJECT', 'NOTIFY_RECEIPT_BODY',
-      'NOTIFY_WEEKLY_SUBJECT', 'NOTIFY_WEEKLY_INTRO'
+      'NOTIFY_WEEKLY_SUBJECT', 'NOTIFY_WEEKLY_INTRO',
+      'ENABLE_CALENDAR_DUE_EVENTS', 'CALENDAR_DUE_HOUR', 'CALENDAR_DUE_DURATION_MIN'
     ],
-    checkboxKeys: ['ENABLE_NOTIFICATION', 'NOTIFY_PAYMENT_RECEIPT', 'NOTIFY_WEEKLY_REPORT'],
+    checkboxKeys: [
+      'ENABLE_NOTIFICATION', 'NOTIFY_PAYMENT_RECEIPT', 'NOTIFY_WEEKLY_REPORT',
+      'ENABLE_CALENDAR_DUE_EVENTS'
+    ],
     editingMessageType: null,
 
     defaultTemplates: {
@@ -98,7 +102,7 @@
       const list = document.getElementById('setup-status-list');
       if (list) {
         let shm = '';
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 8; i++) {
           shm += '<div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>';
         }
         list.innerHTML = shm;
@@ -129,6 +133,7 @@
         ['Drive', setup.driveOk],
         ['Mail', setup.mailOk],
         ['ScriptApp', setup.scriptAppOk],
+        ['Google Calendar', setup.calendarOk],
         ['Weekly trigger', setup.triggerOk],
         ['Setup done', setup.setupComplete]
       ];
@@ -141,7 +146,26 @@
           (ok ? 'check_circle' : 'error') + '</span></div>';
       }).join('');
       const hint = document.getElementById('setup-auth-hint');
-      if (hint && setup.authError) hint.textContent = setup.authError;
+      if (hint) {
+        if (setup.authError) {
+          hint.textContent = setup.authError;
+        } else if (!setup.calendarOk) {
+          hint.textContent = 'Google Calendar permission is missing. Click Authorize — if prompted, allow Calendar, then click Authorize again.';
+        } else {
+          hint.textContent = 'Sign in as the deployer Google account, then authorize once (Mail, ScriptApp, Calendar).';
+        }
+      }
+    },
+
+    openAuthorizationUrl: function(url) {
+      const href = String(url || '').trim();
+      if (!href) return false;
+      try {
+        window.open(href, '_blank', 'noopener');
+        return true;
+      } catch (e) {
+        return false;
+      }
     },
 
     authorizeServices: function() {
@@ -158,7 +182,12 @@
             btn.innerHTML = authBtnHtml;
           }
           if (!res || !res.success) {
-            this.showToast((res && res.error) || 'Authorization failed.', true);
+            if (res && res.authorizationUrl) {
+              this.openAuthorizationUrl(res.authorizationUrl);
+              this.showToast('Complete the Google consent screen (allow Calendar), then click Authorize again.', true);
+            } else {
+              this.showToast((res && res.error) || 'Authorization failed.', true);
+            }
             if (res && res.data) this.renderSetupStatus(res.data);
             return;
           }
@@ -171,7 +200,8 @@
             btn.disabled = false;
             btn.innerHTML = authBtnHtml;
           }
-          this.showToast(err && err.message ? err.message : 'Authorization failed.', true);
+          const msg = err && err.message ? err.message : 'Authorization failed.';
+          this.showToast(msg, true);
         })
         .api_authorizeServices();
     },
@@ -626,6 +656,13 @@
        const daysEl = document.getElementById('gen-NOTIFY_REPORT_DAYS');
        if (daysEl && !hasKey('NOTIFY_REPORT_DAYS') && !daysEl.value) daysEl.value = '7';
 
+       const calHourEl = document.getElementById('gen-CALENDAR_DUE_HOUR');
+       if (calHourEl && !hasKey('CALENDAR_DUE_HOUR') && !calHourEl.value) calHourEl.value = '9';
+       const calDurEl = document.getElementById('gen-CALENDAR_DUE_DURATION_MIN');
+       if (calDurEl && !hasKey('CALENDAR_DUE_DURATION_MIN') && !calDurEl.value) calDurEl.value = '30';
+       const calEnableEl = document.getElementById('gen-ENABLE_CALENDAR_DUE_EVENTS');
+       if (calEnableEl && !hasKey('ENABLE_CALENDAR_DUE_EVENTS')) calEnableEl.checked = false;
+
        const receiptSubject = document.getElementById('gen-NOTIFY_RECEIPT_SUBJECT');
        const receiptBody = document.getElementById('gen-NOTIFY_RECEIPT_BODY');
        if (receiptSubject && !String(receiptSubject.value || '').trim()) receiptSubject.value = this.defaultTemplates.receipt.subject;
@@ -644,6 +681,7 @@
        this.updateCurrencyExplanation();
        this.toggleNotificationView();
        this.updateNotificationSummary();
+       this.toggleCalendarDueView();
     },
 
     onLogoFileSelected: function(input) {
@@ -825,6 +863,29 @@
         }
       }
       this.updateNotificationSummary();
+    },
+
+    toggleCalendarDueView: function() {
+      const toggle = document.getElementById('gen-ENABLE_CALENDAR_DUE_EVENTS');
+      const configArea = document.getElementById('calendar-due-config-area');
+      const statusBadge = document.getElementById('calendar-due-status-badge');
+      if (!toggle) return;
+
+      const isEnabled = toggle.checked;
+      if (configArea) {
+        if (isEnabled) configArea.classList.remove('hidden');
+        else configArea.classList.add('hidden');
+      }
+
+      if (statusBadge) {
+        if (isEnabled) {
+          statusBadge.className = 'text-[10px] font-semibold tracking-wider text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200';
+          statusBadge.textContent = 'Enabled';
+        } else {
+          statusBadge.className = 'text-[10px] font-semibold tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded';
+          statusBadge.textContent = 'Disabled';
+        }
+      }
     },
 
     formatReportHourLabel: function(hourValue) {

@@ -289,6 +289,9 @@ function api_saveMember(memberData) {
           if (typeof maybeSendPaymentReceipt_ === 'function') {
             maybeSendPaymentReceipt_(initialPayment);
           }
+          if (typeof syncMemberDueCalendarEvent_ === 'function') {
+            syncMemberDueCalendarEvent_(memberData.memberId, initialPayment);
+          }
       }
     }
     return { success: true, data: savedData, message: isNew ? "Member added successfully." : "Member updated successfully." };
@@ -302,6 +305,9 @@ function api_deleteMember(memberId) {
     const gate = requirePermission_('members', 'delete');
     if (!gate.ok) return gate.response;
     if (!memberId) throw new Error("Member ID is missing.");
+    if (typeof clearMemberDueCalendarEvent_ === 'function') {
+      clearMemberDueCalendarEvent_(memberId);
+    }
     DB.remove('MEMBERS', memberId);
     return { success: true, message: "Member deleted successfully." };
   } catch (error) {
@@ -413,6 +419,10 @@ function api_recordPayment(paymentData) {
       maybeSendPaymentReceipt_(savedData || paymentData);
     }
 
+    if (typeof syncMemberDueCalendarEvent_ === 'function') {
+      syncMemberDueCalendarEvent_(paymentData.memberId, savedData || paymentData);
+    }
+
     return { success: true, data: savedData, message: isNewPayment ? "Payment recorded successfully." : "Payment updated successfully." };
   } catch (error) {
     return { success: false, error: error.toString() };
@@ -424,7 +434,19 @@ function api_deletePayment(paymentId) {
     const gate = requirePermission_('members', 'delete');
     if (!gate.ok) return gate.response;
     if (!paymentId) throw new Error("Payment ID is missing.");
+
+    const payments = DB.read('PAYMENTS') || [];
+    const existing = payments.find(function(p) {
+      return String(p.paymentId) === String(paymentId);
+    });
+    const memberId = existing ? existing.memberId : '';
+
     DB.remove('PAYMENTS', paymentId);
+
+    if (memberId && typeof syncMemberDueCalendarEvent_ === 'function') {
+      syncMemberDueCalendarEvent_(memberId, null);
+    }
+
     return { success: true, message: "Payment deleted successfully." };
   } catch (error) {
     return { success: false, error: error.toString() };

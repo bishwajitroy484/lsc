@@ -320,7 +320,7 @@
     </section>
 
     <!-- 8 Calendar -->
-    <section id="guide-sec-calendar" data-guide-section="calendar" data-guide-search="calendar due soon renewals month drawer legend" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+    <section id="guide-sec-calendar" data-guide-section="calendar" data-guide-search="calendar due soon renewals month drawer legend google calendar reminder quarterly event" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
       <button type="button" data-guide-toggle="calendar" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
         <span class="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-700 border border-cyan-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">calendar_month</span></span>
         <div class="flex-1 min-w-0">
@@ -339,6 +339,7 @@
           <li><strong>Who appears</strong> — active non-ad-hoc/trial members with a next due in the month <em>or</em> within about 10 days.</li>
           <li><strong>Next due</strong> — usually day after latest payment end date; otherwise from paid/join + plan length. Failed/pending/cancelled payments are skipped.</li>
           <li>Year list matches Dashboard / Members / Staff / Expenses (includes current year even with no data).</li>
+          <li><strong>Google Calendar reminders</strong> — optional in Settings → General. When enabled, each paid <em>quarterly</em> payment creates a timed event on the owner calendar for the next due date; renewing replaces the previous event. Trial/Ad-hoc/Monthly/Annual are skipped. No backfill of existing members.</li>
         </ul>
       </div>
     </section>
@@ -360,7 +361,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">General</p>
-            <p class="text-[11px] text-slate-600 leading-relaxed">Gym identity, Setup &amp; Authorization, revenue recognition, currency style, Spreadsheet/Drive IDs, notification templates and schedule.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Gym identity, Setup &amp; Authorization, revenue recognition, currency style, Spreadsheet/Drive IDs, notification templates/schedule, and Google Calendar due reminders.</p>
           </div>
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">Users</p>
@@ -418,7 +419,7 @@
     </section>
 
     <!-- 11 Notifications -->
-    <section id="guide-sec-notifications" data-guide-section="notifications" data-guide-search="notifications email receipt weekly report cc schedule columns mail" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+    <section id="guide-sec-notifications" data-guide-section="notifications" data-guide-search="notifications email receipt weekly report cc schedule columns mail google calendar due reminder quarterly" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
       <button type="button" data-guide-toggle="notifications" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
         <span class="w-9 h-9 rounded-xl bg-pink-50 text-pink-700 border border-pink-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">mail</span></span>
         <div class="flex-1 min-w-0">
@@ -443,6 +444,10 @@
           </div>
         </div>
         <p class="text-[11px] text-slate-500 leading-relaxed">Note: the weekly report’s “due” uses payment end dates; the Calendar screen’s next due is usually end date + 1 day. Both are intentional for their jobs.</p>
+        <div class="rounded-xl border border-teal-100 bg-teal-50/40 p-3">
+          <p class="text-[11px] font-bold text-teal-900 mb-1">Google Calendar due events</p>
+          <p class="text-[11px] text-slate-600 leading-relaxed">Separate toggle under Settings → General. Opt-in, quarterly only, timed (not all-day) events on the deployer/owner calendar. Re-authorize Google services once after deploy so Calendar access is granted.</p>
+        </div>
       </div>
     </section>
 
