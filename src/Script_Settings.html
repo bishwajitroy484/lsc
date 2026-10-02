@@ -1066,6 +1066,38 @@
         .api_previewNotificationEmail(kind, this.collectNotificationDraft());
     },
 
+    sendTestNotificationEmail: function(type) {
+      const kind = type === 'weekly' ? 'weekly' : 'receipt';
+      const btnId = kind === 'weekly' ? 'btn-test-weekly-email' : 'btn-test-receipt-email';
+      const btn = document.getElementById(btnId);
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[15px]">progress_activity</span><span>Sending…</span>';
+      }
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+          }
+          if (!res || !res.success) {
+            this.showToast((res && res.error) || 'Could not send test email.', true);
+            return;
+          }
+          this.showToast(res.message || 'Test email sent. Check your inbox.');
+        })
+        .withFailureHandler((err) => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+          }
+          this.showToast(err && err.message ? err.message : 'Could not send test email.', true);
+        })
+        .api_sendTestNotificationEmail(kind, this.collectNotificationDraft());
+    },
+
     closePreviewModal: function() {
       this.closeModalById('notification-preview-modal', 'notification-preview-modal-content');
     },

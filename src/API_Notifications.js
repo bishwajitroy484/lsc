@@ -461,65 +461,131 @@ function runWeeklyMemberDueReport() {
   };
 }
 
+function mergeNotificationDraftConfig_(draftConfig) {
+  const saved = getNotificationConfig_();
+  const draft = draftConfig || {};
+  return Object.assign({}, saved, {
+    gymName: draft.gymName || saved.gymName,
+    ownerName: draft.ownerName || saved.ownerName || 'there',
+    ownerEmail: draft.ownerEmail || saved.ownerEmail,
+    weeklyCc: normalizeEmailList_(draft.weeklyCc !== undefined ? draft.weeklyCc : saved.weeklyCc),
+    reportDays: Math.min(30, Math.max(1, parseInt(draft.reportDays || saved.reportDays, 10) || 7)),
+    receiptSubject: draft.receiptSubject || saved.receiptSubject,
+    receiptBody: draft.receiptBody || saved.receiptBody,
+    weeklySubject: draft.weeklySubject || saved.weeklySubject,
+    weeklyIntro: draft.weeklyIntro || saved.weeklyIntro,
+    weeklyFields: parseWeeklyFields_(draft.weeklyFields || saved.weeklyFields)
+  });
+}
+
+function buildSampleNotificationMail_(type, config) {
+  if (String(type || '').toLowerCase() === 'receipt') {
+    const sampleMember = {
+      fullName: 'Priya Kapoor',
+      memberId: 'MEM-1120',
+      email: 'priya.kapoor@email.com'
+    };
+    const samplePayment = {
+      amount: 4500,
+      paidDate: new Date(),
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 90 * 86400000)
+    };
+    return {
+      kind: 'receipt',
+      previewTo: sampleMember.email,
+      previewCc: '',
+      mail: buildPaymentReceiptEmail_(sampleMember, samplePayment, config, 'Quarterly Plan')
+    };
+  }
+
+  const report = buildSampleWeeklyReport_(config.reportDays);
+  return {
+    kind: 'weekly',
+    previewTo: config.ownerEmail || 'owner@example.com',
+    previewCc: config.weeklyCc || '',
+    mail: buildWeeklyReportEmail_(config, report)
+  };
+}
+
+function injectTestEmailBanner_(htmlBody) {
+  const banner =
+    '<div style="margin:0 0 16px;padding:10px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;color:#92400e;font-size:13px;font-weight:600">' +
+    'This is a test email from LSC Settings. No member or CC recipient was notified.' +
+    '</div>';
+  const marker = '<div style="padding:22px">';
+  if (String(htmlBody || '').indexOf(marker) >= 0) {
+    return String(htmlBody).replace(marker, marker + banner);
+  }
+  return banner + String(htmlBody || '');
+}
+
 function api_previewNotificationEmail(type, draftConfig) {
   try {
     const gate = requirePermission_('settings', 'view');
     if (!gate.ok) return gate.response;
-    const saved = getNotificationConfig_();
-    const draft = draftConfig || {};
-    const config = Object.assign({}, saved, {
-      gymName: draft.gymName || saved.gymName,
-      ownerName: draft.ownerName || saved.ownerName || 'there',
-      ownerEmail: draft.ownerEmail || saved.ownerEmail,
-      weeklyCc: normalizeEmailList_(draft.weeklyCc !== undefined ? draft.weeklyCc : saved.weeklyCc),
-      reportDays: Math.min(30, Math.max(1, parseInt(draft.reportDays || saved.reportDays, 10) || 7)),
-      receiptSubject: draft.receiptSubject || saved.receiptSubject,
-      receiptBody: draft.receiptBody || saved.receiptBody,
-      weeklySubject: draft.weeklySubject || saved.weeklySubject,
-      weeklyIntro: draft.weeklyIntro || saved.weeklyIntro,
-      weeklyFields: parseWeeklyFields_(draft.weeklyFields || saved.weeklyFields)
-    });
-
-    if (String(type || '').toLowerCase() === 'receipt') {
-      const sampleMember = {
-        fullName: 'Priya Kapoor',
-        memberId: 'MEM-1120',
-        email: 'priya.kapoor@email.com'
-      };
-      const samplePayment = {
-        amount: 4500,
-        paidDate: new Date(),
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 90 * 86400000)
-      };
-      const mail = buildPaymentReceiptEmail_(sampleMember, samplePayment, config, 'Quarterly Plan');
-      return {
-        success: true,
-        data: {
-          to: sampleMember.email,
-          cc: '',
-          subject: mail.subject,
-          htmlBody: mail.htmlBody,
-          isSample: true
-        }
-      };
-    }
-
-    // Preview always uses polished sample rows so admins can see exact formatting.
-    const report = buildSampleWeeklyReport_(config.reportDays);
-    const mail = buildWeeklyReportEmail_(config, report);
+    const config = mergeNotificationDraftConfig_(draftConfig);
+    const built = buildSampleNotificationMail_(type, config);
     return {
       success: true,
       data: {
-        to: config.ownerEmail || 'owner@example.com',
-        cc: config.weeklyCc || '',
-        subject: mail.subject,
-        htmlBody: mail.htmlBody,
+        to: built.previewTo,
+        cc: built.previewCc,
+        subject: built.mail.subject,
+        htmlBody: built.mail.htmlBody,
         isSample: true
       }
     };
   } catch (error) {
     return { success: false, error: error.message || String(error) };
+  }
+}
+
+/**
+ * Sends a sample receipt or weekly report email to the signed-in admin inbox.
+ * Uses current (unsaved) draft templates from the Settings form when provided.
+ */
+function api_sendTestNotificationEmail(type, draftConfig) {
+  try {
+    const gate = requirePermission_('settings', 'edit');
+    if (!gate.ok) return gate.response;
+
+    const config = mergeNotificationDraftConfig_(draftConfig);
+    const built = buildSampleNotificationMail_(type, config);
+    const recipient = String(
+      (gate.context && gate.context.email) ||
+      config.ownerEmail ||
+      ''
+    ).trim();
+
+    if (!recipient || recipient.indexOf('@') < 0) {
+      return {
+        success: false,
+        error: 'No inbox email available. Sign in with your Google account, or set Owner email under Settings → General.'
+      };
+    }
+
+    const subject = '[TEST] ' + built.mail.subject;
+    MailApp.sendEmail({
+      to: recipient,
+      subject: subject,
+      htmlBody: injectTestEmailBanner_(built.mail.htmlBody)
+    });
+
+    return {
+      success: true,
+      message: 'Test ' + (built.kind === 'weekly' ? 'weekly report' : 'payment receipt') + ' sent to ' + recipient + '.',
+      data: {
+        to: recipient,
+        subject: subject,
+        type: built.kind
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || String(error)
+    };
   }
 }
 

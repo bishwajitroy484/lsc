@@ -15,6 +15,7 @@ function loadNotificationsApi() {
     return new Date(Number(m[3]), months[m[2]], Number(m[1]));
   };
 
+  const mailApp = { sendEmail: jest.fn() };
   const api = new Function(
     'parseSafeDate',
     'isPaidPaymentStatus',
@@ -22,20 +23,32 @@ function loadNotificationsApi() {
     'MailApp',
     'ScriptApp',
     'api_getGlobalDropdowns',
+    'requirePermission_',
     'console',
     `
       ${source};
       return {
         classifyMembersForReport_,
         buildPaymentReceiptEmail_,
-        getNotificationConfig_
+        getNotificationConfig_,
+        api_sendTestNotificationEmail,
+        api_previewNotificationEmail,
+        _mailApp: MailApp
       };
     `
   )(
     parseSafeDate,
     () => true,
-    { read: () => [], batchRead: () => ({}) },
-    { sendEmail: jest.fn() },
+    {
+      read: () => ([
+        { key: 'GYM_NAME', value: 'Lakeside' },
+        { key: 'OWNER_EMAIL', value: 'owner@gym.com' },
+        { key: 'OWNER_NAME', value: 'Owner' },
+        { key: 'ENABLE_NOTIFICATION', value: 'YES' }
+      ]),
+      batchRead: () => ({})
+    },
+    mailApp,
     {
       WeekDay: { SUNDAY: 'SUNDAY', MONDAY: 'MONDAY' },
       getProjectTriggers: () => [],
@@ -43,9 +56,11 @@ function loadNotificationsApi() {
       deleteTrigger: jest.fn()
     },
     () => ({ success: true, data: { options: {} } }),
+    () => ({ ok: true, context: { email: 'admin@gym.com', allowed: true } }),
     console
   );
 
+  api._mailApp = mailApp;
   return api;
 }
 
@@ -78,5 +93,33 @@ describe('notification report helpers', () => {
     expect(mail.htmlBody).toContain('Bishwajit Roy');
     expect(mail.htmlBody).toContain('Quarterly');
     expect(mail.htmlBody).toContain('Lakeside');
+  });
+
+  test('api_sendTestNotificationEmail sends sample receipt to signed-in admin', () => {
+    const api = loadNotificationsApi();
+    const res = api.api_sendTestNotificationEmail('receipt', {});
+    expect(res.success).toBe(true);
+    expect(res.data.to).toBe('admin@gym.com');
+    expect(res.data.subject).toMatch(/^\[TEST\]/);
+    expect(api._mailApp.sendEmail).toHaveBeenCalledTimes(1);
+    const payload = api._mailApp.sendEmail.mock.calls[0][0];
+    expect(payload.to).toBe('admin@gym.com');
+    expect(payload.htmlBody).toContain('This is a test email');
+    expect(payload.cc).toBeUndefined();
+  });
+
+  test('api_sendTestNotificationEmail sends sample weekly report to signed-in admin', () => {
+    const api = loadNotificationsApi();
+    const res = api.api_sendTestNotificationEmail('weekly', {
+      weeklyCc: 'manager@gym.com',
+      reportDays: '7'
+    });
+    expect(res.success).toBe(true);
+    expect(res.data.type).toBe('weekly');
+    expect(res.data.to).toBe('admin@gym.com');
+    const payload = api._mailApp.sendEmail.mock.calls[0][0];
+    expect(payload.to).toBe('admin@gym.com');
+    expect(payload.subject).toContain('[TEST]');
+    expect(payload.cc).toBeUndefined();
   });
 });

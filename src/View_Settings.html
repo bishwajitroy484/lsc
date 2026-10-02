@@ -388,12 +388,15 @@
                     <div class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
                   </label>
                 </div>
-                <div class="flex gap-1.5">
-                  <button type="button" onclick="SettingsApp.openMessageEditor('receipt')" class="flex-1 h-8 px-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" onclick="SettingsApp.openMessageEditor('receipt')" class="flex-1 min-w-[88px] h-8 px-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
                     <span class="material-symbols-rounded text-[15px]">edit_note</span><span>Edit</span>
                   </button>
-                  <button type="button" onclick="SettingsApp.previewNotificationEmail('receipt')" class="flex-1 h-8 px-2 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                  <button type="button" onclick="SettingsApp.previewNotificationEmail('receipt')" class="flex-1 min-w-[88px] h-8 px-2 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
                     <span class="material-symbols-rounded text-[15px]">visibility</span><span>Preview</span>
+                  </button>
+                  <button type="button" id="btn-test-receipt-email" onclick="SettingsApp.sendTestNotificationEmail('receipt')" class="flex-1 min-w-[88px] h-8 px-2 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 text-emerald-800 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">outgoing_mail</span><span>Send test</span>
                   </button>
                 </div>
                 <input type="hidden" id="gen-NOTIFY_RECEIPT_SUBJECT">
@@ -463,12 +466,15 @@
                   <input type="hidden" id="gen-NOTIFY_WEEKLY_FIELDS">
                 </div>
 
-                <div class="flex gap-1.5">
-                  <button type="button" onclick="SettingsApp.openMessageEditor('weekly')" class="flex-1 h-8 px-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" onclick="SettingsApp.openMessageEditor('weekly')" class="flex-1 min-w-[88px] h-8 px-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
                     <span class="material-symbols-rounded text-[15px]">edit_note</span><span>Edit</span>
                   </button>
-                  <button type="button" onclick="SettingsApp.previewNotificationEmail('weekly')" class="flex-1 h-8 px-2 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                  <button type="button" onclick="SettingsApp.previewNotificationEmail('weekly')" class="flex-1 min-w-[88px] h-8 px-2 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
                     <span class="material-symbols-rounded text-[15px]">visibility</span><span>Preview</span>
+                  </button>
+                  <button type="button" id="btn-test-weekly-email" onclick="SettingsApp.sendTestNotificationEmail('weekly')" class="flex-1 min-w-[88px] h-8 px-2 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 text-emerald-800 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">outgoing_mail</span><span>Send test</span>
                   </button>
                 </div>
                 <input type="hidden" id="gen-NOTIFY_WEEKLY_SUBJECT">
