@@ -265,6 +265,7 @@
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     align-items: flex-start !important;
+    justify-content: center !important;
     padding: 0.75rem !important;
     padding-bottom: var(--lsc-mobile-nav-clearance) !important;
     box-sizing: border-box;
@@ -279,9 +280,19 @@
 
   .lsc-modal-panel {
     max-height: calc(100dvh - var(--lsc-mobile-nav-clearance) - 0.75rem) !important;
-    margin-top: auto;
-    margin-bottom: auto;
+    margin: auto;
     width: 100%;
+  }
+
+  /* Spinner / % progress dialog: true center of the screen, ignoring the bottom-nav clearance */
+  #action-progress-overlay {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1rem !important;
+  }
+  #action-progress-overlay .lsc-modal-panel {
+    margin: 0;
+    max-height: none !important;
   }
   @media (min-width: 768px) {
     .lsc-modal-panel {
