@@ -330,7 +330,12 @@
 
       document.getElementById('kpi-staff-exp').innerText = AppUtils.formatCurrency(staffTotal);
 
-      // Total Expenses includes General Expenses + Staff Cost
+      // Other operating expenses (excludes staff payroll metrics)
+      const otherTotal = total;
+      const otherEl = document.getElementById('kpi-other-exp');
+      if (otherEl) otherEl.innerText = AppUtils.formatCurrency(otherTotal);
+
+      // Total Outflow includes General Expenses + Staff Cost
       const grandTotal = total + staffTotal;
       document.getElementById('kpi-total-exp').innerText = AppUtils.formatCurrency(grandTotal);
 
@@ -347,12 +352,16 @@
         topAmt = staffTotal;
         topCatName = 'Staff Cost';
       }
-      document.getElementById('kpi-top-cat').innerText = topCatName;
-      document.getElementById('kpi-top-cat-amt').innerText = AppUtils.formatCurrency(topAmt);
+      const topCatEl = document.getElementById('kpi-top-cat');
+      const topAmtEl = document.getElementById('kpi-top-cat-amt');
+      if (topCatEl) topCatEl.innerText = topCatName;
+      if (topAmtEl) topAmtEl.innerText = AppUtils.formatCurrency(topAmt);
 
       const periodCount = this.selectedPeriods.length || 1;
       const avg = grandTotal / periodCount;
       document.getElementById('kpi-avg-exp').innerText = AppUtils.formatCurrency(avg);
+
+      if (typeof ExpensesHub !== 'undefined') ExpensesHub.refreshAllRecords();
     },
 
     renderCharts: function() {
@@ -399,7 +408,6 @@
             const qIdx = this.quarters.indexOf(p);
             if (qIdx !== -1 && yearStaffMetrics.quarterly[qIdx]) sAmt = yearStaffMetrics.quarterly[qIdx];
           }
-          if (trendDataMap[p] !== undefined) trendDataMap[p] += sAmt;
           staffTotal += sAmt;
         });
       }
@@ -408,24 +416,45 @@
         catSums['Staff Cost'] = (catSums['Staff Cost'] || 0) + staffTotal;
       }
 
-      // 1. Trend Chart (Dynamic Type + Consistent Data Labels)
+      // Dual series: Staff Cost + Other Expenses (trendDataMap is other-only)
+      const categories = Object.keys(trendDataMap);
+      const otherSeries = categories.map(p => trendDataMap[p] || 0);
+      const staffSeries = categories.map(p => {
+        let sAmt = 0;
+        if (yearStaffMetrics) {
+          if (isMonthly) {
+            const mIdx = this.months.indexOf(p);
+            if (mIdx !== -1 && yearStaffMetrics.monthly[mIdx]) sAmt = yearStaffMetrics.monthly[mIdx];
+          } else {
+            const qIdx = this.quarters.indexOf(p);
+            if (qIdx !== -1 && yearStaffMetrics.quarterly[qIdx]) sAmt = yearStaffMetrics.quarterly[qIdx];
+          }
+        }
+        return sAmt;
+      });
+
+      // 1. Trend Chart (stacked Staff + Other)
       const trendOpts = {
-        series: [{ name: 'Expenses', data: Object.values(trendDataMap) }],
-        chart: { type: chartType, height: '100%', toolbar: { show: false } },
-        plotOptions: { bar: { borderRadius: 4, columnWidth: '40%' } },
+        series: [
+          { name: 'Staff Cost', data: staffSeries },
+          { name: 'Other Expenses', data: otherSeries }
+        ],
+        chart: { type: chartType === 'bar' ? 'bar' : chartType, height: '100%', toolbar: { show: false }, stacked: chartType === 'bar' },
+        plotOptions: { bar: { borderRadius: 4, columnWidth: '45%', borderRadiusApplication: 'end' } },
         stroke: { curve: 'smooth', width: chartType === 'bar' ? 0 : 3 },
-        markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
+        markers: { size: chartType === 'bar' ? 0 : 3 },
         dataLabels: { 
-          enabled: true, 
+          enabled: chartType === 'bar', 
           formatter: function (val) { return val ? AppUtils.formatCompactCurrency(val) : ""; },
-          style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
-          background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 },
-          offsetY: chartType === 'bar' ? -8 : -14
+          style: { fontSize: '10px', fontWeight: 600, colors: ['#0f172a'] },
+          background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 2, opacity: 0.9, borderWidth: 0 },
+          offsetY: -6
         },
-        xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '11px', colors: '#64748b' } } },
+        legend: { position: 'top', horizontalAlign: 'right', fontSize: '11px' },
+        xaxis: { categories: categories, axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '11px', colors: '#64748b' } } },
         yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
-        colors: ['#3b82f6'],
+        colors: ['#8b5cf6', '#f59e0b'],
         grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 24, right: 10, left: 10, bottom: 4 } }
       };
 
@@ -437,7 +466,7 @@
       // 2. Category Breakdown Chart (Consistent Data Labels)
       const bLabels = Object.keys(catSums);
       const bSeries = Object.values(catSums);
-      const bColors = bLabels.map((l, i) => this.getColor(i));
+      const bColors = bLabels.map((l, i) => l === 'Staff Cost' ? '#8b5cf6' : this.getColor(i));
       const totalAmt = bSeries.reduce((a,b)=>a+b, 0);
 
       const breakOpts = {
@@ -456,32 +485,9 @@
       this.chartInstances.breakdown = new ApexCharts(document.querySelector("#chart-expense-breakdown"), breakOpts);
       this.chartInstances.breakdown.render();
 
-      // 3. Smart Misc Breakdown (Collapses if Empty)
-      const mLabels = Object.keys(miscSums);
-      const mSeries = Object.values(miscSums);
-      const mColors = mLabels.map((l, i) => this.getColor(i + 3)); 
-
+      // Misc chart optional (hidden wrapper by default in unified layout)
       const miscWrapper = document.getElementById("chart-misc-wrapper");
-      
-      if (mSeries.length === 0) {
-          miscWrapper.classList.add('hidden'); // Collapse entire card
-      } else {
-          miscWrapper.classList.remove('hidden'); // Show card
-          const miscOpts = {
-            series: mSeries,
-            labels: mLabels,
-            chart: { type: 'pie', height: '100%' },
-            colors: mColors,
-            legend: { position: 'bottom', fontSize: '11px' },
-            dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCompactCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 }, dropShadow: { enabled: false } },
-            tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
-          };
-          
-          document.getElementById("chart-expense-misc").innerHTML = "";
-          if(this.chartInstances.misc) this.chartInstances.misc.destroy();
-          this.chartInstances.misc = new ApexCharts(document.querySelector("#chart-expense-misc"), miscOpts);
-          this.chartInstances.misc.render();
-      }
+      if (miscWrapper) miscWrapper.classList.add('hidden');
     },
 
     sortTable: function(column) {
@@ -889,5 +895,334 @@
     }
   };
 
+  var ExpensesHub = {
+    currentListTab: 'all',
+    allRecords: [],
+    allFiltered: [],
+    allSearch: '',
+
+    mountStaffPanel: function() {
+      var slot = document.getElementById('exp-list-panel-staff');
+      var card = document.getElementById('staff-table-card');
+      if (slot && card && card.parentElement !== slot) {
+        card.classList.remove('border', 'border-slate-200', 'rounded-xl', 'shadow-sm');
+        slot.appendChild(card);
+      }
+    },
+
+    applyStoredTab: function() {
+      var tab = 'all';
+      try {
+        var stored = sessionStorage.getItem('lsc_expenses_tab') || 'all';
+        if (stored === 'staff' || stored === 'operating') tab = stored === 'staff' ? 'staff' : 'expenses';
+        else if (stored === 'all' || stored === 'expenses') tab = stored;
+      } catch (e) {}
+      this.mountStaffPanel();
+      this.switchListTab(tab, true);
+    },
+
+    onSharedFiltersChanged: function() {
+      this.syncStaffFiltersFromShared();
+      if (typeof ExpensesApp !== 'undefined') ExpensesApp.applyGlobalFilters();
+      if (typeof StaffApp !== 'undefined' && StaffApp.applyGlobalFilters) StaffApp.applyGlobalFilters();
+    },
+
+    onSharedModeSwitch: function() {
+      if (typeof ExpensesApp !== 'undefined') ExpensesApp.handleModeSwitch();
+      this.syncStaffFiltersFromShared();
+      if (typeof StaffApp !== 'undefined') {
+        var modeEl = document.getElementById('staff-filter-mode');
+        var sharedMode = document.getElementById('exp-filter-mode');
+        if (modeEl && sharedMode) modeEl.value = sharedMode.value;
+        if (StaffApp.handleModeSwitch) StaffApp.handleModeSwitch();
+      }
+    },
+
+    syncStaffFiltersFromShared: function() {
+      var y = document.getElementById('exp-filter-year');
+      var m = document.getElementById('exp-filter-mode');
+      var sy = document.getElementById('staff-filter-year');
+      var sm = document.getElementById('staff-filter-mode');
+      if (y && sy) sy.value = y.value;
+      if (m && sm) sm.value = m.value;
+      if (typeof StaffApp !== 'undefined' && typeof ExpensesApp !== 'undefined') {
+        StaffApp.selectedPeriods = (ExpensesApp.selectedPeriods || []).slice();
+      }
+    },
+
+    switchListTab: function(tab, skipPersist) {
+      var canExp = typeof AccessControl === 'undefined' || AccessControl.can('expenses', 'view');
+      var canSt = typeof AccessControl === 'undefined' || AccessControl.can('staff', 'view');
+      if (tab === 'staff' && !canSt) tab = canExp ? 'expenses' : 'all';
+      if (tab === 'expenses' && !canExp) tab = canSt ? 'staff' : 'all';
+      if (tab === 'all' && !canExp && canSt) tab = 'staff';
+
+      this.currentListTab = tab;
+      if (!skipPersist) {
+        try { sessionStorage.setItem('lsc_expenses_tab', tab); } catch (e) {}
+      }
+
+      this.mountStaffPanel();
+
+      ['all', 'staff', 'expenses'].forEach(function(name) {
+        var btn = document.getElementById('exp-list-tab-' + name);
+        var panel = document.getElementById('exp-list-panel-' + name);
+        var active = name === tab;
+        if (btn) {
+          if (name === 'staff') btn.classList.toggle('hidden', !canSt);
+          if (name === 'expenses') btn.classList.toggle('hidden', !canExp);
+          btn.className = 'exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors ' +
+            (active ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700');
+        }
+        if (panel) {
+          if (active) panel.classList.remove('hidden');
+          else panel.classList.add('hidden');
+        }
+      });
+
+      var fAll = document.getElementById('exp-list-filters-all');
+      var fExp = document.getElementById('exp-list-filters-expenses');
+      if (fAll) fAll.classList.toggle('hidden', tab !== 'all');
+      if (fExp) fExp.classList.toggle('hidden', tab !== 'expenses');
+
+      if (tab === 'all') this.refreshAllRecords();
+    },
+
+    // Back-compat for older Staff Cost KPI clicks
+    switchTab: function(tab) {
+      this.switchListTab(tab === 'staff' ? 'staff' : 'expenses');
+    },
+
+    resolveDropdownName: function(type, id) {
+      if (id === undefined || id === null || id === '') return '';
+      if (typeof StaffApp !== 'undefined' && StaffApp.getName) {
+        var fromStaff = StaffApp.getName(type, id);
+        if (fromStaff && fromStaff !== id) return fromStaff;
+      }
+      var opts = (typeof ExpensesApp !== 'undefined' && ExpensesApp.dropdowns) ? ExpensesApp.dropdowns : {};
+      var list = opts[type];
+      if (type === 'paymentstatus' && !list) list = opts.paymentstatus || opts.status;
+      if (type === 'credittype' && !list) list = opts.credit_type_options || opts.credittype || opts.credit_type;
+      if (!list || !Array.isArray(list)) return String(id);
+      var match = list.find(function(item) { return item && String(item.id) === String(id); });
+      return match ? String(match.name || match.label || match.id) : String(id);
+    },
+
+    statusClassForLabel: function(label) {
+      var lower = String(label || '').toLowerCase();
+      if (lower.indexOf('action') >= 0 || lower.indexOf('pending') >= 0 || lower.indexOf('due') >= 0) {
+        return 'text-amber-700 bg-amber-50 border-amber-100';
+      }
+      if (lower.indexOf('fail') >= 0 || lower.indexOf('unpaid') >= 0 || lower.indexOf('overdue') >= 0) {
+        return 'text-red-700 bg-red-50 border-red-100';
+      }
+      return 'text-emerald-700 bg-emerald-50 border-emerald-100';
+    },
+
+    refreshAllRecords: function() {
+      var rows = [];
+      var year = document.getElementById('exp-filter-year')?.value;
+      var expenses = (typeof ExpensesApp !== 'undefined' && ExpensesApp.filteredData) ? ExpensesApp.filteredData : [];
+      expenses.forEach(function(exp) {
+        rows.push({
+          recordType: 'expense',
+          date: exp.date,
+          sortDate: exp.date,
+          name: (typeof ExpensesApp !== 'undefined') ? ExpensesApp.getName(exp.categoryId) : (exp.categoryId || 'Expense'),
+          description: exp.description || exp.whatMisc || '',
+          amount: exp.amount,
+          status: 'Recorded',
+          statusClass: 'text-emerald-700 bg-emerald-50 border-emerald-100',
+          raw: exp
+        });
+      });
+
+      var salaries = (typeof ExpensesApp !== 'undefined' && ExpensesApp.salaries) ? ExpensesApp.salaries : [];
+      var staffList = (typeof StaffApp !== 'undefined' && StaffApp.allData) ? StaffApp.allData : [];
+      var staffNameById = {};
+      staffList.forEach(function(s) { staffNameById[String(s.staffId)] = s.fullName || s.name || s.staffId; });
+
+      var self = this;
+      salaries.forEach(function(sal) {
+        var d = sal.paidDate || sal.startDate || sal.date;
+        if (year && d) {
+          var parsed = new Date(typeof AppUtils !== 'undefined' && AppUtils.parseToISODate ? AppUtils.parseToISODate(d) : d);
+          if (!isNaN(parsed) && String(parsed.getFullYear()) !== String(year)) return;
+        }
+        var statusLabel = self.resolveDropdownName('paymentstatus', sal.paymentStatus || sal.status) || 'Paid';
+        var creditLabel = self.resolveDropdownName('credittype', sal.type || sal.creditType) || sal.type || sal.creditType || 'Salary';
+        rows.push({
+          recordType: 'staff',
+          date: d,
+          sortDate: d,
+          name: staffNameById[String(sal.staffId)] || sal.staffId || 'Staff',
+          description: creditLabel,
+          amount: sal.amount,
+          status: statusLabel,
+          statusClass: self.statusClassForLabel(statusLabel),
+          staffId: sal.staffId,
+          raw: sal
+        });
+      });
+
+      // Pending salary cycles (Action Needed) from StaffApp cycle engine
+      if (typeof StaffApp !== 'undefined' && StaffApp.getStaffCycles) {
+        staffList.forEach(function(s) {
+          var cycleInfo = StaffApp.getStaffCycles(s, StaffApp.allPayments || []);
+          (cycleInfo.pendingCycles || []).forEach(function(cycle) {
+            rows.push({
+              recordType: 'staff',
+              date: cycle.monthLabel || cycle.endDate || '',
+              sortDate: cycle.endDate || cycle.startDate || '',
+              name: s.fullName || s.name || s.staffId,
+              description: 'Salary · ' + (cycle.monthLabel || 'Pending cycle'),
+              amount: cycle.amount || s.salary || s.monthlySalary || 0,
+              status: 'Action Needed',
+              statusClass: 'text-amber-700 bg-amber-50 border-amber-200',
+              staffId: s.staffId,
+              raw: cycle
+            });
+          });
+        });
+      }
+
+      rows.sort(function(a, b) {
+        var da = new Date(typeof AppUtils !== 'undefined' && AppUtils.parseToISODate ? AppUtils.parseToISODate(a.sortDate) : a.sortDate);
+        var db = new Date(typeof AppUtils !== 'undefined' && AppUtils.parseToISODate ? AppUtils.parseToISODate(b.sortDate) : b.sortDate);
+        return (db - da) || 0;
+      });
+
+      this.allRecords = rows;
+      this.filterAllRecords();
+    },
+
+    searchAllRecords: function(q) {
+      this.allSearch = String(q || '').toLowerCase();
+      this.filterAllRecords();
+    },
+
+    filterAllRecords: function() {
+      var type = document.getElementById('all-filter-type')?.value || 'All';
+      var q = this.allSearch || '';
+      this.allFiltered = (this.allRecords || []).filter(function(r) {
+        if (type === 'staff' && r.recordType !== 'staff') return false;
+        if (type === 'expense' && r.recordType !== 'expense') return false;
+        if (!q) return true;
+        return String(r.name || '').toLowerCase().indexOf(q) >= 0
+          || String(r.description || '').toLowerCase().indexOf(q) >= 0
+          || String(r.status || '').toLowerCase().indexOf(q) >= 0;
+      });
+      this.renderAllRecords();
+    },
+
+    renderAllRecords: function() {
+      var tbody = document.getElementById('desktop-all-body');
+      var mobile = document.getElementById('mobile-all-container');
+      var rows = this.allFiltered || [];
+      if (tbody) {
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-xs font-bold text-slate-400">No records for this period.</td></tr>';
+        } else {
+          tbody.innerHTML = rows.map(function(r) {
+            var typeBadge = r.recordType === 'staff'
+              ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase bg-purple-50 text-purple-700 border-purple-100">Staff</span>'
+              : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase bg-blue-50 text-blue-700 border-blue-100">Expense</span>';
+            var statusBadge = '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ' + r.statusClass + '">' + r.status + '</span>';
+            var amt = (typeof AppUtils !== 'undefined') ? AppUtils.formatCurrency(r.amount) : r.amount;
+            var dateFmt = (typeof ExpensesApp !== 'undefined' && ExpensesApp.formatDateDDMMMYYYY)
+              ? ExpensesApp.formatDateDDMMMYYYY(r.date) : (r.date || '--');
+            var actions = '';
+            if (r.recordType === 'expense' && r.raw && r.raw.expenseId) {
+              var pJson = JSON.stringify(r.raw).replace(/"/g, '&quot;');
+              actions = '<button onclick=\'ExpensesApp.openModal(' + pJson + ')\' class="w-6 h-6 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[14px]">edit</span></button>';
+            } else if (r.recordType === 'staff' && r.staffId && typeof StaffApp !== 'undefined') {
+              actions = '<button onclick="ExpensesHub.openStaffFromAll(\'' + String(r.staffId).replace(/'/g, '') + '\')" class="w-6 h-6 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[14px]">visibility</span></button>';
+            }
+            return '<tr class="border-b border-slate-50 hover:bg-slate-50">' +
+              '<td class="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">' + dateFmt + '</td>' +
+              '<td class="px-4 py-3">' + typeBadge + '</td>' +
+              '<td class="px-4 py-3 font-bold text-slate-800">' + (r.name || '--') + '</td>' +
+              '<td class="px-4 py-3 text-slate-600">' + (r.description || '--') + '</td>' +
+              '<td class="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">' + amt + '</td>' +
+              '<td class="px-4 py-3">' + statusBadge + '</td>' +
+              '<td class="px-4 py-3 text-right">' + actions + '</td></tr>';
+          }).join('');
+        }
+      }
+      if (mobile) {
+        if (!rows.length) {
+          mobile.innerHTML = '<div class="bg-white p-6 text-center text-xs text-slate-400 rounded-xl border">No records for this period.</div>';
+        } else {
+          mobile.innerHTML = rows.map(function(r) {
+            var amt = (typeof AppUtils !== 'undefined') ? AppUtils.formatCurrency(r.amount) : r.amount;
+            var dateFmt = (typeof ExpensesApp !== 'undefined' && ExpensesApp.formatDateDDMMMYYYY)
+              ? ExpensesApp.formatDateDDMMMYYYY(r.date) : (r.date || '--');
+            return '<div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">' +
+              '<div class="flex items-center justify-between gap-2 mb-1"><span class="text-[10px] font-bold text-slate-500">' + dateFmt + '</span>' +
+              '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ' + r.statusClass + '">' + r.status + '</span></div>' +
+              '<div class="font-bold text-sm text-slate-800">' + (r.name || '--') + '</div>' +
+              '<div class="text-[11px] text-slate-500">' + (r.recordType === 'staff' ? 'Staff' : 'Expense') + ' · ' + (r.description || '') + '</div>' +
+              '<div class="text-sm font-bold text-slate-800 mt-1">' + amt + '</div></div>';
+          }).join('');
+        }
+      }
+    },
+
+    openStaffFromAll: function(staffId) {
+      this.switchListTab('staff');
+      if (typeof StaffApp === 'undefined') return;
+      var member = (StaffApp.allData || []).find(function(s) { return String(s.staffId) === String(staffId); });
+      if (member && StaffApp.openDetails) StaffApp.openDetails(member);
+    },
+
+    onAddClick: function() {
+      var canExp = typeof AccessControl === 'undefined' || AccessControl.can('expenses', 'create');
+      var canSt = typeof AccessControl === 'undefined' || AccessControl.can('staff', 'create');
+      if (canExp && canSt) {
+        this.openAddChooser();
+        return;
+      }
+      if (canSt) { if (typeof StaffApp !== 'undefined') StaffApp.openModal(); return; }
+      if (canExp) { if (typeof ExpensesApp !== 'undefined') ExpensesApp.openModal(); return; }
+      if (typeof Toast !== 'undefined') Toast.error('You do not have permission to add records.');
+    },
+
+    openAddChooser: function() {
+      var modal = document.getElementById('exp-add-chooser-modal');
+      var content = document.getElementById('exp-add-chooser-content');
+      if (!modal || !content) return;
+      var canExp = typeof AccessControl === 'undefined' || AccessControl.can('expenses', 'create');
+      var canSt = typeof AccessControl === 'undefined' || AccessControl.can('staff', 'create');
+      var staffBtn = document.getElementById('exp-add-choose-staff');
+      var expBtn = document.getElementById('exp-add-choose-expense');
+      if (staffBtn) staffBtn.classList.toggle('hidden', !canSt);
+      if (expBtn) expBtn.classList.toggle('hidden', !canExp);
+      modal.classList.remove('pointer-events-none', 'opacity-0');
+      modal.classList.add('opacity-100');
+      content.classList.remove('translate-y-4', 'sm:scale-95', 'opacity-0');
+      content.classList.add('translate-y-0', 'sm:scale-100', 'opacity-100');
+    },
+
+    closeAddChooser: function() {
+      var modal = document.getElementById('exp-add-chooser-modal');
+      var content = document.getElementById('exp-add-chooser-content');
+      if (!modal || !content) return;
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modal.classList.remove('opacity-100');
+      content.classList.add('translate-y-4', 'sm:scale-95', 'opacity-0');
+      content.classList.remove('translate-y-0', 'sm:scale-100', 'opacity-100');
+    },
+
+    chooseAddType: function(type) {
+      this.closeAddChooser();
+      if (type === 'staff' && typeof StaffApp !== 'undefined') StaffApp.openModal();
+      else if (typeof ExpensesApp !== 'undefined') ExpensesApp.openModal();
+    }
+  };
+
   ExpensesApp.init();
+  if (typeof ExpensesHub !== 'undefined') {
+    ExpensesHub.mountStaffPanel();
+    ExpensesHub.applyStoredTab();
+  }
 </script>

@@ -236,8 +236,8 @@
         </div>
 
         <div class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
-          <p class="text-[11px] font-bold text-emerald-900 mb-1 flex items-center gap-1"><span class="material-symbols-rounded text-[16px]">chat</span> WhatsApp renewal notify</p>
-          <p class="text-[11px] text-slate-600 leading-relaxed">On Overdue and Upcoming tables, <strong>Notify / WA</strong> opens a preview with a editable message (gym, member, plan, amount, due date). Copy it or open WhatsApp via <code class="text-[10px] bg-white px-1 rounded">wa.me</code>. Needs a phone on the member. No WhatsApp Business API — you send from the WhatsApp app yourself.</p>
+          <p class="text-[11px] font-bold text-emerald-900 mb-1 flex items-center gap-1"><span class="material-symbols-rounded text-[16px]">chat</span> WhatsApp notify</p>
+          <p class="text-[11px] text-slate-600 leading-relaxed">On Dashboard Overdue/Upcoming tables and on <strong>Members → payment history</strong>, the <strong>WA</strong> icon opens a preview with an editable message (gym, member, plan, amount, dates). Unpaid/virtual rows use renewal reminders; paid rows use a payment-received thank-you. Copy it or open WhatsApp via <code class="text-[10px] bg-white px-1 rounded">wa.me</code>. Needs a phone on the member. Email receipts still send automatically when enabled in Settings. No WhatsApp Business API — you send from the WhatsApp app yourself.</p>
         </div>
         <p class="text-[11px] text-slate-500 leading-relaxed"><strong>Overdue table:</strong> active members past due (not ad-hoc/trial). <strong>Upcoming:</strong> due within about 0–7 days, same exclusions.</p>
       </div>
@@ -257,11 +257,11 @@
         <span id="guide-chevron-members" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
       </button>
       <div id="guide-body-members" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
-        <p class="text-xs text-slate-600 leading-relaxed pt-3">Add and edit members (name, <strong>10-digit phone</strong>, email, gender, DOB, join/exit, status, plan, batch, amount, photo). New IDs look like <code class="text-[10px] bg-slate-100 px-1 rounded">LSC-MEM-1</code>, <code class="text-[10px] bg-slate-100 px-1 rounded">LSC-MEM-2</code>, …</p>
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Add and edit members (name, <strong>10-digit phone</strong>, email, gender, DOB, join/exit, status, plan, batch, amount, photo). On edit, leaving optional fields blank keeps the existing saved values — only the fields you change are updated. New IDs look like <code class="text-[10px] bg-slate-100 px-1 rounded">LSC-MEM-1</code>, <code class="text-[10px] bg-slate-100 px-1 rounded">LSC-MEM-2</code>, …</p>
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>Filters</strong> — status (All / Active / Due Soon / Overdue), batch, plan, and search; selections stay visible while filtering.</li>
           <li><strong>Payments</strong> — record payments anytime; optional initial payment when adding. Coverage length follows the plan (e.g. monthly +1 month, quarterly +3, yearly +1 year, trial +7 days, ad-hoc +1 day).</li>
-          <li><strong>Next due</strong> — usually day after latest paid coverage end; otherwise from plan frequency / join. Ad-hoc &amp; trial show N/A for renewal due.</li>
+          <li><strong>Next due</strong> — usually day after latest paid coverage end; otherwise from plan frequency / join. Ad-hoc &amp; trial always show <strong>No Due Date</strong> on both the list and detail (exit date governs the plan, not a renewal due).</li>
           <li><strong>Trial fee</strong> — daily rate × inclusive days between join and exit; recalculates when plan or dates change.</li>
           <li><strong>Ad-hoc / trial exit</strong> — exit date required; when that date arrives, status becomes Inactive (on load and by a daily check).</li>
           <li><strong>Insights</strong> — per-member earnings charts; only Paid/Completed payments count as collected.</li>
@@ -276,15 +276,15 @@
         <span class="w-9 h-9 rounded-xl bg-orange-50 text-orange-700 border border-orange-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">badge</span></span>
         <div class="flex-1 min-w-0">
           <div class="flex flex-wrap items-center gap-1.5">
-            <h3 class="text-sm font-bold text-slate-800">Staff &amp; salary</h3>
-            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-orange-50 text-orange-700 border border-orange-100">Module</span>
+            <h3 class="text-sm font-bold text-slate-800">Staff &amp; Payroll</h3>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-orange-50 text-orange-700 border border-orange-100">Expenses tab</span>
           </div>
-          <p class="text-[11px] text-slate-500 mt-0.5 truncate">KPIs, Action Needed, salary credits</p>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Under Expenses → Staff list — drawer Overview &amp; Salary</p>
         </div>
         <span id="guide-chevron-staff" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
       </button>
       <div id="guide-body-staff" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
-        <p class="text-xs text-slate-600 leading-relaxed pt-3">Manage staff profiles and salary/credit transactions. There is <strong>no attendance</strong> module — payroll is about recorded payments.</p>
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Opened from <strong>Expenses → Staff &amp; Payroll</strong>. Manage staff profiles and salary/credit transactions. There is <strong>no attendance</strong> module — payroll is about recorded payments. Access is still controlled by the Staff permission row in Users.</p>
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>KPIs</strong> — active headcount, total paid cost for selected periods, and Action Needed count.</li>
           <li><strong>Salary cycles</strong> — from join through today (or exit). First cycle is join→end of that month; later cycles are full calendar months. Expected amount is the <strong>full nominal monthly salary</strong> (not mid-month prorated).</li>
@@ -301,20 +301,21 @@
         <span class="w-9 h-9 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">receipt_long</span></span>
         <div class="flex-1 min-w-0">
           <div class="flex flex-wrap items-center gap-1.5">
-            <h3 class="text-sm font-bold text-slate-800">Expenses</h3>
+            <h3 class="text-sm font-bold text-slate-800">Expenses &amp; Staff</h3>
             <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-rose-50 text-rose-700 border border-rose-100">Module</span>
           </div>
-          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Operating spend, misc, receipts, staff cost link</p>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Combined KPIs, trend, All / Staff / Expenses lists</p>
         </div>
         <span id="guide-chevron-expenses" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
       </button>
       <div id="guide-body-expenses" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
-        <p class="text-xs text-slate-600 leading-relaxed pt-3">Log facility and operating expenses by category and date. Optional receipt images go to Drive.</p>
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">One page for operating expenses and staff payroll. Shared filters drive KPIs and charts. <strong>Add Record</strong> chooses Staff or Expenses, then opens the usual form.</p>
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
-          <li><strong>Misc / Other</strong> — when the category name looks like misc/other, a detail field is required.</li>
-          <li><strong>KPIs</strong> — total spend (expenses + staff cost), staff cost portion, most-spent category, average per selected period.</li>
-          <li><strong>Staff cost link</strong> — salary totals are shown with expenses for a full picture, but salary rows live in the Staff module (not duplicated as expense rows). The Staff Cost card can jump to Staff.</li>
-          <li><strong>Charts</strong> — spend trend, category donut, misc breakdown.</li>
+          <li><strong>KPIs</strong> — four cards: Total Outflow; Cost Split (Staff Cost + Other Expenses); period average; Staff Snapshot (headcount + Action Needed). Readable on mobile in a 2×2 grid.</li>
+          <li><strong>Charts</strong> — stacked Staff Cost + Other Expenses trend, and expenses-by-category donut (includes Staff Cost).</li>
+          <li><strong>All Records</strong> — salaries, pending salary cycles, and expenses with type and status.</li>
+          <li><strong>Staff</strong> — staff list; open a member for Overview and Salary (Record Salary stays in the drawer).</li>
+          <li><strong>Expenses</strong> — operating expense table with edit/delete as before.</li>
         </ul>
       </div>
     </section>
@@ -446,7 +447,7 @@
         <p class="text-[11px] text-slate-500 leading-relaxed">Note: the weekly report’s “due” uses payment end dates; the Calendar screen’s next due is usually end date + 1 day. Both are intentional for their jobs.</p>
         <div class="rounded-xl border border-teal-100 bg-teal-50/40 p-3">
           <p class="text-[11px] font-bold text-teal-900 mb-1">Google Calendar due events</p>
-          <p class="text-[11px] text-slate-600 leading-relaxed">Separate toggle under Settings → General. Opt-in, quarterly only, timed (not all-day) events on the deployer/owner calendar. Re-authorize Google services once after deploy so Calendar access is granted.</p>
+          <p class="text-[11px] text-slate-600 leading-relaxed">Separate toggle under Settings → General. Opt-in, quarterly only, timed (not all-day) events on the deployer/owner calendar. When you mark a quarterly payment as paid, the previous due event is deleted and a new event is created for the next due date (`endDate + 1`). Turning the feature off clears leftover events. Re-authorize Google services once after deploy so Calendar access is granted.</p>
         </div>
       </div>
     </section>
