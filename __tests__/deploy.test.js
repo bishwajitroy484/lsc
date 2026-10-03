@@ -110,6 +110,20 @@ describe('Web app version publish', () => {
     expect(deploySrc).toContain('function api_getWebAppDeployStatus');
     expect(deploySrc).toContain('function api_saveWebAppDeploymentId');
     expect(deploySrc).toContain('function api_publishWebAppVersion');
+    expect(deploySrc).toContain('function probeDeployApiAccess_');
+  });
+
+  test('Settings UI uses a publish confirmation modal instead of window.confirm', () => {
+    expect(viewSettings).toContain('id="publish-webapp-modal"');
+    expect(viewSettings).toContain('id="btn-publish-modal-confirm"');
+    expect(scriptSettings).toContain('openPublishModal');
+    expect(scriptSettings).toContain('confirmPublishWebAppVersion');
+    expect(scriptSettings).toContain('Publish API');
+    const publishFn = scriptSettings.slice(
+      scriptSettings.indexOf('publishWebAppVersion: function'),
+      scriptSettings.indexOf('openPublishModal: function')
+    );
+    expect(publishFn).not.toMatch(/confirm\(/);
   });
 
   test('owner can read deploy status from settings deployment id', () => {

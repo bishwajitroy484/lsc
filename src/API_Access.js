@@ -591,6 +591,7 @@ function getSetupStatus_(options) {
   let mailOk = false;
   let scriptAppOk = false;
   let calendarOk = false;
+  let deployApiOk = false;
   let triggerOk = false;
   let authError = '';
   let authorizationUrl = '';
@@ -601,6 +602,7 @@ function getSetupStatus_(options) {
     mailOk = servicesFlag;
     scriptAppOk = servicesFlag;
     calendarOk = servicesFlag;
+    deployApiOk = servicesFlag;
     servicesAuthorized = servicesFlag || (setupComplete && driveOk);
   } else {
     try {
@@ -628,6 +630,15 @@ function getSetupStatus_(options) {
       authorizationUrl = getAuthorizationUrlIfNeeded_();
     }
 
+    if (typeof probeDeployApiAccess_ === 'function') {
+      const deployProbe = probeDeployApiAccess_();
+      deployApiOk = !!deployProbe.ok;
+      if (!deployApiOk) {
+        if (!authError) authError = deployProbe.error || 'Publish API permission is missing.';
+        if (!authorizationUrl) authorizationUrl = getAuthorizationUrlIfNeeded_();
+      }
+    }
+
     servicesAuthorized = mailOk && scriptAppOk && calendarOk;
   }
 
@@ -638,6 +649,7 @@ function getSetupStatus_(options) {
     mailOk: mailOk,
     scriptAppOk: scriptAppOk,
     calendarOk: calendarOk,
+    deployApiOk: deployApiOk,
     triggerOk: triggerOk,
     servicesAuthorized: servicesAuthorized,
     setupComplete: setupComplete,
@@ -1014,6 +1026,20 @@ function api_authorizeServices() {
         authorizationUrl: authUrl || '',
         data: getSetupStatus_()
       };
+    }
+
+    if (typeof probeDeployApiAccess_ === 'function') {
+      const deployProbe = probeDeployApiAccess_();
+      if (!deployProbe.ok) {
+        const authUrl = getAuthorizationUrlIfNeeded_();
+        return {
+          success: false,
+          error: deployProbe.error ||
+            'Publish API permission is missing. Complete Google consent (script projects + deployments), enable Apps Script API on the Cloud project if prompted, then click Authorize again.',
+          authorizationUrl: authUrl || '',
+          data: getSetupStatus_()
+        };
+      }
     }
 
     const settings = readSettingsMapForAccess_();

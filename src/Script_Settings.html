@@ -110,7 +110,7 @@
       const list = document.getElementById('setup-status-list');
       if (list) {
         let shm = '';
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 9; i++) {
           shm += '<div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>';
         }
         list.innerHTML = shm;
@@ -126,7 +126,7 @@
         })
         .withFailureHandler(() => {
           if (list) {
-            list.innerHTML = '<div class="col-span-2 text-[10px] text-slate-400 py-1">Could not load setup status.</div>';
+            list.innerHTML = '<div class="col-span-3 text-[10px] text-slate-400 py-1">Could not load setup status.</div>';
           }
         })
         .api_getSetupStatus();
@@ -285,17 +285,74 @@
     },
 
     publishWebAppVersion: function() {
-      const btn = document.getElementById('btn-publish-webapp');
-      const publishHtml = '<span class="material-symbols-rounded text-[15px] md:text-[16px]">publish</span><span class="sm:hidden">Publish</span><span class="hidden sm:inline">Publish latest code</span>';
-      if (!confirm('Publish the latest pushed code to the live web app URL?\n\nThe /exec link stays the same. Mail and Calendar keep the deployer account.')) {
-        return;
+      this.openPublishModal();
+    },
+
+    openPublishModal: function() {
+      const modal = document.getElementById('publish-webapp-modal');
+      const content = document.getElementById('publish-webapp-modal-content');
+      const meta = document.getElementById('publish-modal-meta');
+      const confirmBtn = document.getElementById('btn-publish-modal-confirm');
+      if (!modal || !content) return;
+
+      const envBadge = document.getElementById('deploy-env-badge');
+      const envLabel = envBadge ? String(envBadge.textContent || '').trim() : '';
+      const versionChip = document.querySelector('#deploy-status-chips .font-bold');
+      const versionHint = versionChip ? String(versionChip.textContent || '').trim() : '';
+      if (meta) {
+        const bits = [];
+        if (envLabel && envLabel !== '—') bits.push('Environment: ' + envLabel);
+        if (versionHint && versionHint !== 'Unknown' && versionHint !== 'Ready' && versionHint !== 'Missing') {
+          bits.push('Current live: ' + versionHint);
+        }
+        meta.textContent = bits.length
+          ? bits.join(' · ')
+          : 'A new version number will be created and attached to the same deployment.';
       }
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<span class="material-symbols-rounded text-[18px]">publish</span><span>Publish now</span>';
+      }
+      modal.classList.remove('pointer-events-none', 'opacity-0');
+      modal.classList.add('opacity-100');
+      content.classList.remove('opacity-0', 'translate-y-4', 'sm:scale-95');
+      content.classList.add('opacity-100', 'translate-y-0', 'sm:scale-100');
+    },
+
+    closePublishModal: function() {
+      const modal = document.getElementById('publish-webapp-modal');
+      const content = document.getElementById('publish-webapp-modal-content');
+      if (!modal || !content) return;
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modal.classList.remove('opacity-100');
+      content.classList.add('opacity-0', 'translate-y-4', 'sm:scale-95');
+      content.classList.remove('opacity-100', 'translate-y-0', 'sm:scale-100');
+    },
+
+    confirmPublishWebAppVersion: function() {
+      const btn = document.getElementById('btn-publish-webapp');
+      const confirmBtn = document.getElementById('btn-publish-modal-confirm');
+      const cancelBtn = document.getElementById('btn-publish-modal-cancel');
+      const publishHtml = '<span class="material-symbols-rounded text-[15px] md:text-[16px]">publish</span><span class="sm:hidden">Publish</span><span class="hidden sm:inline">Publish latest code</span>';
+      const confirmHtml = '<span class="material-symbols-rounded text-[18px]">publish</span><span>Publish now</span>';
+
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[18px]">progress_activity</span><span>Publishing…</span>';
+      }
+      if (cancelBtn) cancelBtn.disabled = true;
       if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[15px]">progress_activity</span><span>Publishing…</span>';
       }
+
       google.script.run
         .withSuccessHandler((res) => {
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = confirmHtml;
+          }
+          if (cancelBtn) cancelBtn.disabled = false;
           if (btn) {
             btn.disabled = false;
             btn.innerHTML = publishHtml;
@@ -303,25 +360,34 @@
           if (!res || !res.success) {
             if (res && res.authorizationUrl) {
               this.openAuthorizationUrl(res.authorizationUrl);
-              this.showToast('Complete Google consent, then click Publish again.', true);
+              this.showToast('Complete Google consent, then publish again.', true);
             } else {
               this.showToast((res && res.error) || 'Publish failed.', true);
             }
             if (res && res.data) this.renderDeployStatus(res.data);
             else this.refreshDeployStatus();
+            this.refreshSetupStatus();
             return;
           }
+          this.closePublishModal();
           this.showToast(res.message || 'Published successfully.', false);
           if (res.data) this.renderDeployStatus(res.data);
           else this.refreshDeployStatus();
+          this.refreshSetupStatus();
         })
         .withFailureHandler((err) => {
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = confirmHtml;
+          }
+          if (cancelBtn) cancelBtn.disabled = false;
           if (btn) {
             btn.disabled = false;
             btn.innerHTML = publishHtml;
           }
           this.showToast((err && err.message) || 'Publish failed.', true);
           this.refreshDeployStatus();
+          this.refreshSetupStatus();
         })
         .api_publishWebAppVersion('');
     },
@@ -330,21 +396,22 @@
       const list = document.getElementById('setup-status-list');
       if (!list || !setup) return;
       const rows = [
-        ['Spreadsheet', setup.spreadsheetOk],
+        ['Sheet', setup.spreadsheetOk],
         ['Settings', setup.settingsOk],
         ['Drive', setup.driveOk],
         ['Mail', setup.mailOk],
         ['ScriptApp', setup.scriptAppOk],
-        ['Google Calendar', setup.calendarOk],
-        ['Weekly trigger', setup.triggerOk],
+        ['Calendar', setup.calendarOk],
+        ['Publish API', setup.deployApiOk],
+        ['Trigger', setup.triggerOk],
         ['Setup done', setup.setupComplete]
       ];
       list.innerHTML = rows.map(function(pair) {
         const ok = !!pair[1];
-        return '<div class="flex items-center justify-between gap-1 px-2 py-1 md:px-2.5 md:py-1.5 rounded-md md:rounded-lg border ' +
+        return '<div class="flex items-center justify-between gap-0.5 px-1.5 py-1 md:px-2 md:py-1.5 rounded-md md:rounded-lg border min-w-0 ' +
           (ok ? 'bg-emerald-50/70 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-200 text-amber-800') +
-          '"><span class="font-semibold truncate">' + pair[0] + '</span>' +
-          '<span class="material-symbols-rounded text-[14px] shrink-0" title="' + (ok ? 'OK' : 'Needed') + '">' +
+          '"><span class="font-semibold truncate text-[9px] md:text-[11px]">' + pair[0] + '</span>' +
+          '<span class="material-symbols-rounded text-[13px] md:text-[14px] shrink-0" title="' + (ok ? 'OK' : 'Needed') + '">' +
           (ok ? 'check_circle' : 'error') + '</span></div>';
       }).join('');
       const hint = document.getElementById('setup-auth-hint');
@@ -353,8 +420,10 @@
           hint.textContent = setup.authError;
         } else if (!setup.calendarOk) {
           hint.textContent = 'Google Calendar permission is missing. Click Authorize — if prompted, allow Calendar, then click Authorize again.';
+        } else if (!setup.deployApiOk) {
+          hint.textContent = 'Publish API is not ready. Click Authorize (allow script projects/deployments). If it still fails, enable Apps Script API on the script’s Cloud project, then Authorize again.';
         } else {
-          hint.textContent = 'Sign in as the deployer Google account, then authorize once (Mail, ScriptApp, Calendar).';
+          hint.textContent = 'Sign in as the deployer Google account, then authorize once (Mail, ScriptApp, Calendar, and Publish API).';
         }
       }
     },
@@ -386,7 +455,7 @@
           if (!res || !res.success) {
             if (res && res.authorizationUrl) {
               this.openAuthorizationUrl(res.authorizationUrl);
-              this.showToast('Complete the Google consent screen (allow Calendar), then click Authorize again.', true);
+              this.showToast('Complete the Google consent screen (allow Calendar and Publish scopes), then click Authorize again.', true);
             } else {
               this.showToast((res && res.error) || 'Authorization failed.', true);
             }

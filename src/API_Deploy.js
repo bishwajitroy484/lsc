@@ -39,6 +39,37 @@ function getDeployEnvLabel_() {
   return env ? env : 'Unknown';
 }
 
+function probeDeployApiAccess_() {
+  try {
+    if (typeof appsScriptApiRequest_ !== 'function' || typeof getDeployScriptId_ !== 'function') {
+      return { ok: false, error: 'Publish helpers are not loaded.' };
+    }
+    const scriptId = getDeployScriptId_();
+    if (!scriptId) {
+      return { ok: false, error: 'Script ID is missing.' };
+    }
+    const deploymentId = typeof getConfiguredDeploymentId_ === 'function'
+      ? getConfiguredDeploymentId_()
+      : '';
+    const path = deploymentId
+      ? ('projects/' + encodeURIComponent(scriptId) + '/deployments/' + encodeURIComponent(deploymentId))
+      : ('projects/' + encodeURIComponent(scriptId) + '/deployments?pageSize=1');
+    const result = appsScriptApiRequest_('get', path);
+    if (result.code >= 200 && result.code < 300) {
+      return { ok: true, error: '' };
+    }
+    const message = typeof formatAppsScriptApiError_ === 'function'
+      ? formatAppsScriptApiError_(result, 'Publish API is not ready.')
+      : 'Publish API is not ready.';
+    return { ok: false, error: message };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error && error.message ? error.message : String(error)
+    };
+  }
+}
+
 function requireOwnerForDeploy_() {
   const context = typeof getCurrentUserContext_ === 'function' ? getCurrentUserContext_() : null;
   if (!context || !context.allowed) {

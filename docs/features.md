@@ -22,6 +22,8 @@ After `clasp push` / `npm run push:dev` / `push:prod`, owners can open **Setting
 
 - Status chips show environment (Dev/Prod), live version, and deployment ID readiness.
 - Owners can paste/save a deployment ID if it is missing from config.
+- **Publish latest code** opens a mobile-friendly confirmation modal (not a browser `confirm` dialog).
+- Setup & Authorization status chips use a compact **3-column** grid and include a **Publish API** check (Apps Script deployments API / scopes). Authorize Google services also probes this path.
 - One-time Cloud setup: enable **Apps Script API** on the script’s standard GCP project (Project Settings → GCP Project), then **Authorize Google services** again so project/deployments scopes are granted.
 - Non-owners can view status; only owners can Save ID or Publish.
 

@@ -18,6 +18,7 @@ describe('Access control foundation', () => {
     expect(accessSrc).toContain('function api_getSession');
     expect(accessSrc).toContain('function api_authorizeServices');
     expect(accessSrc).toContain('calendarOk');
+    expect(accessSrc).toContain('deployApiOk');
     expect(accessSrc).toContain('probeCalendarAccess_');
     expect(accessSrc).toContain('getAuthorizationUrlIfNeeded_');
     expect(accessSrc).toContain('authorizationUrl');
@@ -66,6 +67,8 @@ describe('Access control foundation', () => {
     expect(viewSettings).toContain('id="btn-authorize-services"');
     expect(viewSettings).toContain('id="deploy-section"');
     expect(viewSettings).toContain('id="btn-publish-webapp"');
+    expect(viewSettings).toContain('id="publish-webapp-modal"');
+    expect(viewSettings).toContain('grid-cols-3 gap-1.5 md:gap-2 text-[10px]');
     expect(viewSettings).toContain('id="tab-btn-users"');
     expect(viewSettings).toContain('id="pane-users"');
     expect(viewSettings).toContain('id="user-perm-matrix"');
