@@ -30,7 +30,7 @@ Add or update a section for a feature when documenting a behavior change; do not
 
 ## Expenses hub (Operating + Staff)
 
-Expenses is a single nav destination with two tabs. **Operating** covers facility/operating expenses (KPIs, trend and breakdown charts that include staff cost in totals, expense records, add/edit expense). **Staff & Payroll** hosts the former Staff module (staff KPIs, cost and role charts, staff list, salary recording, Action Needed). Permission keys remain separate (`expenses` and `staff`); the page is visible with either View permission, and each tab/actions are gated by its module. Legacy `#staff` routes open the Staff & Payroll tab. Sheets and APIs stay separate (`EXPENSES` vs `STAFF`/`SALARY`).
+Expenses & Staff is a single page: shared year/period filters, combined KPIs (Total Outflow, Staff Cost, Other Expenses, period average, Total Staff, Action Needed), a stacked Staff Cost + Other Expenses trend, and category breakdown. Below that, list tabs are **All Records** (salaries, pending salary cycles, and expenses with type/status), **Staff** (staff member list with the existing detail drawer for Overview and Salary), and **Expenses** (operating expense records). **Add Record** asks Staff vs Expenses, then opens the existing add-staff or add-expense form. Salary payments still happen from the staff detail drawer. Permission keys remain separate (`expenses` and `staff`); the page is visible with either View permission. Legacy `#staff` opens the Staff list tab. Sheets and APIs stay separate (`EXPENSES` vs `STAFF`/`SALARY`).
 
 ## Calendar year selection
 

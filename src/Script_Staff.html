@@ -586,6 +586,9 @@
     },
 
     renderCharts: function() {
+      if (!document.getElementById('chart-staff-trend') && !document.getElementById('chart-staff-role')) {
+        return; // Charts live on the shared Expenses hub trend/breakdown now
+      }
       const mode = document.getElementById('staff-filter-mode')?.value || 'Monthly';
       const isMonthly = mode === 'Monthly';
       const yearStr = document.getElementById('staff-filter-year')?.value;
@@ -1442,5 +1445,10 @@
   };
 
   StaffApp.init();
-  if (typeof ExpensesHub !== 'undefined') ExpensesHub.applyStoredTab();
+  if (typeof ExpensesHub !== 'undefined') {
+    ExpensesHub.mountStaffPanel();
+    ExpensesHub.syncStaffFiltersFromShared();
+    ExpensesHub.applyStoredTab();
+    ExpensesHub.refreshAllRecords();
+  }
 </script>
