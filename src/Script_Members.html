@@ -814,7 +814,13 @@
       }
       
       let phtml = '';
-      combinedHistory.forEach(p => {
+      const memberPhone = (m && m.phone) || '';
+      const memberName = (m && m.fullName) || 'Member';
+      const planLabel = this.getName('membership', m && m.membershipId) || 'membership';
+      const todayForWa = new Date();
+      todayForWa.setHours(0, 0, 0, 0);
+
+      combinedHistory.forEach((p, histIndex) => {
         const pAmt = p.amount ? p.amount.toString().replace(/[^0-9.-]+/g,"") : '';
         const pJson = JSON.stringify(p).replace(/"/g, '&quot;');
         
@@ -826,6 +832,24 @@
             const rowClass = isUpcoming ? 'bg-amber-50/20 border-l-[3px] border-l-amber-400' : 'bg-red-50/30 border-l-[3px] border-l-red-500';
             const labelColor = isUpcoming ? 'text-amber-600' : 'text-red-500';
             const badgeClass = isUpcoming ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-red-600 bg-red-50 border-red-200';
+            const waType = isUpcoming ? 'upcoming' : 'overdue';
+            const dueDateObj = new Date(p.virtualStartDate);
+            const daysDiff = WhatsAppNotify.daysBetween(dueDateObj, todayForWa);
+            const waRow = {
+              name: memberName,
+              phone: memberPhone,
+              plan: planLabel,
+              amount: Number(pAmt) || 0,
+              date: p.paidDate,
+              days: isUpcoming ? Math.max(0, -daysDiff) : Math.max(0, daysDiff),
+              period: vStartFmt + ' to ' + vEndFmt
+            };
+            const waRowJson = JSON.stringify(waRow).replace(/"/g, '&quot;');
+            const hasPhone = Boolean(WhatsAppNotify.normalizePhone(memberPhone));
+            const waBtn = WhatsAppNotify.renderButton(
+              hasPhone,
+              `WhatsAppNotify.open('${waType}', ${waRowJson}, event)`
+            );
             
             phtml += `
               <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 group transition-colors ${rowClass}">
@@ -837,7 +861,10 @@
                 <td class="px-4 py-3"><div class="font-bold text-slate-800">${AppUtils.formatCurrency(pAmt)}</div><div class="text-[9px] text-slate-500">${p.paymentMode}</div></td>
                 <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${badgeClass}">${p.paymentStatus}</span></td>
                 <td class="px-4 py-3 text-right">
-                  <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-auto px-3 py-1.5 text-brand-primary border border-blue-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm inline-flex items-center justify-center transition-colors">Pay Now</button>
+                  <div class="inline-flex items-center justify-end gap-1.5">
+                    ${waBtn}
+                    <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-auto px-3 py-1.5 text-brand-primary border border-blue-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm inline-flex items-center justify-center transition-colors">Pay Now</button>
+                  </div>
                 </td>
               </tr>
             `;
@@ -851,10 +878,33 @@
             if (pStatusName.toLowerCase().includes('fail') || pStatusName.toLowerCase().includes('overdue') || pStatusName.toLowerCase().includes('unpaid')) statColor = 'text-red-600 bg-red-50 border-red-100';
             
             let coverageHtml = '';
+            let periodText = '';
             if (p.startDate && p.endDate) {
-                coverageHtml = `<div class="text-[9px] text-slate-500 mt-0.5">${this.formatDateDDMMMYYYY(p.startDate)} to ${this.formatDateDDMMMYYYY(p.endDate)}</div>`;
+                const startFmt = this.formatDateDDMMMYYYY(p.startDate);
+                const endFmt = this.formatDateDDMMMYYYY(p.endDate);
+                coverageHtml = `<div class="text-[9px] text-slate-500 mt-0.5">${startFmt} to ${endFmt}</div>`;
+                periodText = startFmt + ' to ' + endFmt;
             } else {
                 coverageHtml = `<div class="text-[9px] text-slate-400 italic mt-0.5">No coverage period recorded</div>`;
+            }
+
+            const isPaidRow = this.isPaidPayment(p);
+            const hasPhone = Boolean(WhatsAppNotify.normalizePhone(memberPhone));
+            let waBtn = '';
+            if (isPaidRow) {
+              const waRow = {
+                name: memberName,
+                phone: memberPhone,
+                plan: planLabel,
+                amount: Number(pAmt) || 0,
+                date: this.formatDateDDMMMYYYY(p.paidDate),
+                period: periodText
+              };
+              const waRowJson = JSON.stringify(waRow).replace(/"/g, '&quot;');
+              waBtn = WhatsAppNotify.renderButton(
+                hasPhone,
+                `WhatsAppNotify.open('paid', ${waRowJson}, event)`
+              );
             }
 
             phtml += `
@@ -866,9 +916,12 @@
                 <td class="px-4 py-3"><div class="font-bold text-slate-800">${AppUtils.formatCurrency(pAmt)}${rcptHtml}</div><div class="text-[9px] text-slate-500">${modeName}</div></td>
                 <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${statColor}">${pStatusName}</span></td>
                 <td class="px-4 py-3 text-right">
-                  <div class="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
-                    <button onclick="MembersApp.openDeleteModal('payment', '${p.paymentId}', '${this.formatDateDDMMMYYYY(p.paidDate)} Payment')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
+                  <div class="flex items-center justify-end gap-1">
+                    ${waBtn}
+                    <div class="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
+                      <button onclick="MembersApp.openDeleteModal('payment', '${p.paymentId}', '${this.formatDateDDMMMYYYY(p.paidDate)} Payment')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
+                    </div>
                   </div>
                 </td>
               </tr>
