@@ -805,7 +805,7 @@ function escapeHtml_(value) {
 var MODULE_LABELS_ = {
   dashboard: 'Dashboard',
   members: 'Members',
-  staff: 'Staff',
+  staff: 'Staff & Payroll',
   expenses: 'Expenses',
   calendar: 'Calendar',
   settings: 'Settings'

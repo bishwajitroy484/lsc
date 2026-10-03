@@ -1,20 +1,8 @@
-<div class="bg-slate-50 h-full flex flex-col relative overflow-hidden">
+<div id="exp-panel-staff" class="hidden bg-slate-50 h-full flex flex-col relative overflow-hidden flex-1 min-h-0">
   
-  <header class="bg-white px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center justify-between sticky top-0 border-b border-slate-100 z-20 gap-3">
-    <div class="flex items-center justify-between w-full md:w-auto shrink-0">
-      <div class="flex items-center gap-3">
-        <span onclick="window.location.hash='#dashboard'" class="material-symbols-rounded text-slate-600 cursor-pointer hover:bg-slate-100 rounded-full p-1 transition-colors">arrow_back</span>
-        <div>
-          <h1 class="text-xl font-bold text-slate-800 leading-tight">Staff</h1>
-          <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Manage your gym staff, track costs and performance</p>
-        </div>
-      </div>
-      <button onclick="StaffApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors shrink-0">
-        <span class="material-symbols-rounded text-[18px]">add</span>
-      </button>
-    </div>
-    
-    <div class="grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+  <div class="bg-white px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 gap-3 shrink-0">
+    <p class="text-[11px] text-slate-500 font-medium hidden md:block">Staff roster, salaries, and payroll actions</p>
+    <div class="grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 w-full md:w-auto">
       <select id="staff-filter-year" onchange="StaffApp.applyGlobalFilters()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]"></select>
       
       <select id="staff-filter-mode" onchange="StaffApp.handleModeSwitch()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
@@ -30,11 +18,11 @@
         <div id="staff-multi-select-menu" class="hidden absolute top-full mt-1 right-0 w-full min-w-[140px] bg-white border border-slate-200 shadow-lg rounded-lg max-h-48 overflow-y-auto z-40 p-2"></div>
       </div>
 
-      <button onclick="StaffApp.openModal()" class="hidden md:flex shrink-0 h-8 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-blue-700 transition-colors">
+      <button onclick="StaffApp.openModal()" data-perm="staff:create" class="hidden md:flex shrink-0 h-8 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-blue-700 transition-colors">
         <span class="material-symbols-rounded text-[16px]">add</span><span class="font-semibold text-xs">Add Staff</span>
       </button>
     </div>
-  </header>
+  </div>
 
   <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
     
@@ -68,7 +56,7 @@
       <div class="lg:col-span-2 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
         <div class="flex items-center justify-between mb-2">
           <h3 class="font-bold text-sm text-slate-800">Staff Cost Trend</h3>
-          <select id="chart-type-toggle" onchange="StaffApp.renderCharts()" class="appearance-none bg-slate-50 pl-3 pr-7 py-1.5 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+          <select id="staff-chart-type-toggle" onchange="StaffApp.renderCharts()" class="appearance-none bg-slate-50 pl-3 pr-7 py-1.5 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
             <option value="bar">Bar Chart</option><option value="area">Area Chart</option><option value="line">Line Chart</option>
           </select>
         </div>
@@ -99,7 +87,7 @@
         <div class="flex flex-nowrap items-center gap-2 w-full md:w-auto">
           <div class="relative flex-1 md:w-44 shrink-0">
             <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[16px]">search</span>
-            <input type="text" id="search-table" onkeyup="StaffApp.searchTable(this.value)" placeholder="Search staff..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary bg-white">
+            <input type="text" id="staff-search-table" onkeyup="StaffApp.searchTable(this.value)" placeholder="Search staff..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary bg-white">
           </div>
           <select id="filter-table-role" onchange="StaffApp.filterTable()" class="shrink-0 w-28 md:w-auto appearance-none bg-white pl-2.5 pr-6 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_6px_center]">
             <option value="All">All Roles</option>
@@ -332,4 +320,6 @@
     </div>
   </div>
 
-</div>
+
+</div><!-- /exp-panel-staff -->
+</div><!-- /expenses-hub-root -->

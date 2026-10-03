@@ -590,7 +590,7 @@
       const isMonthly = mode === 'Monthly';
       const yearStr = document.getElementById('staff-filter-year')?.value;
       const selectedYear = yearStr ? parseInt(yearStr) : new Date().getFullYear();
-      const chartType = document.getElementById('chart-type-toggle')?.value || 'bar';
+      const chartType = document.getElementById('staff-chart-type-toggle')?.value || 'bar';
       
       const trendDataMap = {};
       this.selectedPeriods.forEach(p => trendDataMap[p] = 0);
@@ -1442,4 +1442,5 @@
   };
 
   StaffApp.init();
+  if (typeof ExpensesHub !== 'undefined') ExpensesHub.applyStoredTab();
 </script>

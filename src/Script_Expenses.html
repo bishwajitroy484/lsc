@@ -889,5 +889,82 @@
     }
   };
 
+  var ExpensesHub = {
+    currentTab: 'operating',
+
+    applyStoredTab: function() {
+      var tab = 'operating';
+      try {
+        tab = sessionStorage.getItem('lsc_expenses_tab') || 'operating';
+      } catch (e) {}
+      this.switchTab(tab === 'staff' ? 'staff' : 'operating', true);
+    },
+
+    switchTab: function(tab, skipPersist) {
+      this.currentTab = tab === 'staff' ? 'staff' : 'operating';
+      if (!skipPersist) {
+        try { sessionStorage.setItem('lsc_expenses_tab', this.currentTab); } catch (e) {}
+      }
+
+      var op = document.getElementById('exp-panel-operating');
+      var st = document.getElementById('exp-panel-staff');
+      var tabOp = document.getElementById('exp-tab-operating');
+      var tabSt = document.getElementById('exp-tab-staff');
+
+      var canOp = typeof AccessControl === 'undefined' || AccessControl.can('expenses', 'view');
+      var canSt = typeof AccessControl === 'undefined' || AccessControl.can('staff', 'view');
+
+      if (this.currentTab === 'staff' && !canSt && canOp) this.currentTab = 'operating';
+      if (this.currentTab === 'operating' && !canOp && canSt) this.currentTab = 'staff';
+
+      if (tabOp) {
+        tabOp.classList.toggle('hidden', !canOp);
+        tabOp.className = 'exp-hub-tab px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors ' +
+          (this.currentTab === 'operating' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700');
+      }
+      if (tabSt) {
+        tabSt.classList.toggle('hidden', !canSt);
+        tabSt.className = 'exp-hub-tab px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors ' +
+          (this.currentTab === 'staff' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700');
+      }
+
+      if (op) {
+        if (this.currentTab === 'operating') op.classList.remove('hidden');
+        else op.classList.add('hidden');
+      }
+      if (st) {
+        if (this.currentTab === 'staff') st.classList.remove('hidden');
+        else st.classList.add('hidden');
+      }
+
+      // Charts need a resize after becoming visible
+      setTimeout(function() {
+        try {
+          if (ExpensesHub.currentTab === 'operating' && typeof ExpensesApp !== 'undefined' && ExpensesApp.chartInstances) {
+            Object.keys(ExpensesApp.chartInstances).forEach(function(k) {
+              var c = ExpensesApp.chartInstances[k];
+              if (c && typeof c.resize === 'function') c.resize();
+            });
+          }
+          if (ExpensesHub.currentTab === 'staff' && typeof StaffApp !== 'undefined' && StaffApp.chartInstances) {
+            Object.keys(StaffApp.chartInstances).forEach(function(k) {
+              var c = StaffApp.chartInstances[k];
+              if (c && typeof c.resize === 'function') c.resize();
+            });
+          }
+        } catch (err) {}
+      }, 50);
+    },
+
+    onAddClick: function() {
+      if (this.currentTab === 'staff') {
+        if (typeof StaffApp !== 'undefined') StaffApp.openModal();
+      } else if (typeof ExpensesApp !== 'undefined') {
+        ExpensesApp.openModal();
+      }
+    }
+  };
+
   ExpensesApp.init();
+  if (typeof ExpensesHub !== 'undefined') ExpensesHub.applyStoredTab();
 </script>

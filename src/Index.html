@@ -113,13 +113,19 @@
     <?!= include('View_Members'); ?>
     <?!= include('Script_Members'); ?>
   </template>
-  <template id="tpl-view-staff">
-    <?!= include('View_Staff'); ?>
-    <?!= include('Script_Staff'); ?>
-  </template>
   <template id="tpl-view-expenses">
     <?!= include('View_Expenses'); ?>
+    <?!= include('View_Staff'); ?>
     <?!= include('Script_Expenses'); ?>
+    <?!= include('Script_Staff'); ?>
+  </template>
+  <template id="tpl-view-staff">
+    <!-- Legacy #staff redirects to Expenses Staff tab via Router -->
+    <div class="p-6 text-sm text-slate-500">Opening Expenses…</div>
+    <script>
+      try { sessionStorage.setItem('lsc_expenses_tab', 'staff'); } catch (e) {}
+      window.location.hash = '#expenses';
+    </script>
   </template>
   <template id="tpl-view-calendar">
     <?!= include('View_Calendar'); ?>

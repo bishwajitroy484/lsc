@@ -1,24 +1,31 @@
-<div class="bg-slate-50 h-full flex flex-col relative overflow-hidden">
+<div class="bg-slate-50 h-full flex flex-col relative overflow-hidden" id="expenses-hub-root">
   
   
-  <header class="bg-white px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center justify-between sticky top-0 border-b border-slate-100 z-20 gap-3">
-    
-    
-    <div class="flex items-center justify-between w-full md:w-auto shrink-0">
+  <header class="bg-white px-4 md:px-6 py-3 flex flex-col gap-3 sticky top-0 border-b border-slate-100 z-20">
+    <div class="flex items-center justify-between w-full">
       <div class="flex items-center gap-3">
         <span onclick="window.location.hash='#dashboard'" class="material-symbols-rounded text-slate-600 cursor-pointer hover:bg-slate-100 rounded-full p-1 transition-colors">arrow_back</span>
         <div>
           <h1 class="text-xl font-bold text-slate-800 leading-tight">Expenses</h1>
-          <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Track and manage your gym expenses</p>
+          <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Operating costs and staff payroll in one place</p>
         </div>
       </div>
-      <button onclick="ExpensesApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors shrink-0">
+      <button id="exp-hub-add-btn" onclick="ExpensesHub.onAddClick()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors shrink-0">
         <span class="material-symbols-rounded text-[18px]">add</span>
       </button>
     </div>
-    
-    
-    <div class="grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+
+    <div class="flex items-center gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-auto self-start">
+      <button type="button" id="exp-tab-operating" onclick="ExpensesHub.switchTab('operating')" class="exp-hub-tab px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors bg-white text-slate-800 shadow-sm">Operating</button>
+      <button type="button" id="exp-tab-staff" onclick="ExpensesHub.switchTab('staff')" class="exp-hub-tab px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors text-slate-500 hover:text-slate-700">Staff &amp; Payroll</button>
+    </div>
+  </header>
+
+  <div id="exp-panel-operating" class="flex-1 flex flex-col min-h-0 overflow-hidden">
+  
+  <div class="bg-white px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 gap-3 shrink-0">
+    <p class="text-[11px] text-slate-500 font-medium hidden md:block">Facility and operating expense records</p>
+    <div class="grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 w-full md:w-auto">
       <select id="exp-filter-year" onchange="ExpensesApp.applyGlobalFilters()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]"></select>
       
       <select id="exp-filter-mode" onchange="ExpensesApp.handleModeSwitch()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
@@ -35,12 +42,12 @@
       </div>
 
       
-      <button onclick="ExpensesApp.openModal()" class="hidden md:flex shrink-0 h-8 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-blue-700 transition-colors">
+      <button onclick="ExpensesApp.openModal()" data-perm="expenses:create" class="hidden md:flex shrink-0 h-8 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-blue-700 transition-colors">
         <span class="material-symbols-rounded text-[16px]">add</span>
         <span class="font-semibold text-xs">Add Expense</span>
       </button>
     </div>
-  </header>
+  </div>
 
   
   <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
@@ -61,7 +68,7 @@
         <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[14px]">calendar_month</span><p id="kpi-avg-title" class="text-[10px] text-slate-500 font-bold uppercase">Monthly Avg</p></div>
         <h2 id="kpi-avg-exp" class="text-xl font-bold text-slate-800">₹0</h2>
       </div>
-      <div onclick="window.location.hash='#staff'" class="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex flex-col justify-center cursor-pointer hover:border-purple-200 hover:shadow-sm transition-all group" title="View Staff Management">
+      <div onclick="ExpensesHub.switchTab('staff')" class="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex flex-col justify-center cursor-pointer hover:border-purple-200 hover:shadow-sm transition-all group" title="View Staff & Payroll">
         <div class="flex items-center justify-between mb-1">
           <div class="flex items-center gap-2">
             <span class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[14px]">badge</span>
@@ -114,6 +121,7 @@
         <div class="relative w-full flex-1 min-h-[240px]">
           <div id="chart-expense-misc" class="absolute inset-0 flex items-center justify-center">
             <div class="w-full h-full shimmer opacity-40 rounded-lg"></div>
+      
           </div>
         </div>
       </div>
@@ -164,6 +172,8 @@
     </div>
 
   </div>
+
+  </div><!-- /exp-panel-operating -->
 
   
 <div id="expense-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[100] flex items-end md:items-center justify-center sm:p-4 lsc-modal-sheet">
@@ -255,5 +265,6 @@
       </div>
     </div>
   </div>
+
 
-</div>
+  <!-- expenses-hub-root stays open; closed by View_Staff -->

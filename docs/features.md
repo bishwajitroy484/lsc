@@ -22,16 +22,19 @@ The current application includes these feature modules:
 
 - Calendar
 - Dashboard
-- Expenses
+- Expenses (Operating expenses and Staff & Payroll tabs)
 - Members
 - Settings
-- Staff
 
 Add or update a section for a feature when documenting a behavior change; do not infer unverified product behavior from a module name alone.
 
+## Expenses hub (Operating + Staff)
+
+Expenses is a single nav destination with two tabs. **Operating** covers facility/operating expenses (KPIs, trend and breakdown charts that include staff cost in totals, expense records, add/edit expense). **Staff & Payroll** hosts the former Staff module (staff KPIs, cost and role charts, staff list, salary recording, Action Needed). Permission keys remain separate (`expenses` and `staff`); the page is visible with either View permission, and each tab/actions are gated by its module. Legacy `#staff` routes open the Staff & Payroll tab. Sheets and APIs stay separate (`EXPENSES` vs `STAFF`/`SALARY`).
+
 ## Calendar year selection
 
-The Calendar year selector is a dropdown populated from years found in member, payment, expense, staff, and salary records. The current year is included even when no records exist for it. Dashboard, Members, Staff, and Expenses use the same available-year list, so their year selectors stay consistent.
+The Calendar year selector is a dropdown populated from years found in member, payment, expense, staff, and salary records. The current year is included even when no records exist for it. Dashboard, Members, and Expenses (including Staff & Payroll) use the same available-year list, so their year selectors stay consistent.
 
 ## Payment insights and dashboard collections
 
@@ -118,7 +121,7 @@ The backend includes a dedicated mock data generator (`src/MockDataGenerator.gs`
 
 ## Lazy Loading and High-Performance Data Tables
 
-To deliver an instantaneous and smooth user experience across large record volumes, the Members, Staff, and Expenses modules use a progressive lazy loading rendering strategy:
+To deliver an instantaneous and smooth user experience across large record volumes, the Members and Expenses (Operating and Staff & Payroll tabs) modules use a progressive lazy loading rendering strategy:
 
 - **Batch Size:** Renders records in performant chunks of 50 items.
 - **Progressive Bottom Loading:** Scrolling down on both desktop table views and mobile card containers dynamically detects when the user nears the bottom, appends a lightweight shimmer/skeleton row or card placeholder, and seamlessly loads the next batch without clearing or re-rendering existing items at the top.
@@ -126,7 +129,7 @@ To deliver an instantaneous and smooth user experience across large record volum
 
 ## Chart Styling and Mobile Toolbar Ergonomics
 
-All ApexCharts throughout the application (Dashboard, Expenses, Staff, and Members) follow unified visual and typographic standards:
+All ApexCharts throughout the application (Dashboard, Expenses Operating/Staff tabs, and Members) follow unified visual and typographic standards:
 
 - **Consistent Data-Labels & Axes:** Data labels use styled badge containers (`11px font-size`, semi-bold weight, contrasting dark text `#0f172a`, and subtle rounded pill backgrounds `#ffffff` with 0.92 opacity). Axes and legend text are scaled to a readable `11px` to ensure effortless legibility across devices.
 - **Mobile Toolbar Ergonomics:** Toolbar buttons (zoom-in, zoom-out, pan/range, and reset) feature top clearance and scaled mobile padding on small screens (`max-width: 640px`) to prevent any visual overlap with peak chart data points and labels.
