@@ -179,6 +179,70 @@ describe('Members Module', () => {
     expect(response.data[0].dueDate).toBe('10-Jan-2024');
   });
 
+  test('api_getMembers sets No Due Date (N/A) for trial and ad-hoc even with paid coverage', () => {
+    const membersApi = loadMembersApi({
+      MEMBERS: [
+        { memberId: 'MEM-T', fullName: 'Trial User', membershipId: 'PLAN-3', joinDate: '2026-09-28', phone: '9111111111', status: 'Active', exitDate: '2026-10-05' },
+        { memberId: 'MEM-A', fullName: 'Adhoc User', membershipId: 'PLAN-ADHOC', joinDate: '2026-09-30', phone: '9222222222', status: 'Active', exitDate: '2026-10-02' }
+      ],
+      PAYMENTS: [
+        { memberId: 'MEM-T', paymentStatus: 'Paid', endDate: '2026-10-05', amount: 500, paidDate: '2026-09-28' },
+        { memberId: 'MEM-A', paymentStatus: 'Paid', endDate: '2026-10-02', amount: 300, paidDate: '2026-09-30' }
+      ],
+      SETTINGS: []
+    }, {
+      success: true,
+      data: {
+        options: {
+          membership: [
+            { id: 'PLAN-3', name: 'Trial', frequency: 'TRIAL' },
+            { id: 'PLAN-ADHOC', name: 'Ad-hoc', frequency: 'Ad-hoc' },
+            { id: 'PLAN-1', name: 'Monthly', frequency: 'MONTHLY' }
+          ],
+          paymentstatus: [
+            { id: 'Paid', name: 'Paid' }
+          ],
+          status: [
+            { id: 'Active', name: 'Active' },
+            { id: 'Inactive', name: 'Inactive' }
+          ]
+        }
+      }
+    });
+
+    const response = membersApi.api_getMembers();
+    expect(response.success).toBe(true);
+    const trial = response.data.find(m => m.memberId === 'MEM-T');
+    const adhoc = response.data.find(m => m.memberId === 'MEM-A');
+    expect(trial.dueDate).toBe('N/A');
+    expect(adhoc.dueDate).toBe('N/A');
+  });
+
+  test('api_getMembers sets N/A for unpaid trial/ad-hoc (no join-date due)', () => {
+    const membersApi = loadMembersApi({
+      MEMBERS: [
+        { memberId: 'MEM-T2', fullName: 'New Trial', membershipId: 'PLAN-3', joinDate: '2026-10-01', phone: '9333333333', status: 'Active' }
+      ],
+      PAYMENTS: [],
+      SETTINGS: []
+    }, {
+      success: true,
+      data: {
+        options: {
+          membership: [
+            { id: 'PLAN-3', name: 'Trial Week', frequency: 'Trial' }
+          ],
+          paymentstatus: [{ id: 'Paid', name: 'Paid' }],
+          status: [{ id: 'Active', name: 'Active' }]
+        }
+      }
+    });
+
+    const response = membersApi.api_getMembers();
+    expect(response.success).toBe(true);
+    expect(response.data[0].dueDate).toBe('N/A');
+  });
+
   test('api_getMembers persists inactive status for expired ad-hoc and trial memberships', () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-10-01T12:00:00Z'));
     try {

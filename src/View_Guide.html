@@ -261,7 +261,7 @@
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>Filters</strong> — status (All / Active / Due Soon / Overdue), batch, plan, and search; selections stay visible while filtering.</li>
           <li><strong>Payments</strong> — record payments anytime; optional initial payment when adding. Coverage length follows the plan (e.g. monthly +1 month, quarterly +3, yearly +1 year, trial +7 days, ad-hoc +1 day).</li>
-          <li><strong>Next due</strong> — usually day after latest paid coverage end; otherwise from plan frequency / join. Ad-hoc &amp; trial show N/A for renewal due.</li>
+          <li><strong>Next due</strong> — usually day after latest paid coverage end; otherwise from plan frequency / join. Ad-hoc &amp; trial always show <strong>No Due Date</strong> on both the list and detail (exit date governs the plan, not a renewal due).</li>
           <li><strong>Trial fee</strong> — daily rate × inclusive days between join and exit; recalculates when plan or dates change.</li>
           <li><strong>Ad-hoc / trial exit</strong> — exit date required; when that date arrives, status becomes Inactive (on load and by a daily check).</li>
           <li><strong>Insights</strong> — per-member earnings charts; only Paid/Completed payments count as collected.</li>

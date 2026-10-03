@@ -185,36 +185,33 @@ function api_getMembers() {
 
       let nextDue = '';
 
-      if (latestPayment) {
-        if (isAdHocOrTrial) {
-          nextDue = 'N/A';
+      // Ad-hoc and Trial never have a renewal due date (exit date governs lifecycle instead).
+      if (isAdHocOrTrial) {
+        nextDue = 'N/A';
+      } else if (latestPayment) {
+        if (latestPayment.endDate) {
+          let d = new Date(latestPayment.endDate);
+          if (!isNaN(d)) {
+            d.setDate(d.getDate() + 1);
+            nextDue = formatToDDMMMYYYY(d);
+          }
         } else {
-          if (latestPayment.endDate) {
-            let d = new Date(latestPayment.endDate);
+          let baseDateStr = latestPayment.paidDate || latestPayment.date || m.joinDate;
+          if (baseDateStr) {
+            let d = new Date(baseDateStr);
             if (!isNaN(d)) {
-              d.setDate(d.getDate() + 1);
+              if (freq.includes('MONTH')) d.setMonth(d.getMonth() + 1);
+              else if (freq.includes('QUARTER')) d.setMonth(d.getMonth() + 3);
+              else if (freq.includes('HALF')) d.setMonth(d.getMonth() + 6);
+              else if (freq.includes('YEAR') || freq.includes('ANNUAL')) d.setFullYear(d.getFullYear() + 1);
               nextDue = formatToDDMMMYYYY(d);
-            }
-          } else {
-            let baseDateStr = latestPayment.paidDate || latestPayment.date || m.joinDate;
-            if (baseDateStr) {
-              let d = new Date(baseDateStr);
-              if (!isNaN(d)) {
-                if (freq.includes('MONTH')) d.setMonth(d.getMonth() + 1);
-                else if (freq.includes('QUARTER')) d.setMonth(d.getMonth() + 3);
-                else if (freq.includes('HALF')) d.setMonth(d.getMonth() + 6);
-                else if (freq.includes('YEAR') || freq.includes('ANNUAL')) d.setFullYear(d.getFullYear() + 1);
-                nextDue = formatToDDMMMYYYY(d);
-              }
             }
           }
         }
-      } else {
-        if (m.joinDate) {
-          let d = new Date(m.joinDate);
-          if (!isNaN(d)) {
-            nextDue = formatToDDMMMYYYY(d);
-          }
+      } else if (m.joinDate) {
+        let d = new Date(m.joinDate);
+        if (!isNaN(d)) {
+          nextDue = formatToDDMMMYYYY(d);
         }
       }
 

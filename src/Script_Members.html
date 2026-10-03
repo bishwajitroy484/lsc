@@ -630,7 +630,23 @@
       setTimeout(() => { document.getElementById('view-details').classList.remove('translate-x-full'); }, 50);
     },
 
+    isNonRecurringPlan: function(membershipId) {
+      const plans = this.dropdowns.membership || [];
+      const planMatch = plans.find(p => String(p.id) === String(membershipId));
+      if (!planMatch) return false;
+      const planName = String(planMatch.name || planMatch.label || '').toUpperCase();
+      const frequency = String(planMatch.frequency || '').toUpperCase();
+      const blob = frequency + ' ' + planName;
+      return blob.indexOf('TRIAL') >= 0 || blob.indexOf('ADHOC') >= 0 || blob.indexOf('AD-HOC') >= 0;
+    },
+
     calculateEffectiveCoverage: function(m) {
+        // Ad-hoc / Trial: no renewal due date (consistent with member list)
+        if (this.isNonRecurringPlan(m && m.membershipId)) {
+          this.effectiveDueDate = null;
+          return;
+        }
+
         let effectiveDue = null;
         
         if (this.currentMemberPayments && this.currentMemberPayments.length > 0) {
@@ -659,11 +675,7 @@
     },
 
     updateDetailHeader: function(member) {
-        const plans = this.dropdowns.membership || [];
-        const planMatch = plans.find(p => p.id === member.membershipId);
-        const planName = String(planMatch && planMatch.name ? planMatch.name : '').toUpperCase();
-        
-        const isNonRecurring = planName.includes('TRIAL') || planName.includes('ADHOC') || planName.includes('AD-HOC');
+        const isNonRecurring = this.isNonRecurringPlan(member.membershipId);
         const validPaymentsCount = this.currentMemberPayments.filter(p => {
             return this.isPaidPayment(p);
         }).length;
@@ -680,10 +692,19 @@
              mainStatusName = 'In-Active';
              dueStr = '--';
              dueInfo = { text: 'Account Closed', class: 'bg-slate-100 text-slate-500 border-slate-200' };
-        } else if (isNonRecurring && validPaymentsCount > 0 && this.effectiveDueDate && this.effectiveDueDate < today) {
-             mainStatusName = 'Expired';
-             dueStr = '--';
-             dueInfo = { text: 'Plan Expired', class: 'bg-slate-100 text-slate-500 border-slate-200' };
+        } else if (isNonRecurring) {
+             // Match list behavior: never show a renewal countdown for Trial / Ad-hoc
+             dueStr = 'N/A';
+             dueInfo = this.getDueInfo('N/A');
+             if (validPaymentsCount > 0 && member.exitDate) {
+               const exit = new Date(this.parseToISODate(member.exitDate));
+               exit.setHours(0,0,0,0);
+               if (!isNaN(exit) && exit < today) {
+                 mainStatusName = 'Expired';
+                 dueStr = '--';
+                 dueInfo = { text: 'Plan Expired', class: 'bg-slate-100 text-slate-500 border-slate-200' };
+               }
+             }
         } else {
             if (this.effectiveDueDate && this.effectiveDueDate >= today) {
                 mainStatusName = 'Active';
