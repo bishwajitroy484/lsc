@@ -185,36 +185,33 @@ function api_getMembers() {
 
       let nextDue = '';
 
-      if (latestPayment) {
-        if (isAdHocOrTrial) {
-          nextDue = 'N/A';
+      // Ad-hoc and Trial never have a renewal due date (exit date governs lifecycle instead).
+      if (isAdHocOrTrial) {
+        nextDue = 'N/A';
+      } else if (latestPayment) {
+        if (latestPayment.endDate) {
+          let d = new Date(latestPayment.endDate);
+          if (!isNaN(d)) {
+            d.setDate(d.getDate() + 1);
+            nextDue = formatToDDMMMYYYY(d);
+          }
         } else {
-          if (latestPayment.endDate) {
-            let d = new Date(latestPayment.endDate);
+          let baseDateStr = latestPayment.paidDate || latestPayment.date || m.joinDate;
+          if (baseDateStr) {
+            let d = new Date(baseDateStr);
             if (!isNaN(d)) {
-              d.setDate(d.getDate() + 1);
+              if (freq.includes('MONTH')) d.setMonth(d.getMonth() + 1);
+              else if (freq.includes('QUARTER')) d.setMonth(d.getMonth() + 3);
+              else if (freq.includes('HALF')) d.setMonth(d.getMonth() + 6);
+              else if (freq.includes('YEAR') || freq.includes('ANNUAL')) d.setFullYear(d.getFullYear() + 1);
               nextDue = formatToDDMMMYYYY(d);
-            }
-          } else {
-            let baseDateStr = latestPayment.paidDate || latestPayment.date || m.joinDate;
-            if (baseDateStr) {
-              let d = new Date(baseDateStr);
-              if (!isNaN(d)) {
-                if (freq.includes('MONTH')) d.setMonth(d.getMonth() + 1);
-                else if (freq.includes('QUARTER')) d.setMonth(d.getMonth() + 3);
-                else if (freq.includes('HALF')) d.setMonth(d.getMonth() + 6);
-                else if (freq.includes('YEAR') || freq.includes('ANNUAL')) d.setFullYear(d.getFullYear() + 1);
-                nextDue = formatToDDMMMYYYY(d);
-              }
             }
           }
         }
-      } else {
-        if (m.joinDate) {
-          let d = new Date(m.joinDate);
-          if (!isNaN(d)) {
-            nextDue = formatToDDMMMYYYY(d);
-          }
+      } else if (m.joinDate) {
+        let d = new Date(m.joinDate);
+        if (!isNaN(d)) {
+          nextDue = formatToDDMMMYYYY(d);
         }
       }
 
@@ -227,6 +224,52 @@ function api_getMembers() {
   } catch (error) {
     return { success: false, error: error.toString() };
   }
+}
+
+function isBlankMemberField_(value) {
+  if (value === undefined || value === null) return true;
+  if (typeof value === 'string' && String(value).trim() === '') return true;
+  return false;
+}
+
+/**
+ * On edit, blank optional fields from the form must not wipe existing sheet values.
+ * Required name/phone still come from the incoming payload after validation.
+ */
+function mergeMemberUpdatePayload_(existing, incoming) {
+  const prev = existing || {};
+  const next = incoming || {};
+  const merged = Object.assign({}, prev, next);
+
+  const optionalKeys = [
+    'email',
+    'dob',
+    'exitDate',
+    'profileImage',
+    'gender',
+    'batchId',
+    'membershipId',
+    'status',
+    'joinDate'
+  ];
+
+  optionalKeys.forEach(function(key) {
+    if (!Object.prototype.hasOwnProperty.call(next, key)) return;
+    if (isBlankMemberField_(next[key]) && !isBlankMemberField_(prev[key])) {
+      merged[key] = prev[key];
+    }
+  });
+
+  // Client sends Number('') => 0; treat blank amount as keep previous
+  if (Object.prototype.hasOwnProperty.call(next, 'membershipAmount')) {
+    const raw = next.membershipAmount;
+    const blankAmount = isBlankMemberField_(raw) || raw === 0 || raw === '0';
+    if (blankAmount && prev.membershipAmount !== undefined && prev.membershipAmount !== null && prev.membershipAmount !== '' && Number(prev.membershipAmount) !== 0) {
+      merged.membershipAmount = prev.membershipAmount;
+    }
+  }
+
+  return merged;
 }
 
 function api_saveMember(memberData) {
@@ -272,7 +315,13 @@ function api_saveMember(memberData) {
     // 3. Save Member to DB
     let savedData;
     if (!isNew) {
-      savedData = DB.update('MEMBERS', memberData.memberId, memberData);
+      const members = DB.read('MEMBERS') || [];
+      const existing = members.find(function(m) {
+        return String(m.memberId) === String(memberData.memberId);
+      });
+      if (!existing) throw new Error('Member not found.');
+      const merged = mergeMemberUpdatePayload_(existing, memberData);
+      savedData = DB.update('MEMBERS', memberData.memberId, merged);
     } else {
       savedData = DB.create('MEMBERS', memberData);
       

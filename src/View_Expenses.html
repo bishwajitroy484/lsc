@@ -1,86 +1,116 @@
-<div class="bg-slate-50 h-full flex flex-col relative overflow-hidden">
-  
-  
-  <header class="bg-white px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center justify-between sticky top-0 border-b border-slate-100 z-20 gap-3">
-    
-    
+<div class="bg-slate-50 h-full flex flex-col relative overflow-hidden" id="expenses-hub-root">
+
+  <header class="bg-white px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between sticky top-0 border-b border-slate-100 z-20 gap-3 shrink-0">
     <div class="flex items-center justify-between w-full md:w-auto shrink-0">
       <div class="flex items-center gap-3">
         <span onclick="window.location.hash='#dashboard'" class="material-symbols-rounded text-slate-600 cursor-pointer hover:bg-slate-100 rounded-full p-1 transition-colors">arrow_back</span>
         <div>
-          <h1 class="text-xl font-bold text-slate-800 leading-tight">Expenses</h1>
-          <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Track and manage your gym expenses</p>
+          <h1 class="text-xl font-bold text-slate-800 leading-tight">Expenses &amp; Staff</h1>
+          <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Manage operating costs and staff payroll in one place</p>
         </div>
       </div>
-      <button onclick="ExpensesApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors shrink-0">
+      <button type="button" onclick="ExpensesHub.onAddClick()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors shrink-0">
         <span class="material-symbols-rounded text-[18px]">add</span>
       </button>
     </div>
-    
-    
-    <div class="grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
-      <select id="exp-filter-year" onchange="ExpensesApp.applyGlobalFilters()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]"></select>
-      
-      <select id="exp-filter-mode" onchange="ExpensesApp.handleModeSwitch()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+
+    <div class="grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 w-full md:w-auto">
+      <select id="exp-filter-year" onchange="ExpensesHub.onSharedFiltersChanged()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]"></select>
+      <select id="exp-filter-mode" onchange="ExpensesHub.onSharedModeSwitch()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
         <option value="Monthly">Monthly</option>
         <option value="Quarterly">Quarterly</option>
       </select>
-
       <div class="relative w-full">
-        <button onclick="document.getElementById('exp-multi-select-menu').classList.toggle('hidden')" class="w-full bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 shadow-sm flex items-center justify-between relative">
+        <button type="button" onclick="document.getElementById('exp-multi-select-menu').classList.toggle('hidden')" class="w-full bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 shadow-sm flex items-center justify-between relative">
           <span id="exp-multi-select-label" class="truncate">All Selected</span>
           <span class="material-symbols-rounded text-[14px] absolute right-1.5 text-slate-500">expand_more</span>
         </button>
         <div id="exp-multi-select-menu" class="hidden absolute top-full mt-1 right-0 w-full min-w-[140px] bg-white border border-slate-200 shadow-lg rounded-lg max-h-48 overflow-y-auto z-40 p-2"></div>
       </div>
-
-      
-      <button onclick="ExpensesApp.openModal()" class="hidden md:flex shrink-0 h-8 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-blue-700 transition-colors">
+      <button type="button" onclick="ExpensesHub.onAddClick()" class="hidden md:flex shrink-0 h-8 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-blue-700 transition-colors">
         <span class="material-symbols-rounded text-[16px]">add</span>
-        <span class="font-semibold text-xs">Add Expense</span>
+        <span class="font-semibold text-xs">Add Record</span>
       </button>
     </div>
   </header>
 
-  
+  <!-- Hidden staff filter mirrors (StaffApp still reads these) -->
+  <div class="hidden" aria-hidden="true">
+    <select id="staff-filter-year"></select>
+    <select id="staff-filter-mode"><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option></select>
+    <div id="staff-multi-select-menu"></div>
+    <span id="staff-multi-select-label"></span>
+  </div>
+
   <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
-    
-    
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
-      <div class="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex flex-col justify-center">
-        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center material-symbols-rounded text-[14px]">account_balance_wallet</span><p class="text-[10px] text-slate-500 font-bold uppercase">Total Expenses</p></div>
-        <h2 id="kpi-total-exp" class="text-xl font-bold text-slate-800">₹0</h2>
-      </div>
-      <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex flex-col justify-center">
-        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center material-symbols-rounded text-[14px]">category</span><p class="text-[10px] text-slate-500 font-bold uppercase">Most Spent</p></div>
-        <h2 id="kpi-top-cat" class="text-sm font-bold text-slate-800">--</h2>
-        <p id="kpi-top-cat-amt" class="text-[10px] font-medium text-slate-500">₹0</p>
-      </div>
-      <div class="bg-amber-50/50 p-4 rounded-xl border border-amber-100 flex flex-col justify-center">
-        
-        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[14px]">calendar_month</span><p id="kpi-avg-title" class="text-[10px] text-slate-500 font-bold uppercase">Monthly Avg</p></div>
-        <h2 id="kpi-avg-exp" class="text-xl font-bold text-slate-800">₹0</h2>
-      </div>
-      <div onclick="window.location.hash='#staff'" class="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex flex-col justify-center cursor-pointer hover:border-purple-200 hover:shadow-sm transition-all group" title="View Staff Management">
-        <div class="flex items-center justify-between mb-1">
-          <div class="flex items-center gap-2">
-            <span class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[14px]">badge</span>
-            <p class="text-[10px] text-slate-500 font-bold uppercase">Staff Cost</p>
-          </div>
-          <span class="material-symbols-rounded text-[14px] text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
+
+    <div class="grid grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
+      <!-- 1: Total Outflow -->
+      <div class="bg-emerald-50/50 p-3 md:p-4 rounded-xl border border-emerald-100 flex flex-col justify-center min-w-0">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center material-symbols-rounded text-[14px] shrink-0">account_balance_wallet</span>
+          <p class="text-[10px] text-slate-500 font-bold uppercase truncate">Total Outflow</p>
         </div>
-        <h2 id="kpi-staff-exp" class="text-xl font-bold text-slate-800">₹0</h2>
+        <h2 id="kpi-total-exp" class="text-base sm:text-lg md:text-xl font-bold text-slate-800 truncate">₹0</h2>
+      </div>
+
+      <!-- 2: Staff Cost + Other Expenses -->
+      <div class="bg-slate-50/80 p-3 md:p-4 rounded-xl border border-slate-200 min-w-0">
+        <p class="text-[10px] text-slate-500 font-bold uppercase mb-2 truncate">Cost Split</p>
+        <div class="grid grid-cols-2 gap-2 sm:gap-3">
+          <div class="min-w-0 border-r border-slate-200 pr-2 sm:pr-3">
+            <div class="flex items-center gap-1 mb-0.5">
+              <span class="w-5 h-5 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">badge</span>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Staff Cost</p>
+            </div>
+            <h2 id="kpi-staff-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">₹0</h2>
+          </div>
+          <div class="min-w-0 pl-0.5">
+            <div class="flex items-center gap-1 mb-0.5">
+              <span class="w-5 h-5 rounded bg-blue-100 text-blue-600 flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">receipt_long</span>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Other</p>
+            </div>
+            <h2 id="kpi-other-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">₹0</h2>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3: Period average -->
+      <div class="bg-amber-50/50 p-3 md:p-4 rounded-xl border border-amber-100 flex flex-col justify-center min-w-0">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-6 h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[14px] shrink-0">calendar_month</span>
+          <p id="kpi-avg-title" class="text-[10px] text-slate-500 font-bold uppercase truncate">Monthly Avg</p>
+        </div>
+        <h2 id="kpi-avg-exp" class="text-base sm:text-lg md:text-xl font-bold text-slate-800 truncate">₹0</h2>
+      </div>
+
+      <!-- 4: Total Staff + Action Needed -->
+      <div onclick="ExpensesHub.switchListTab('staff'); StaffApp.scrollToActionNeeded && StaffApp.scrollToActionNeeded();" class="bg-cyan-50/40 p-3 md:p-4 rounded-xl border border-cyan-100 min-w-0 cursor-pointer hover:border-cyan-200 hover:shadow-sm transition-all" title="Open Staff list">
+        <p class="text-[10px] text-slate-500 font-bold uppercase mb-2 truncate">Staff Snapshot</p>
+        <div class="grid grid-cols-2 gap-2 sm:gap-3">
+          <div class="min-w-0 border-r border-cyan-100/80 pr-2 sm:pr-3">
+            <div class="flex items-center gap-1 mb-0.5">
+              <span class="w-5 h-5 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">group</span>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Staff</p>
+            </div>
+            <h2 id="kpi-total-staff" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">--</h2>
+          </div>
+          <div class="min-w-0 pl-0.5">
+            <div class="flex items-center gap-1 mb-0.5">
+              <span class="w-5 h-5 rounded bg-orange-100 text-orange-700 flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">pending_actions</span>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Action</p>
+            </div>
+            <h2 id="kpi-action-needed" class="text-sm sm:text-base md:text-lg font-bold text-amber-700 leading-tight truncate">--</h2>
+            <p id="kpi-action-needed-sub" class="text-[9px] sm:text-[10px] font-medium text-slate-500 mt-0.5 leading-tight line-clamp-2">--</p>
+          </div>
+        </div>
       </div>
     </div>
 
-    
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-      
-      
       <div class="lg:col-span-2 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="font-bold text-sm text-slate-800">Expense Trend</h3>
-          
+          <h3 class="font-bold text-sm text-slate-800">Expenses Trend</h3>
           <select id="chart-type-toggle" onchange="ExpensesApp.renderCharts()" class="appearance-none bg-slate-50 pl-3 pr-7 py-1.5 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
             <option value="bar">Bar Chart</option>
             <option value="area">Area Chart</option>
@@ -93,11 +123,9 @@
           </div>
         </div>
       </div>
-      
-      
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col lg:col-span-2">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="font-bold text-sm text-slate-800">Expense Breakdown</h3>
+          <h3 class="font-bold text-sm text-slate-800">Expenses by Category</h3>
         </div>
         <div class="relative w-full flex-1 min-h-[240px]">
           <div id="chart-expense-breakdown" class="absolute inset-0 flex items-center justify-center">
@@ -105,83 +133,131 @@
           </div>
         </div>
       </div>
-
-      
-      <div id="chart-misc-wrapper" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col transition-all duration-300">
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="font-bold text-sm text-slate-800">Misc / Other Breakdown</h3>
-        </div>
-        <div class="relative w-full flex-1 min-h-[240px]">
-          <div id="chart-expense-misc" class="absolute inset-0 flex items-center justify-center">
-            <div class="w-full h-full shimmer opacity-40 rounded-lg"></div>
-          </div>
-        </div>
-      </div>
-
+      <div id="chart-misc-wrapper" class="hidden"></div>
+      <div id="kpi-top-cat" class="hidden"></div>
+      <div id="kpi-top-cat-amt" class="hidden"></div>
+      <div id="kpi-total-cost" class="hidden"></div>
     </div>
 
-    
     <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-      <div class="p-3 md:p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
-        <h3 class="font-bold text-sm text-slate-800 shrink-0">Expense Records</h3>
-        
-        <div class="flex flex-nowrap items-center gap-2 w-full md:w-auto">
-          <div class="relative w-[55%] md:w-48 shrink-0">
-            <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[16px]">search</span>
-            <input type="text" id="search-table" onkeyup="ExpensesApp.searchTable(this.value)" placeholder="Search..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary bg-white">
+      <div class="p-3 md:p-4 border-b border-slate-100 flex flex-col gap-3 bg-slate-50/50">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
+            <button type="button" id="exp-list-tab-all" onclick="ExpensesHub.switchListTab('all')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white text-slate-800 shadow-sm">All Records</button>
+            <button type="button" id="exp-list-tab-staff" onclick="ExpensesHub.switchListTab('staff')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-slate-700">Staff</button>
+            <button type="button" id="exp-list-tab-expenses" onclick="ExpensesHub.switchListTab('expenses')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-slate-700">Expenses</button>
           </div>
-          <select id="filter-table-cat" onchange="ExpensesApp.filterTable()" class="w-[45%] md:w-auto shrink-0 appearance-none bg-white pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_6px_center]">
-            <option value="All">All Categories</option>
-          </select>
+          <div id="exp-list-filters-expenses" class="flex flex-nowrap items-center gap-2 w-full sm:w-auto">
+            <div class="relative flex-1 sm:w-44 shrink-0">
+              <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[16px]">search</span>
+              <input type="text" id="search-table" onkeyup="ExpensesApp.searchTable(this.value)" placeholder="Search..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary bg-white">
+            </div>
+            <select id="filter-table-cat" onchange="ExpensesApp.filterTable()" class="shrink-0 appearance-none bg-white pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_6px_center]">
+              <option value="All">All Categories</option>
+            </select>
+          </div>
+          <div id="exp-list-filters-all" class="hidden flex flex-nowrap items-center gap-2 w-full sm:w-auto">
+            <div class="relative flex-1 sm:w-44 shrink-0">
+              <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[16px]">search</span>
+              <input type="text" id="all-search-table" onkeyup="ExpensesHub.searchAllRecords(this.value)" placeholder="Search all..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary bg-white">
+            </div>
+            <select id="all-filter-type" onchange="ExpensesHub.filterAllRecords()" class="shrink-0 appearance-none bg-white pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_6px_center]">
+              <option value="All">All Types</option>
+              <option value="staff">Staff</option>
+              <option value="expense">Expense</option>
+            </select>
+          </div>
         </div>
       </div>
-      
-      
-      <div id="expenses-table-container" class="hidden md:block overflow-auto no-scrollbar max-h-[380px]">
-        <table class="w-full text-left border-collapse min-w-[700px]">
-          <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
-            <tr class="text-[11px] uppercase text-slate-500 font-bold select-none tracking-wider">
-              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('date')">
-                <div class="flex items-center gap-1">Date <span id="sort-icon-date" class="material-symbols-rounded text-[14px]">arrow_downward</span></div>
-              </th>
-              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('category')">
-                <div class="flex items-center gap-1">Category <span id="sort-icon-category" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></div>
-              </th>
-              <th class="px-4 py-3">Description</th>
-              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('amount')">
-                <div class="flex items-center gap-1">Amount <span id="sort-icon-amount" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></div>
-              </th>
-              <th class="px-4 py-3">Added By</th>
-              <th class="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="desktop-expense-body" class="text-xs text-slate-700"></tbody>
-        </table>
+
+      <!-- All Records -->
+      <div id="exp-list-panel-all" class="">
+        <div id="all-records-table-container" class="hidden md:block overflow-auto no-scrollbar max-h-[420px]">
+          <table class="w-full text-left border-collapse min-w-[780px]">
+            <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
+              <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider">
+                <th class="px-4 py-3">Date</th>
+                <th class="px-4 py-3">Type</th>
+                <th class="px-4 py-3">Name / Category</th>
+                <th class="px-4 py-3">Description</th>
+                <th class="px-4 py-3">Amount</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="desktop-all-body" class="text-xs text-slate-700"></tbody>
+          </table>
+        </div>
+        <div id="mobile-all-container" class="md:hidden flex flex-col bg-slate-50 p-3 gap-3 overflow-y-auto no-scrollbar max-h-[460px]"></div>
       </div>
 
-      
-      <div id="mobile-expense-container" class="md:hidden flex flex-col bg-slate-50 p-3 gap-3 overflow-y-auto no-scrollbar max-h-[460px]"></div>
-    </div>
+      <!-- Expenses panel -->
+      <div id="exp-list-panel-expenses" class="hidden">
+        <div id="expenses-table-container" class="hidden md:block overflow-auto no-scrollbar max-h-[420px]">
+          <table class="w-full text-left border-collapse min-w-[700px]">
+            <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
+              <tr class="text-[11px] uppercase text-slate-500 font-bold select-none tracking-wider">
+                <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('date')">
+                  <div class="flex items-center gap-1">Date <span id="sort-icon-date" class="material-symbols-rounded text-[14px]">arrow_downward</span></div>
+                </th>
+                <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('category')">
+                  <div class="flex items-center gap-1">Category <span id="sort-icon-category" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></div>
+                </th>
+                <th class="px-4 py-3">Description</th>
+                <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('amount')">
+                  <div class="flex items-center gap-1">Amount <span id="sort-icon-amount" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></div>
+                </th>
+                <th class="px-4 py-3">Added By</th>
+                <th class="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="desktop-expense-body" class="text-xs text-slate-700"></tbody>
+          </table>
+        </div>
+        <div id="mobile-expense-container" class="md:hidden flex flex-col bg-slate-50 p-3 gap-3 overflow-y-auto no-scrollbar max-h-[460px]"></div>
+      </div>
 
+      <!-- Staff panel slot: filled by View_Staff table card -->
+      <div id="exp-list-panel-staff" class="hidden"></div>
+    </div>
   </div>
 
-  
-<div id="expense-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[100] flex items-end md:items-center justify-center sm:p-4 lsc-modal-sheet">
+  <!-- Add Record type chooser -->
+  <div id="exp-add-chooser-modal" onclick="if(event.target===this) ExpensesHub.closeAddChooser()" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 lsc-modal-sheet">
+    <div id="exp-add-chooser-content" class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl transform translate-y-4 sm:scale-95 opacity-0 transition-all duration-200 border border-slate-200 overflow-hidden lsc-modal-sheet-panel">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50">
+        <div>
+          <h2 class="text-base font-bold text-slate-800">Add Record</h2>
+          <p class="text-[11px] text-slate-500 mt-0.5">What would you like to add?</p>
+        </div>
+        <button type="button" onclick="ExpensesHub.closeAddChooser()" class="w-8 h-8 flex items-center justify-center bg-white text-slate-500 rounded-full hover:bg-slate-200 border border-slate-100"><span class="material-symbols-rounded text-[18px]">close</span></button>
+      </div>
+      <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <button type="button" id="exp-add-choose-staff" onclick="ExpensesHub.chooseAddType('staff')" class="text-left p-4 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50/40 transition-colors">
+          <span class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center material-symbols-rounded mb-3">badge</span>
+          <p class="text-sm font-bold text-slate-800">Staff</p>
+          <p class="text-[11px] text-slate-500 mt-1">Add a staff member</p>
+        </button>
+        <button type="button" id="exp-add-choose-expense" onclick="ExpensesHub.chooseAddType('expense')" class="text-left p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 transition-colors">
+          <span class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center material-symbols-rounded mb-3">receipt_long</span>
+          <p class="text-sm font-bold text-slate-800">Expenses</p>
+          <p class="text-[11px] text-slate-500 mt-1">Add an operating expense</p>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="expense-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[100] flex items-end md:items-center justify-center sm:p-4 lsc-modal-sheet">
     <div id="expense-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh] lsc-modal-sheet-panel">
-      
-      
       <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0 bg-slate-50 rounded-t-2xl">
         <h2 id="exp-modal-title" class="text-base font-bold text-slate-800">Add Expense</h2>
         <button type="button" onclick="ExpensesApp.closeModal()" class="w-7 h-7 flex items-center justify-center bg-white text-slate-500 rounded-full hover:bg-slate-200 shadow-sm border border-slate-100 transition-colors">
           <span class="material-symbols-rounded text-[16px]">close</span>
         </button>
       </div>
-      
-      
       <div class="p-4 md:p-5 overflow-y-auto flex-1 no-scrollbar">
         <form id="expense-form" novalidate onsubmit="ExpensesApp.saveExpense(event)" class="flex flex-col h-full space-y-3">
           <input type="hidden" id="exp-id">
-          
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Date *</label>
@@ -198,13 +274,10 @@
               </div>
             </div>
           </div>
-
-          
           <div id="misc-field-container" class="hidden">
             <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">What is this for? *</label>
             <input type="text" id="exp-what-misc" required placeholder="Specify miscellaneous detail (e.g. Printer Ink)" class="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">
           </div>
-
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Amount *</label>
@@ -214,11 +287,10 @@
               </div>
             </div>
             <div>
-               <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Description</label>
-               <input type="text" id="exp-desc" placeholder="e.g. Gym Rent - Sept" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">
+              <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Description</label>
+              <input type="text" id="exp-desc" placeholder="e.g. Gym Rent - Sept" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">
             </div>
           </div>
-
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt Image (Optional)</label>
             <div class="flex items-center gap-3">
@@ -232,8 +304,6 @@
               <input type="hidden" id="exp-receipt-file-id">
             </div>
           </div>
-
-          
           <div class="mt-auto flex gap-3 pt-3 border-t border-slate-100">
             <button type="button" onclick="ExpensesApp.closeModal()" class="flex-1 px-4 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors">Cancel</button>
             <button type="submit" id="btn-save-expense" class="flex-1 px-4 py-2 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 hover:bg-blue-700 flex items-center justify-center gap-1.5 transition-all active:scale-95">Save Expense</button>
@@ -243,7 +313,6 @@
     </div>
   </div>
 
-  
   <div id="delete-exp-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[120] flex lsc-modal-overlay">
     <div id="delete-exp-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 p-6 text-center lsc-modal-panel">
       <div class="w-16 h-16 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4"><span class="material-symbols-rounded text-3xl">delete_forever</span></div>
@@ -256,4 +325,4 @@
     </div>
   </div>
 
-</div>
+  <!-- View_Staff continues inside hub -->

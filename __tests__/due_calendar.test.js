@@ -154,8 +154,8 @@ describe('due calendar helpers', () => {
     expect(due.getDate()).toBe(1);
   });
 
-  test('sync is a no-op when feature is disabled', () => {
-    const { api, createdEvents, deletedIds } = loadDueCalendarApi({
+  test('sync clears leftover events when feature is disabled', () => {
+    const { api, createdEvents, deletedIds, memberUpdates } = loadDueCalendarApi({
       enabled: false,
       previousEventId: 'evt-old-1'
     });
@@ -163,7 +163,8 @@ describe('due calendar helpers', () => {
     expect(res.synced).toBe(false);
     expect(res.reason).toBe('disabled');
     expect(createdEvents).toHaveLength(0);
-    expect(deletedIds).toHaveLength(0);
+    expect(deletedIds).toContain('evt-old-1');
+    expect(memberUpdates.some(u => u.payload.dueCalendarEventId === '')).toBe(true);
   });
 
   test('sync deletes previous event and creates a timed replacement', () => {
@@ -181,6 +182,76 @@ describe('due calendar helpers', () => {
     expect(durationMs).toBe(30 * 60 * 1000);
     expect(createdEvents[0].start.getHours()).toBe(9);
     expect(memberUpdates.some(u => u.payload.dueCalendarEventId === 'evt-new-1')).toBe(true);
+  });
+
+  test('renewal cycle: second paid payment replaces prior due event with next quarter due', () => {
+    const { api, createdEvents, deletedIds, memberUpdates } = loadDueCalendarApi({
+      enabled: true,
+      previousEventId: 'evt-old-1',
+      payments: [
+        {
+          paymentId: 'PAY-Q1',
+          memberId: 'MEM-1',
+          paymentStatus: 'Paid',
+          amount: 4500,
+          endDate: '2026-09-30',
+          paidDate: '2026-07-01'
+        },
+        {
+          paymentId: 'PAY-Q2',
+          memberId: 'MEM-1',
+          paymentStatus: 'Paid',
+          amount: 4500,
+          endDate: '2026-12-31',
+          paidDate: '2026-10-01'
+        }
+      ]
+    });
+    const res = api.syncMemberDueCalendarEvent_('MEM-1', {
+      paymentId: 'PAY-Q2',
+      memberId: 'MEM-1',
+      paymentStatus: 'Paid',
+      amount: 4500,
+      endDate: '2026-12-31',
+      paidDate: '2026-10-01'
+    });
+    expect(res.synced).toBe(true);
+    expect(res.replaced).toBe('evt-old-1');
+    expect(deletedIds).toContain('evt-old-1');
+    expect(createdEvents).toHaveLength(1);
+    expect(createdEvents[0].start.getFullYear()).toBe(2027);
+    expect(createdEvents[0].start.getMonth()).toBe(0);
+    expect(createdEvents[0].start.getDate()).toBe(1);
+    expect(memberUpdates.some(u => u.payload.dueCalendarEventId === 'evt-new-1')).toBe(true);
+  });
+
+  test('paymentHint wins as latest paid when sheet still has older payment only', () => {
+    const { api, createdEvents } = loadDueCalendarApi({
+      enabled: true,
+      previousEventId: '',
+      payments: [
+        {
+          paymentId: 'PAY-OLD',
+          memberId: 'MEM-1',
+          paymentStatus: 'Paid',
+          amount: 4500,
+          endDate: '2026-06-30',
+          paidDate: '2026-04-01'
+        }
+      ]
+    });
+    const res = api.syncMemberDueCalendarEvent_('MEM-1', {
+      paymentId: 'PAY-NEW',
+      memberId: 'MEM-1',
+      paymentStatus: 'Paid',
+      amount: 4500,
+      endDate: '2026-12-16',
+      paidDate: '2026-09-17'
+    });
+    expect(res.synced).toBe(true);
+    expect(createdEvents[0].start.getFullYear()).toBe(2026);
+    expect(createdEvents[0].start.getMonth()).toBe(11);
+    expect(createdEvents[0].start.getDate()).toBe(17);
   });
 
   test('sync skips non-quarterly plans', () => {

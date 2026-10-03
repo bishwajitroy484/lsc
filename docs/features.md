@@ -22,16 +22,19 @@ The current application includes these feature modules:
 
 - Calendar
 - Dashboard
-- Expenses
+- Expenses (Operating expenses and Staff & Payroll tabs)
 - Members
 - Settings
-- Staff
 
 Add or update a section for a feature when documenting a behavior change; do not infer unverified product behavior from a module name alone.
 
+## Expenses hub (Operating + Staff)
+
+Expenses & Staff is a single page: shared year/period filters, **four KPI cards** showing six values (Total Outflow; Cost Split with Staff Cost + Other Expenses; period average; Staff Snapshot with Total Staff + Action Needed), a stacked Staff Cost + Other Expenses trend, and category breakdown. Below that, list tabs are **All Records** (salaries, pending salary cycles, and expenses with type/status), **Staff** (staff member list with the existing detail drawer for Overview and Salary), and **Expenses** (operating expense records). **Add Record** asks Staff vs Expenses, then opens the existing add-staff or add-expense form. Salary payments still happen from the staff detail drawer. Permission keys remain separate (`expenses` and `staff`); the page is visible with either View permission. Legacy `#staff` opens the Staff list tab. Sheets and APIs stay separate (`EXPENSES` vs `STAFF`/`SALARY`).
+
 ## Calendar year selection
 
-The Calendar year selector is a dropdown populated from years found in member, payment, expense, staff, and salary records. The current year is included even when no records exist for it. Dashboard, Members, Staff, and Expenses use the same available-year list, so their year selectors stay consistent.
+The Calendar year selector is a dropdown populated from years found in member, payment, expense, staff, and salary records. The current year is included even when no records exist for it. Dashboard, Members, and Expenses (including Staff & Payroll) use the same available-year list, so their year selectors stay consistent.
 
 ## Payment insights and dashboard collections
 
@@ -55,7 +58,7 @@ The app is meant for portrait and landscape phones of any common width without p
 
 ## Member filters, payments, and exit dates
 
-The Members module's status, batch, and membership filters keep their selected values visible while filtering the member list. Member phone numbers must contain exactly 10 digits when adding or editing a record. Adding a member can optionally capture an initial payment; its payment mode and status choices are populated from the configured dropdown options and shown when Record Now is selected. Ad-hoc and trial members require an exit date and are changed to Inactive when that date is reached, both during member-list loading and by a daily scheduled check. Trial fees use the configured daily rate multiplied by the inclusive number of days between join and exit dates, and recalculate when the plan or dates change.
+The Members module's status, batch, and membership filters keep their selected values visible while filtering the member list. Member phone numbers must contain exactly 10 digits when adding or editing a record. Editing a member preserves existing optional values (email, DOB, exit date, profile image, batch, amount, and similar) when those form fields are left blank — only fields you change are overwritten. Adding a member can optionally capture an initial payment; its payment mode and status choices are populated from the configured dropdown options and shown when Record Now is selected. Ad-hoc and trial members require an exit date and are changed to Inactive when that date is reached, both during member-list loading and by a daily scheduled check. They do **not** show a renewal due date — both the member list and member detail show **No Due Date** (lifecycle is driven by exit date, not payment renewal). Trial fees use the configured daily rate multiplied by the inclusive number of days between join and exit dates, and recalculate when the plan or dates change.
 
 ## Dashboard Net-In-Hand forecast
 
@@ -73,9 +76,9 @@ Each Dashboard KPI, chart, and overdue/upcoming table title includes a small inf
 
 The Dashboard year, monthly/quarterly mode, and selected months or quarters filter the KPI totals and charts. Expense Breakdown follows those same selected periods, grouping recognized operating expenses and paid staff costs by category; misc expense details use the same period selection.
 
-## Dashboard WhatsApp renewal notify
+## WhatsApp notify (Dashboard and Members)
 
-The Dashboard Overdue and Upcoming member tables include a compact Notify/WA action with a WhatsApp icon. Tapping it opens a mobile-friendly preview sheet with a prefilled overdue or upcoming renewal message (gym name, member, plan, amount, due date, and days). The message can be edited, copied, or opened in WhatsApp via a `wa.me` link with the member’s phone number and the edited text prefilled. Members without a phone number show a disabled action. No WhatsApp Business API is used; sending still happens in the WhatsApp app after the user confirms.
+The Dashboard Overdue and Upcoming member tables, and the Members payment-history rows, include a compact Notify/WA action with a WhatsApp icon. Tapping it opens a mobile-friendly preview sheet with a prefilled message that can be edited, copied, or opened in WhatsApp via a `wa.me` link with the member’s phone number. Message types cover overdue and upcoming renewal reminders, plus a payment-received thank-you on paid history rows (email receipt still sends automatically when enabled in Settings). Members without a phone number show a disabled action. No WhatsApp Business API is used; sending still happens in the WhatsApp app after the user confirms.
 
 ## Sign-in, authorization, and multi-user access
 
@@ -100,7 +103,7 @@ The web app is published with `Anyone` access and executes as the deployer. Data
 
 The Settings module provides a responsive, device-compatible interface organized into four main tabs:
 
-- **General:** Configures gym identity (gym name, owner name, owner email, and gym logo upload with LSC fallback), setup/authorization, financial policies (revenue recognition and currency numbering), database IDs (Spreadsheet and Drive folder with compact copy/open actions), automated notifications, and Google Calendar due reminders. Mobile general settings use denser two-column rows and a single header Save. Notifications support editable receipt/weekly templates, sample HTML previews, **Send test** (delivers a sample receipt or weekly report to the signed-in admin inbox, without emailing members or CC), weekly CC recipients, day/time/days-ahead schedule, and selectable report table columns. **Calendar due reminders** (opt-in) create a timed event on the deployer/owner Google Calendar when a **paid quarterly** payment is saved (`endDate + 1 day` at a configured start hour/duration). Renewals replace the previous event; Trial/Ad-hoc/Monthly/Annual are excluded; no backfill of existing members. Event ids are stored on `MEMBERS.dueCalendarEventId`. Requires Calendar OAuth (re-authorize in Setup after first deploy).
+- **General:** Configures gym identity (gym name, owner name, owner email, and gym logo upload with LSC fallback), setup/authorization, financial policies (revenue recognition and currency numbering), database IDs (Spreadsheet and Drive folder with compact copy/open actions), automated notifications, and Google Calendar due reminders. Mobile general settings use denser two-column rows and a single header Save. Notifications support editable receipt/weekly templates, sample HTML previews, **Send test** (delivers a sample receipt or weekly report to the signed-in admin inbox, without emailing members or CC), weekly CC recipients, day/time/days-ahead schedule, and selectable report table columns. **Calendar due reminders** (opt-in) create a timed event on the deployer/owner Google Calendar when a **paid quarterly** payment is saved (`endDate + 1 day` at a configured start hour/duration). Each new paid quarterly payment **deletes the previous due event** (if any) and creates the next quarter's due event — a cyclic replace stored as `MEMBERS.dueCalendarEventId`. Turning the feature off clears leftover events. Trial/Ad-hoc/Monthly/Annual are excluded; no backfill of existing members. Requires Calendar OAuth (re-authorize in Setup after first deploy).
 - **Users:** Add people and configure per-page View / Create / Edit / Delete access stored in the `USERS` sheet. Invitees only need their personal link; they are never given access to the Spreadsheet, Drive folder, or Apps Script project, because the app reads and writes data on their behalf.
 - **Dropdowns:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
 - **Guide:** In-app product walkthrough (`View_Guide.html`) with search, sticky section chips, and expand/collapse cards. Covers architecture (web app ↔ Sheets ↔ Drive ↔ Mail), getting started, sign-in/invites/roles, every module, Dashboard metric formulas, money rules (Anchor/Split, currency, Paid status), notifications, everyday UX, and admin notes. Readable on mobile and desktop. No Save action — documentation only. When user-facing behavior changes, update this Guide in the same change as `docs/features.md`.
@@ -118,7 +121,7 @@ The backend includes a dedicated mock data generator (`src/MockDataGenerator.gs`
 
 ## Lazy Loading and High-Performance Data Tables
 
-To deliver an instantaneous and smooth user experience across large record volumes, the Members, Staff, and Expenses modules use a progressive lazy loading rendering strategy:
+To deliver an instantaneous and smooth user experience across large record volumes, the Members and Expenses (Operating and Staff & Payroll tabs) modules use a progressive lazy loading rendering strategy:
 
 - **Batch Size:** Renders records in performant chunks of 50 items.
 - **Progressive Bottom Loading:** Scrolling down on both desktop table views and mobile card containers dynamically detects when the user nears the bottom, appends a lightweight shimmer/skeleton row or card placeholder, and seamlessly loads the next batch without clearing or re-rendering existing items at the top.
@@ -126,7 +129,7 @@ To deliver an instantaneous and smooth user experience across large record volum
 
 ## Chart Styling and Mobile Toolbar Ergonomics
 
-All ApexCharts throughout the application (Dashboard, Expenses, Staff, and Members) follow unified visual and typographic standards:
+All ApexCharts throughout the application (Dashboard, Expenses Operating/Staff tabs, and Members) follow unified visual and typographic standards:
 
 - **Consistent Data-Labels & Axes:** Data labels use styled badge containers (`11px font-size`, semi-bold weight, contrasting dark text `#0f172a`, and subtle rounded pill backgrounds `#ffffff` with 0.92 opacity). Axes and legend text are scaled to a readable `11px` to ensure effortless legibility across devices.
 - **Mobile Toolbar Ergonomics:** Toolbar buttons (zoom-in, zoom-out, pan/range, and reset) feature top clearance and scaled mobile padding on small screens (`max-width: 640px`) to prevent any visual overlap with peak chart data points and labels.

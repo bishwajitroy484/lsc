@@ -619,10 +619,16 @@
     },
 
     firstAllowedRoute: function() {
-      const order = ['dashboard', 'members', 'staff', 'expenses', 'calendar', 'settings'];
+      const order = ['dashboard', 'members', 'expenses', 'calendar', 'settings'];
       for (let i = 0; i < order.length; i++) {
-        if (this.can(order[i], 'view')) return order[i];
+        const route = order[i];
+        if (route === 'expenses') {
+          if (this.can('expenses', 'view') || this.can('staff', 'view')) return 'expenses';
+          continue;
+        }
+        if (this.can(route, 'view')) return route;
       }
+      if (this.can('staff', 'view')) return 'expenses';
       return '';
     },
 
@@ -630,7 +636,11 @@
       document.querySelectorAll('.nav-btn[data-route]').forEach(btn => {
         const route = btn.getAttribute('data-route');
         if (!route) return;
-        if (this.can(route, 'view')) btn.classList.remove('hidden');
+        let allowed = this.can(route, 'view');
+        if (route === 'expenses') {
+          allowed = this.can('expenses', 'view') || this.can('staff', 'view');
+        }
+        if (allowed) btn.classList.remove('hidden');
         else btn.classList.add('hidden');
       });
     },
@@ -893,7 +903,10 @@
             const route = btn.getAttribute('data-route');
             if (route) {
               e.preventDefault();
-              if (!AccessControl.can(route, 'view')) {
+              const canRoute = route === 'expenses'
+                ? (AccessControl.can('expenses', 'view') || AccessControl.can('staff', 'view'))
+                : AccessControl.can(route, 'view');
+              if (!canRoute) {
                 if (typeof Toast !== 'undefined') Toast.error('You do not have access to this page.');
                 return;
               }
@@ -928,8 +941,21 @@
       const hash = forcedView ? ('#' + forcedView) : (window.location.hash || '#dashboard');
       let viewName = hash.replace('#', '') || 'dashboard';
 
+      // Staff lives under Expenses (Staff & Payroll tab)
+      if (viewName === 'staff') {
+        try { sessionStorage.setItem('lsc_expenses_tab', 'staff'); } catch (e) {}
+        viewName = 'expenses';
+        if (window.location.hash !== '#expenses') {
+          window.location.hash = '#expenses';
+          return;
+        }
+      }
+
       if (typeof AccessControl !== 'undefined' && AccessControl.session && AccessControl.session.allowed) {
-        if (!AccessControl.can(viewName, 'view')) {
+        const canView = viewName === 'expenses'
+          ? (AccessControl.can('expenses', 'view') || AccessControl.can('staff', 'view'))
+          : AccessControl.can(viewName, 'view');
+        if (!canView) {
           const fallback = AccessControl.firstAllowedRoute();
           if (!fallback) {
             AccessControl.showDenied('You do not have permission to view any modules.', AccessControl.session.email);
@@ -947,6 +973,9 @@
 
       const root = document.getElementById('app-root');
       if (this.currentView === viewName && root && root.children.length > 0) {
+        if (viewName === 'expenses' && typeof ExpensesHub !== 'undefined') {
+          ExpensesHub.applyStoredTab();
+        }
         return;
       }
       this.currentView = viewName;
@@ -969,7 +998,12 @@
 
          this.executeScripts(root);
          if (typeof AccessControl !== 'undefined') {
-           AccessControl.applyActionGates(root, viewName);
+           if (viewName === 'expenses') {
+             AccessControl.applyActionGates(root, 'expenses');
+             AccessControl.applyActionGates(root, 'staff');
+           } else {
+             AccessControl.applyActionGates(root, viewName);
+           }
          }
       } else if (root) {
          root.innerHTML = `
