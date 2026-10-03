@@ -31,8 +31,9 @@ function loadMembersApi(dbData = {
   const source = fs.readFileSync(path.join(__dirname, '../src/API_Members.js'), 'utf8');
   const db = {
     batchRead: jest.fn(() => dbData),
+    read: jest.fn((sheet) => dbData[sheet] || []),
     create: jest.fn(record => record),
-    update: jest.fn(() => true)
+    update: jest.fn((sheet, id, payload) => payload)
   };
   const trigger = {
     timeBased: jest.fn(() => trigger),
@@ -56,7 +57,7 @@ function loadMembersApi(dbData = {
     'ScriptApp',
     `
       ${source};
-      return { api_getMembers, api_getMemberPayments, api_saveMember, setupMemberExitDateTrigger, db: DB, scriptApp: ScriptApp, trigger: ScriptApp.trigger };
+      return { api_getMembers, api_getMemberPayments, api_saveMember, mergeMemberUpdatePayload_, setupMemberExitDateTrigger, db: DB, scriptApp: ScriptApp, trigger: ScriptApp.trigger };
     `
   )(
     db,
@@ -266,6 +267,112 @@ describe('Members Module', () => {
     });
     expect(membersApi.db.create).not.toHaveBeenCalled();
     expect(membersApi.db.update).not.toHaveBeenCalled();
+  });
+
+  test('mergeMemberUpdatePayload_ keeps existing optional fields when incoming blanks them', () => {
+    const membersApi = loadMembersApi();
+    const existing = {
+      memberId: 'MEM-1',
+      fullName: 'Alice Johnson',
+      phone: '9876543210',
+      email: 'alice@example.com',
+      dob: '01-Jan-1990',
+      exitDate: '31-Dec-2026',
+      profileImage: 'drive-file-1',
+      membershipAmount: 4500,
+      batchId: 'BATCH-1',
+      status: 'Active',
+      joinDate: '10-Jan-2024'
+    };
+    const merged = membersApi.mergeMemberUpdatePayload_(existing, {
+      memberId: 'MEM-1',
+      fullName: 'Alice Johnson',
+      phone: '9876543210',
+      email: '',
+      dob: '',
+      exitDate: '',
+      profileImage: '',
+      membershipAmount: 0,
+      batchId: '',
+      status: 'Active',
+      joinDate: '10-Jan-2024'
+    });
+    expect(merged.email).toBe('alice@example.com');
+    expect(merged.dob).toBe('01-Jan-1990');
+    expect(merged.exitDate).toBe('31-Dec-2026');
+    expect(merged.profileImage).toBe('drive-file-1');
+    expect(merged.membershipAmount).toBe(4500);
+    expect(merged.batchId).toBe('BATCH-1');
+  });
+
+  test('api_saveMember edit preserves blanked optionals and applies intentional changes', () => {
+    const membersApi = loadMembersApi({
+      MEMBERS: [
+        {
+          memberId: 'MEM-1',
+          fullName: 'Alice Johnson',
+          phone: '9876543210',
+          email: 'alice@example.com',
+          dob: '01-Jan-1990',
+          exitDate: '31-Dec-2026',
+          profileImage: 'drive-file-1',
+          membershipAmount: 4500,
+          batchId: 'BATCH-1',
+          membershipId: 'PLAN-1',
+          status: 'Active',
+          joinDate: '10-Jan-2024',
+          gender: 'Female'
+        }
+      ],
+      PAYMENTS: [],
+      SETTINGS: []
+    });
+
+    const result = membersApi.api_saveMember({
+      memberId: 'MEM-1',
+      fullName: 'Alice J.',
+      phone: '9876543210',
+      email: '',
+      dob: '',
+      exitDate: '',
+      profileImage: '',
+      membershipAmount: 0,
+      batchId: '',
+      membershipId: 'PLAN-2',
+      status: 'Active',
+      joinDate: '10-Jan-2024',
+      gender: ''
+    });
+
+    expect(result.success).toBe(true);
+    expect(membersApi.db.update).toHaveBeenCalled();
+    const payload = membersApi.db.update.mock.calls[0][2];
+    expect(payload.fullName).toBe('Alice J.');
+    expect(payload.membershipId).toBe('PLAN-2');
+    expect(payload.email).toBe('alice@example.com');
+    expect(payload.dob).toBe('01-Jan-1990');
+    expect(payload.exitDate).toBe('31-Dec-2026');
+    expect(payload.profileImage).toBe('drive-file-1');
+    expect(payload.membershipAmount).toBe(4500);
+    expect(payload.batchId).toBe('BATCH-1');
+    expect(payload.gender).toBe('Female');
+  });
+
+  test('api_saveMember create still allows optional blanks', () => {
+    const membersApi = loadMembersApi({ MEMBERS: [], PAYMENTS: [], SETTINGS: [] });
+    const result = membersApi.api_saveMember({
+      fullName: 'New Member',
+      phone: '9123456789',
+      email: '',
+      dob: '',
+      membershipAmount: 0
+    });
+    expect(result.success).toBe(true);
+    expect(membersApi.db.create).toHaveBeenCalled();
+    const record = membersApi.db.create.mock.calls[0][1];
+    expect(record.fullName).toBe('New Member');
+    expect(record.email).toBe('');
+    expect(record.phone).toBe('9123456789');
   });
 
   test('setupMemberExitDateTrigger creates a daily trigger once and remains idempotent', () => {

@@ -229,6 +229,52 @@ function api_getMembers() {
   }
 }
 
+function isBlankMemberField_(value) {
+  if (value === undefined || value === null) return true;
+  if (typeof value === 'string' && String(value).trim() === '') return true;
+  return false;
+}
+
+/**
+ * On edit, blank optional fields from the form must not wipe existing sheet values.
+ * Required name/phone still come from the incoming payload after validation.
+ */
+function mergeMemberUpdatePayload_(existing, incoming) {
+  const prev = existing || {};
+  const next = incoming || {};
+  const merged = Object.assign({}, prev, next);
+
+  const optionalKeys = [
+    'email',
+    'dob',
+    'exitDate',
+    'profileImage',
+    'gender',
+    'batchId',
+    'membershipId',
+    'status',
+    'joinDate'
+  ];
+
+  optionalKeys.forEach(function(key) {
+    if (!Object.prototype.hasOwnProperty.call(next, key)) return;
+    if (isBlankMemberField_(next[key]) && !isBlankMemberField_(prev[key])) {
+      merged[key] = prev[key];
+    }
+  });
+
+  // Client sends Number('') => 0; treat blank amount as keep previous
+  if (Object.prototype.hasOwnProperty.call(next, 'membershipAmount')) {
+    const raw = next.membershipAmount;
+    const blankAmount = isBlankMemberField_(raw) || raw === 0 || raw === '0';
+    if (blankAmount && prev.membershipAmount !== undefined && prev.membershipAmount !== null && prev.membershipAmount !== '' && Number(prev.membershipAmount) !== 0) {
+      merged.membershipAmount = prev.membershipAmount;
+    }
+  }
+
+  return merged;
+}
+
 function api_saveMember(memberData) {
   try {
     const isNew = !(memberData && memberData.memberId);
@@ -272,7 +318,13 @@ function api_saveMember(memberData) {
     // 3. Save Member to DB
     let savedData;
     if (!isNew) {
-      savedData = DB.update('MEMBERS', memberData.memberId, memberData);
+      const members = DB.read('MEMBERS') || [];
+      const existing = members.find(function(m) {
+        return String(m.memberId) === String(memberData.memberId);
+      });
+      if (!existing) throw new Error('Member not found.');
+      const merged = mergeMemberUpdatePayload_(existing, memberData);
+      savedData = DB.update('MEMBERS', memberData.memberId, merged);
     } else {
       savedData = DB.create('MEMBERS', memberData);
       
