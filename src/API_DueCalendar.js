@@ -155,6 +155,9 @@ function findLatestPaidPaymentForMember_(memberId, paymentHint) {
     });
     if (idx >= 0) payments[idx] = Object.assign({}, payments[idx], paymentHint);
     else payments.push(paymentHint);
+  } else if (paymentHint && paymentHint.memberId) {
+    // Newly saved payment without relying solely on sheet round-trip
+    payments.push(paymentHint);
   }
 
   payments = payments.filter(function(p) {
@@ -185,6 +188,7 @@ function persistMemberDueCalendarEventId_(memberId, eventId) {
 
 /**
  * Sync Google Calendar due reminder for a member after payment create/update/delete.
+ * Replaces any previous due event with the next quarterly due (endDate + 1 of latest paid).
  * Never throws to the caller — payment save must succeed even if Calendar fails.
  */
 function syncMemberDueCalendarEvent_(memberId, paymentHint) {
@@ -202,7 +206,12 @@ function syncMemberDueCalendarEvent_(memberId, paymentHint) {
     const previousEventId = String(member[DUE_CALENDAR_EVENT_FIELD_] || '').trim();
 
     if (!config.enabled) {
-      return { synced: false, reason: 'disabled' };
+      // Clean leftover calendar events when the feature is turned off
+      if (previousEventId) {
+        deleteDueCalendarEvent_(previousEventId);
+        persistMemberDueCalendarEventId_(id, '');
+      }
+      return { synced: false, reason: 'disabled', cleared: Boolean(previousEventId) };
     }
 
     const planMeta = findMemberPlanMeta_(member);
@@ -217,19 +226,29 @@ function syncMemberDueCalendarEvent_(memberId, paymentHint) {
     const latestPaid = findLatestPaidPaymentForMember_(id, paymentHint);
     const nextDue = resolveNextDueFromPayment_(latestPaid);
 
-    if (previousEventId) {
-      deleteDueCalendarEvent_(previousEventId);
-    }
-
     if (!latestPaid || !nextDue) {
-      if (previousEventId) persistMemberDueCalendarEventId_(id, '');
+      if (previousEventId) {
+        deleteDueCalendarEvent_(previousEventId);
+        persistMemberDueCalendarEventId_(id, '');
+      }
       return { synced: false, reason: 'no-due' };
     }
 
     const planName = String((planMeta && (planMeta.name || planMeta.label)) || 'Quarterly');
+    // Create the next-quarter event first so a Calendar failure does not leave the member with no reminder
+    // and an orphaned stored id. Then delete the previous event and persist the new id.
     const newEventId = createDueCalendarEvent_(member, nextDue, config, planName, latestPaid);
+    if (!newEventId) {
+      console.error('Due calendar sync: create returned empty event id for member ' + id);
+      return { synced: false, reason: 'create-failed' };
+    }
+
+    if (previousEventId && previousEventId !== newEventId) {
+      deleteDueCalendarEvent_(previousEventId);
+    }
+
     persistMemberDueCalendarEventId_(id, newEventId);
-    return { synced: true, eventId: newEventId, dueDate: nextDue };
+    return { synced: true, eventId: newEventId, dueDate: nextDue, replaced: previousEventId || '' };
   } catch (error) {
     console.error('Due calendar sync failed: ' + (error && error.message ? error.message : error));
     return { synced: false, reason: 'error', error: String(error) };

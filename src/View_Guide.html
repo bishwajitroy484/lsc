@@ -446,7 +446,7 @@
         <p class="text-[11px] text-slate-500 leading-relaxed">Note: the weekly report’s “due” uses payment end dates; the Calendar screen’s next due is usually end date + 1 day. Both are intentional for their jobs.</p>
         <div class="rounded-xl border border-teal-100 bg-teal-50/40 p-3">
           <p class="text-[11px] font-bold text-teal-900 mb-1">Google Calendar due events</p>
-          <p class="text-[11px] text-slate-600 leading-relaxed">Separate toggle under Settings → General. Opt-in, quarterly only, timed (not all-day) events on the deployer/owner calendar. Re-authorize Google services once after deploy so Calendar access is granted.</p>
+          <p class="text-[11px] text-slate-600 leading-relaxed">Separate toggle under Settings → General. Opt-in, quarterly only, timed (not all-day) events on the deployer/owner calendar. When you mark a quarterly payment as paid, the previous due event is deleted and a new event is created for the next due date (`endDate + 1`). Turning the feature off clears leftover events. Re-authorize Google services once after deploy so Calendar access is granted.</p>
         </div>
       </div>
     </section>
