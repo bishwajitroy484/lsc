@@ -44,31 +44,66 @@
 
   <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
 
-    <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4 mb-4 md:mb-6">
-      <div class="bg-emerald-50/50 p-3.5 rounded-xl border border-emerald-100 flex flex-col justify-center">
-        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center material-symbols-rounded text-[14px]">account_balance_wallet</span><p class="text-[10px] text-slate-500 font-bold uppercase truncate">Total Outflow</p></div>
-        <h2 id="kpi-total-exp" class="text-lg md:text-xl font-bold text-slate-800">₹0</h2>
+    <div class="grid grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
+      <!-- 1: Total Outflow -->
+      <div class="bg-emerald-50/50 p-3 md:p-4 rounded-xl border border-emerald-100 flex flex-col justify-center min-w-0">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center material-symbols-rounded text-[14px] shrink-0">account_balance_wallet</span>
+          <p class="text-[10px] text-slate-500 font-bold uppercase truncate">Total Outflow</p>
+        </div>
+        <h2 id="kpi-total-exp" class="text-base sm:text-lg md:text-xl font-bold text-slate-800 truncate">₹0</h2>
       </div>
-      <div class="bg-purple-50/50 p-3.5 rounded-xl border border-purple-100 flex flex-col justify-center">
-        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[14px]">badge</span><p class="text-[10px] text-slate-500 font-bold uppercase truncate">Staff Cost</p></div>
-        <h2 id="kpi-staff-exp" class="text-lg md:text-xl font-bold text-slate-800">₹0</h2>
+
+      <!-- 2: Staff Cost + Other Expenses -->
+      <div class="bg-slate-50/80 p-3 md:p-4 rounded-xl border border-slate-200 min-w-0">
+        <p class="text-[10px] text-slate-500 font-bold uppercase mb-2 truncate">Cost Split</p>
+        <div class="grid grid-cols-2 gap-2 sm:gap-3">
+          <div class="min-w-0 border-r border-slate-200 pr-2 sm:pr-3">
+            <div class="flex items-center gap-1 mb-0.5">
+              <span class="w-5 h-5 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">badge</span>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Staff Cost</p>
+            </div>
+            <h2 id="kpi-staff-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">₹0</h2>
+          </div>
+          <div class="min-w-0 pl-0.5">
+            <div class="flex items-center gap-1 mb-0.5">
+              <span class="w-5 h-5 rounded bg-blue-100 text-blue-600 flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">receipt_long</span>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Other</p>
+            </div>
+            <h2 id="kpi-other-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">₹0</h2>
+          </div>
+        </div>
       </div>
-      <div class="bg-blue-50/50 p-3.5 rounded-xl border border-blue-100 flex flex-col justify-center">
-        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center material-symbols-rounded text-[14px]">receipt_long</span><p class="text-[10px] text-slate-500 font-bold uppercase truncate">Other Expenses</p></div>
-        <h2 id="kpi-other-exp" class="text-lg md:text-xl font-bold text-slate-800">₹0</h2>
+
+      <!-- 3: Period average -->
+      <div class="bg-amber-50/50 p-3 md:p-4 rounded-xl border border-amber-100 flex flex-col justify-center min-w-0">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-6 h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[14px] shrink-0">calendar_month</span>
+          <p id="kpi-avg-title" class="text-[10px] text-slate-500 font-bold uppercase truncate">Monthly Avg</p>
+        </div>
+        <h2 id="kpi-avg-exp" class="text-base sm:text-lg md:text-xl font-bold text-slate-800 truncate">₹0</h2>
       </div>
-      <div class="bg-amber-50/50 p-3.5 rounded-xl border border-amber-100 flex flex-col justify-center">
-        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[14px]">calendar_month</span><p id="kpi-avg-title" class="text-[10px] text-slate-500 font-bold uppercase truncate">Monthly Avg</p></div>
-        <h2 id="kpi-avg-exp" class="text-lg md:text-xl font-bold text-slate-800">₹0</h2>
-      </div>
-      <div class="bg-cyan-50/50 p-3.5 rounded-xl border border-cyan-100 flex flex-col justify-center">
-        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[14px]">group</span><p class="text-[10px] text-slate-500 font-bold uppercase truncate">Total Staff</p></div>
-        <h2 id="kpi-total-staff" class="text-lg md:text-xl font-bold text-slate-800">--</h2>
-      </div>
-      <div onclick="ExpensesHub.switchListTab('staff'); StaffApp.scrollToActionNeeded && StaffApp.scrollToActionNeeded();" class="bg-orange-50/50 p-3.5 rounded-xl border border-orange-200/80 flex flex-col justify-center cursor-pointer hover:border-orange-300 hover:shadow-sm transition-all">
-        <div class="flex items-center gap-2 mb-1"><span class="w-6 h-6 rounded bg-orange-100 text-orange-700 flex items-center justify-center material-symbols-rounded text-[14px]">pending_actions</span><p class="text-[10px] text-slate-500 font-bold uppercase truncate">Action Needed</p></div>
-        <h2 id="kpi-action-needed" class="text-lg md:text-xl font-bold text-amber-700 leading-tight">--</h2>
-        <p id="kpi-action-needed-sub" class="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">--</p>
+
+      <!-- 4: Total Staff + Action Needed -->
+      <div onclick="ExpensesHub.switchListTab('staff'); StaffApp.scrollToActionNeeded && StaffApp.scrollToActionNeeded();" class="bg-cyan-50/40 p-3 md:p-4 rounded-xl border border-cyan-100 min-w-0 cursor-pointer hover:border-cyan-200 hover:shadow-sm transition-all" title="Open Staff list">
+        <p class="text-[10px] text-slate-500 font-bold uppercase mb-2 truncate">Staff Snapshot</p>
+        <div class="grid grid-cols-2 gap-2 sm:gap-3">
+          <div class="min-w-0 border-r border-cyan-100/80 pr-2 sm:pr-3">
+            <div class="flex items-center gap-1 mb-0.5">
+              <span class="w-5 h-5 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">group</span>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Staff</p>
+            </div>
+            <h2 id="kpi-total-staff" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">--</h2>
+          </div>
+          <div class="min-w-0 pl-0.5">
+            <div class="flex items-center gap-1 mb-0.5">
+              <span class="w-5 h-5 rounded bg-orange-100 text-orange-700 flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">pending_actions</span>
+              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Action</p>
+            </div>
+            <h2 id="kpi-action-needed" class="text-sm sm:text-base md:text-lg font-bold text-amber-700 leading-tight truncate">--</h2>
+            <p id="kpi-action-needed-sub" class="text-[9px] sm:text-[10px] font-medium text-slate-500 mt-0.5 leading-tight line-clamp-2">--</p>
+          </div>
+        </div>
       </div>
     </div>
 
