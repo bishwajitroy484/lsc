@@ -993,6 +993,32 @@
       this.switchListTab(tab === 'staff' ? 'staff' : 'expenses');
     },
 
+    resolveDropdownName: function(type, id) {
+      if (id === undefined || id === null || id === '') return '';
+      if (typeof StaffApp !== 'undefined' && StaffApp.getName) {
+        var fromStaff = StaffApp.getName(type, id);
+        if (fromStaff && fromStaff !== id) return fromStaff;
+      }
+      var opts = (typeof ExpensesApp !== 'undefined' && ExpensesApp.dropdowns) ? ExpensesApp.dropdowns : {};
+      var list = opts[type];
+      if (type === 'paymentstatus' && !list) list = opts.paymentstatus || opts.status;
+      if (type === 'credittype' && !list) list = opts.credit_type_options || opts.credittype || opts.credit_type;
+      if (!list || !Array.isArray(list)) return String(id);
+      var match = list.find(function(item) { return item && String(item.id) === String(id); });
+      return match ? String(match.name || match.label || match.id) : String(id);
+    },
+
+    statusClassForLabel: function(label) {
+      var lower = String(label || '').toLowerCase();
+      if (lower.indexOf('action') >= 0 || lower.indexOf('pending') >= 0 || lower.indexOf('due') >= 0) {
+        return 'text-amber-700 bg-amber-50 border-amber-100';
+      }
+      if (lower.indexOf('fail') >= 0 || lower.indexOf('unpaid') >= 0 || lower.indexOf('overdue') >= 0) {
+        return 'text-red-700 bg-red-50 border-red-100';
+      }
+      return 'text-emerald-700 bg-emerald-50 border-emerald-100';
+    },
+
     refreshAllRecords: function() {
       var rows = [];
       var year = document.getElementById('exp-filter-year')?.value;
@@ -1016,25 +1042,24 @@
       var staffNameById = {};
       staffList.forEach(function(s) { staffNameById[String(s.staffId)] = s.fullName || s.name || s.staffId; });
 
+      var self = this;
       salaries.forEach(function(sal) {
         var d = sal.paidDate || sal.startDate || sal.date;
         if (year && d) {
           var parsed = new Date(typeof AppUtils !== 'undefined' && AppUtils.parseToISODate ? AppUtils.parseToISODate(d) : d);
           if (!isNaN(parsed) && String(parsed.getFullYear()) !== String(year)) return;
         }
-        var statusLabel = String(sal.paymentStatus || sal.status || 'Paid');
-        var lower = statusLabel.toLowerCase();
-        var statusClass = 'text-emerald-700 bg-emerald-50 border-emerald-100';
-        if (lower.indexOf('pending') >= 0 || lower.indexOf('action') >= 0) statusClass = 'text-amber-700 bg-amber-50 border-amber-100';
+        var statusLabel = self.resolveDropdownName('paymentstatus', sal.paymentStatus || sal.status) || 'Paid';
+        var creditLabel = self.resolveDropdownName('credittype', sal.type || sal.creditType) || sal.type || sal.creditType || 'Salary';
         rows.push({
           recordType: 'staff',
           date: d,
           sortDate: d,
           name: staffNameById[String(sal.staffId)] || sal.staffId || 'Staff',
-          description: sal.type || sal.creditType || 'Salary',
+          description: creditLabel,
           amount: sal.amount,
           status: statusLabel,
-          statusClass: statusClass,
+          statusClass: self.statusClassForLabel(statusLabel),
           staffId: sal.staffId,
           raw: sal
         });
