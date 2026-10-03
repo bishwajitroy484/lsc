@@ -26,7 +26,7 @@
 
   
   <div class="px-3 sm:px-4 md:px-5 grid grid-cols-2 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4 mb-4 min-w-0">
-    <div class="bg-white p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-0 overflow-hidden">
+    <div class="bg-white p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-0 overflow-visible">
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
         <div class="w-6 h-6 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">group</span></div>
         <p class="text-[11px] sm:text-xs text-slate-500 font-semibold truncate min-w-0">Active Members</p>
@@ -36,7 +36,7 @@
       <div id="kpi-active-segregation" class="flex flex-wrap gap-1 mt-auto border-t border-slate-100 pt-2 min-h-[26px]"></div>
     </div>
     
-    <div class="bg-indigo-50 p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-indigo-100 flex flex-col justify-between min-w-0 overflow-hidden">
+    <div class="bg-indigo-50 p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-indigo-100 flex flex-col justify-between min-w-0 overflow-visible">
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
         <div class="w-6 h-6 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance</span></div>
         <p class="text-[11px] sm:text-xs text-indigo-900/80 font-bold truncate min-w-0">Net-In Hand</p>
@@ -49,7 +49,7 @@
       </div>
     </div>
     
-    <div class="bg-white p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-0 overflow-hidden">
+    <div class="bg-white p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-0 overflow-visible">
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
         <div class="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance_wallet</span></div>
         <p class="text-[11px] sm:text-xs text-slate-500 font-semibold truncate min-w-0">Total Collected</p>
@@ -58,7 +58,7 @@
       <div class="h-7 flex items-center min-w-0"><h2 id="kpi-collected" class="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 leading-none truncate">--</h2></div>
     </div>
     
-    <div class="bg-white p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-0 overflow-hidden">
+    <div class="bg-white p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-0 overflow-visible">
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
         <div class="w-6 h-6 rounded bg-red-50 text-red-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">error</span></div>
         <p class="text-[11px] sm:text-xs text-slate-500 font-semibold truncate min-w-0">Overdue Amount</p>
@@ -67,7 +67,7 @@
       <div class="h-7 flex items-center min-w-0"><h2 id="kpi-overdue" class="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 leading-none truncate">--</h2></div>
     </div>
     
-    <div class="bg-slate-50 p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-200 col-span-2 flex flex-col justify-between min-w-0 overflow-hidden">
+    <div class="bg-slate-50 p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-200 col-span-2 flex flex-col justify-between min-w-0 overflow-visible">
       <div class="flex items-center justify-between mb-2 gap-2 min-w-0">
         <div class="flex items-center gap-1.5 min-w-0">
           <h3 class="font-bold text-xs md:text-sm text-slate-800 truncate">Operating Expenses</h3>
@@ -99,7 +99,7 @@
 
   
   <div class="px-3 sm:px-4 md:px-5 grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4 min-w-0">
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-hidden">
+    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-3 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Revenue vs Expenses</h3>
@@ -110,12 +110,12 @@
           <button onclick="window.openChartModal('Revenue vs Expenses', 'revExp')" class="hidden md:flex hover:text-brand-primary p-0.5 rounded transition-colors"><span class="material-symbols-rounded text-[16px]">open_in_full</span></button>
         </div>
       </div>
-      <div class="relative w-full flex-1 min-h-[220px]">
+      <div class="relative w-full flex-1 min-h-[220px] overflow-hidden">
         <div id="chart-rev-exp" class="absolute inset-0"></div>
       </div>
     </div>
     
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-hidden">
+    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-3 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Members by Batch</h3>
@@ -126,12 +126,12 @@
           <button onclick="window.openChartModal('Members by Batch', 'batch')" class="hidden md:flex hover:text-brand-primary p-0.5 rounded transition-colors"><span class="material-symbols-rounded text-[16px]">open_in_full</span></button>
         </div>
       </div>
-      <div class="relative w-full flex-1 min-h-[220px]">
+      <div class="relative w-full flex-1 min-h-[220px] overflow-hidden">
         <div id="chart-batch" class="absolute inset-0"></div>
       </div>
     </div>
     
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-hidden">
+    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1.5 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Net-In-Hand Prediction</h3>
@@ -161,7 +161,7 @@
           <span id="pred-sum-total" class="font-bold text-indigo-700">--</span>
         </div>
       </div>
-      <div class="relative w-full flex-1 min-h-[220px]">
+      <div class="relative w-full flex-1 min-h-[220px] overflow-hidden">
         <div id="chart-prediction" class="absolute inset-0"></div>
       </div>
     </div>
@@ -169,7 +169,7 @@
 
   
   <div class="px-3 sm:px-4 md:px-5 grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4 min-w-0">
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-hidden">
+    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-3 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Collection Trend</h3>
@@ -185,12 +185,12 @@
           <button onclick="window.openChartModal('Collection Trend', 'trend')" class="hidden md:flex hover:text-brand-primary p-0.5 rounded"><span class="material-symbols-rounded text-[16px]">open_in_full</span></button>
         </div>
       </div>
-      <div class="relative w-full flex-1 min-h-[220px]">
+      <div class="relative w-full flex-1 min-h-[220px] overflow-hidden">
         <div id="chart-trend" class="absolute inset-0"></div>
       </div>
     </div>
     
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-hidden">
+    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-3 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Expense Breakdown</h3>
@@ -202,12 +202,12 @@
           <button onclick="window.openChartModal('Expense Breakdown', 'exp')" class="hidden md:flex hover:text-brand-primary p-0.5 rounded"><span class="material-symbols-rounded text-[16px]">open_in_full</span></button>
         </div>
       </div>
-      <div class="relative w-full flex-1 min-h-[220px]">
+      <div class="relative w-full flex-1 min-h-[220px] overflow-hidden">
         <div id="chart-expense-breakdown" class="absolute inset-0"></div>
       </div>
     </div>
     
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-hidden">
+    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-3 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Staff Cost Trend</h3>
@@ -239,7 +239,7 @@
         </div>
       </div>
 
-      <div class="relative w-full flex-1 min-h-[160px]">
+      <div class="relative w-full flex-1 min-h-[160px] overflow-hidden">
         <div id="chart-staff-trend" class="absolute inset-0"></div>
       </div>
     </div>
@@ -247,7 +247,7 @@
 
   
   <div class="px-3 sm:px-4 md:px-5 grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3 md:gap-4 mb-4 min-w-0">
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col min-w-0">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-visible flex flex-col min-w-0">
       <div class="p-3 border-b border-slate-100 flex flex-row items-center justify-between bg-slate-50/50 gap-2 min-w-0">
         <h3 class="font-bold text-xs md:text-sm text-slate-800 flex items-center gap-1.5 min-w-0">
           <span class="material-symbols-rounded text-red-500 text-[16px] shrink-0">error</span>
@@ -276,7 +276,7 @@
       </div>
     </div>
     
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col min-w-0">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-visible flex flex-col min-w-0">
       <div class="p-3 border-b border-slate-100 flex flex-row items-center justify-between bg-slate-50/50 gap-2 min-w-0">
         <h3 class="font-bold text-xs md:text-sm text-slate-800 flex items-center gap-1.5 min-w-0">
           <span class="material-symbols-rounded text-amber-500 text-[16px] shrink-0">calendar_month</span>
