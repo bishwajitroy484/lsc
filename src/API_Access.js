@@ -1028,7 +1028,7 @@ function api_authorizeServices() {
     upsertSettingKey_('SERVICES_AUTHORIZED', 'YES');
     return {
       success: true,
-      message: 'Google services authorized successfully (Mail, ScriptApp, Calendar).',
+      message: 'Google services authorized successfully (Mail, ScriptApp, Calendar, and web-app publish scopes).',
       data: getSetupStatus_()
     };
   } catch (error) {

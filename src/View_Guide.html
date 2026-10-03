@@ -362,7 +362,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">General</p>
-            <p class="text-[11px] text-slate-600 leading-relaxed">Gym identity, Setup &amp; Authorization, revenue recognition, currency style, Spreadsheet/Drive IDs, notification templates/schedule, and Google Calendar due reminders.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Gym identity, Setup &amp; Authorization, Web app version publish, revenue recognition, currency style, Spreadsheet/Drive IDs, notification templates/schedule, and Google Calendar due reminders.</p>
           </div>
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">Users</p>
@@ -479,7 +479,7 @@
     </section>
 
     <!-- 13 Admin ops -->
-    <section id="guide-sec-ops" data-guide-section="ops" data-guide-search="admin ops env.json deploymentId clasp mock data developer stable url" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+    <section id="guide-sec-ops" data-guide-section="ops" data-guide-search="admin ops env.json deploymentId clasp mock data developer stable url publish version web app" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
       <button type="button" data-guide-toggle="ops" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
         <span class="w-9 h-9 rounded-xl bg-stone-100 text-stone-700 border border-stone-200 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">construction</span></span>
         <div class="flex-1 min-w-0">
@@ -494,9 +494,10 @@
       <div id="guide-body-ops" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
         <ul class="pt-3 text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>Stable web URL</strong> — keep one published <code class="text-[10px] bg-slate-100 px-1 rounded">/exec</code> link. Redeploying should update that same deployment so QR codes and bookmarks do not break.</li>
+          <li><strong>Publish from Settings</strong> — after a developer pushes code, an owner opens <strong>Settings → General → Web app version</strong> and taps <strong>Publish latest code</strong>. Same URL; Mail/Calendar stay with the deployer. One-time: enable Apps Script API on the script’s Cloud project, then Authorize again.</li>
           <li><strong>Local env IDs</strong> — developers store spreadsheet, Drive, script, and deployment IDs in a local <code class="text-[10px] bg-slate-100 px-1 rounded">config/env.json</code> (not committed). Copy from <code class="text-[10px] bg-slate-100 px-1 rounded">config/env.example.json</code>.</li>
           <li><strong>Mock data</strong> — a generator can wipe and refill sample members/payments/staff/expenses for testing. It is for development only; do not run it on a live gym’s real data.</li>
-          <li><strong>Handover</strong> — client should own Spreadsheet, Apps Script, and Drive; create the web app deployment as themselves; authorize from Settings; then invite staff.</li>
+          <li><strong>Handover</strong> — client should own Spreadsheet, Apps Script, and Drive; create the web app deployment as themselves; authorize from Settings; then invite staff. Later updates: developer pushes, owner publishes from Settings.</li>
         </ul>
       </div>
     </section>

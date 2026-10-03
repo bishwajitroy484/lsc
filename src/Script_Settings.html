@@ -81,6 +81,7 @@
       this.fetchGeneralSettings();
       this.initSectionDefaults();
       this.refreshSetupStatus();
+      this.refreshDeployStatus();
       this.applySettingsAccessGates();
       google.script.run
         .withSuccessHandler((res) => {
@@ -92,10 +93,17 @@
     applySettingsAccessGates: function() {
       const canEdit = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'edit');
       const canViewUsers = typeof AccessControl !== 'undefined' && (AccessControl.can('settings', 'view') || AccessControl.can('settings', 'edit'));
+      const isOwner = typeof AccessControl !== 'undefined' && AccessControl.session && AccessControl.session.isOwner;
       const usersTab = document.getElementById('tab-btn-users');
       if (usersTab && !canViewUsers) usersTab.classList.add('hidden');
       const addBtn = document.getElementById('btn-add-user');
       if (addBtn) addBtn.classList.toggle('hidden', !canEdit);
+      const publishBtn = document.getElementById('btn-publish-webapp');
+      if (publishBtn) publishBtn.classList.toggle('hidden', !isOwner);
+      const saveDeployBtn = document.getElementById('btn-save-deployment-id');
+      if (saveDeployBtn) saveDeployBtn.classList.toggle('hidden', !isOwner);
+      const deployInput = document.getElementById('deploy-deployment-id');
+      if (deployInput) deployInput.readOnly = !isOwner;
     },
 
     refreshSetupStatus: function() {
@@ -122,6 +130,200 @@
           }
         })
         .api_getSetupStatus();
+    },
+
+    refreshDeployStatus: function() {
+      const chips = document.getElementById('deploy-status-chips');
+      if (chips) {
+        chips.innerHTML =
+          '<div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>' +
+          '<div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>';
+      }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res || !res.success || !res.data) {
+            if (chips) {
+              chips.innerHTML = '<div class="col-span-2 text-[10px] text-slate-400 py-1">Could not load deploy status.</div>';
+            }
+            return;
+          }
+          this.renderDeployStatus(res.data);
+        })
+        .withFailureHandler(() => {
+          if (chips) {
+            chips.innerHTML = '<div class="col-span-2 text-[10px] text-slate-400 py-1">Could not load deploy status.</div>';
+          }
+        })
+        .api_getWebAppDeployStatus();
+    },
+
+    renderDeployStatus: function(data) {
+      const chips = document.getElementById('deploy-status-chips');
+      const badge = document.getElementById('deploy-env-badge');
+      const hint = document.getElementById('deploy-hint');
+      const meta = document.getElementById('deploy-last-meta');
+      const input = document.getElementById('deploy-deployment-id');
+      const publishBtn = document.getElementById('btn-publish-webapp');
+      if (!data) return;
+
+      if (badge) {
+        badge.textContent = data.env || '—';
+        badge.className = 'text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded ' +
+          (String(data.envKey || '').toLowerCase() === 'prod'
+            ? 'text-emerald-800 bg-emerald-50 border border-emerald-100'
+            : 'text-slate-600 bg-slate-100');
+      }
+
+      if (input && !input.matches(':focus')) {
+        input.value = data.deploymentId || '';
+      }
+
+      if (chips) {
+        const versionLabel = data.currentVersion != null ? ('v' + data.currentVersion) : 'Unknown';
+        const apiOk = !!data.apiReady;
+        const idOk = !!data.deploymentId;
+        const rows = [
+          ['Live version', versionLabel, apiOk],
+          ['Deployment ID', idOk ? 'Ready' : 'Missing', idOk]
+        ];
+        chips.innerHTML = rows.map(function(pair) {
+          const ok = !!pair[2];
+          return '<div class="flex items-center justify-between gap-1 px-2 py-1 md:px-2.5 md:py-1.5 rounded-md md:rounded-lg border ' +
+            (ok ? 'bg-emerald-50/70 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-200 text-amber-800') +
+            '"><span class="font-semibold truncate">' + pair[0] + '</span>' +
+            '<span class="font-bold shrink-0">' + pair[1] + '</span></div>';
+        }).join('');
+      }
+
+      if (hint) {
+        hint.textContent = data.hint ||
+          'After a developer pushes code, click Publish latest code to update this same URL.';
+      }
+
+      if (meta) {
+        const parts = [];
+        if (data.lastPublishedVersion) parts.push('Last published: v' + data.lastPublishedVersion);
+        if (data.lastPublishedAt) {
+          try {
+            const d = new Date(data.lastPublishedAt);
+            parts.push(isNaN(d.getTime()) ? data.lastPublishedAt : d.toLocaleString());
+          } catch (e) {
+            parts.push(data.lastPublishedAt);
+          }
+        }
+        if (data.lastPublishedBy) parts.push('by ' + data.lastPublishedBy);
+        if (parts.length) {
+          meta.textContent = parts.join(' · ');
+          meta.classList.remove('hidden');
+        } else {
+          meta.textContent = '';
+          meta.classList.add('hidden');
+        }
+      }
+
+      if (publishBtn) {
+        const isOwner = typeof AccessControl !== 'undefined' && AccessControl.session && AccessControl.session.isOwner;
+        publishBtn.disabled = !isOwner || !data.canPublish;
+      }
+    },
+
+    copyDeploymentId: function() {
+      const input = document.getElementById('deploy-deployment-id');
+      const value = input ? String(input.value || '').trim() : '';
+      if (!value) {
+        this.showToast('No deployment ID to copy.', true);
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(() => {
+          this.showToast('Deployment ID copied.', false);
+        }).catch(() => {
+          this.showToast('Could not copy deployment ID.', true);
+        });
+      } else {
+        try {
+          input.select();
+          document.execCommand('copy');
+          this.showToast('Deployment ID copied.', false);
+        } catch (e) {
+          this.showToast('Could not copy deployment ID.', true);
+        }
+      }
+    },
+
+    saveDeploymentId: function() {
+      const input = document.getElementById('deploy-deployment-id');
+      const btn = document.getElementById('btn-save-deployment-id');
+      const id = input ? String(input.value || '').trim() : '';
+      const restore = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px]">progress_activity</span>';
+      }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = restore || '<span class="material-symbols-rounded text-[16px]">save</span><span class="hidden sm:inline">Save ID</span>';
+          }
+          if (!res || !res.success) {
+            this.showToast((res && res.error) || 'Could not save deployment ID.', true);
+            return;
+          }
+          this.showToast(res.message || 'Deployment ID saved.', false);
+          if (res.data) this.renderDeployStatus(res.data);
+          else this.refreshDeployStatus();
+        })
+        .withFailureHandler((err) => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = restore || '<span class="material-symbols-rounded text-[16px]">save</span><span class="hidden sm:inline">Save ID</span>';
+          }
+          this.showToast((err && err.message) || 'Could not save deployment ID.', true);
+        })
+        .api_saveWebAppDeploymentId(id);
+    },
+
+    publishWebAppVersion: function() {
+      const btn = document.getElementById('btn-publish-webapp');
+      const publishHtml = '<span class="material-symbols-rounded text-[15px] md:text-[16px]">publish</span><span class="sm:hidden">Publish</span><span class="hidden sm:inline">Publish latest code</span>';
+      if (!confirm('Publish the latest pushed code to the live web app URL?\n\nThe /exec link stays the same. Mail and Calendar keep the deployer account.')) {
+        return;
+      }
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[15px]">progress_activity</span><span>Publishing…</span>';
+      }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = publishHtml;
+          }
+          if (!res || !res.success) {
+            if (res && res.authorizationUrl) {
+              this.openAuthorizationUrl(res.authorizationUrl);
+              this.showToast('Complete Google consent, then click Publish again.', true);
+            } else {
+              this.showToast((res && res.error) || 'Publish failed.', true);
+            }
+            if (res && res.data) this.renderDeployStatus(res.data);
+            else this.refreshDeployStatus();
+            return;
+          }
+          this.showToast(res.message || 'Published successfully.', false);
+          if (res.data) this.renderDeployStatus(res.data);
+          else this.refreshDeployStatus();
+        })
+        .withFailureHandler((err) => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = publishHtml;
+          }
+          this.showToast((err && err.message) || 'Publish failed.', true);
+          this.refreshDeployStatus();
+        })
+        .api_publishWebAppVersion('');
     },
 
     renderSetupStatus: function(setup) {
@@ -194,6 +396,7 @@
           this.showToast(res.message || 'Services authorized.', false);
           if (res.data) this.renderSetupStatus(res.data);
           this.refreshSetupStatus();
+          this.refreshDeployStatus();
         })
         .withFailureHandler((err) => {
           if (btn) {

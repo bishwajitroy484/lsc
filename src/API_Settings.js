@@ -360,6 +360,29 @@ function api_saveGeneralSettings(settingsArray) {
       }
     }
 
+    // Preserve web-app publish metadata if the UI payload omitted it (e.g. after in-app Publish).
+    var preserveDeployKeys = [
+      'WEBAPP_DEPLOYMENT_ID',
+      'WEBAPP_LAST_VERSION',
+      'WEBAPP_LAST_PUBLISHED_AT',
+      'WEBAPP_LAST_PUBLISHED_BY'
+    ];
+    var incomingKeys = {};
+    settingsArray.forEach(function(row) {
+      var key = String((row && (row.key || row.Key)) || '').trim().toUpperCase();
+      if (key) incomingKeys[key] = true;
+    });
+    var existingRows = sheet.getLastRow() > 1
+      ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues()
+      : [];
+    existingRows.forEach(function(row) {
+      var key = String(row[0] || '').trim().toUpperCase();
+      if (!key || incomingKeys[key]) return;
+      if (preserveDeployKeys.indexOf(key) < 0) return;
+      settingsArray.push({ key: key, value: row[1] != null ? String(row[1]) : '' });
+      incomingKeys[key] = true;
+    });
+
     // Clear everything from Row 2 down safely
     const lastRow = sheet.getLastRow();
     if (lastRow > 1) {
