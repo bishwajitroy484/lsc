@@ -73,6 +73,15 @@
     usersCache: [],
     permissionPresets: null,
     accessModules: ['dashboard', 'members', 'staff', 'expenses', 'calendar', 'settings'],
+    // UI shows Expenses hub once (Staff+Expenses merged); stored keys still include both.
+    uiAccessModules: ['dashboard', 'members', 'expenses', 'calendar', 'settings'],
+    moduleLabels: {
+      dashboard: 'Dashboard',
+      members: 'Members',
+      expenses: 'Expenses & Staff',
+      calendar: 'Calendar',
+      settings: 'Settings'
+    },
 
     inviteModalUser: null,
 
@@ -533,7 +542,7 @@
       if (empty) empty.classList.add('hidden');
       list.innerHTML = this.usersCache.map((u) => {
         const perms = u.permissions || {};
-        const viewMods = Object.keys(perms).filter(k => perms[k] && perms[k].view).join(', ') || 'none';
+        const viewMods = this.formatViewModules_(perms);
         const uid = String(u.userId || '').replace(/'/g, '');
         const isDisabled = String(u.status || '').toLowerCase() === 'disabled';
         const actions = canEdit
@@ -552,6 +561,27 @@
           '<div class="text-[10px] text-slate-400 mt-1">' + (u.status || '') + ' · ' + (u.rolePreset || 'Viewer') + ' · Views: ' + viewMods + '</div>' +
           '</div>' + actions + '</div>';
       }).join('');
+    },
+
+    formatViewModules_: function(perms) {
+      const labels = [];
+      const hub = this.mergeExpenseStaffPerm_(perms);
+      this.uiAccessModules.forEach((mod) => {
+        const row = mod === 'expenses' ? hub : ((perms && perms[mod]) || {});
+        if (row && row.view) labels.push(this.moduleLabels[mod] || mod);
+      });
+      return labels.length ? labels.join(', ') : 'none';
+    },
+
+    mergeExpenseStaffPerm_: function(perms) {
+      const e = (perms && perms.expenses) || {};
+      const s = (perms && perms.staff) || {};
+      return {
+        view: !!(e.view || s.view),
+        create: !!(e.create || s.create),
+        edit: !!(e.edit || s.edit),
+        delete: !!(e.delete || s.delete)
+      };
     },
 
     sendInvitation: function(userId) {
@@ -693,13 +723,14 @@
         perms = {};
         this.accessModules.forEach(m => { perms[m] = { view: m !== 'settings', create: false, edit: false, delete: false }; });
       }
-      body.innerHTML = this.accessModules.map(mod => {
-        const row = perms[mod] || {};
+      body.innerHTML = this.uiAccessModules.map(mod => {
+        const row = mod === 'expenses' ? this.mergeExpenseStaffPerm_(perms) : (perms[mod] || {});
+        const label = this.moduleLabels[mod] || mod;
         const cell = (action) =>
           '<td class="text-center px-1 py-1.5"><input type="checkbox" data-mod="' + mod + '" data-act="' + action + '" ' +
           (row[action] ? 'checked' : '') + ' class="rounded border-slate-300 text-brand-primary"></td>';
         return '<tr class="border-t border-slate-100">' +
-          '<td class="px-2 py-1.5 font-semibold text-slate-700 capitalize">' + mod + '</td>' +
+          '<td class="px-2 py-1.5 font-semibold text-slate-700">' + label + '</td>' +
           cell('view') + cell('create') + cell('edit') + cell('delete') +
           '</tr>';
       }).join('');
@@ -723,6 +754,13 @@
         const act = cb.getAttribute('data-act');
         if (perms[mod] && act) perms[mod][act] = !!cb.checked;
       });
+      // Keep Staff API gates in sync with the merged Expenses & Staff UI row
+      perms.staff = {
+        view: !!perms.expenses.view,
+        create: !!perms.expenses.create,
+        edit: !!perms.expenses.edit,
+        delete: !!perms.expenses.delete
+      };
       return perms;
     },
 

@@ -871,17 +871,32 @@ function escapeHtml_(value) {
 var MODULE_LABELS_ = {
   dashboard: 'Dashboard',
   members: 'Members',
-  staff: 'Staff & Payroll',
-  expenses: 'Expenses',
+  staff: 'Expenses & Staff',
+  expenses: 'Expenses & Staff',
   calendar: 'Calendar',
   settings: 'Settings'
 };
 
+var UI_ACCESS_MODULES_ = ['dashboard', 'members', 'expenses', 'calendar', 'settings'];
+
+function mergeExpenseStaffPerm_(permissions) {
+  const e = (permissions && permissions.expenses) || {};
+  const s = (permissions && permissions.staff) || {};
+  return {
+    view: !!(e.view || s.view),
+    create: !!(e.create || s.create),
+    edit: !!(e.edit || s.edit),
+    delete: !!(e.delete || s.delete)
+  };
+}
+
 /** Human-readable page list for the invitation email, e.g. [{ page: 'Members', level: 'View only' }]. */
 function describeAccess_(permissions) {
   const rows = [];
-  ACCESS_MODULES.forEach(function(mod) {
-    const p = (permissions && permissions[mod]) || {};
+  UI_ACCESS_MODULES_.forEach(function(mod) {
+    const p = mod === 'expenses'
+      ? mergeExpenseStaffPerm_(permissions)
+      : ((permissions && permissions[mod]) || {});
     if (!p.view) return;
     const extras = [];
     if (p.create) extras.push('add');

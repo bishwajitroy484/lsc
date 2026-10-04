@@ -101,8 +101,29 @@ describe('Access control foundation', () => {
       const rows = ctx.describeAccess_(ctx.getPresetPermissions_('manager'));
       const byPage = Object.fromEntries(rows.map(r => [r.page, r.level]));
       expect(byPage.Members).toBe('View, add, edit');
+      expect(byPage['Expenses & Staff']).toBe('View, add, edit');
       expect(byPage.Calendar).toBe('View only');
       expect(byPage.Settings).toBeUndefined();
+      expect(byPage['Staff & Payroll']).toBeUndefined();
+      expect(byPage.Expenses).toBeUndefined();
+    });
+
+    test('merges staff-only or expenses-only access into one Expenses & Staff row', () => {
+      const staffOnly = ctx.describeAccess_({
+        dashboard: { view: false },
+        members: { view: false },
+        staff: { view: true, create: true, edit: false, delete: false },
+        expenses: { view: false, create: false, edit: false, delete: false },
+        calendar: { view: false },
+        settings: { view: false }
+      });
+      expect(staffOnly).toEqual([{ page: 'Expenses & Staff', level: 'View, add' }]);
+
+      const expensesOnly = ctx.describeAccess_({
+        staff: { view: false },
+        expenses: { view: true, create: false, edit: true, delete: false }
+      });
+      expect(expensesOnly).toEqual([{ page: 'Expenses & Staff', level: 'View, edit' }]);
     });
 
     test('email greets the user, links to the app, and never mentions Sheet/Drive/Script', () => {
