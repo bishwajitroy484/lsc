@@ -36,22 +36,22 @@
       <div id="kpi-active-segregation" class="flex flex-wrap gap-1 mt-auto border-t border-slate-100 pt-2 min-h-[26px]"></div>
     </div>
     
-    <div class="bg-indigo-50 p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-indigo-100 flex flex-col justify-between min-w-0 overflow-visible">
+    <div class="bg-red-50 p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-red-100 flex flex-col justify-between min-w-0 overflow-visible">
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
-        <div class="w-6 h-6 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance</span></div>
-        <p class="text-[11px] sm:text-xs text-indigo-900/80 font-bold truncate min-w-0">Net-In Hand</p>
+        <div class="w-6 h-6 rounded bg-red-100 text-brand-primary flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance</span></div>
+        <p class="text-[11px] sm:text-xs text-red-900/80 font-bold truncate min-w-0">Net-In Hand</p>
         <span class="metric-tip" tabindex="0" aria-label="About Net-In Hand"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Money left after costs for the selected periods: recognized collections minus operating expenses. “Remaining” is the forecast still expected later this year.</span></span>
       </div>
-      <div class="h-7 flex items-center mb-1 min-w-0"><h2 id="kpi-net" class="text-lg sm:text-xl md:text-2xl font-bold text-indigo-900 leading-none truncate">--</h2></div>
-      <div id="kpi-net-forecast-container" class="mt-auto border-t border-indigo-200/50 pt-2 min-h-[26px] flex items-center justify-between text-[11px]">
-        <span class="text-indigo-600/80 font-semibold text-[10px] uppercase tracking-wider">Remaining</span>
-        <span id="kpi-net-forecast" class="font-bold text-indigo-950 bg-white/80 px-2 py-0.5 rounded border border-indigo-200/60 leading-none shadow-xs">--</span>
+      <div class="h-7 flex items-center mb-1 min-w-0"><h2 id="kpi-net" class="text-lg sm:text-xl md:text-2xl font-bold text-red-900 leading-none truncate">--</h2></div>
+      <div id="kpi-net-forecast-container" class="mt-auto border-t border-red-200/50 pt-2 min-h-[26px] flex items-center justify-between text-[11px]">
+        <span class="text-red-600/80 font-semibold text-[10px] uppercase tracking-wider">Remaining</span>
+        <span id="kpi-net-forecast" class="font-bold text-red-950 bg-white/80 px-2 py-0.5 rounded border border-red-200/60 leading-none shadow-xs">--</span>
       </div>
     </div>
     
     <div class="bg-white p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-0 overflow-visible">
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
-        <div class="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance_wallet</span></div>
+        <div class="w-6 h-6 rounded bg-red-50 text-brand-primary flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance_wallet</span></div>
         <p class="text-[11px] sm:text-xs text-slate-500 font-semibold truncate min-w-0">Total Collected</p>
         <span class="metric-tip" tabindex="0" aria-label="About Total Collected"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Sum of member payments marked Paid/Completed in the selected year and months/quarters. Uses your Anchor or Split revenue recognition setting.</span></span>
       </div>
@@ -158,7 +158,7 @@
         <span class="text-slate-300">•</span>
         <div class="flex items-center gap-1 min-w-0">
           <span class="text-slate-400 font-medium truncate">Total:</span>
-          <span id="pred-sum-total" class="font-bold text-indigo-700">--</span>
+          <span id="pred-sum-total" class="font-bold text-red-700">--</span>
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
@@ -197,7 +197,7 @@
           <span class="metric-tip" tabindex="0" aria-label="About Expense Breakdown"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Share of operating spend by category in the selected periods, including staff cost. Use View Misc to drill into miscellaneous expense details.</span></span>
         </div>
         <div class="flex items-center gap-1 text-slate-400 shrink-0">
-          <button id="btn-misc-toggle" onclick="DashboardState.toggleMisc()" class="hidden appearance-none bg-blue-50 text-brand-primary px-2 py-1 border border-blue-200 rounded-md text-[9px] font-bold hover:bg-blue-100 transition-colors whitespace-nowrap">View Misc</button>
+          <button id="btn-misc-toggle" onclick="DashboardState.toggleMisc()" class="hidden appearance-none bg-red-50 text-brand-primary px-2 py-1 border border-red-200 rounded-md text-[9px] font-bold hover:bg-red-100 transition-colors whitespace-nowrap">View Misc</button>
           <button onclick="window.toggleDataLabels('exp', this)" class="text-brand-primary p-0.5 rounded transition-colors" title="Toggle value labels"><span class="material-symbols-rounded text-[16px]">label</span></button>
           <button onclick="window.openChartModal('Expense Breakdown', 'exp')" class="hidden md:flex hover:text-brand-primary p-0.5 rounded"><span class="material-symbols-rounded text-[16px]">open_in_full</span></button>
         </div>
@@ -226,7 +226,7 @@
       
       <div class="grid grid-cols-3 gap-2 mb-2 shrink-0">
         <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
-          <div id="mini-staff-count" class="text-blue-600 font-bold text-sm">--</div>
+          <div id="mini-staff-count" class="text-brand-primary font-bold text-sm">--</div>
           <div class="text-[9px] text-slate-500 inline-flex items-center justify-center gap-0.5">Total Staff <span class="metric-tip" tabindex="0" aria-label="About Total Staff"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Number of staff currently marked Active.</span></span></div>
         </div>
         <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">

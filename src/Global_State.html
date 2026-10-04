@@ -691,7 +691,7 @@
       if (title) title.textContent = needsLink ? 'Open your invitation link' : 'Access denied';
       if (icon) {
         icon.className = needsLink
-          ? 'w-12 h-12 mx-auto rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center'
+          ? 'w-12 h-12 mx-auto rounded-xl bg-red-50 text-brand-primary flex items-center justify-center'
           : 'w-12 h-12 mx-auto rounded-xl bg-red-50 text-red-500 flex items-center justify-center';
         icon.innerHTML = '<span class="material-symbols-rounded text-[26px]">' + (needsLink ? 'mail' : 'lock') + '</span>';
       }
@@ -1029,7 +1029,7 @@
     updateNavHighlight: function(viewName) {
       // Reset all buttons
       document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('text-brand-primary', 'bg-slate-800');
+        btn.classList.remove('text-brand-primary', 'bg-slate-800', 'bg-white/10');
         btn.classList.add('text-slate-400');
       });
 
@@ -1037,9 +1037,9 @@
       document.querySelectorAll(`[data-route="${viewName}"]`).forEach(btn => {
         btn.classList.remove('text-slate-400');
         btn.classList.add('text-brand-primary');
-        // If it's a desktop sidebar button, give it the dark background highlight
+        // If it's a desktop sidebar button, give it a soft brand wash
         if(btn.closest('aside')) {
-           btn.classList.add('bg-slate-800');
+           btn.classList.add('bg-white/10');
         }
       });
     }

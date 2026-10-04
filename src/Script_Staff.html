@@ -21,7 +21,7 @@
     currentActiveStaff: null,
     currentStaffPayments: [],
     
-    colorMap: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#64748b'],
+    colorMap: ['#CE0002', '#f59e0b', '#10b981', '#404040', '#ef4444', '#737373', '#f97316', '#64748b'],
 
     pageSize: 50,
     renderedCount: 0,
@@ -648,7 +648,7 @@
         chart: { type: chartType, height: '100%', toolbar: { show: false } },
         plotOptions: { bar: { borderRadius: 4, columnWidth: '40%' } },
         stroke: { curve: 'smooth', width: chartType === 'bar' ? 0 : 3 },
-        markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
+        markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#CE0002', strokeWidth: 2 },
         dataLabels: { 
           enabled: true, 
           formatter: function (val) { return val ? AppUtils.formatCompactCurrency(val) : ""; },
@@ -659,7 +659,7 @@
         xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '11px', colors: '#64748b' } } },
         yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
-        colors: ['#3b82f6'],
+        colors: ['#CE0002'],
         grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 24, right: 10, left: 10, bottom: 4 } }
       };
 
@@ -815,7 +815,7 @@
           <td class="px-4 py-3"><span class="text-xs font-bold px-2 py-0.5 rounded border ${sClass}">${sName}</span></td>
           <td class="px-4 py-3 text-right whitespace-nowrap">
             ${payButtonHtml}
-            <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">edit</span></button>
+            <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">edit</span></button>
             <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">delete</span></button>
           </td>
         </tr>`;
@@ -1149,7 +1149,7 @@
                       </td>
                       <td class="px-4 py-3 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onclick="StaffApp.openTransactionModal(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
+                          <button onclick="StaffApp.openTransactionModal(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
                           <button onclick="StaffApp.openDeleteModal('payment', '${r.paymentId}', '${cycleLabel} Record')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
                         </div>
                       </td>

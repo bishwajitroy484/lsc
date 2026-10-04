@@ -939,12 +939,12 @@ function buildInvitationEmail_(opts) {
     '<p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;">' +
     escapeHtml_(inviter) + ' has granted you access to the <strong>' + escapeHtml_(appName) + '</strong> application. ' +
     'Use the button below to open it.</p>' +
-    '<p style="margin:0 0 24px;"><a href="' + escapeHtml_(opts.url) + '" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 26px;border-radius:10px;">Open ' + escapeHtml_(appName) + '</a></p>' +
+    '<p style="margin:0 0 24px;"><a href="' + escapeHtml_(opts.url) + '" style="display:inline-block;background:#CE0002;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 26px;border-radius:10px;">Open ' + escapeHtml_(appName) + '</a></p>' +
     '<p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;">Your access</p>' +
     accessHtml +
     '<p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#64748b;">This link is personal to you, so please do not forward it. ' +
     'If the button does not work, copy this address into your browser:<br>' +
-    '<span style="word-break:break-all;color:#2563eb;">' + escapeHtml_(opts.url) + '</span></p>' +
+    '<span style="word-break:break-all;color:#CE0002;">' + escapeHtml_(opts.url) + '</span></p>' +
     '</div>' +
     '<div style="padding:16px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">' +
     'You received this email because an administrator of ' + escapeHtml_(appName) + ' added you as a user. If you were not expecting it, you can ignore this message.' +

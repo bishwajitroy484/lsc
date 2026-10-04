@@ -1,18 +1,23 @@
 <script>
+  // Lakshya Strength & Conditioning — brand tokens sampled from the official logo
+  // Primary red ≈ #CE0002 · Ink black · Clean white surface
   tailwind.config = {
     theme: {
       extend: {
         colors: {
           brand: {
-            dark: '#0f172a',    // Dark navy for the top dashboard section
-            primary: '#2563eb', // Bright blue for primary actions and highlights
-            surface: '#f8fafc', // App background (slate-50)
+            dark: '#0a0a0a',      // Logo ink / sidebar
+            primary: '#CE0002',   // Logo red (weights, wordmark, target)
+            hover: '#A80000',     // Pressed / hover red
+            soft: '#FEF2F2',      // Light red wash for chips & hovers
+            softBorder: '#FECACA',
+            surface: '#FAFAFA',    // App canvas
             card: '#ffffff',
           },
           status: {
-            active: '#10b981',  // Emerald for 'Active' / 'Paid'
-            due: '#f59e0b',     // Amber for 'Due Soon'
-            overdue: '#ef4444'  // Red for 'Overdue'
+            active: '#15803d',    // Green kept for Paid/Active semantics
+            due: '#d97706',       // Amber for Due Soon
+            overdue: '#CE0002'    // Align overdue with brand red
           }
         },
         fontFamily: {
