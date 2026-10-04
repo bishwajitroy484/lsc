@@ -72,7 +72,7 @@ describe('Access control foundation', () => {
     expect(viewSettings).toContain('id="tab-btn-users"');
     expect(viewSettings).toContain('id="pane-users"');
     expect(viewSettings).toContain('Add a person in 3 steps');
-    expect(viewSettings).toContain('https://console.cloud.google.com/auth/audience');
+    expect(viewSettings).toContain('https://console.cloud.google.com/auth/audience?project=lakshya-strength-conditioning');
     expect(viewSettings).toContain('Add Test user here');
     expect(viewSettings).toContain('id="user-perm-matrix"');
     expect(viewSettings).toContain('id="user-invite-modal"');
