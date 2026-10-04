@@ -410,7 +410,7 @@ function buildMembersAndPayments(today, cfg) {
     updatedBy: adminEmail
   };
   members.push(memDue2Days);
-  simulatePaymentCycles(memDue2Days.memberId, new Date(2025, 0, 15), mockAddDays(today, 1), 3, ADULT_FEE, cfg.modeUPI);
+  simulatePaymentCycles(memDue2Days.memberId, new Date(2025, 0, 15), mockAddDays(today, 2), 3, ADULT_FEE, cfg.modeUPI);
 
   // 2. KIDS: Due in 2 Days (Kids Evening, Quarterly ₹15,000)
   var memKidDue2 = {
@@ -434,7 +434,7 @@ function buildMembersAndPayments(today, cfg) {
     updatedBy: adminEmail
   };
   members.push(memKidDue2);
-  simulatePaymentCycles(memKidDue2.memberId, new Date(2025, 1, 1), mockAddDays(today, 1), 3, KIDS_FEE, cfg.modeUPI);
+  simulatePaymentCycles(memKidDue2.memberId, new Date(2025, 1, 1), mockAddDays(today, 2), 3, KIDS_FEE, cfg.modeUPI);
 
   // 3. ADULT: Due in 10 Days (Adult Evening, Quarterly ₹30,000)
   var memDue10Days = {
@@ -458,7 +458,7 @@ function buildMembersAndPayments(today, cfg) {
     updatedBy: adminEmail
   };
   members.push(memDue10Days);
-  simulatePaymentCycles(memDue10Days.memberId, new Date(2025, 1, 1), mockAddDays(today, 9), 3, ADULT_FEE, cfg.modeCard);
+  simulatePaymentCycles(memDue10Days.memberId, new Date(2025, 1, 1), mockAddDays(today, 10), 3, ADULT_FEE, cfg.modeCard);
 
   // 4. KIDS: Due in 10 Days (Kids Evening, Quarterly ₹15,000)
   var memKidDue10 = {
@@ -482,7 +482,7 @@ function buildMembersAndPayments(today, cfg) {
     updatedBy: adminEmail
   };
   members.push(memKidDue10);
-  simulatePaymentCycles(memKidDue10.memberId, new Date(2025, 0, 10), mockAddDays(today, 9), 3, KIDS_FEE, cfg.modeCard);
+  simulatePaymentCycles(memKidDue10.memberId, new Date(2025, 0, 10), mockAddDays(today, 10), 3, KIDS_FEE, cfg.modeCard);
 
   // 5. ADULT: Due Today (Adult Morning, Quarterly ₹30,000)
   var memDueToday = {
@@ -506,7 +506,7 @@ function buildMembersAndPayments(today, cfg) {
     updatedBy: adminEmail
   };
   members.push(memDueToday);
-  simulatePaymentCycles(memDueToday.memberId, new Date(2025, 0, 10), mockAddDays(today, -1), 3, ADULT_FEE, cfg.modeUPI);
+  simulatePaymentCycles(memDueToday.memberId, new Date(2025, 0, 10), mockAddDays(today, 0), 3, ADULT_FEE, cfg.modeUPI);
 
   // 6. ADULT: Overdue by 5 Days (Adult Evening, Quarterly ₹30,000)
   var memOverdue5 = {
@@ -530,7 +530,7 @@ function buildMembersAndPayments(today, cfg) {
     updatedBy: adminEmail
   };
   members.push(memOverdue5);
-  simulatePaymentCycles(memOverdue5.memberId, new Date(2025, 0, 20), mockAddDays(today, -6), 3, ADULT_FEE, cfg.modeCash);
+  simulatePaymentCycles(memOverdue5.memberId, new Date(2025, 0, 20), mockAddDays(today, -5), 3, ADULT_FEE, cfg.modeCash);
   addPayment(memOverdue5.memberId, ADULT_FEE, mockAddDays(today, -5), mockAddDays(today, -5), mockAddDays(today, 85), cfg.modeUPI, cfg.payStatusOverdue, 'Overdue renewal notification');
 
   // 7. KIDS: Overdue by 15 Days (Kids Morning, Quarterly ₹15,000)
@@ -555,7 +555,7 @@ function buildMembersAndPayments(today, cfg) {
     updatedBy: adminEmail
   };
   members.push(memKidOverdue15);
-  simulatePaymentCycles(memKidOverdue15.memberId, new Date(2025, 1, 1), mockAddDays(today, -16), 3, KIDS_FEE, cfg.modeUPI);
+  simulatePaymentCycles(memKidOverdue15.memberId, new Date(2025, 1, 1), mockAddDays(today, -15), 3, KIDS_FEE, cfg.modeUPI);
 
   // 8. ADULT: Overdue by 30 Days (Adult Evening, Quarterly ₹30,000)
   var memOverdue30 = {
@@ -579,7 +579,7 @@ function buildMembersAndPayments(today, cfg) {
     updatedBy: adminEmail
   };
   members.push(memOverdue30);
-  simulatePaymentCycles(memOverdue30.memberId, new Date(2025, 1, 5), mockAddDays(today, -31), 3, ADULT_FEE, cfg.modeUPI);
+  simulatePaymentCycles(memOverdue30.memberId, new Date(2025, 1, 5), mockAddDays(today, -30), 3, ADULT_FEE, cfg.modeUPI);
 
   // 9. KIDS: Active with Comfortable Runway (Kids Morning, Quarterly ₹15,000)
   var memKidActive1 = {
