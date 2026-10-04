@@ -261,7 +261,7 @@
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>Filters</strong> — status (All / Active / Due Soon / Overdue), batch, plan, and search; selections stay visible while filtering.</li>
           <li><strong>Payments</strong> — record payments anytime; optional initial payment when adding. Coverage length follows the plan (e.g. monthly +1 month, quarterly +3, yearly +1 year, trial +7 days, ad-hoc +1 day).</li>
-          <li><strong>Next due</strong> — usually day after latest paid coverage end; otherwise from plan frequency / join. Ad-hoc &amp; trial always show <strong>No Due Date</strong> on both the list and detail (exit date governs the plan, not a renewal due).</li>
+          <li><strong>Next due</strong> — latest paid coverage <strong>endDate</strong> (same everywhere); otherwise from plan frequency / join. Ad-hoc &amp; trial always show <strong>No Due Date</strong> on both the list and detail (exit date governs the plan, not a renewal due).</li>
           <li><strong>Trial fee</strong> — daily rate × inclusive days between join and exit; recalculates when plan or dates change.</li>
           <li><strong>Ad-hoc / trial exit</strong> — exit date required; when that date arrives, status becomes Inactive (on load and by a daily check).</li>
           <li><strong>Insights</strong> — per-member earnings charts; only Paid/Completed payments count as collected.</li>
@@ -321,7 +321,7 @@
     </section>
 
     <!-- 8 Calendar -->
-    <section id="guide-sec-calendar" data-guide-section="calendar" data-guide-search="calendar due soon renewals month drawer legend google calendar reminder quarterly event" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+    <section id="guide-sec-calendar" data-guide-section="calendar" data-guide-search="calendar ops planner due soon renewals overdue exits month drawer legend google calendar reminder quarterly event endDate" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
       <button type="button" data-guide-toggle="calendar" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
         <span class="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-700 border border-cyan-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">calendar_month</span></span>
         <div class="flex-1 min-w-0">
@@ -329,18 +329,19 @@
             <h3 class="text-sm font-bold text-slate-800">Calendar</h3>
             <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-cyan-50 text-cyan-700 border border-cyan-100">Module</span>
           </div>
-          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Upcoming renewals by day</p>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Ops month planner — renewals, exits</p>
         </div>
         <span id="guide-chevron-calendar" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
       </button>
       <div id="guide-body-calendar" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
-        <p class="text-xs text-slate-600 leading-relaxed pt-3">Month grid of upcoming subscription renewals. Year dropdown, Today, and prev/next month controls. Tap a day for the member drawer; search the side list.</p>
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Month grid of gym operations — renewals, overdue, and trial/ad-hoc exits. Year dropdown, Today, and prev/next month controls. Tap a day for the event drawer (bottom sheet on phones); filter chips and search refine the list.</p>
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
-          <li><strong>KPIs</strong> — Due Soon (≤2 days), In 3–5, In 6–10, Total shown.</li>
-          <li><strong>Who appears</strong> — active non-ad-hoc/trial members with a next due in the month <em>or</em> within about 10 days.</li>
-          <li><strong>Next due</strong> — usually day after latest payment end date; otherwise from paid/join + plan length. Failed/pending/cancelled payments are skipped.</li>
+          <li><strong>KPIs</strong> — Overdue, Due ≤2, Due 3–7, This month.</li>
+          <li><strong>Who appears</strong> — Active members only. Recurring plans show renewals/overdue; ad-hoc &amp; trial show <em>exit date</em> only (no renewal due).</li>
+          <li><strong>Next due</strong> — latest paid payment <strong>endDate</strong> (same as Members, Dashboard, and Google Calendar). Paid/Completed statuses only.</li>
+          <li><strong>Actions</strong> — Open member; WhatsApp renewal reminder. Optional GCal synced badge when a quarterly due event exists.</li>
           <li>Year list matches Dashboard / Members / Staff / Expenses (includes current year even with no data).</li>
-          <li><strong>Google Calendar reminders</strong> — optional in Settings → General. When enabled, each paid <em>quarterly</em> payment creates a timed event on the owner calendar for the next due date; renewing replaces the previous event. Trial/Ad-hoc/Monthly/Annual are skipped. No backfill of existing members.</li>
+          <li><strong>Google Calendar reminders</strong> — optional in Settings → General. When enabled, each paid <em>quarterly</em> payment creates a timed event on the owner calendar for the next due date (<code>endDate</code>); renewing replaces the previous event. Trial/Ad-hoc/Monthly/Annual are skipped. No backfill of existing members.</li>
         </ul>
       </div>
     </section>
@@ -447,7 +448,7 @@
         <p class="text-[11px] text-slate-500 leading-relaxed">Note: the weekly report’s “due” uses payment end dates; the Calendar screen’s next due is usually end date + 1 day. Both are intentional for their jobs.</p>
         <div class="rounded-xl border border-teal-100 bg-teal-50/40 p-3">
           <p class="text-[11px] font-bold text-teal-900 mb-1">Google Calendar due events</p>
-          <p class="text-[11px] text-slate-600 leading-relaxed">Separate toggle under Settings → General. Opt-in, quarterly only, timed (not all-day) events on the deployer/owner calendar. When you mark a quarterly payment as paid, the previous due event is deleted and a new event is created for the next due date (`endDate + 1`). Turning the feature off clears leftover events. Re-authorize Google services once after deploy so Calendar access is granted.</p>
+          <p class="text-[11px] text-slate-600 leading-relaxed">Separate toggle under Settings → General. Opt-in, quarterly only, timed (not all-day) events on the deployer/owner calendar. When you mark a quarterly payment as paid, the previous due event is deleted and a new event is created for the next due date (`endDate`). Turning the feature off clears leftover events. Re-authorize Google services once after deploy so Calendar access is granted.</p>
         </div>
       </div>
     </section>

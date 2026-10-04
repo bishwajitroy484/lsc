@@ -657,9 +657,7 @@
             validPayments.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
             
             if (validPayments.length > 0) {
-                let latestEnd = new Date(this.parseToISODate(validPayments[0].endDate));
-                latestEnd.setDate(latestEnd.getDate() + 1); 
-                effectiveDue = latestEnd;
+                effectiveDue = new Date(this.parseToISODate(validPayments[0].endDate));
             }
         }
         
@@ -1407,8 +1405,7 @@
             
             const targetMember = this.allData.find(m => m.memberId === payload.memberId);
             if (targetMember && payload.endDate) {
-                let nextDue = new Date(this.parseToISODate(payload.endDate));
-                nextDue.setDate(nextDue.getDate() + 1);
+                const nextDue = new Date(this.parseToISODate(payload.endDate));
                 targetMember.dueDate = this.formatDateDDMMMYYYY(nextDue);
             }
             

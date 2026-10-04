@@ -146,12 +146,12 @@ describe('due calendar helpers', () => {
     expect(api.isQuarterlyPlan_({ name: 'Ad-hoc', frequency: 'Ad-hoc' })).toBe(false);
   });
 
-  test('resolveNextDueFromPayment_ is endDate + 1 day', () => {
+  test('resolveNextDueFromPayment_ is payment endDate (no +1 day)', () => {
     const { api } = loadDueCalendarApi();
     const due = api.resolveNextDueFromPayment_({ endDate: '2026-12-31' });
-    expect(due.getFullYear()).toBe(2027);
-    expect(due.getMonth()).toBe(0);
-    expect(due.getDate()).toBe(1);
+    expect(due.getFullYear()).toBe(2026);
+    expect(due.getMonth()).toBe(11);
+    expect(due.getDate()).toBe(31);
   });
 
   test('sync clears leftover events when feature is disabled', () => {
@@ -219,9 +219,9 @@ describe('due calendar helpers', () => {
     expect(res.replaced).toBe('evt-old-1');
     expect(deletedIds).toContain('evt-old-1');
     expect(createdEvents).toHaveLength(1);
-    expect(createdEvents[0].start.getFullYear()).toBe(2027);
-    expect(createdEvents[0].start.getMonth()).toBe(0);
-    expect(createdEvents[0].start.getDate()).toBe(1);
+    expect(createdEvents[0].start.getFullYear()).toBe(2026);
+    expect(createdEvents[0].start.getMonth()).toBe(11);
+    expect(createdEvents[0].start.getDate()).toBe(31);
     expect(memberUpdates.some(u => u.payload.dueCalendarEventId === 'evt-new-1')).toBe(true);
   });
 
@@ -251,7 +251,7 @@ describe('due calendar helpers', () => {
     expect(res.synced).toBe(true);
     expect(createdEvents[0].start.getFullYear()).toBe(2026);
     expect(createdEvents[0].start.getMonth()).toBe(11);
-    expect(createdEvents[0].start.getDate()).toBe(17);
+    expect(createdEvents[0].start.getDate()).toBe(16);
   });
 
   test('sync skips non-quarterly plans', () => {
