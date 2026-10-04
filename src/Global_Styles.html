@@ -127,7 +127,7 @@
     }
   }
 
-  /* Consistent legible ApexCharts Typography across all modules */
+  /* ApexCharts tooltips: NEVER force opacity:1 — hide uses opacity:0, show uses .apexcharts-active */
   .apexcharts-tooltip {
     font-size: 13px !important;
     font-family: inherit !important;
@@ -136,10 +136,12 @@
     border: 1px solid #1e293b !important;
     background: #0f172a !important;
     color: #f8fafc !important;
-    opacity: 1 !important;
+    opacity: 0;
     z-index: 10050 !important;
     pointer-events: none !important;
-    overflow: visible !important;
+  }
+  .apexcharts-tooltip.apexcharts-active {
+    opacity: 1;
   }
   .apexcharts-tooltip.apexcharts-theme-light,
   .apexcharts-tooltip.apexcharts-theme-dark {
@@ -179,8 +181,13 @@
     border: 1px solid #334155 !important;
     border-radius: 6px !important;
     box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25) !important;
-    opacity: 1 !important;
+    opacity: 0;
+    pointer-events: none !important;
     z-index: 10050 !important;
+  }
+  .apexcharts-xaxistooltip.apexcharts-active,
+  .apexcharts-yaxistooltip.apexcharts-active {
+    opacity: 1;
   }
   .apexcharts-xaxistooltip-text,
   .apexcharts-yaxistooltip-text {
@@ -193,6 +200,20 @@
     font-size: 12px !important;
     font-weight: 600 !important;
     font-family: inherit !important;
+  }
+  /* Value-label badges: white pill + dark text (Apex uses text fill as badge fill unless backgroundColor is set) */
+  .apexcharts-datalabels rect,
+  .apexcharts-data-labels rect,
+  .apexcharts-datalabel rect {
+    fill: #ffffff !important;
+    stroke: #e2e8f0 !important;
+    stroke-width: 1 !important;
+    opacity: 0.95 !important;
+  }
+  .apexcharts-datalabels text,
+  .apexcharts-data-labels text,
+  .apexcharts-datalabel text {
+    fill: #0f172a !important;
   }
   .apexcharts-xaxis-label text,
   .apexcharts-yaxis-label text {

@@ -968,16 +968,17 @@
       let chartData = [];
 
       const dlOptions = {
-        enabled: false,
+        enabled: true,
         formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '',
         offsetY: -6,
-        style: { fontSize: '11px', fontWeight: 600, colors: ['#ffffff'] },
+        style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
         background: {
           enabled: true,
+          backgroundColor: '#ffffff',
           foreColor: '#0f172a',
           borderRadius: 4,
           padding: 3,
-          opacity: 0.92,
+          opacity: 0.95,
           borderWidth: 1,
           borderColor: '#e2e8f0'
         }
