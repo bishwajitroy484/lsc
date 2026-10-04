@@ -29,6 +29,7 @@ describe('Access control foundation', () => {
     expect(accessSrc).toContain('function api_redeemInviteToken');
     expect(accessSrc).toContain('function api_invoke');
     expect(accessSrc).toContain('bindIdentityToTemporaryKey_');
+    expect(accessSrc).toContain('clearIdentityBindingsForEmail_');
     expect(accessSrc).toContain('getTemporaryActiveUserKey');
     expect(accessSrc).toContain('webAppUrl');
     expect(accessSrc).toContain('function requirePermission_');

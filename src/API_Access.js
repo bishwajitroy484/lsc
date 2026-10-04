@@ -132,6 +132,57 @@ function bindIdentityToTemporaryKey_(email) {
   return true;
 }
 
+function clearCurrentTemporaryIdentityBinding_() {
+  const key = getTemporaryUserKey_();
+  if (!key) return;
+  try {
+    PropertiesService.getScriptProperties().deleteProperty('lsc_uid_' + key);
+  } catch (error) {
+    // non-fatal
+  }
+  try {
+    authCache_().remove('lsc_uid_' + key);
+  } catch (error) {
+    // non-fatal
+  }
+}
+
+/** Remove leftover lsc_uid_* Script Property bindings for a deleted/disabled user email. */
+function clearIdentityBindingsForEmail_(email) {
+  const normalized = normalizeEmail_(email);
+  if (!normalized) return 0;
+  let removed = 0;
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const all = props.getProperties() || {};
+    Object.keys(all).forEach(function(propKey) {
+      if (String(propKey).indexOf('lsc_uid_') !== 0) return;
+      if (normalizeEmail_(all[propKey]) !== normalized) return;
+      try {
+        props.deleteProperty(propKey);
+        removed += 1;
+      } catch (error) {
+        // continue
+      }
+    });
+  } catch (error) {
+    // non-fatal
+  }
+  // Also drop the current request's cache entry if it matches.
+  try {
+    const key = getTemporaryUserKey_();
+    if (key) {
+      const cached = authCache_().get('lsc_uid_' + key);
+      if (normalizeEmail_(cached) === normalized) {
+        authCache_().remove('lsc_uid_' + key);
+      }
+    }
+  } catch (error) {
+    // non-fatal
+  }
+  return removed;
+}
+
 function emailFromTemporaryKey_() {
   const key = getTemporaryUserKey_();
   if (!key) return '';
@@ -483,6 +534,9 @@ function getCurrentUserContext_() {
   const context = buildUserContext_(userRow, email);
   if (!context.allowed && email) {
     context.error = 'Your email (' + email + ') is not authorized for this app.';
+    // Drop stale session bindings so deleted/disabled users do not linger in Script Properties.
+    clearIdentityBindingsForEmail_(email);
+    clearCurrentTemporaryIdentityBinding_();
   }
   return context;
 }
@@ -1198,6 +1252,9 @@ function api_saveUser(userData) {
       savedUserId = record.userId;
     }
     invalidateUsersCache_();
+    if (status.toLowerCase() === 'disabled') {
+      clearIdentityBindingsForEmail_(email);
+    }
 
     let message = existing ? 'User updated.' : 'User added.';
     let warning = '';
@@ -1245,6 +1302,7 @@ function api_deleteUser(userId) {
 
     DB.remove('USERS', userId);
     invalidateUsersCache_();
+    clearIdentityBindingsForEmail_(target.email);
 
     return { success: true, message: 'User removed. Their link no longer works.' };
   } catch (error) {
