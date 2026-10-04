@@ -702,12 +702,22 @@
             <p class="text-[10px] text-slate-500 leading-snug">Add a person, choose what they can open, and they receive an email with their personal link. You can also copy the link or show a QR code from the user list.</p>
 
             <div class="rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2.5 text-[10px] md:text-[11px] text-amber-950 leading-relaxed">
-              <p class="font-bold text-amber-900 mb-1 flex items-center gap-1">
+              <p class="font-bold text-amber-900 mb-1.5 flex items-center gap-1">
                 <span class="material-symbols-rounded text-[15px]">info</span>
-                Google OAuth test user (Cloud Console)
+                Add a person in 3 steps
               </p>
-              <p class="mb-1">Adding someone here gives them an LSC access link only. If your Google Cloud OAuth app is in <strong>Testing</strong>, also add their <strong>same Gmail</strong> under Cloud Console → <strong>Google Auth Platform → Audience → Test users</strong>, or Authorize / Publish will show Access blocked.</p>
-              <p class="text-amber-800/90">Not needed if OAuth publishing status is already <strong>In production</strong>.</p>
+              <ol class="list-decimal list-inside space-y-1 mb-2">
+                <li>Click <strong>Add</strong> here → enter name &amp; email → Save (sends their LSC access link).</li>
+                <li>If Google OAuth is in <strong>Testing</strong>, open Cloud Console and add the <strong>same Gmail</strong> as a Test user.</li>
+                <li>They open the email link, sign in with Google, and Authorize if prompted.</li>
+              </ol>
+              <p class="mb-1.5">
+                <a href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-bold text-brand-primary hover:underline">
+                  Open Audience → Test users
+                  <span class="material-symbols-rounded text-[14px]">open_in_new</span>
+                </a>
+              </p>
+              <p class="text-amber-800/90">Skip step 2 only if OAuth publishing status is already <strong>In production</strong>. Use the same GCP project linked to this app.</p>
             </div>
 
             <div id="users-list" class="space-y-2"></div>
@@ -738,9 +748,20 @@
               <input type="email" id="user-edit-email" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-primary">
             </div>
           </div>
-          <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] text-slate-600 leading-relaxed">
-            <p class="font-semibold text-slate-800 mb-0.5">Also add this email as a Google Test user</p>
-            <p>While OAuth is in <strong>Testing</strong>, open Cloud Console → <strong>Audience → Test users</strong> and add this same address. This app cannot add Cloud test users for you. Skip this step only if OAuth is <strong>In production</strong>.</p>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] text-slate-600 leading-relaxed space-y-1.5">
+            <p class="font-semibold text-slate-800">Simple steps</p>
+            <ol class="list-decimal list-inside space-y-0.5">
+              <li>Save this user here (LSC access).</li>
+              <li>If OAuth is <strong>Testing</strong>, add this same email as a Cloud Test user.</li>
+              <li>They open the invite link and Authorize.</li>
+            </ol>
+            <p>
+              <a href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-bold text-brand-primary hover:underline">
+                Add Test user here
+                <span class="material-symbols-rounded text-[14px]">open_in_new</span>
+              </a>
+              <span class="text-slate-500"> — Google Auth Platform → Audience → Test users</span>
+            </p>
           </div>
           <div class="grid grid-cols-2 gap-2.5">
             <div>

@@ -71,8 +71,9 @@ describe('Access control foundation', () => {
     expect(viewSettings).toContain('grid-cols-3 gap-1.5 md:gap-2 text-[10px]');
     expect(viewSettings).toContain('id="tab-btn-users"');
     expect(viewSettings).toContain('id="pane-users"');
-    expect(viewSettings).toContain('Google OAuth test user');
-    expect(viewSettings).toContain('Also add this email as a Google Test user');
+    expect(viewSettings).toContain('Add a person in 3 steps');
+    expect(viewSettings).toContain('https://console.cloud.google.com/auth/audience');
+    expect(viewSettings).toContain('Add Test user here');
     expect(viewSettings).toContain('id="user-perm-matrix"');
     expect(viewSettings).toContain('id="user-invite-modal"');
     expect(viewSettings).toContain('id="user-edit-send"');
