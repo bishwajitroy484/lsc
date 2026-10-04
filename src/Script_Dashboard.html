@@ -412,7 +412,23 @@
     const commonToolbar = { show: true, tools: { download: false, selection: false, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true }, autoSelected: 'zoom' };
     const commonGrid = { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 28, right: 12, left: 10, bottom: 4 } };
     const commonXAxis = { categories: data.charts.categories || [], tickAmount: 'dataPoints', labels: { hideOverlappingLabels: false, rotate: -45, rotateAlways: false, style: { fontSize: '11px', colors: '#64748b' } } };
-    var dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '', offsetY: -6, style: { fontSize: '11px', fontWeight: 600, colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 } };
+    // ApexCharts: with background.enabled, style.colors = badge fill, background.foreColor = text.
+    // Keep labels off by default (toggle via chart header); when on, white pill + dark text.
+    var dlOptions = {
+      enabled: false,
+      formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '',
+      offsetY: -6,
+      style: { fontSize: '11px', fontWeight: 600, colors: ['#ffffff'] },
+      background: {
+        enabled: true,
+        foreColor: '#0f172a',
+        borderRadius: 4,
+        padding: 3,
+        opacity: 0.92,
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+      }
+    };
     const commonTooltip = {
       theme: 'dark',
       style: { fontSize: '13px', fontFamily: 'inherit' },
@@ -446,7 +462,7 @@
         series: [{ name: 'Members', data: data.charts.batchData }],
         chart: { type: 'bar', height: '100%', toolbar: commonToolbar },
         plotOptions: { bar: { distributed: true, columnWidth: '50%', borderRadius: 4, dataLabels: { position: 'top' } } },
-        dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '11px', fontWeight: 600, colors: ["#304758"] } },
+        dataLabels: { enabled: false, offsetY: -20, style: { fontSize: '11px', fontWeight: 600, colors: ["#304758"] } },
         xaxis: { categories: data.charts.batchLabels, axisBorder: { show: false }, labels: { rotate: -45, style: { fontSize: '11px', fontWeight: 600 } } },
         yaxis: { labels: { style: { fontSize: '11px', colors: '#64748b' } } },
         colors: ['#3b82f6', '#10b981', '#a855f7', '#fbbf24', '#3b82f6'],
@@ -556,7 +572,7 @@
         plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: DashboardState.isShowingMisc ? 'Total Misc' : 'Total', fontSize: '14px', fontWeight: 600, formatter: function(w) { const tot = w.globals.seriesTotals.reduce((a,b)=>a+b,0); return AppUtils.formatCurrency(tot); } } } } } },
         legend: { position: 'right', fontSize: '11px', offsetX: -10, offsetY: 20 },
         responsive: [{ breakpoint: 768, options: { legend: { position: 'bottom', offsetX: 0, offsetY: 0 } } }],
-        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCompactCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 } },
+        dataLabels: { enabled: false, formatter: function (val, opts) { return AppUtils.formatCompactCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 } },
         tooltip: commonTooltip
       };
       elExp.innerHTML = ''; 

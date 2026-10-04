@@ -444,10 +444,10 @@
         stroke: { curve: 'smooth', width: chartType === 'bar' ? 0 : 3 },
         markers: { size: chartType === 'bar' ? 0 : 3 },
         dataLabels: { 
-          enabled: chartType === 'bar', 
+          enabled: false, 
           formatter: function (val) { return val ? AppUtils.formatCompactCurrency(val) : ""; },
-          style: { fontSize: '10px', fontWeight: 600, colors: ['#0f172a'] },
-          background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 2, opacity: 0.9, borderWidth: 0 },
+          style: { fontSize: '10px', fontWeight: 600, colors: ['#ffffff'] },
+          background: { enabled: true, foreColor: '#0f172a', borderRadius: 4, padding: 2, opacity: 0.92, borderWidth: 1, borderColor: '#e2e8f0' },
           offsetY: -6
         },
         legend: { position: 'top', horizontalAlign: 'right', fontSize: '11px' },

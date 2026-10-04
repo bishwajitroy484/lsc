@@ -967,7 +967,21 @@
       let categories = [];
       let chartData = [];
 
-      const dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '', offsetY: -6, style: { fontSize: '11px', fontWeight: 600, colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 } };
+      const dlOptions = {
+        enabled: false,
+        formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '',
+        offsetY: -6,
+        style: { fontSize: '11px', fontWeight: 600, colors: ['#ffffff'] },
+        background: {
+          enabled: true,
+          foreColor: '#0f172a',
+          borderRadius: 4,
+          padding: 3,
+          opacity: 0.92,
+          borderWidth: 1,
+          borderColor: '#e2e8f0'
+        }
+      };
 
       if (viewMode === 'quarterly') {
           categories = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];

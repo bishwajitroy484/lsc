@@ -650,10 +650,10 @@
         stroke: { curve: 'smooth', width: chartType === 'bar' ? 0 : 3 },
         markers: { size: chartType === 'bar' ? 0 : 4, colors: ['#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
         dataLabels: { 
-          enabled: true, 
+          enabled: false, 
           formatter: function (val) { return val ? AppUtils.formatCompactCurrency(val) : ""; },
-          style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
-          background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 },
+          style: { fontSize: '11px', fontWeight: 600, colors: ['#ffffff'] },
+          background: { enabled: true, foreColor: '#0f172a', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 1, borderColor: '#e2e8f0' },
           offsetY: chartType === 'bar' ? -8 : -14
         },
         xaxis: { categories: Object.keys(trendDataMap), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '11px', colors: '#64748b' } } },
