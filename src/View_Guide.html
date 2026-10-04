@@ -141,6 +141,10 @@
       </button>
       <div id="guide-body-access" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
         <p class="text-xs text-slate-600 leading-relaxed pt-3">There is no password or code. Each user gets a <strong>personal link</strong>. Opening it signs them in, and this device remembers them.</p>
+        <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-[11px] text-amber-950 leading-relaxed">
+          <p class="font-bold text-amber-900 mb-1">OAuth Testing reminder</p>
+          <p>If Google Cloud OAuth for this project is in <strong>Testing</strong>, adding a user in Settings is not enough for Authorize/Publish. Also add their Gmail under Cloud Console → <strong>Google Auth Platform → Audience → Test users</strong>. If OAuth is <strong>In production</strong>, you can skip that Cloud step.</p>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div class="rounded-xl border border-violet-100 bg-violet-50/40 p-3">
             <p class="text-[11px] font-bold text-violet-900 mb-1">Email</p>
