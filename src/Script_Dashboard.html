@@ -6,12 +6,16 @@
 
   var safeSetText = AppUtils.safeSetText;
 
-  window.toggleDataLabels = function(chartKey) {
+  window.toggleDataLabels = function(chartKey, btn) {
     const chart = window.AppCharts[chartKey];
     if (!chart) return;
-    const isEnabled = chart.w.config.dataLabels.enabled;
-    chart.updateOptions({ dataLabels: { enabled: !isEnabled } });
-    if (window.AppChartConfigs[chartKey]) window.AppChartConfigs[chartKey].dataLabels.enabled = !isEnabled;
+    const next = !chart.w.config.dataLabels.enabled;
+    chart.updateOptions({ dataLabels: { enabled: next } });
+    if (window.AppChartConfigs[chartKey]) window.AppChartConfigs[chartKey].dataLabels.enabled = next;
+    if (btn) {
+      btn.classList.toggle('text-brand-primary', next);
+      btn.classList.toggle('text-slate-400', !next);
+    }
   };
 
   window.openChartModal = function(title, chartKey) {
@@ -410,9 +414,30 @@
     window.AppCharts = {};
 
     const commonToolbar = { show: true, tools: { download: false, selection: false, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true }, autoSelected: 'zoom' };
-    const commonGrid = { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 28, right: 12, left: 10, bottom: 4 } };
+    const commonGrid = { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 36, right: 12, left: 10, bottom: 4 } };
     const commonXAxis = { categories: data.charts.categories || [], tickAmount: 'dataPoints', labels: { hideOverlappingLabels: false, rotate: -45, rotateAlways: false, style: { fontSize: '11px', colors: '#64748b' } } };
-    var dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '', offsetY: -6, style: { fontSize: '11px', fontWeight: 600, colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 } };
+    // ApexCharts: backgroundColor = pill fill; foreColor = text. style.colors is fallback pill fill if backgroundColor omitted.
+    var dlOptions = {
+      enabled: true,
+      formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '',
+      offsetY: -6,
+      style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
+      background: {
+        enabled: true,
+        backgroundColor: '#ffffff',
+        foreColor: '#0f172a',
+        borderRadius: 4,
+        padding: 3,
+        opacity: 0.95,
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+      }
+    };
+    const commonTooltip = {
+      theme: 'dark',
+      style: { fontSize: '13px', fontFamily: 'inherit' },
+      y: { formatter: (val) => AppUtils.formatCurrency(val) }
+    };
 
     // 1. Rev vs Exp
     const elRevExp = document.querySelector("#chart-rev-exp");
@@ -424,7 +449,7 @@
         dataLabels: dlOptions,
         xaxis: commonXAxis,
         yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
-        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
+        tooltip: commonTooltip,
         colors: ['#3b82f6', '#f43f5e'],
         legend: { position: 'top', horizontalAlign: 'left', markers: { radius: 12 }, fontSize: '11px' },
         grid: commonGrid
@@ -473,6 +498,7 @@
         xaxis: { ...commonXAxis, categories: prediction.categories || data.charts.categories || [] },
         yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: {
+          ...commonTooltip,
           y: {
             formatter: (val) => AppUtils.formatCurrency(val),
             title: { formatter: (seriesName) => seriesName }
@@ -520,7 +546,7 @@
         markers: { size: trendType === 'bar' ? 0 : 4 },
         xaxis: commonXAxis,
         yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
-        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
+        tooltip: commonTooltip,
         colors: ['#10b981', '#ef4444'],
         legend: { position: 'bottom', horizontalAlign: 'center', offsetY: 5, fontSize: '11px' },
         grid: commonGrid
@@ -551,7 +577,7 @@
         legend: { position: 'right', fontSize: '11px', offsetX: -10, offsetY: 20 },
         responsive: [{ breakpoint: 768, options: { legend: { position: 'bottom', offsetX: 0, offsetY: 0 } } }],
         dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCompactCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 } },
-        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
+        tooltip: commonTooltip
       };
       elExp.innerHTML = ''; 
       window.AppCharts.exp = new ApexCharts(elExp, window.AppChartConfigs.exp);
@@ -568,7 +594,7 @@
         stroke: { curve: 'smooth', width: staffType === 'bar' ? 0 : 3, connectNulls: true },
         xaxis: commonXAxis,
         yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
-        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
+        tooltip: commonTooltip,
         colors: ['#8b5cf6'], 
         markers: { size: staffType === 'bar' ? 0 : 4 },
         legend: { position: 'bottom', horizontalAlign: 'center', show: true, offsetY: 5, fontSize: '11px' },

@@ -138,7 +138,7 @@ function wrapEmailHtml_(title, innerHtml) {
   return (
     '<div style="font-family:Segoe UI,Arial,sans-serif;background:#f8fafc;padding:24px">' +
     '<div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">' +
-    '<div style="background:linear-gradient(135deg,#1d4ed8,#2563eb);padding:18px 22px">' +
+    '<div style="background:linear-gradient(135deg,#A80000,#CE0002);padding:18px 22px">' +
     '<div style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.2px">' +
     escapeHtmlEmail_(title) +
     '</div></div>' +
@@ -393,7 +393,7 @@ function buildWeeklyReportEmail_(config, report) {
   const inner =
     textToHtmlParagraphs_(introText) +
     '<div style="margin-top:18px;padding:12px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px">' +
-    '<div style="font-size:12px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px">Summary</div>' +
+    '<div style="font-size:12px;font-weight:700;color:#A80000;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px">Summary</div>' +
     '<div style="font-size:13px;color:#1e3a8a">Upcoming: <strong>' +
     vars.upcomingCount +
     '</strong> · Overdue: <strong>' +

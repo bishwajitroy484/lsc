@@ -18,7 +18,7 @@
     
     chartInstances: {},
     expenseToDelete: null,
-    colorMap: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#64748b'],
+    colorMap: ['#CE0002', '#f59e0b', '#10b981', '#404040', '#ef4444', '#737373', '#f97316', '#64748b'],
 
     pageSize: 50,
     renderedCount: 0,
@@ -444,17 +444,17 @@
         stroke: { curve: 'smooth', width: chartType === 'bar' ? 0 : 3 },
         markers: { size: chartType === 'bar' ? 0 : 3 },
         dataLabels: { 
-          enabled: chartType === 'bar', 
+          enabled: true, 
           formatter: function (val) { return val ? AppUtils.formatCompactCurrency(val) : ""; },
           style: { fontSize: '10px', fontWeight: 600, colors: ['#0f172a'] },
-          background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 2, opacity: 0.9, borderWidth: 0 },
+          background: { enabled: true, backgroundColor: '#ffffff', foreColor: '#0f172a', borderRadius: 4, padding: 2, opacity: 0.95, borderWidth: 1, borderColor: '#e2e8f0' },
           offsetY: -6
         },
         legend: { position: 'top', horizontalAlign: 'right', fontSize: '11px' },
         xaxis: { categories: categories, axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '11px', colors: '#64748b' } } },
         yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
-        colors: ['#8b5cf6', '#f59e0b'],
+        colors: ['#404040', '#f59e0b'],
         grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 24, right: 10, left: 10, bottom: 4 } }
       };
 
@@ -466,7 +466,7 @@
       // 2. Category Breakdown Chart (Consistent Data Labels)
       const bLabels = Object.keys(catSums);
       const bSeries = Object.values(catSums);
-      const bColors = bLabels.map((l, i) => l === 'Staff Cost' ? '#8b5cf6' : this.getColor(i));
+      const bColors = bLabels.map((l, i) => l === 'Staff Cost' ? '#404040' : this.getColor(i));
       const totalAmt = bSeries.reduce((a,b)=>a+b, 0);
 
       const breakOpts = {
@@ -570,7 +570,7 @@
           <td class="px-4 py-3 font-bold text-slate-800 text-xs md:text-sm">${amtStr}${rcptHtml}</td>
           <td class="px-4 py-3 text-slate-500 capitalize text-xs">${creator}</td>
           <td class="px-4 py-3 text-right">
-            <button onclick="ExpensesApp.openModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded"><span class="material-symbols-rounded text-[17px]">edit</span></button>
+            <button onclick="ExpensesApp.openModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[17px]">edit</span></button>
             <button onclick="ExpensesApp.openDeleteModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[17px]">delete</span></button>
           </td>
         </tr>
@@ -1126,7 +1126,7 @@
           tbody.innerHTML = rows.map(function(r) {
             var typeBadge = r.recordType === 'staff'
               ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase bg-purple-50 text-purple-700 border-purple-100">Staff</span>'
-              : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase bg-blue-50 text-blue-700 border-blue-100">Expense</span>';
+              : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase bg-red-50 text-red-700 border-red-100">Expense</span>';
             var statusBadge = '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ' + r.statusClass + '">' + r.status + '</span>';
             var amt = (typeof AppUtils !== 'undefined') ? AppUtils.formatCurrency(r.amount) : r.amount;
             var dateFmt = (typeof ExpensesApp !== 'undefined' && ExpensesApp.formatDateDDMMMYYYY)

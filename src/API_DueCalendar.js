@@ -57,7 +57,6 @@ function resolveNextDueFromPayment_(payment) {
   if (!end || isNaN(end.getTime())) return null;
   const due = new Date(end.getTime());
   due.setHours(0, 0, 0, 0);
-  due.setDate(due.getDate() + 1);
   return due;
 }
 
@@ -188,7 +187,7 @@ function persistMemberDueCalendarEventId_(memberId, eventId) {
 
 /**
  * Sync Google Calendar due reminder for a member after payment create/update/delete.
- * Replaces any previous due event with the next quarterly due (endDate + 1 of latest paid).
+ * Replaces any previous due event with the next quarterly due (endDate of latest paid).
  * Never throws to the caller — payment save must succeed even if Calendar fails.
  */
 function syncMemberDueCalendarEvent_(memberId, paymentHint) {

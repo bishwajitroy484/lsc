@@ -323,6 +323,24 @@ describe('Dashboard Module', () => {
     expect(predictionConfig).toContain("fill: { opacity: [0.12, 0] }");
   });
 
+  test('keeps dashboard metric and chart tooltips readable and unclipped', () => {
+    const view = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
+    const styles = fs.readFileSync(path.join(__dirname, '../src/Global_Styles.html'), 'utf8');
+    const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
+
+    expect(view).toContain('metric-tip-bubble');
+    expect(view).toMatch(/justify-between min-w-0 overflow-visible/);
+    expect(view).toMatch(/h-full min-w-0 overflow-visible/);
+    expect(styles).toContain('.metric-tip-bubble');
+    expect(styles).toContain('top: calc(100% + 10px)');
+    expect(styles).toContain('font-size: 12px');
+    expect(styles).toContain('.apexcharts-tooltip');
+    expect(styles).toContain('background: #0f172a !important');
+    expect(styles).toContain('z-index: 10050 !important');
+    expect(script).toContain("theme: 'dark'");
+    expect(script).toContain('commonTooltip');
+  });
+
   test('reflects recognized future revenue from split payments in Net-In-Hand Prediction', () => {
     const dashboardApi = loadDashboardApi();
     const revArr = [0, 0, 0, 0, 0, 5200, 10000, 10000, 9700, 10100, 9800, 5200];

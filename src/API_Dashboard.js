@@ -475,7 +475,6 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                if (latestP.endDate) {
                    let d = parseSafeDate(latestP.endDate);
                    if (!isNaN(d)) {
-                       d.setDate(d.getDate() + 1);
                        actualNextDue = d;
                    }
                } else {

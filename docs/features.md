@@ -14,7 +14,18 @@ Developers keep spreadsheet, Drive folder, Apps Script, and **stable web-app dep
 
 Those commands write `.clasp.json` (script target) and `src/Config_Env.js` (runtime `SPREADSHEET_ID` / drive defaults). Then `npm run push:dev` / `push:prod` use the selected environment’s IDs.
 
-**Stable web app URL:** `npm run deploy:dev` / `deploy:prod` updates the existing `deploymentId` so the `/exec` link does **not** change. Share that URL once. If `deploymentId` is empty, the first deploy creates one and saves it into `config/env.json` automatically.
+**Stable web app URL:** `npm run deploy:dev` / `deploy:prod` updates the existing `deploymentId` so the `/exec` link does **not** change. Share that URL once. If `deploymentId` is empty, the first deploy creates one and saves it into `config/env.json` automatically. `prepare-env` also writes `LSC_DEPLOYMENT_ID` into `Config_Env.js` so Settings can publish against that stable deployment.
+
+### Publish latest code from Settings (Dev & Prod)
+
+After `clasp push` / `npm run push:dev` / `push:prod`, owners can open **Settings → General → Web app version** and click **Publish latest code**. That creates a new Apps Script version from the project HEAD and updates the existing web-app deployment (same `/exec` URL). Mail and Calendar keep the deployer account because the app still runs as `Execute as: Me`.
+
+- Status chips show environment (Dev/Prod), live version, and deployment ID readiness.
+- Owners can paste/save a deployment ID if it is missing from config.
+- **Publish latest code** opens a mobile-friendly confirmation modal (not a browser `confirm` dialog).
+- Setup & Authorization status chips use a compact **3-column** grid and include a **Publish API** check (Apps Script deployments API / scopes). Authorize Google services also probes this path.
+- One-time Cloud setup: enable **Apps Script API** on the script’s standard GCP project (Project Settings → GCP Project), then **Authorize Google services** again so project/deployments scopes are granted.
+- Non-owners can view status; only owners can Save ID or Publish.
 
 ## Feature areas
 
@@ -35,6 +46,16 @@ Expenses & Staff is a single page: shared year/period filters, **four KPI cards*
 ## Calendar year selection
 
 The Calendar year selector is a dropdown populated from years found in member, payment, expense, staff, and salary records. The current year is included even when no records exist for it. Dashboard, Members, and Expenses (including Staff & Payroll) use the same available-year list, so their year selectors stay consistent.
+
+## Calendar ops month planner
+
+Calendar is the gym’s **operations month planner** (what happens on which day), not a second finance dashboard. It shows **Active** members only:
+
+- **Renewals / Overdue** — next due is the latest paid payment’s **`endDate`** (same rule as Members, Dashboard, and Google Calendar due events). Ad-hoc and trial plans never get a renewal due.
+- **Exits** — ad-hoc and trial members appear on their **exit date** only.
+- KPI strip: Overdue | Due ≤2 | Due 3–7 | This month. Urgency for side lists uses a **≤7 day** window; the month grid still shows the full selected month.
+- Filter chips: Renewals · Overdue · Exits. Tap a day for a drawer (bottom sheet on mobile) with Open member and WhatsApp renewal reminder. Optional **Synced to Google Calendar** badge when a quarterly due event id is stored.
+- Paid status checks match Members (`Paid` / `Completed`).
 
 ## Payment insights and dashboard collections
 
@@ -85,8 +106,8 @@ The Dashboard Overdue and Upcoming member tables, and the Members payment-histor
 The web app is published with `Anyone` access and executes as the deployer. Data reads/writes through the deploying account’s Spreadsheet, Drive, Mail, and triggers, so invited users never need access to those files. Users get in through a personal link sent by email.
 
 - **First-run setup:** Owners use **Settings → Setup & Authorization** and click **Authorize Google services** in the UI (no Apps Script editor). Status checks cover Spreadsheet, Settings, Drive, Mail, ScriptApp, **Google Calendar**, and the weekly trigger. If Calendar scope was newly added, Authorize opens Google consent; allow Calendar, then click Authorize again. **Mark setup complete** stores `SETUP_COMPLETE=YES`.
-- **USERS sheet:** A dedicated `USERS` spreadsheet tab stores `userId`, email, name, status (`Active` / `Invited` / `Disabled`), owner flag, role preset, and a JSON permissions matrix (View / Create / Edit / Delete) for dashboard, members, staff, expenses, calendar, and settings.
-- **Users & Access:** Settings tab to add people, apply Admin / Manager / Viewer presets, and edit the per-page permission matrix. Saving a new user can email them a professional message saying they have been given access, with a button to open the app and the list of pages they can use. Nothing about the underlying Sheet, Drive, or script is shared or mentioned.
+- **USERS sheet:** A dedicated `USERS` spreadsheet tab stores `userId`, email, name, status (`Active` / `Invited` / `Disabled`), owner flag, role preset, and a JSON permissions matrix (View / Create / Edit / Delete) for dashboard, members, expenses/staff (stored as both keys, edited as one **Expenses & Staff** row), calendar, and settings.
+- **Users & Access:** Settings tab to add people, apply Admin / Manager / Viewer presets, and edit the per-page permission matrix. The matrix shows a single **Expenses & Staff** row for the merged Expenses hub (saving keeps `expenses` and `staff` keys aligned for API checks). Saving a new user can email them a professional message saying they have been given access, with a button to open the app and the list of pages they can use. Nothing about the underlying Sheet, Drive, or script is shared or mentioned.
 - **How invitees sign in:** No password or one-time code. Each user has a **personal link** (`?t=…`). Opening it signs them in, and the device remembers them. Disabling or deleting a user stops the link; **New link** replaces it.
 - **Link / QR:** Each user in the Users tab has a mail icon (send or resend the email) and a QR icon (personal link, QR code, copy, share, new link). Do not share the Apps Script editor or `/dev` URL.
 - **Enforcement:** Navigation and write actions hide when denied; every server API also checks permissions.
@@ -98,13 +119,14 @@ The web app is published with `Anyone` access and executes as the deployer. Data
 3. Client opens the **/exec** URL, signs in, authorizes Google services, completes gym settings, and adds staff users.
 4. Each invited user receives an email with their personal link (or the client shares the link/QR from the Users tab).
 5. Developer may keep Editor access for clasp pushes; the client remains the deployer for Mail/triggers.
+6. Later releases: developer runs `npm run push:prod`, then an owner (often the client, or the developer if they are an owner) clicks **Settings → Web app version → Publish latest code** so the stable URL picks up the new code without flipping Mail/Calendar identity. Avoid `npm run deploy:prod` from the developer account if client email/calendar must stay.
 
 ## Settings and dropdown configuration
 
 The Settings module provides a responsive, device-compatible interface organized into four main tabs:
 
-- **General:** Configures gym identity (gym name, owner name, owner email, and gym logo upload with LSC fallback), setup/authorization, financial policies (revenue recognition and currency numbering), database IDs (Spreadsheet and Drive folder with compact copy/open actions), automated notifications, and Google Calendar due reminders. Mobile general settings use denser two-column rows and a single header Save. Notifications support editable receipt/weekly templates, sample HTML previews, **Send test** (delivers a sample receipt or weekly report to the signed-in admin inbox, without emailing members or CC), weekly CC recipients, day/time/days-ahead schedule, and selectable report table columns. **Calendar due reminders** (opt-in) create a timed event on the deployer/owner Google Calendar when a **paid quarterly** payment is saved (`endDate + 1 day` at a configured start hour/duration). Each new paid quarterly payment **deletes the previous due event** (if any) and creates the next quarter's due event — a cyclic replace stored as `MEMBERS.dueCalendarEventId`. Turning the feature off clears leftover events. Trial/Ad-hoc/Monthly/Annual are excluded; no backfill of existing members. Requires Calendar OAuth (re-authorize in Setup after first deploy).
-- **Users:** Add people and configure per-page View / Create / Edit / Delete access stored in the `USERS` sheet. Invitees only need their personal link; they are never given access to the Spreadsheet, Drive folder, or Apps Script project, because the app reads and writes data on their behalf.
+- **General:** Configures gym identity (gym name, owner name, owner email, and gym logo upload with LSC fallback), setup/authorization, **Web app version** (publish latest pushed code to the stable `/exec` deployment), financial policies (revenue recognition and currency numbering), database IDs (Spreadsheet and Drive folder with compact copy/open actions), automated notifications, and Google Calendar due reminders. Mobile general settings use denser two-column rows and a single header Save. Notifications support editable receipt/weekly templates, sample HTML previews, **Send test** (delivers a sample receipt or weekly report to the signed-in admin inbox, without emailing members or CC), weekly CC recipients, day/time/days-ahead schedule, and selectable report table columns. **Calendar due reminders** (opt-in) create a timed event on the deployer/owner Google Calendar when a **paid quarterly** payment is saved (on payment **`endDate`** at a configured start hour/duration). Each new paid quarterly payment **deletes the previous due event** (if any) and creates the next quarter's due event — a cyclic replace stored as `MEMBERS.dueCalendarEventId`. Turning the feature off clears leftover events. Trial/Ad-hoc/Monthly/Annual are excluded; no backfill of existing members. Requires Calendar OAuth (re-authorize in Setup after first deploy).
+- **Users:** Add people and configure per-page View / Create / Edit / Delete access stored in the `USERS` sheet. Invitees only need their personal link; they are never given access to the Spreadsheet, Drive folder, or Apps Script project, because the app reads and writes data on their behalf. After adding someone in Settings → Users, also add their Gmail under Cloud Console → [Audience → Test users](https://console.cloud.google.com/auth/audience?project=lakshya-strength-conditioning) (the LSC Users tab cannot do this). The Users tab shows a short 1–2–3 checklist with that direct link.
 - **Dropdowns:** Manages schema-driven dropdown categories across the application. On mobile devices, categories can be selected via touch-friendly chips or dropdown selector, and options are rendered as mobile-friendly cards with dedicated reorder, edit, and delete buttons. On tablet and desktop screens, a category sidebar and data table layout are displayed. Reorder modifications trigger a floating action toolbar positioned above mobile navigation to save or discard changes. Modals for schema editing and option values adapt responsively with required field validation.
 - **Guide:** In-app product walkthrough (`View_Guide.html`) with search, sticky section chips, and expand/collapse cards. Covers architecture (web app ↔ Sheets ↔ Drive ↔ Mail), getting started, sign-in/invites/roles, every module, Dashboard metric formulas, money rules (Anchor/Split, currency, Paid status), notifications, everyday UX, and admin notes. Readable on mobile and desktop. No Save action — documentation only. When user-facing behavior changes, update this Guide in the same change as `docs/features.md`.
 
