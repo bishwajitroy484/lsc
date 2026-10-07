@@ -464,6 +464,66 @@ describe('Dashboard Module', () => {
     expect(metrics.projectedNet).toBe(115500);
   });
 
+  test('keeps Remaining Net-In-Hand consistent between Monthly and Quarterly mid-year', () => {
+    const dashboardApi = loadDashboardApi();
+    const revArr = [...new Array(9).fill(20000), 0, 0, 0];
+    const expArr = [...new Array(9).fill(10000), 0, 0, 0];
+    const expectedCollectionArr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30000, 30000];
+    const financial = { revArr, expArr, staffArr: new Array(12).fill(0) };
+    const operational = { overdueArr: new Array(12).fill(0), expectedCollectionArr };
+    const averages = { operating: 0, staff: 11500 };
+    const today = new Date(2026, 8, 28); // 28-Sep-2026 — still inside Q3
+
+    const monthly = dashboardApi.formatTimePeriods(
+      financial, operational, 'Monthly',
+      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      2026, today, averages, null
+    );
+    const quarterly = dashboardApi.formatTimePeriods(
+      financial, operational, 'Quarterly',
+      ['Q1 (JFM)', 'Q2 (AMJ)', 'Q3 (JAS)', 'Q4 (OND)'],
+      2026, today, averages, null
+    );
+
+    expect(quarterly.remainingForecastNet).toBe(monthly.remainingForecastNet);
+    expect(quarterly.actualNet).toBe(monthly.actualNet);
+    expect(quarterly.projectedNet).toBe(monthly.projectedNet);
+    expect(quarterly.remainingForecastNet).toBe(25500);
+  });
+
+  test('keeps Remaining Net-In-Hand non-zero in Quarterly during Q4', () => {
+    const dashboardApi = loadDashboardApi();
+    // Through Sep: 10k net/month. Oct booked 5k net. Nov/Dec expected renewals.
+    const revArr = [...new Array(9).fill(20000), 15000, 0, 0];
+    const expArr = [...new Array(9).fill(10000), 10000, 0, 0];
+    const expectedCollectionArr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30000, 30000];
+    const financial = { revArr, expArr, staffArr: new Array(12).fill(0) };
+    const operational = { overdueArr: new Array(12).fill(0), expectedCollectionArr };
+    const averages = { operating: 0, staff: 11500 };
+    const today = new Date(2026, 9, 7); // 07-Oct-2026 — inside Q4
+
+    const monthly = dashboardApi.formatTimePeriods(
+      financial, operational, 'Monthly',
+      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      2026, today, averages, null
+    );
+    const quarterly = dashboardApi.formatTimePeriods(
+      financial, operational, 'Quarterly',
+      ['Q1 (JFM)', 'Q2 (AMJ)', 'Q3 (JAS)', 'Q4 (OND)'],
+      2026, today, averages, null
+    );
+
+    // Nov + Dec forecast only (Oct is current/elapsed): 18500 + 18500 = 37000
+    expect(monthly.remainingForecastNet).toBe(37000);
+    expect(quarterly.remainingForecastNet).toBe(monthly.remainingForecastNet);
+    expect(quarterly.actualNet).toBe(monthly.actualNet);
+    expect(quarterly.actualNet).toBe(95000);
+    // Q4 chart point must still expose forecast uplift (not treat whole quarter as elapsed)
+    expect(quarterly.transitionIndex).toBe(3);
+    expect(quarterly.actualNetArr[3]).toBe(5000);
+    expect(quarterly.expectedNetArr[3]).toBe(5000 + 37000);
+  });
+
   test('kpis.netInHand matches charts.prediction.actualNet for elapsed periods', () => {
     const dashboardApi = loadDashboardApi();
     const res = dashboardApi.api_getDashboardMetrics('2024', 'Monthly', ['Jan', 'Feb']);
