@@ -44,90 +44,92 @@
 
   <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
 
-    <div class="grid grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
+    <!-- Desktop: all KPIs in one row · Mobile: 2×2 -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3 mb-3 md:mb-4">
       <!-- 1: Total Outflow -->
-      <div class="bg-emerald-50/50 p-3 md:p-4 rounded-xl border border-emerald-100 flex flex-col justify-center min-w-0">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center material-symbols-rounded text-[14px] shrink-0">account_balance_wallet</span>
-          <p class="text-[10px] text-slate-500 font-bold uppercase truncate">Total Outflow</p>
+      <div class="bg-emerald-50/50 p-2.5 md:p-3 rounded-xl border border-emerald-100 flex flex-col justify-center min-w-0">
+        <div class="flex items-center gap-1.5 mb-1">
+          <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">account_balance_wallet</span>
+          <p class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase truncate">Total Outflow</p>
         </div>
-        <h2 id="kpi-total-exp" class="text-base sm:text-lg md:text-xl font-bold text-slate-800 truncate">₹0</h2>
+        <h2 id="kpi-total-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">₹0</h2>
       </div>
 
       <!-- 2: Staff Cost + Other Expenses -->
-      <div class="bg-slate-50/80 p-3 md:p-4 rounded-xl border border-slate-200 min-w-0">
-        <p class="text-[10px] text-slate-500 font-bold uppercase mb-2 truncate">Cost Split</p>
-        <div class="grid grid-cols-2 gap-2 sm:gap-3">
-          <div class="min-w-0 border-r border-slate-200 pr-2 sm:pr-3">
+      <div class="bg-slate-50/80 p-2.5 md:p-3 rounded-xl border border-slate-200 min-w-0">
+        <p class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase mb-1.5 truncate">Cost Split</p>
+        <div class="grid grid-cols-2 gap-1.5 sm:gap-2">
+          <div class="min-w-0 border-r border-slate-200 pr-1.5 sm:pr-2">
             <div class="flex items-center gap-1 mb-0.5">
-              <span class="w-5 h-5 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">badge</span>
-              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Staff Cost</p>
+              <span class="w-4 h-4 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[11px] shrink-0">badge</span>
+              <p class="text-[8px] sm:text-[9px] text-slate-500 font-bold uppercase truncate">Staff Cost</p>
             </div>
-            <h2 id="kpi-staff-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">₹0</h2>
+            <h2 id="kpi-staff-exp" class="text-xs sm:text-sm md:text-base font-bold text-slate-800 truncate">₹0</h2>
           </div>
           <div class="min-w-0 pl-0.5">
             <div class="flex items-center gap-1 mb-0.5">
-              <span class="w-5 h-5 rounded bg-red-100 text-brand-primary flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">receipt_long</span>
-              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Other</p>
+              <span class="w-4 h-4 rounded bg-red-100 text-brand-primary flex items-center justify-center material-symbols-rounded text-[11px] shrink-0">receipt_long</span>
+              <p class="text-[8px] sm:text-[9px] text-slate-500 font-bold uppercase truncate">Other</p>
             </div>
-            <h2 id="kpi-other-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">₹0</h2>
+            <h2 id="kpi-other-exp" class="text-xs sm:text-sm md:text-base font-bold text-slate-800 truncate">₹0</h2>
           </div>
         </div>
       </div>
 
       <!-- 3: Period average -->
-      <div class="bg-amber-50/50 p-3 md:p-4 rounded-xl border border-amber-100 flex flex-col justify-center min-w-0">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="w-6 h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[14px] shrink-0">calendar_month</span>
-          <p id="kpi-avg-title" class="text-[10px] text-slate-500 font-bold uppercase truncate">Monthly Avg</p>
+      <div class="bg-amber-50/50 p-2.5 md:p-3 rounded-xl border border-amber-100 flex flex-col justify-center min-w-0">
+        <div class="flex items-center gap-1.5 mb-1">
+          <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">calendar_month</span>
+          <p id="kpi-avg-title" class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase truncate">Monthly Avg</p>
         </div>
-        <h2 id="kpi-avg-exp" class="text-base sm:text-lg md:text-xl font-bold text-slate-800 truncate">₹0</h2>
+        <h2 id="kpi-avg-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">₹0</h2>
       </div>
 
       <!-- 4: Total Staff + Action Needed -->
-      <div onclick="ExpensesHub.switchListTab('staff'); StaffApp.scrollToActionNeeded && StaffApp.scrollToActionNeeded();" class="bg-cyan-50/40 p-3 md:p-4 rounded-xl border border-cyan-100 min-w-0 cursor-pointer hover:border-cyan-200 hover:shadow-sm transition-all" title="Open Staff list">
-        <p class="text-[10px] text-slate-500 font-bold uppercase mb-2 truncate">Staff Snapshot</p>
-        <div class="grid grid-cols-2 gap-2 sm:gap-3">
-          <div class="min-w-0 border-r border-cyan-100/80 pr-2 sm:pr-3">
+      <div onclick="ExpensesHub.switchListTab('staff'); StaffApp.scrollToActionNeeded && StaffApp.scrollToActionNeeded();" class="bg-cyan-50/40 p-2.5 md:p-3 rounded-xl border border-cyan-100 min-w-0 cursor-pointer hover:border-cyan-200 hover:shadow-sm transition-all" title="Open Staff list">
+        <p class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase mb-1.5 truncate">Staff Snapshot</p>
+        <div class="grid grid-cols-2 gap-1.5 sm:gap-2">
+          <div class="min-w-0 border-r border-cyan-100/80 pr-1.5 sm:pr-2">
             <div class="flex items-center gap-1 mb-0.5">
-              <span class="w-5 h-5 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">group</span>
-              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Staff</p>
+              <span class="w-4 h-4 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[11px] shrink-0">group</span>
+              <p class="text-[8px] sm:text-[9px] text-slate-500 font-bold uppercase truncate">Staff</p>
             </div>
-            <h2 id="kpi-total-staff" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">--</h2>
+            <h2 id="kpi-total-staff" class="text-xs sm:text-sm md:text-base font-bold text-slate-800 truncate">--</h2>
           </div>
           <div class="min-w-0 pl-0.5">
             <div class="flex items-center gap-1 mb-0.5">
-              <span class="w-5 h-5 rounded bg-orange-100 text-orange-700 flex items-center justify-center material-symbols-rounded text-[12px] shrink-0">pending_actions</span>
-              <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase truncate">Action</p>
+              <span class="w-4 h-4 rounded bg-orange-100 text-orange-700 flex items-center justify-center material-symbols-rounded text-[11px] shrink-0">pending_actions</span>
+              <p class="text-[8px] sm:text-[9px] text-slate-500 font-bold uppercase truncate">Action</p>
             </div>
-            <h2 id="kpi-action-needed" class="text-sm sm:text-base md:text-lg font-bold text-amber-700 leading-tight truncate">--</h2>
-            <p id="kpi-action-needed-sub" class="text-[9px] sm:text-[10px] font-medium text-slate-500 mt-0.5 leading-tight line-clamp-2">--</p>
+            <h2 id="kpi-action-needed" class="text-xs sm:text-sm md:text-base font-bold text-amber-700 leading-tight truncate">--</h2>
+            <p id="kpi-action-needed-sub" class="text-[8px] sm:text-[9px] font-medium text-slate-500 mt-0.5 leading-tight line-clamp-2 hidden md:line-clamp-1">--</p>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-      <div class="lg:col-span-2 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="font-bold text-sm text-slate-800">Expenses Trend</h3>
-          <select id="chart-type-toggle" onchange="ExpensesApp.renderCharts()" class="appearance-none bg-slate-50 pl-3 pr-7 py-1.5 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+    <!-- Desktop: both charts in one row · Mobile: stacked -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-5">
+      <div class="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col min-w-0">
+        <div class="flex items-center justify-between mb-2 gap-2">
+          <h3 class="font-bold text-sm text-slate-800 truncate">Expenses Trend</h3>
+          <select id="chart-type-toggle" onchange="ExpensesApp.renderCharts()" class="shrink-0 appearance-none bg-slate-50 pl-2.5 pr-6 py-1 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
             <option value="bar">Bar Chart</option>
             <option value="area">Area Chart</option>
             <option value="line">Line Chart</option>
           </select>
         </div>
-        <div class="relative w-full flex-1 min-h-[240px]">
+        <div class="relative w-full flex-1 min-h-[200px] md:min-h-[220px]">
           <div id="chart-expense-trend" class="absolute inset-0 flex items-center justify-center">
             <div class="w-full h-full shimmer opacity-40 rounded-lg"></div>
           </div>
         </div>
       </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col lg:col-span-2">
+      <div class="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col min-w-0">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="font-bold text-sm text-slate-800">Expenses by Category</h3>
+          <h3 class="font-bold text-sm text-slate-800 truncate">Expenses by Category</h3>
         </div>
-        <div class="relative w-full flex-1 min-h-[240px]">
+        <div class="relative w-full flex-1 min-h-[200px] md:min-h-[220px]">
           <div id="chart-expense-breakdown" class="absolute inset-0 flex items-center justify-center">
             <div class="w-full h-full shimmer opacity-40 rounded-lg"></div>
           </div>
