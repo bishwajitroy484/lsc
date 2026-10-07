@@ -192,7 +192,6 @@ function api_getMembers() {
         if (latestPayment.endDate) {
           let d = new Date(latestPayment.endDate);
           if (!isNaN(d)) {
-            d.setDate(d.getDate() + 1);
             nextDue = formatToDDMMMYYYY(d);
           }
         } else {

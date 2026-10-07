@@ -1,14 +1,17 @@
 /**
  * API_Calendar.gs
- * Returns the month-based member schedule derived from Member + Payment records.
+ * Operations month planner: renewals, overdue, and exits for Active members.
+ * Renewal due = payment endDate (same contract as Members / Dashboard / GCal).
  */
 function api_getCalendarData(month, year) {
   try {
     const gate = requirePermission_('calendar', 'view');
     if (!gate.ok) return gate.response;
+
     const targetMonth = Number(month);
     const targetYear = Number(year);
     const monthStart = new Date(targetYear, targetMonth, 1);
+    monthStart.setHours(0, 0, 0, 0);
     const monthEnd = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -18,18 +21,56 @@ function api_getCalendarData(month, year) {
     const payments = dbData['PAYMENTS'] || [];
 
     const planOptions = api_getGlobalDropdowns && api_getGlobalDropdowns();
-    const plans = planOptions && planOptions.success && planOptions.data && planOptions.data.options && planOptions.data.options.membership ? planOptions.data.options.membership : [];
+    const options = planOptions && planOptions.success && planOptions.data && planOptions.data.options
+      ? planOptions.data.options
+      : {};
+    const plans = options.membership || [];
+    const paymentStatuses = options.paymentstatus || [];
+    const memberStatuses = options.status || [];
+
     const planMap = {};
     plans.forEach(plan => {
-      planMap[String(plan.id || plan.value || plan.code || '').trim()] = plan.name || plan.label || plan.id || 'Membership';
+      const id = String(plan.id || plan.value || plan.code || '').trim();
+      planMap[id] = {
+        name: plan.name || plan.label || plan.id || 'Membership',
+        frequency: String(plan.frequency || '').toUpperCase()
+      };
     });
+
+    const statusLabel = (statusValue) => {
+      const raw = String(statusValue || '').trim();
+      if (!raw) return '';
+      const match = memberStatuses.find(item =>
+        String(item.id || item.value || '').trim() === raw ||
+        String(item.name || item.label || '').trim().toLowerCase() === raw.toLowerCase()
+      );
+      return String(match ? (match.name || match.label || match.id) : raw).trim();
+    };
+
+    const isActiveMember = (member) => {
+      const label = statusLabel(member.status).toLowerCase().replace(/[_-]+/g, ' ');
+      if (!label) return true;
+      if (label.includes('inactive') || label.includes('in active') || label.includes('exit') || label.includes('left')) {
+        return false;
+      }
+      return true;
+    };
+
+    const isAdHocOrTrial = (planMeta, planName) => {
+      const freq = String((planMeta && planMeta.frequency) || '').toUpperCase();
+      const name = String(planName || (planMeta && planMeta.name) || '').toUpperCase();
+      const blob = freq + ' ' + name;
+      return blob.indexOf('AD-HOC') >= 0 || blob.indexOf('ADHOC') >= 0 || blob.indexOf('TRIAL') >= 0;
+    };
 
     const paymentsByMember = {};
     payments.forEach(payment => {
       const memberId = String(payment.memberId || '').trim();
       if (!memberId) return;
-      const status = String(payment.paymentStatus || '').toLowerCase();
-      if (status.includes('fail') || status.includes('pending') || status.includes('cancel')) return;
+      const paid = typeof isPaidPaymentStatus === 'function'
+        ? isPaidPaymentStatus(payment.paymentStatus, paymentStatuses)
+        : true;
+      if (!paid) return;
       if (!paymentsByMember[memberId]) paymentsByMember[memberId] = [];
       paymentsByMember[memberId].push(payment);
     });
@@ -43,132 +84,214 @@ function api_getCalendarData(month, year) {
     });
 
     const parseDate = (value) => {
-      const safe = parseSafeDate(value);
-      return isNaN(safe) ? null : safe;
+      const safe = typeof parseSafeDate === 'function' ? parseSafeDate(value) : new Date(value);
+      if (!safe || isNaN(safe.getTime())) return null;
+      const d = new Date(safe.getTime());
+      d.setHours(0, 0, 0, 0);
+      return d;
     };
 
-    const frequencyMonthsFromPlan = (planName) => {
-      const name = String(planName || '').toLowerCase();
-      if (name.includes('year') || name.includes('annual')) return 12;
-      if (name.includes('half')) return 6;
-      if (name.includes('quarter')) return 3;
-      if (name.includes('month')) return 1;
+    const frequencyMonthsFromPlan = (planMeta, planName) => {
+      const blob = String(((planMeta && planMeta.frequency) || '') + ' ' + (planName || '')).toLowerCase();
+      if (blob.includes('year') || blob.includes('annual')) return 12;
+      if (blob.includes('half')) return 6;
+      if (blob.includes('quarter')) return 3;
+      if (blob.includes('month')) return 1;
       return 1;
     };
 
-    const isAdHocOrTrial = (planName) => {
-      const name = String(planName || '').toLowerCase();
-      return name.includes('ad-hoc') || name.includes('adhoc') || name.includes('trial');
+    const formatDueLabel = (dateObj) => {
+      return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
     };
 
-    const resolveNextDueDate = (member, planName) => {
+    const dateKeyOf = (dateObj) => {
+      return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+    };
+
+    const resolveNextDueDate = (member, planMeta, planName) => {
       const mPayments = paymentsByMember[String(member.memberId || '')] || [];
-      if (isAdHocOrTrial(planName) || !member || (!member.joinDate && mPayments.length === 0)) return null;
+      if (!member || (!member.joinDate && mPayments.length === 0)) return null;
 
       if (mPayments.length > 0) {
         const latest = mPayments[0];
         const endDate = parseDate(latest.endDate);
-        if (endDate && !isNaN(endDate)) {
-          const due = new Date(endDate);
-          due.setDate(due.getDate() + 1);
-          return due;
-        }
+        if (endDate) return endDate;
 
         const paidDate = parseDate(latest.paidDate || latest.date || member.joinDate);
-        if (paidDate && !isNaN(paidDate)) {
-          const due = new Date(paidDate);
-          due.setMonth(due.getMonth() + frequencyMonthsFromPlan(planName));
+        if (paidDate) {
+          const due = new Date(paidDate.getTime());
+          due.setMonth(due.getMonth() + frequencyMonthsFromPlan(planMeta, planName));
           return due;
         }
       }
 
-      const joinDate = parseDate(member.joinDate);
-      if (joinDate && !isNaN(joinDate)) {
-        return new Date(joinDate);
+      return parseDate(member.joinDate);
+    };
+
+    const typeMeta = (type, daysLeft) => {
+      if (type === 'exit') {
+        return {
+          statusKey: 'exit',
+          statusText: daysLeft < 0 ? 'Exited' : (daysLeft === 0 ? 'Exit today' : 'Exit soon'),
+          badgeClass: 'text-violet-700 bg-violet-50 border-violet-200',
+          dot: 'bg-violet-500',
+          colorKey: 'exit'
+        };
       }
-
-      return null;
+      if (type === 'overdue' || daysLeft < 0) {
+        return {
+          statusKey: 'overdue',
+          statusText: 'Overdue',
+          badgeClass: 'text-red-600 bg-red-50 border-red-200',
+          dot: 'bg-red-500',
+          colorKey: 'overdue'
+        };
+      }
+      if (daysLeft <= 2) {
+        return {
+          statusKey: 'critical',
+          statusText: 'Due ≤2d',
+          badgeClass: 'text-red-600 bg-red-50 border-red-200',
+          dot: 'bg-sky-500',
+          colorKey: 'renewal'
+        };
+      }
+      if (daysLeft <= 7) {
+        return {
+          statusKey: 'warning',
+          statusText: 'Due 3–7d',
+          badgeClass: 'text-amber-600 bg-amber-50 border-amber-200',
+          dot: 'bg-sky-500',
+          colorKey: 'renewal'
+        };
+      }
+      return {
+        statusKey: 'upcoming',
+        statusText: 'Renewal',
+        badgeClass: 'text-slate-600 bg-slate-100 border-slate-200',
+        dot: 'bg-sky-500',
+        colorKey: 'renewal'
+      };
     };
 
-    const getUrgency = (daysLeft) => {
-      if (daysLeft < 0) return { key: 'overdue', label: 'Overdue', badgeClass: 'text-red-600 bg-red-50 border-red-200', dot: 'bg-red-500' };
-      if (daysLeft <= 2) return { key: 'critical', label: 'Due in ≤2 days', badgeClass: 'text-red-600 bg-red-50 border-red-200', dot: 'bg-red-500' };
-      if (daysLeft <= 5) return { key: 'warning', label: 'Due in 3-5 days', badgeClass: 'text-amber-600 bg-amber-50 border-amber-200', dot: 'bg-amber-400' };
-      if (daysLeft <= 10) return { key: 'soon', label: 'Due in 6-10 days', badgeClass: 'text-emerald-600 bg-emerald-50 border-emerald-200', dot: 'bg-emerald-500' };
-      return { key: 'upcoming', label: 'Upcoming', badgeClass: 'text-slate-600 bg-slate-100 border-slate-200', dot: 'bg-slate-300' };
-    };
-
-    const monthItems = [];
+    const events = [];
     const dateBuckets = {};
-    const stats = { dueSoon: 0, due2: 0, due3To5: 0, due6To10: 0, total: 0 };
+    const stats = { overdue: 0, due2: 0, due3To7: 0, thisMonth: 0, exits: 0 };
+
+    const pushEvent = (item) => {
+      events.push(item);
+      if (!dateBuckets[item.dateKey]) dateBuckets[item.dateKey] = [];
+      dateBuckets[item.dateKey].push(item);
+    };
 
     members.forEach((member) => {
-      const rawPlanName = planMap[String(member.membershipId || '').trim()] || 'Membership';
       if (!member.fullName || !member.memberId) return;
+      if (!isActiveMember(member)) return;
 
-      const nextDue = resolveNextDueDate(member, rawPlanName);
-      if (!nextDue) return;
+      const planMeta = planMap[String(member.membershipId || '').trim()] || null;
+      const planName = (planMeta && planMeta.name) || 'Membership';
+      const adHocOrTrial = isAdHocOrTrial(planMeta, planName);
+      const memberAmount = Number(String(member.membershipAmount ?? member.amount ?? 0).replace(/[^0-9.-]+/g, '')) || 0;
+      const phone = String(member.phone || '').trim();
+      const gcalSynced = Boolean(String(member.dueCalendarEventId || '').trim());
 
-      const diffMs = nextDue.getTime() - today.getTime();
-      const daysLeft = Math.ceil(diffMs / 86400000);
-      const urgency = getUrgency(daysLeft);
+      // Trial / Ad-hoc: exit date only (no renewal)
+      if (adHocOrTrial) {
+        const exitDate = parseDate(member.exitDate);
+        if (!exitDate) return;
+        const inMonth = exitDate >= monthStart && exitDate <= monthEnd;
+        if (!inMonth) return;
 
-      if (isNaN(daysLeft)) return;
-
-      const isSelectedMonthDue = nextDue >= monthStart && nextDue <= monthEnd;
-      const isRelevantForMonth = isSelectedMonthDue || daysLeft <= 10;
-      if (!isRelevantForMonth) {
+        const daysLeft = Math.round((exitDate.getTime() - today.getTime()) / 86400000);
+        const meta = typeMeta('exit', daysLeft);
+        pushEvent({
+          id: 'exit-' + member.memberId,
+          type: 'exit',
+          memberId: member.memberId,
+          name: member.fullName,
+          phone: phone,
+          plan: planName,
+          amount: memberAmount,
+          eventDate: exitDate.toISOString(),
+          nextDueDate: exitDate.toISOString(),
+          dueDateLabel: formatDueLabel(exitDate),
+          daysLeft: daysLeft,
+          statusText: meta.statusText,
+          statusKey: meta.statusKey,
+          badgeClass: meta.badgeClass,
+          dot: meta.dot,
+          colorKey: meta.colorKey,
+          gcalSynced: false,
+          dateKey: dateKeyOf(exitDate)
+        });
+        stats.exits += 1;
+        stats.thisMonth += 1;
         return;
       }
 
-      const memberAmount = Number(String(member.membershipAmount ?? member.amount ?? 0).replace(/[^0-9.-]+/g, '')) || 0;
+      const nextDue = resolveNextDueDate(member, planMeta, planName);
+      if (!nextDue) return;
 
-      const item = {
+      const daysLeft = Math.round((nextDue.getTime() - today.getTime()) / 86400000);
+      if (isNaN(daysLeft)) return;
+
+      const isSelectedMonthDue = nextDue >= monthStart && nextDue <= monthEnd;
+      // Urgency window ≤7 days (Dashboard parity); month grid still shows full month
+      const isUrgencyRelevant = daysLeft <= 7;
+      if (!isSelectedMonthDue && !isUrgencyRelevant) return;
+
+      const type = daysLeft < 0 ? 'overdue' : 'renewal';
+      const meta = typeMeta(type, daysLeft);
+      pushEvent({
+        id: type + '-' + member.memberId,
+        type: type,
         memberId: member.memberId,
         name: member.fullName,
-        plan: rawPlanName,
+        phone: phone,
+        plan: planName,
         amount: memberAmount,
+        eventDate: nextDue.toISOString(),
         nextDueDate: nextDue.toISOString(),
-        dueDateLabel: nextDue.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+        dueDateLabel: formatDueLabel(nextDue),
         daysLeft: daysLeft,
-        statusText: urgency.label,
-        statusKey: urgency.key,
-        badgeClass: urgency.badgeClass,
-        dot: urgency.dot,
-        currency: Number(String(member.membershipAmount || 0).replace(/[^0-9.-]+/g, '')) || 0,
-        dateKey: `${nextDue.getFullYear()}-${String(nextDue.getMonth() + 1).padStart(2, '0')}-${String(nextDue.getDate()).padStart(2, '0')}`
-      };
+        statusText: meta.statusText,
+        statusKey: meta.statusKey,
+        badgeClass: meta.badgeClass,
+        dot: meta.dot,
+        colorKey: meta.colorKey,
+        gcalSynced: gcalSynced,
+        dateKey: dateKeyOf(nextDue)
+      });
 
-      monthItems.push(item);
-      if (!dateBuckets[item.dateKey]) dateBuckets[item.dateKey] = [];
-      dateBuckets[item.dateKey].push(item);
-
-      if (daysLeft <= 10 && daysLeft >= 0) {
-        stats.dueSoon += 1;
-        if (daysLeft <= 2) stats.due2 += 1;
-        else if (daysLeft <= 5) stats.due3To5 += 1;
-        else stats.due6To10 += 1;
-      }
-      stats.total += 1;
+      if (daysLeft < 0) stats.overdue += 1;
+      else if (daysLeft <= 2) stats.due2 += 1;
+      else if (daysLeft <= 7) stats.due3To7 += 1;
+      if (isSelectedMonthDue) stats.thisMonth += 1;
     });
 
-    monthItems.sort((a, b) => a.nextDueDate - b.nextDueDate);
+    events.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate) || String(a.name).localeCompare(String(b.name)));
     Object.keys(dateBuckets).forEach(key => {
-      dateBuckets[key].sort((a, b) => a.nextDueDate - b.nextDueDate);
+      dateBuckets[key].sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate) || String(a.name).localeCompare(String(b.name)));
     });
 
     return {
       success: true,
       data: {
-        monthMembers: monthItems,
+        events: events,
+        monthMembers: events,
         dateBuckets: dateBuckets,
         stats: {
-          dueSoon: stats.dueSoon,
+          overdue: stats.overdue,
           due2: stats.due2,
-          due3To5: stats.due3To5,
-          due6To10: stats.due6To10,
-          total: monthItems.length,
-          totalMembers: monthItems.length
+          due3To7: stats.due3To7,
+          thisMonth: stats.thisMonth,
+          exits: stats.exits,
+          total: events.length,
+          // legacy keys kept for older UI caches
+          dueSoon: stats.due2 + stats.due3To7,
+          due3To5: stats.due3To7,
+          due6To10: 0,
+          totalMembers: events.length
         }
       }
     };

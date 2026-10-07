@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <!-- Defer non-critical JS so the boot overlay paints sooner; session/API still gate the app. -->
   <script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/apexcharts/dist/apexcharts.css">
   <script defer src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 
@@ -61,7 +62,7 @@
       <div class="relative w-16 h-16 mx-auto">
         <svg class="w-16 h-16 -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
           <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e2e8f0" stroke-width="3"></circle>
-          <circle id="action-progress-ring" cx="18" cy="18" r="15.5" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"
+          <circle id="action-progress-ring" cx="18" cy="18" r="15.5" fill="none" stroke="#CE0002" stroke-width="3" stroke-linecap="round"
             stroke-dasharray="97.4" stroke-dashoffset="97.4"></circle>
         </svg>
         <div class="absolute inset-0 flex items-center justify-center">
@@ -80,7 +81,7 @@
   </div>
   
   <aside id="main-sidebar"
-    class="hidden md:flex w-20 flex-col bg-brand-dark border-r border-slate-800 z-20 h-full shrink-0 transition-all duration-300">
+    class="hidden md:flex w-20 flex-col bg-brand-dark border-r border-neutral-900 z-20 h-full shrink-0 transition-all duration-300">
     <div id="desktop-nav-container" class="h-full w-full"></div>
   </aside>
 

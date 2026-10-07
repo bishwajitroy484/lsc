@@ -168,7 +168,7 @@ describe('Mock Data Generator', () => {
         if (!latest) return { member: m, diffDays: null };
 
         const endD = new Date(latest.endDate);
-        const nextDue = new Date(endD.getFullYear(), endD.getMonth(), endD.getDate() + 1);
+        const nextDue = new Date(endD.getFullYear(), endD.getMonth(), endD.getDate());
         const diffDays = Math.ceil((nextDue - fixedToday) / (1000 * 60 * 60 * 24));
         return { member: m, diffDays };
       });

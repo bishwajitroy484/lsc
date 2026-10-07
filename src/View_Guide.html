@@ -49,11 +49,11 @@
     <!-- 1 Overview -->
     <section id="guide-sec-overview" data-guide-section="overview" data-guide-search="overview architecture big picture sheets drive mail web app execute as me connections block diagram" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
       <button type="button" data-guide-toggle="overview" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
-        <span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">hub</span></span>
+        <span class="w-9 h-9 rounded-xl bg-red-50 text-red-700 border border-red-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">hub</span></span>
         <div class="flex-1 min-w-0">
           <div class="flex flex-wrap items-center gap-1.5">
             <h3 class="text-sm font-bold text-slate-800">Big picture — how LSC is connected</h3>
-            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-indigo-50 text-indigo-700 border border-indigo-100">Architecture</span>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-red-50 text-red-700 border border-red-100">Architecture</span>
           </div>
           <p class="text-[11px] text-slate-500 mt-0.5 truncate">Web app face · Sheets notebook · Drive files · Mail messages</p>
         </div>
@@ -64,7 +64,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div class="rounded-xl border border-sky-100 bg-sky-50/50 p-3">
             <p class="text-[10px] font-bold uppercase tracking-wide text-sky-700 mb-1">Web app</p>
-            <p class="text-[11px] text-slate-600 leading-relaxed">Screens you tap: Dashboard, Members, Staff, Expenses, Calendar, Settings. Runs in the browser / phone.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Screens you tap: Dashboard, Members, Expenses &amp; Staff, Calendar, Settings. Runs in the browser / phone.</p>
           </div>
           <div class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
             <p class="text-[10px] font-bold uppercase tracking-wide text-emerald-700 mb-1">Google Sheets</p>
@@ -115,7 +115,7 @@
         <ol class="pt-3 space-y-2 text-xs text-slate-600 list-decimal list-inside leading-relaxed">
           <li>Open the shared <strong>web app URL</strong> ending in <code class="text-[10px] bg-slate-100 px-1 rounded">/exec</code> (not the editor or <code class="text-[10px] bg-slate-100 px-1 rounded">/dev</code>).</li>
           <li>Sign in with Google when prompted.</li>
-          <li>Go to <strong>Settings → General → Setup &amp; Authorization</strong>. Tap <strong>Authorize Google services</strong>. Status chips cover Spreadsheet, Settings, Drive, Mail, ScriptApp, and the weekly report trigger.</li>
+          <li>Go to <strong>Settings → General → Setup &amp; Authorization</strong>. Tap <strong>Authorize Google services</strong>. Status chips cover Spreadsheet, Settings, Drive, Mail, ScriptApp, Calendar, <strong>Publish API</strong>, and the weekly report trigger.</li>
           <li>When checks look good, tap <strong>Mark setup complete</strong>.</li>
           <li>Fill gym name, owner name/email, and optional logo (LSC badge is used if none).</li>
           <li>Add other staff from the <strong>Users</strong> tab. Choose what each person can open and tick <strong>Email them their access link</strong>; they receive a short email with a button to open the app.</li>
@@ -141,6 +141,20 @@
       </button>
       <div id="guide-body-access" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
         <p class="text-xs text-slate-600 leading-relaxed pt-3">There is no password or code. Each user gets a <strong>personal link</strong>. Opening it signs them in, and this device remembers them.</p>
+        <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-[11px] text-amber-950 leading-relaxed space-y-1.5">
+          <p class="font-bold text-amber-900">Add a user (3 steps)</p>
+          <ol class="list-decimal list-inside space-y-0.5 text-amber-950/95">
+            <li>Settings → Users → Add → save (sends personal link).</li>
+            <li>Add the same Gmail under Cloud <strong>Test users</strong>.</li>
+            <li>They open the link and Authorize.</li>
+          </ol>
+          <p>
+            <a href="https://console.cloud.google.com/auth/audience?project=lakshya-strength-conditioning" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-bold text-brand-primary hover:underline">
+              Open Audience → Test users
+              <span class="material-symbols-rounded text-[14px]">open_in_new</span>
+            </a>
+          </p>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div class="rounded-xl border border-violet-100 bg-violet-50/40 p-3">
             <p class="text-[11px] font-bold text-violet-900 mb-1">Email</p>
@@ -178,7 +192,7 @@
     <!-- 4 Dashboard -->
     <section id="guide-sec-dashboard" data-guide-section="dashboard" data-guide-search="dashboard kpi metrics net-in hand collected overdue operating expenses charts whatsapp notify forecast tip formula" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
       <button type="button" data-guide-toggle="dashboard" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
-        <span class="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">dashboard</span></span>
+        <span class="w-9 h-9 rounded-xl bg-red-50 text-red-700 border border-red-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">dashboard</span></span>
         <div class="flex-1 min-w-0">
           <div class="flex flex-wrap items-center gap-1.5">
             <h3 class="text-sm font-bold text-slate-800">Dashboard — metrics &amp; charts</h3>
@@ -261,7 +275,7 @@
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>Filters</strong> — status (All / Active / Due Soon / Overdue), batch, plan, and search; selections stay visible while filtering.</li>
           <li><strong>Payments</strong> — record payments anytime; optional initial payment when adding. Coverage length follows the plan (e.g. monthly +1 month, quarterly +3, yearly +1 year, trial +7 days, ad-hoc +1 day).</li>
-          <li><strong>Next due</strong> — usually day after latest paid coverage end; otherwise from plan frequency / join. Ad-hoc &amp; trial always show <strong>No Due Date</strong> on both the list and detail (exit date governs the plan, not a renewal due).</li>
+          <li><strong>Next due</strong> — latest paid coverage <strong>endDate</strong> (same everywhere); otherwise from plan frequency / join. Ad-hoc &amp; trial always show <strong>No Due Date</strong> on both the list and detail (exit date governs the plan, not a renewal due).</li>
           <li><strong>Trial fee</strong> — daily rate × inclusive days between join and exit; recalculates when plan or dates change.</li>
           <li><strong>Ad-hoc / trial exit</strong> — exit date required; when that date arrives, status becomes Inactive (on load and by a daily check).</li>
           <li><strong>Insights</strong> — per-member earnings charts; only Paid/Completed payments count as collected.</li>
@@ -284,7 +298,7 @@
         <span id="guide-chevron-staff" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
       </button>
       <div id="guide-body-staff" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
-        <p class="text-xs text-slate-600 leading-relaxed pt-3">Opened from <strong>Expenses → Staff &amp; Payroll</strong>. Manage staff profiles and salary/credit transactions. There is <strong>no attendance</strong> module — payroll is about recorded payments. Access is still controlled by the Staff permission row in Users.</p>
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Opened from <strong>Expenses → Staff &amp; Payroll</strong>. Manage staff profiles and salary/credit transactions. There is <strong>no attendance</strong> module — payroll is about recorded payments. Access is controlled by the shared <strong>Expenses &amp; Staff</strong> permission row in Users.</p>
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>KPIs</strong> — active headcount, total paid cost for selected periods, and Action Needed count.</li>
           <li><strong>Salary cycles</strong> — from join through today (or exit). First cycle is join→end of that month; later cycles are full calendar months. Expected amount is the <strong>full nominal monthly salary</strong> (not mid-month prorated).</li>
@@ -321,7 +335,7 @@
     </section>
 
     <!-- 8 Calendar -->
-    <section id="guide-sec-calendar" data-guide-section="calendar" data-guide-search="calendar due soon renewals month drawer legend google calendar reminder quarterly event" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+    <section id="guide-sec-calendar" data-guide-section="calendar" data-guide-search="calendar ops planner due soon renewals overdue exits month drawer legend google calendar reminder quarterly event endDate" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
       <button type="button" data-guide-toggle="calendar" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
         <span class="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-700 border border-cyan-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">calendar_month</span></span>
         <div class="flex-1 min-w-0">
@@ -329,18 +343,19 @@
             <h3 class="text-sm font-bold text-slate-800">Calendar</h3>
             <span class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-cyan-50 text-cyan-700 border border-cyan-100">Module</span>
           </div>
-          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Upcoming renewals by day</p>
+          <p class="text-[11px] text-slate-500 mt-0.5 truncate">Ops month planner — renewals, exits</p>
         </div>
         <span id="guide-chevron-calendar" class="material-symbols-rounded text-slate-400 shrink-0">expand_more</span>
       </button>
       <div id="guide-body-calendar" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
-        <p class="text-xs text-slate-600 leading-relaxed pt-3">Month grid of upcoming subscription renewals. Year dropdown, Today, and prev/next month controls. Tap a day for the member drawer; search the side list.</p>
+        <p class="text-xs text-slate-600 leading-relaxed pt-3">Month grid of gym operations — renewals, overdue, and trial/ad-hoc exits. Year dropdown, Today, and prev/next month controls. Tap a day for the event drawer (bottom sheet on phones); filter chips and search refine the list.</p>
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
-          <li><strong>KPIs</strong> — Due Soon (≤2 days), In 3–5, In 6–10, Total shown.</li>
-          <li><strong>Who appears</strong> — active non-ad-hoc/trial members with a next due in the month <em>or</em> within about 10 days.</li>
-          <li><strong>Next due</strong> — usually day after latest payment end date; otherwise from paid/join + plan length. Failed/pending/cancelled payments are skipped.</li>
+          <li><strong>KPIs</strong> — Overdue, Due ≤2, Due 3–7, This month.</li>
+          <li><strong>Who appears</strong> — Active members only. Recurring plans show renewals/overdue; ad-hoc &amp; trial show <em>exit date</em> only (no renewal due).</li>
+          <li><strong>Next due</strong> — latest paid payment <strong>endDate</strong> (same as Members, Dashboard, and Google Calendar). Paid/Completed statuses only.</li>
+          <li><strong>Actions</strong> — Open member; WhatsApp renewal reminder. Optional GCal synced badge when a quarterly due event exists.</li>
           <li>Year list matches Dashboard / Members / Staff / Expenses (includes current year even with no data).</li>
-          <li><strong>Google Calendar reminders</strong> — optional in Settings → General. When enabled, each paid <em>quarterly</em> payment creates a timed event on the owner calendar for the next due date; renewing replaces the previous event. Trial/Ad-hoc/Monthly/Annual are skipped. No backfill of existing members.</li>
+          <li><strong>Google Calendar reminders</strong> — optional in Settings → General. When enabled, each paid <em>quarterly</em> payment creates a timed event on the owner calendar for the next due date (<code>endDate</code>); renewing replaces the previous event. Trial/Ad-hoc/Monthly/Annual are skipped. No backfill of existing members.</li>
         </ul>
       </div>
     </section>
@@ -362,7 +377,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">General</p>
-            <p class="text-[11px] text-slate-600 leading-relaxed">Gym identity, Setup &amp; Authorization, revenue recognition, currency style, Spreadsheet/Drive IDs, notification templates/schedule, and Google Calendar due reminders.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Gym identity, Setup &amp; Authorization, Web app version publish, revenue recognition, currency style, Spreadsheet/Drive IDs, notification templates/schedule, and Google Calendar due reminders.</p>
           </div>
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">Users</p>
@@ -447,7 +462,7 @@
         <p class="text-[11px] text-slate-500 leading-relaxed">Note: the weekly report’s “due” uses payment end dates; the Calendar screen’s next due is usually end date + 1 day. Both are intentional for their jobs.</p>
         <div class="rounded-xl border border-teal-100 bg-teal-50/40 p-3">
           <p class="text-[11px] font-bold text-teal-900 mb-1">Google Calendar due events</p>
-          <p class="text-[11px] text-slate-600 leading-relaxed">Separate toggle under Settings → General. Opt-in, quarterly only, timed (not all-day) events on the deployer/owner calendar. When you mark a quarterly payment as paid, the previous due event is deleted and a new event is created for the next due date (`endDate + 1`). Turning the feature off clears leftover events. Re-authorize Google services once after deploy so Calendar access is granted.</p>
+          <p class="text-[11px] text-slate-600 leading-relaxed">Separate toggle under Settings → General. Opt-in, quarterly only, timed (not all-day) events on the deployer/owner calendar. When you mark a quarterly payment as paid, the previous due event is deleted and a new event is created for the next due date (`endDate`). Turning the feature off clears leftover events. Re-authorize Google services once after deploy so Calendar access is granted.</p>
         </div>
       </div>
     </section>
@@ -479,7 +494,7 @@
     </section>
 
     <!-- 13 Admin ops -->
-    <section id="guide-sec-ops" data-guide-section="ops" data-guide-search="admin ops env.json deploymentId clasp mock data developer stable url" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+    <section id="guide-sec-ops" data-guide-section="ops" data-guide-search="admin ops env.json deploymentId clasp mock data developer stable url publish version web app" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
       <button type="button" data-guide-toggle="ops" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
         <span class="w-9 h-9 rounded-xl bg-stone-100 text-stone-700 border border-stone-200 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">construction</span></span>
         <div class="flex-1 min-w-0">
@@ -494,9 +509,10 @@
       <div id="guide-body-ops" class="hidden px-3.5 sm:px-4 pb-4 space-y-3 border-t border-slate-100">
         <ul class="pt-3 text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>Stable web URL</strong> — keep one published <code class="text-[10px] bg-slate-100 px-1 rounded">/exec</code> link. Redeploying should update that same deployment so QR codes and bookmarks do not break.</li>
+          <li><strong>Publish from Settings</strong> — after a developer pushes code, an owner opens <strong>Settings → General → Web app version</strong> and taps <strong>Publish latest code</strong>. Same URL; Mail/Calendar stay with the deployer. One-time: enable Apps Script API on the script’s Cloud project, then Authorize again.</li>
           <li><strong>Local env IDs</strong> — developers store spreadsheet, Drive, script, and deployment IDs in a local <code class="text-[10px] bg-slate-100 px-1 rounded">config/env.json</code> (not committed). Copy from <code class="text-[10px] bg-slate-100 px-1 rounded">config/env.example.json</code>.</li>
           <li><strong>Mock data</strong> — a generator can wipe and refill sample members/payments/staff/expenses for testing. It is for development only; do not run it on a live gym’s real data.</li>
-          <li><strong>Handover</strong> — client should own Spreadsheet, Apps Script, and Drive; create the web app deployment as themselves; authorize from Settings; then invite staff.</li>
+          <li><strong>Handover</strong> — client should own Spreadsheet, Apps Script, and Drive; create the web app deployment as themselves; authorize from Settings; then invite staff. Later updates: developer pushes, owner publishes from Settings.</li>
         </ul>
       </div>
     </section>

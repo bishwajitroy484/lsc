@@ -323,6 +323,24 @@ describe('Dashboard Module', () => {
     expect(predictionConfig).toContain("fill: { opacity: [0.12, 0] }");
   });
 
+  test('keeps dashboard metric and chart tooltips readable and unclipped', () => {
+    const view = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
+    const styles = fs.readFileSync(path.join(__dirname, '../src/Global_Styles.html'), 'utf8');
+    const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
+
+    expect(view).toContain('metric-tip-bubble');
+    expect(view).toMatch(/justify-between min-w-0 overflow-visible/);
+    expect(view).toMatch(/h-full min-w-0 overflow-visible/);
+    expect(styles).toContain('.metric-tip-bubble');
+    expect(styles).toContain('top: calc(100% + 10px)');
+    expect(styles).toContain('font-size: 12px');
+    expect(styles).toContain('.apexcharts-tooltip');
+    expect(styles).toContain('background: #0f172a !important');
+    expect(styles).toContain('z-index: 10050 !important');
+    expect(script).toContain("theme: 'dark'");
+    expect(script).toContain('commonTooltip');
+  });
+
   test('reflects recognized future revenue from split payments in Net-In-Hand Prediction', () => {
     const dashboardApi = loadDashboardApi();
     const revArr = [0, 0, 0, 0, 0, 5200, 10000, 10000, 9700, 10100, 9800, 5200];
@@ -444,6 +462,66 @@ describe('Dashboard Module', () => {
     expect(metrics.actualNet).toBe(90000);
     expect(metrics.remainingForecastNet).toBe(25500);
     expect(metrics.projectedNet).toBe(115500);
+  });
+
+  test('keeps Remaining Net-In-Hand consistent between Monthly and Quarterly mid-year', () => {
+    const dashboardApi = loadDashboardApi();
+    const revArr = [...new Array(9).fill(20000), 0, 0, 0];
+    const expArr = [...new Array(9).fill(10000), 0, 0, 0];
+    const expectedCollectionArr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30000, 30000];
+    const financial = { revArr, expArr, staffArr: new Array(12).fill(0) };
+    const operational = { overdueArr: new Array(12).fill(0), expectedCollectionArr };
+    const averages = { operating: 0, staff: 11500 };
+    const today = new Date(2026, 8, 28); // 28-Sep-2026 — still inside Q3
+
+    const monthly = dashboardApi.formatTimePeriods(
+      financial, operational, 'Monthly',
+      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      2026, today, averages, null
+    );
+    const quarterly = dashboardApi.formatTimePeriods(
+      financial, operational, 'Quarterly',
+      ['Q1 (JFM)', 'Q2 (AMJ)', 'Q3 (JAS)', 'Q4 (OND)'],
+      2026, today, averages, null
+    );
+
+    expect(quarterly.remainingForecastNet).toBe(monthly.remainingForecastNet);
+    expect(quarterly.actualNet).toBe(monthly.actualNet);
+    expect(quarterly.projectedNet).toBe(monthly.projectedNet);
+    expect(quarterly.remainingForecastNet).toBe(25500);
+  });
+
+  test('keeps Remaining Net-In-Hand non-zero in Quarterly during Q4', () => {
+    const dashboardApi = loadDashboardApi();
+    // Through Sep: 10k net/month. Oct booked 5k net. Nov/Dec expected renewals.
+    const revArr = [...new Array(9).fill(20000), 15000, 0, 0];
+    const expArr = [...new Array(9).fill(10000), 10000, 0, 0];
+    const expectedCollectionArr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30000, 30000];
+    const financial = { revArr, expArr, staffArr: new Array(12).fill(0) };
+    const operational = { overdueArr: new Array(12).fill(0), expectedCollectionArr };
+    const averages = { operating: 0, staff: 11500 };
+    const today = new Date(2026, 9, 7); // 07-Oct-2026 — inside Q4
+
+    const monthly = dashboardApi.formatTimePeriods(
+      financial, operational, 'Monthly',
+      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      2026, today, averages, null
+    );
+    const quarterly = dashboardApi.formatTimePeriods(
+      financial, operational, 'Quarterly',
+      ['Q1 (JFM)', 'Q2 (AMJ)', 'Q3 (JAS)', 'Q4 (OND)'],
+      2026, today, averages, null
+    );
+
+    // Nov + Dec forecast only (Oct is current/elapsed): 18500 + 18500 = 37000
+    expect(monthly.remainingForecastNet).toBe(37000);
+    expect(quarterly.remainingForecastNet).toBe(monthly.remainingForecastNet);
+    expect(quarterly.actualNet).toBe(monthly.actualNet);
+    expect(quarterly.actualNet).toBe(95000);
+    // Q4 chart point must still expose forecast uplift (not treat whole quarter as elapsed)
+    expect(quarterly.transitionIndex).toBe(3);
+    expect(quarterly.actualNetArr[3]).toBe(5000);
+    expect(quarterly.expectedNetArr[3]).toBe(5000 + 37000);
   });
 
   test('kpis.netInHand matches charts.prediction.actualNet for elapsed periods', () => {

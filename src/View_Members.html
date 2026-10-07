@@ -13,11 +13,11 @@
         </div>
       </div>
       
-      <button onclick="MembersApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-700 transition-colors shrink-0">
+      <button onclick="MembersApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-brand-hover transition-colors shrink-0">
         <span class="material-symbols-rounded text-[18px]">add</span>
       </button>
       
-      <button onclick="MembersApp.openModal()" class="hidden md:flex shrink-0 h-9 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-blue-700 transition-colors">
+      <button onclick="MembersApp.openModal()" class="hidden md:flex shrink-0 h-9 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-brand-hover transition-colors">
         <span class="material-symbols-rounded text-[18px]">add</span><span class="font-semibold text-sm">Add Member</span>
       </button>
     </header>
@@ -111,7 +111,7 @@
               </div>
             </div>
             
-            <button onclick="MembersApp.openRecordPayment()" class="h-9 px-4 bg-brand-primary text-white text-xs font-bold rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 shrink-0 flex items-center gap-1">
+            <button onclick="MembersApp.openRecordPayment()" class="h-9 px-4 bg-brand-primary text-white text-xs font-bold rounded-lg shadow-md shadow-red-500/20 hover:bg-brand-hover transition-all active:scale-95 shrink-0 flex items-center gap-1">
               <span class="material-symbols-rounded text-[16px] hidden sm:block">payments</span> Pay
             </button>
           </div>
@@ -238,7 +238,7 @@
           <input type="hidden" id="mem-id">
 
           <div class="flex flex-col gap-4">
-            <div class="bg-blue-50/30 p-3 md:p-4 rounded-xl border border-blue-100/50">
+            <div class="bg-red-50/30 p-3 md:p-4 rounded-xl border border-red-100/50">
               <h4
                 class="text-[11px] font-bold text-brand-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
                 <span class="material-symbols-rounded text-[14px]">badge</span> Personal Information
@@ -381,9 +381,9 @@
         </div>
 
         
-            <div id="upfront-payment-container" class="bg-indigo-50/30 p-3 md:p-4 rounded-xl border border-indigo-100/50 mt-4 transition-all">
+            <div id="upfront-payment-container" class="bg-red-50/30 p-3 md:p-4 rounded-xl border border-red-100/50 mt-4 transition-all">
               <div class="flex items-center justify-between">
-                <h4 class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 class="text-[11px] font-bold text-brand-primary uppercase tracking-wider flex items-center gap-1.5">
                   <span class="material-symbols-rounded text-[14px]">payments</span> Capture Initial Payment
                 </h4>
                 <label class="flex items-center gap-2 cursor-pointer">
@@ -392,7 +392,7 @@
                 </label>
               </div>
               
-              <div id="mem-pay-fields" class="hidden flex flex-col gap-3 border-t border-indigo-100/50 pt-3 mt-3">
+              <div id="mem-pay-fields" class="hidden flex flex-col gap-3 border-t border-red-100/50 pt-3 mt-3">
                  <div class="grid grid-cols-2 gap-3">
                    <div>
                      <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Mode *</label>
@@ -417,7 +417,7 @@
         <div
           class="p-4 bg-white border-t border-slate-100 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex justify-end gap-3 pb-2 md:pb-2">
           <button type="button" onclick="MembersApp.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors">Cancel</button>
-          <button type="submit" id="btn-save-member" class="px-6 py-2.5 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 hover:bg-blue-700 flex items-center justify-center gap-2 transition-all">Save Member</button>
+          <button type="submit" id="btn-save-member" class="px-6 py-2.5 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-md shadow-red-500/20 hover:bg-brand-hover flex items-center justify-center gap-2 transition-all">Save Member</button>
         </div>
 
       </form>
@@ -527,7 +527,7 @@
         <div
           class="p-4 bg-white border-t border-slate-100 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex justify-end gap-3 pb-3 md:pb-3">
           <button type="button" onclick="MembersApp.closeRecordPayment()" class="px-5 py-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors">Cancel</button>
-          <button type="submit" id="btn-submit-payment" class="px-6 py-2.5 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 hover:bg-blue-700 flex items-center justify-center gap-2 transition-all">Save Payment</button>
+          <button type="submit" id="btn-submit-payment" class="px-6 py-2.5 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-md shadow-red-500/20 hover:bg-brand-hover flex items-center justify-center gap-2 transition-all">Save Payment</button>
         </div>
 
       </form>

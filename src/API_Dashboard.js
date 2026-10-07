@@ -475,7 +475,6 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                if (latestP.endDate) {
                    let d = parseSafeDate(latestP.endDate);
                    if (!isNaN(d)) {
-                       d.setDate(d.getDate() + 1);
                        actualNextDue = d;
                    }
                } else {
@@ -635,18 +634,45 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
   const currentMIdx = today.getMonth();
   const currentQIdx = Math.floor(currentMIdx / 3);
   const elapsedBoundaryIdx = isQuarterly ? currentQIdx : currentMIdx;
-  const isFuturePeriod = index => targetYear > today.getFullYear() ||
-    (targetYear === today.getFullYear() && index > elapsedBoundaryIdx);
+  const monthlyExpectedExp = (expenseAverages.operating || 0) + (expenseAverages.staff || 0);
+  const monthsForSlot = (slotIdx) => isQuarterly
+    ? [slotIdx * 3, slotIdx * 3 + 1, slotIdx * 3 + 2]
+    : [slotIdx];
+  // Month-level "future" keeps Remaining consistent between Monthly and Quarterly
+  // (e.g. in Q4, Nov/Dec still count as remaining — not zero because the quarter started).
+  const isMonthFuture = (monthIdx) => targetYear > today.getFullYear() ||
+    (targetYear === today.getFullYear() && monthIdx > currentMIdx);
+  const monthActualNet = (monthIdx) =>
+    (financialData.revArr[monthIdx] || 0) - (financialData.expArr[monthIdx] || 0);
+  const monthForecastNet = (monthIdx) =>
+    (financialData.revArr[monthIdx] || 0) +
+    (operationalData.expectedCollectionArr[monthIdx] || 0) -
+    monthlyExpectedExp;
+  const slotHasElapsed = (slotIdx) => monthsForSlot(slotIdx).some(m => !isMonthFuture(m));
+  const slotHasFuture = (slotIdx) => monthsForSlot(slotIdx).some(m => isMonthFuture(m));
+
   const selectedIndices = filteredLabels.map(label => finalLabels.indexOf(label));
-  const selectedForecastStart = selectedIndices.findIndex(index => isFuturePeriod(index));
+  const selectedForecastStart = selectedIndices.findIndex(slotIdx => slotHasFuture(slotIdx));
   let predictionLabels = filteredLabels.slice();
-  let predictionActual = selectedIndices.map(index => isFuturePeriod(index)
-    ? null
-    : Number(((finalRev[index] || 0) - (finalExp[index] || 0)).toFixed(2)));
-  let predictionExpected = selectedIndices.map(index => isFuturePeriod(index)
-    ? Number(((finalRev[index] || 0) + (finalExpectedCollections[index] || 0) - (finalExpectedExpenses[index] || 0)).toFixed(2))
-    : null);
-  let transitionIndex = selectedIndices.indexOf(elapsedBoundaryIdx);
+  let predictionActual = selectedIndices.map(slotIdx => {
+    const elapsedMonths = monthsForSlot(slotIdx).filter(m => !isMonthFuture(m));
+    if (!elapsedMonths.length) return null;
+    return Number(elapsedMonths.reduce((sum, m) => sum + monthActualNet(m), 0).toFixed(2));
+  });
+  let predictionExpected = selectedIndices.map(slotIdx => {
+    const months = monthsForSlot(slotIdx);
+    const futureMonths = months.filter(m => isMonthFuture(m));
+    if (!futureMonths.length) return null;
+    const elapsedMonths = months.filter(m => !isMonthFuture(m));
+    // Partial current quarter/month group: keep elapsed actual + future forecast on the expected series
+    const total = elapsedMonths.reduce((sum, m) => sum + monthActualNet(m), 0) +
+      futureMonths.reduce((sum, m) => sum + monthForecastNet(m), 0);
+    return Number(total.toFixed(2));
+  });
+  let transitionIndex = selectedIndices.findIndex(slotIdx => slotHasElapsed(slotIdx) && slotHasFuture(slotIdx));
+  if (transitionIndex < 0) {
+    transitionIndex = selectedIndices.indexOf(elapsedBoundaryIdx);
+  }
 
   if (selectedForecastStart >= 0) {
     const needsAnchor = targetYear > today.getFullYear() || !selectedIndices.includes(elapsedBoundaryIdx);
@@ -657,24 +683,32 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
         : finalLabels[elapsedBoundaryIdx];
       const anchorValue = targetYear > today.getFullYear()
         ? Number((actualAnchor || 0).toFixed(2))
-        : Number(((finalRev[elapsedBoundaryIdx] || 0) - (finalExp[elapsedBoundaryIdx] || 0)).toFixed(2));
+        : Number(monthsForSlot(elapsedBoundaryIdx)
+          .filter(m => !isMonthFuture(m))
+          .reduce((sum, m) => sum + monthActualNet(m), 0)
+          .toFixed(2));
       predictionLabels.splice(insertionIndex, 0, anchorLabel);
       predictionActual.splice(insertionIndex, 0, anchorValue);
       predictionExpected.splice(insertionIndex, 0, anchorValue);
       transitionIndex = insertionIndex;
-    } else {
+    } else if (
+      transitionIndex >= 0 &&
+      predictionExpected[transitionIndex] == null &&
+      predictionActual[transitionIndex] != null
+    ) {
+      // Monthly (and wholly-elapsed slots): stitch expected to actual at the join point
       predictionExpected[transitionIndex] = predictionActual[transitionIndex];
     }
   }
 
+  // Always roll Actual / Remaining at month granularity inside the selected periods
   let actualNet = 0;
   let remainingForecastNet = 0;
-  selectedIndices.forEach(index => {
-    if (isFuturePeriod(index)) {
-      remainingForecastNet += ((finalRev[index] || 0) + (finalExpectedCollections[index] || 0) - (finalExpectedExpenses[index] || 0));
-    } else {
-      actualNet += ((finalRev[index] || 0) - (finalExp[index] || 0));
-    }
+  selectedIndices.forEach(slotIdx => {
+    monthsForSlot(slotIdx).forEach(monthIdx => {
+      if (isMonthFuture(monthIdx)) remainingForecastNet += monthForecastNet(monthIdx);
+      else actualNet += monthActualNet(monthIdx);
+    });
   });
 
   actualNet = Number(actualNet.toFixed(2));

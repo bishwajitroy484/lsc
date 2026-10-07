@@ -349,7 +349,7 @@
       const sLower = String(sName).toLowerCase();
       
       let sClass = 'bg-slate-50 text-slate-600 border-slate-200';
-      if (sLower === 'active') sClass = 'bg-blue-50 text-brand-primary border-blue-200';
+      if (sLower === 'active') sClass = 'bg-red-50 text-brand-primary border-red-200';
       if (sLower.includes('in-active') || sLower.includes('inactive')) sClass = 'bg-red-50 text-red-600 border-red-200';
 
       const planName = this.getName('membership', member.membershipId);
@@ -406,7 +406,7 @@
           </td>
           <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} uppercase tracking-wider">${sName}</span></td>
           <td class="px-4 py-3 text-right">
-            <button onclick="event.stopPropagation(); MembersApp.openModal(${memberJson})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-full transition-colors">
+            <button onclick="event.stopPropagation(); MembersApp.openModal(${memberJson})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded-full transition-colors">
                <span class="material-symbols-rounded text-[18px]">edit</span>
             </button>
           </td>
@@ -418,7 +418,7 @@
       const sLower = String(sName).toLowerCase();
       
       let sClass = 'bg-slate-50 text-slate-600 border-slate-200';
-      if (sLower === 'active') sClass = 'bg-blue-50 text-brand-primary border-blue-200';
+      if (sLower === 'active') sClass = 'bg-red-50 text-brand-primary border-red-200';
       if (sLower.includes('in-active') || sLower.includes('inactive')) sClass = 'bg-red-50 text-red-600 border-red-200';
 
       const planName = this.getName('membership', member.membershipId);
@@ -657,9 +657,7 @@
             validPayments.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
             
             if (validPayments.length > 0) {
-                let latestEnd = new Date(this.parseToISODate(validPayments[0].endDate));
-                latestEnd.setDate(latestEnd.getDate() + 1); 
-                effectiveDue = latestEnd;
+                effectiveDue = new Date(this.parseToISODate(validPayments[0].endDate));
             }
         }
         
@@ -884,7 +882,7 @@
                 <td class="px-4 py-3 text-right">
                   <div class="inline-flex items-center justify-end gap-1.5">
                     ${waBtn}
-                    <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-auto px-3 py-1.5 text-brand-primary border border-blue-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm inline-flex items-center justify-center transition-colors">Pay Now</button>
+                    <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-auto px-3 py-1.5 text-brand-primary border border-red-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm inline-flex items-center justify-center transition-colors">Pay Now</button>
                   </div>
                 </td>
               </tr>
@@ -940,7 +938,7 @@
                   <div class="flex items-center justify-end gap-1">
                     ${waBtn}
                     <div class="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
+                      <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
                       <button onclick="MembersApp.openDeleteModal('payment', '${p.paymentId}', '${this.formatDateDDMMMYYYY(p.paidDate)} Payment')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
                     </div>
                   </div>
@@ -969,7 +967,22 @@
       let categories = [];
       let chartData = [];
 
-      const dlOptions = { enabled: true, formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '', offsetY: -6, style: { fontSize: '11px', fontWeight: 600, colors: ["#0f172a"] }, background: { enabled: true, foreColor: '#ffffff', borderRadius: 4, padding: 3, opacity: 0.92, borderWidth: 0 } };
+      const dlOptions = {
+        enabled: true,
+        formatter: (val) => val ? AppUtils.formatCompactCurrency(val) : '',
+        offsetY: -6,
+        style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
+        background: {
+          enabled: true,
+          backgroundColor: '#ffffff',
+          foreColor: '#0f172a',
+          borderRadius: 4,
+          padding: 3,
+          opacity: 0.95,
+          borderWidth: 1,
+          borderColor: '#e2e8f0'
+        }
+      };
 
       if (viewMode === 'quarterly') {
           categories = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
@@ -1248,7 +1261,7 @@
           if (groupName.toLowerCase().includes('kid')) {
               badge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-200 uppercase tracking-wider';
           } else {
-              badge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-600 border-indigo-200 uppercase tracking-wider';
+              badge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border bg-red-50 text-brand-primary border-red-200 uppercase tracking-wider';
           }
       } else {
           badge.classList.add('hidden');
@@ -1407,8 +1420,7 @@
             
             const targetMember = this.allData.find(m => m.memberId === payload.memberId);
             if (targetMember && payload.endDate) {
-                let nextDue = new Date(this.parseToISODate(payload.endDate));
-                nextDue.setDate(nextDue.getDate() + 1);
+                const nextDue = new Date(this.parseToISODate(payload.endDate));
                 targetMember.dueDate = this.formatDateDDMMMYYYY(nextDue);
             }
             

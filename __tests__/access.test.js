@@ -18,6 +18,7 @@ describe('Access control foundation', () => {
     expect(accessSrc).toContain('function api_getSession');
     expect(accessSrc).toContain('function api_authorizeServices');
     expect(accessSrc).toContain('calendarOk');
+    expect(accessSrc).toContain('deployApiOk');
     expect(accessSrc).toContain('probeCalendarAccess_');
     expect(accessSrc).toContain('getAuthorizationUrlIfNeeded_');
     expect(accessSrc).toContain('authorizationUrl');
@@ -28,6 +29,7 @@ describe('Access control foundation', () => {
     expect(accessSrc).toContain('function api_redeemInviteToken');
     expect(accessSrc).toContain('function api_invoke');
     expect(accessSrc).toContain('bindIdentityToTemporaryKey_');
+    expect(accessSrc).toContain('clearIdentityBindingsForEmail_');
     expect(accessSrc).toContain('getTemporaryActiveUserKey');
     expect(accessSrc).toContain('webAppUrl');
     expect(accessSrc).toContain('function requirePermission_');
@@ -64,8 +66,15 @@ describe('Access control foundation', () => {
   test('Settings includes Setup authorization and Users & Access UI', () => {
     expect(viewSettings).toContain('id="setup-section"');
     expect(viewSettings).toContain('id="btn-authorize-services"');
+    expect(viewSettings).toContain('id="deploy-section"');
+    expect(viewSettings).toContain('id="btn-publish-webapp"');
+    expect(viewSettings).toContain('id="publish-webapp-modal"');
+    expect(viewSettings).toContain('grid-cols-3 gap-1.5 md:gap-2 text-[10px]');
     expect(viewSettings).toContain('id="tab-btn-users"');
     expect(viewSettings).toContain('id="pane-users"');
+    expect(viewSettings).toContain('Add a person in 3 steps');
+    expect(viewSettings).toContain('https://console.cloud.google.com/auth/audience?project=lakshya-strength-conditioning');
+    expect(viewSettings).toContain('Add Test user here');
     expect(viewSettings).toContain('id="user-perm-matrix"');
     expect(viewSettings).toContain('id="user-invite-modal"');
     expect(viewSettings).toContain('id="user-edit-send"');
@@ -92,8 +101,29 @@ describe('Access control foundation', () => {
       const rows = ctx.describeAccess_(ctx.getPresetPermissions_('manager'));
       const byPage = Object.fromEntries(rows.map(r => [r.page, r.level]));
       expect(byPage.Members).toBe('View, add, edit');
+      expect(byPage['Expenses & Staff']).toBe('View, add, edit');
       expect(byPage.Calendar).toBe('View only');
       expect(byPage.Settings).toBeUndefined();
+      expect(byPage['Staff & Payroll']).toBeUndefined();
+      expect(byPage.Expenses).toBeUndefined();
+    });
+
+    test('merges staff-only or expenses-only access into one Expenses & Staff row', () => {
+      const staffOnly = ctx.describeAccess_({
+        dashboard: { view: false },
+        members: { view: false },
+        staff: { view: true, create: true, edit: false, delete: false },
+        expenses: { view: false, create: false, edit: false, delete: false },
+        calendar: { view: false },
+        settings: { view: false }
+      });
+      expect(staffOnly).toEqual([{ page: 'Expenses & Staff', level: 'View, add' }]);
+
+      const expensesOnly = ctx.describeAccess_({
+        staff: { view: false },
+        expenses: { view: true, create: false, edit: true, delete: false }
+      });
+      expect(expensesOnly).toEqual([{ page: 'Expenses & Staff', level: 'View, edit' }]);
     });
 
     test('email greets the user, links to the app, and never mentions Sheet/Drive/Script', () => {

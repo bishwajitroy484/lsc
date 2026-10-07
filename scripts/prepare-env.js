@@ -61,6 +61,11 @@ const driveId = String(selected.driveId || '').trim();
 if (!driveId || driveId.indexOf('YOUR_') === 0) {
   console.warn('Warning: ' + envName + '.driveId is empty/placeholder. Logo uploads will need DRIVE_ID in SETTINGS.');
 }
+const deploymentIdRaw = String(selected.deploymentId || '').trim();
+const deploymentId = (!deploymentIdRaw || deploymentIdRaw.indexOf('YOUR_') === 0) ? '' : deploymentIdRaw;
+if (!deploymentId) {
+  console.warn('Warning: ' + envName + '.deploymentId is empty. Set it after the first web app deploy so Settings → Publish works.');
+}
 
 const devScriptId = String((allEnv.dev && allEnv.dev.scriptId) || '').trim();
 const prodScriptId = String((allEnv.prod && allEnv.prod.scriptId) || '').trim();
@@ -101,6 +106,9 @@ const configEnvJs = [
   'var LSC_PROD_SPREADSHEET_ID = ' + jsString(prodSpreadsheetId.indexOf('YOUR_') === 0 ? '' : prodSpreadsheetId) + ';',
   'var LSC_DEV_DRIVE_ID = ' + jsString((allEnv.dev && allEnv.dev.driveId && String(allEnv.dev.driveId).indexOf('YOUR_') !== 0) ? allEnv.dev.driveId : '') + ';',
   'var LSC_PROD_DRIVE_ID = ' + jsString((allEnv.prod && allEnv.prod.driveId && String(allEnv.prod.driveId).indexOf('YOUR_') !== 0) ? allEnv.prod.driveId : '') + ';',
+  'var LSC_DEPLOYMENT_ID = ' + jsString(deploymentId) + ';',
+  'var LSC_DEV_DEPLOYMENT_ID = ' + jsString((allEnv.dev && allEnv.dev.deploymentId && String(allEnv.dev.deploymentId).indexOf('YOUR_') !== 0) ? allEnv.dev.deploymentId : '') + ';',
+  'var LSC_PROD_DEPLOYMENT_ID = ' + jsString((allEnv.prod && allEnv.prod.deploymentId && String(allEnv.prod.deploymentId).indexOf('YOUR_') !== 0) ? allEnv.prod.deploymentId : '') + ';',
   ''
 ].join('\n');
 
@@ -110,4 +118,5 @@ console.log('Prepared ' + envName + ' environment:');
 console.log('  scriptId      = ' + scriptId);
 console.log('  spreadsheetId = ' + spreadsheetId);
 console.log('  driveId       = ' + (driveId && driveId.indexOf('YOUR_') !== 0 ? driveId : '(not set)'));
+console.log('  deploymentId  = ' + (deploymentId || '(not set)'));
 console.log('Wrote .clasp.json and src/Config_Env.js');

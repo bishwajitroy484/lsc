@@ -73,6 +73,15 @@
     usersCache: [],
     permissionPresets: null,
     accessModules: ['dashboard', 'members', 'staff', 'expenses', 'calendar', 'settings'],
+    // UI shows Expenses hub once (Staff+Expenses merged); stored keys still include both.
+    uiAccessModules: ['dashboard', 'members', 'expenses', 'calendar', 'settings'],
+    moduleLabels: {
+      dashboard: 'Dashboard',
+      members: 'Members',
+      expenses: 'Expenses & Staff',
+      calendar: 'Calendar',
+      settings: 'Settings'
+    },
 
     inviteModalUser: null,
 
@@ -81,6 +90,7 @@
       this.fetchGeneralSettings();
       this.initSectionDefaults();
       this.refreshSetupStatus();
+      this.refreshDeployStatus();
       this.applySettingsAccessGates();
       google.script.run
         .withSuccessHandler((res) => {
@@ -92,17 +102,24 @@
     applySettingsAccessGates: function() {
       const canEdit = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'edit');
       const canViewUsers = typeof AccessControl !== 'undefined' && (AccessControl.can('settings', 'view') || AccessControl.can('settings', 'edit'));
+      const isOwner = typeof AccessControl !== 'undefined' && AccessControl.session && AccessControl.session.isOwner;
       const usersTab = document.getElementById('tab-btn-users');
       if (usersTab && !canViewUsers) usersTab.classList.add('hidden');
       const addBtn = document.getElementById('btn-add-user');
       if (addBtn) addBtn.classList.toggle('hidden', !canEdit);
+      const publishBtn = document.getElementById('btn-publish-webapp');
+      if (publishBtn) publishBtn.classList.toggle('hidden', !isOwner);
+      const saveDeployBtn = document.getElementById('btn-save-deployment-id');
+      if (saveDeployBtn) saveDeployBtn.classList.toggle('hidden', !isOwner);
+      const deployInput = document.getElementById('deploy-deployment-id');
+      if (deployInput) deployInput.readOnly = !isOwner;
     },
 
     refreshSetupStatus: function() {
       const list = document.getElementById('setup-status-list');
       if (list) {
         let shm = '';
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 9; i++) {
           shm += '<div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>';
         }
         list.innerHTML = shm;
@@ -118,31 +135,292 @@
         })
         .withFailureHandler(() => {
           if (list) {
-            list.innerHTML = '<div class="col-span-2 text-[10px] text-slate-400 py-1">Could not load setup status.</div>';
+            list.innerHTML = '<div class="col-span-3 text-[10px] text-slate-400 py-1">Could not load setup status.</div>';
           }
         })
         .api_getSetupStatus();
+    },
+
+    refreshDeployStatus: function() {
+      const chips = document.getElementById('deploy-status-chips');
+      if (chips) {
+        chips.innerHTML =
+          '<div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>' +
+          '<div class="h-7 md:h-8 bg-slate-100 shimmer rounded-md md:rounded-lg"></div>';
+      }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res || !res.success || !res.data) {
+            if (chips) {
+              chips.innerHTML = '<div class="col-span-2 text-[10px] text-slate-400 py-1">Could not load deploy status.</div>';
+            }
+            return;
+          }
+          this.renderDeployStatus(res.data);
+        })
+        .withFailureHandler(() => {
+          if (chips) {
+            chips.innerHTML = '<div class="col-span-2 text-[10px] text-slate-400 py-1">Could not load deploy status.</div>';
+          }
+        })
+        .api_getWebAppDeployStatus();
+    },
+
+    renderDeployStatus: function(data) {
+      const chips = document.getElementById('deploy-status-chips');
+      const badge = document.getElementById('deploy-env-badge');
+      const hint = document.getElementById('deploy-hint');
+      const meta = document.getElementById('deploy-last-meta');
+      const input = document.getElementById('deploy-deployment-id');
+      const publishBtn = document.getElementById('btn-publish-webapp');
+      if (!data) return;
+
+      if (badge) {
+        badge.textContent = data.env || '—';
+        badge.className = 'text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded ' +
+          (String(data.envKey || '').toLowerCase() === 'prod'
+            ? 'text-emerald-800 bg-emerald-50 border border-emerald-100'
+            : 'text-slate-600 bg-slate-100');
+      }
+
+      if (input && !input.matches(':focus')) {
+        input.value = data.deploymentId || '';
+      }
+
+      if (chips) {
+        const versionLabel = data.currentVersion != null ? ('v' + data.currentVersion) : 'Unknown';
+        const apiOk = !!data.apiReady;
+        const idOk = !!data.deploymentId;
+        const rows = [
+          ['Live version', versionLabel, apiOk],
+          ['Deployment ID', idOk ? 'Ready' : 'Missing', idOk]
+        ];
+        chips.innerHTML = rows.map(function(pair) {
+          const ok = !!pair[2];
+          return '<div class="flex items-center justify-between gap-1 px-2 py-1 md:px-2.5 md:py-1.5 rounded-md md:rounded-lg border ' +
+            (ok ? 'bg-emerald-50/70 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-200 text-amber-800') +
+            '"><span class="font-semibold truncate">' + pair[0] + '</span>' +
+            '<span class="font-bold shrink-0">' + pair[1] + '</span></div>';
+        }).join('');
+      }
+
+      if (hint) {
+        hint.textContent = data.hint ||
+          'After a developer pushes code, click Publish latest code to update this same URL.';
+      }
+
+      if (meta) {
+        const parts = [];
+        if (data.lastPublishedVersion) parts.push('Last published: v' + data.lastPublishedVersion);
+        if (data.lastPublishedAt) {
+          try {
+            const d = new Date(data.lastPublishedAt);
+            parts.push(isNaN(d.getTime()) ? data.lastPublishedAt : d.toLocaleString());
+          } catch (e) {
+            parts.push(data.lastPublishedAt);
+          }
+        }
+        if (data.lastPublishedBy) parts.push('by ' + data.lastPublishedBy);
+        if (parts.length) {
+          meta.textContent = parts.join(' · ');
+          meta.classList.remove('hidden');
+        } else {
+          meta.textContent = '';
+          meta.classList.add('hidden');
+        }
+      }
+
+      if (publishBtn) {
+        const isOwner = typeof AccessControl !== 'undefined' && AccessControl.session && AccessControl.session.isOwner;
+        publishBtn.disabled = !isOwner || !data.canPublish;
+      }
+    },
+
+    copyDeploymentId: function() {
+      const input = document.getElementById('deploy-deployment-id');
+      const value = input ? String(input.value || '').trim() : '';
+      if (!value) {
+        this.showToast('No deployment ID to copy.', true);
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(() => {
+          this.showToast('Deployment ID copied.', false);
+        }).catch(() => {
+          this.showToast('Could not copy deployment ID.', true);
+        });
+      } else {
+        try {
+          input.select();
+          document.execCommand('copy');
+          this.showToast('Deployment ID copied.', false);
+        } catch (e) {
+          this.showToast('Could not copy deployment ID.', true);
+        }
+      }
+    },
+
+    saveDeploymentId: function() {
+      const input = document.getElementById('deploy-deployment-id');
+      const btn = document.getElementById('btn-save-deployment-id');
+      const id = input ? String(input.value || '').trim() : '';
+      const restore = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px]">progress_activity</span>';
+      }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = restore || '<span class="material-symbols-rounded text-[16px]">save</span><span class="hidden sm:inline">Save ID</span>';
+          }
+          if (!res || !res.success) {
+            this.showToast((res && res.error) || 'Could not save deployment ID.', true);
+            return;
+          }
+          this.showToast(res.message || 'Deployment ID saved.', false);
+          if (res.data) this.renderDeployStatus(res.data);
+          else this.refreshDeployStatus();
+        })
+        .withFailureHandler((err) => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = restore || '<span class="material-symbols-rounded text-[16px]">save</span><span class="hidden sm:inline">Save ID</span>';
+          }
+          this.showToast((err && err.message) || 'Could not save deployment ID.', true);
+        })
+        .api_saveWebAppDeploymentId(id);
+    },
+
+    publishWebAppVersion: function() {
+      this.openPublishModal();
+    },
+
+    openPublishModal: function() {
+      const modal = document.getElementById('publish-webapp-modal');
+      const content = document.getElementById('publish-webapp-modal-content');
+      const meta = document.getElementById('publish-modal-meta');
+      const confirmBtn = document.getElementById('btn-publish-modal-confirm');
+      if (!modal || !content) return;
+
+      const envBadge = document.getElementById('deploy-env-badge');
+      const envLabel = envBadge ? String(envBadge.textContent || '').trim() : '';
+      const versionChip = document.querySelector('#deploy-status-chips .font-bold');
+      const versionHint = versionChip ? String(versionChip.textContent || '').trim() : '';
+      if (meta) {
+        const bits = [];
+        if (envLabel && envLabel !== '—') bits.push('Environment: ' + envLabel);
+        if (versionHint && versionHint !== 'Unknown' && versionHint !== 'Ready' && versionHint !== 'Missing') {
+          bits.push('Current live: ' + versionHint);
+        }
+        meta.textContent = bits.length
+          ? bits.join(' · ')
+          : 'A new version number will be created and attached to the same deployment.';
+      }
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<span class="material-symbols-rounded text-[18px]">publish</span><span>Publish now</span>';
+      }
+      modal.classList.remove('pointer-events-none', 'opacity-0');
+      modal.classList.add('opacity-100');
+      content.classList.remove('opacity-0', 'translate-y-4', 'sm:scale-95');
+      content.classList.add('opacity-100', 'translate-y-0', 'sm:scale-100');
+    },
+
+    closePublishModal: function() {
+      const modal = document.getElementById('publish-webapp-modal');
+      const content = document.getElementById('publish-webapp-modal-content');
+      if (!modal || !content) return;
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modal.classList.remove('opacity-100');
+      content.classList.add('opacity-0', 'translate-y-4', 'sm:scale-95');
+      content.classList.remove('opacity-100', 'translate-y-0', 'sm:scale-100');
+    },
+
+    confirmPublishWebAppVersion: function() {
+      const btn = document.getElementById('btn-publish-webapp');
+      const confirmBtn = document.getElementById('btn-publish-modal-confirm');
+      const cancelBtn = document.getElementById('btn-publish-modal-cancel');
+      const publishHtml = '<span class="material-symbols-rounded text-[15px] md:text-[16px]">publish</span><span class="sm:hidden">Publish</span><span class="hidden sm:inline">Publish latest code</span>';
+      const confirmHtml = '<span class="material-symbols-rounded text-[18px]">publish</span><span>Publish now</span>';
+
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[18px]">progress_activity</span><span>Publishing…</span>';
+      }
+      if (cancelBtn) cancelBtn.disabled = true;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[15px]">progress_activity</span><span>Publishing…</span>';
+      }
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = confirmHtml;
+          }
+          if (cancelBtn) cancelBtn.disabled = false;
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = publishHtml;
+          }
+          if (!res || !res.success) {
+            if (res && res.authorizationUrl) {
+              this.openAuthorizationUrl(res.authorizationUrl);
+              this.showToast('Complete Google consent, then publish again.', true);
+            } else {
+              this.showToast((res && res.error) || 'Publish failed.', true);
+            }
+            if (res && res.data) this.renderDeployStatus(res.data);
+            else this.refreshDeployStatus();
+            this.refreshSetupStatus();
+            return;
+          }
+          this.closePublishModal();
+          this.showToast(res.message || 'Published successfully.', false);
+          if (res.data) this.renderDeployStatus(res.data);
+          else this.refreshDeployStatus();
+          this.refreshSetupStatus();
+        })
+        .withFailureHandler((err) => {
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = confirmHtml;
+          }
+          if (cancelBtn) cancelBtn.disabled = false;
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = publishHtml;
+          }
+          this.showToast((err && err.message) || 'Publish failed.', true);
+          this.refreshDeployStatus();
+          this.refreshSetupStatus();
+        })
+        .api_publishWebAppVersion('');
     },
 
     renderSetupStatus: function(setup) {
       const list = document.getElementById('setup-status-list');
       if (!list || !setup) return;
       const rows = [
-        ['Spreadsheet', setup.spreadsheetOk],
+        ['Sheet', setup.spreadsheetOk],
         ['Settings', setup.settingsOk],
         ['Drive', setup.driveOk],
         ['Mail', setup.mailOk],
         ['ScriptApp', setup.scriptAppOk],
-        ['Google Calendar', setup.calendarOk],
-        ['Weekly trigger', setup.triggerOk],
+        ['Calendar', setup.calendarOk],
+        ['Publish API', setup.deployApiOk],
+        ['Trigger', setup.triggerOk],
         ['Setup done', setup.setupComplete]
       ];
       list.innerHTML = rows.map(function(pair) {
         const ok = !!pair[1];
-        return '<div class="flex items-center justify-between gap-1 px-2 py-1 md:px-2.5 md:py-1.5 rounded-md md:rounded-lg border ' +
+        return '<div class="flex items-center justify-between gap-0.5 px-1.5 py-1 md:px-2 md:py-1.5 rounded-md md:rounded-lg border min-w-0 ' +
           (ok ? 'bg-emerald-50/70 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-200 text-amber-800') +
-          '"><span class="font-semibold truncate">' + pair[0] + '</span>' +
-          '<span class="material-symbols-rounded text-[14px] shrink-0" title="' + (ok ? 'OK' : 'Needed') + '">' +
+          '"><span class="font-semibold truncate text-[9px] md:text-[11px]">' + pair[0] + '</span>' +
+          '<span class="material-symbols-rounded text-[13px] md:text-[14px] shrink-0" title="' + (ok ? 'OK' : 'Needed') + '">' +
           (ok ? 'check_circle' : 'error') + '</span></div>';
       }).join('');
       const hint = document.getElementById('setup-auth-hint');
@@ -151,8 +429,10 @@
           hint.textContent = setup.authError;
         } else if (!setup.calendarOk) {
           hint.textContent = 'Google Calendar permission is missing. Click Authorize — if prompted, allow Calendar, then click Authorize again.';
+        } else if (!setup.deployApiOk) {
+          hint.textContent = 'Publish API is not ready. Click Authorize (allow script projects/deployments). If it still fails, enable Apps Script API on the script’s Cloud project, then Authorize again.';
         } else {
-          hint.textContent = 'Sign in as the deployer Google account, then authorize once (Mail, ScriptApp, Calendar).';
+          hint.textContent = 'Sign in as the deployer Google account, then authorize once (Mail, ScriptApp, Calendar, and Publish API).';
         }
       }
     },
@@ -184,7 +464,7 @@
           if (!res || !res.success) {
             if (res && res.authorizationUrl) {
               this.openAuthorizationUrl(res.authorizationUrl);
-              this.showToast('Complete the Google consent screen (allow Calendar), then click Authorize again.', true);
+              this.showToast('Complete the Google consent screen (allow Calendar and Publish scopes), then click Authorize again.', true);
             } else {
               this.showToast((res && res.error) || 'Authorization failed.', true);
             }
@@ -194,6 +474,7 @@
           this.showToast(res.message || 'Services authorized.', false);
           if (res.data) this.renderSetupStatus(res.data);
           this.refreshSetupStatus();
+          this.refreshDeployStatus();
         })
         .withFailureHandler((err) => {
           if (btn) {
@@ -261,7 +542,7 @@
       if (empty) empty.classList.add('hidden');
       list.innerHTML = this.usersCache.map((u) => {
         const perms = u.permissions || {};
-        const viewMods = Object.keys(perms).filter(k => perms[k] && perms[k].view).join(', ') || 'none';
+        const viewMods = this.formatViewModules_(perms);
         const uid = String(u.userId || '').replace(/'/g, '');
         const isDisabled = String(u.status || '').toLowerCase() === 'disabled';
         const actions = canEdit
@@ -280,6 +561,27 @@
           '<div class="text-[10px] text-slate-400 mt-1">' + (u.status || '') + ' · ' + (u.rolePreset || 'Viewer') + ' · Views: ' + viewMods + '</div>' +
           '</div>' + actions + '</div>';
       }).join('');
+    },
+
+    formatViewModules_: function(perms) {
+      const labels = [];
+      const hub = this.mergeExpenseStaffPerm_(perms);
+      this.uiAccessModules.forEach((mod) => {
+        const row = mod === 'expenses' ? hub : ((perms && perms[mod]) || {});
+        if (row && row.view) labels.push(this.moduleLabels[mod] || mod);
+      });
+      return labels.length ? labels.join(', ') : 'none';
+    },
+
+    mergeExpenseStaffPerm_: function(perms) {
+      const e = (perms && perms.expenses) || {};
+      const s = (perms && perms.staff) || {};
+      return {
+        view: !!(e.view || s.view),
+        create: !!(e.create || s.create),
+        edit: !!(e.edit || s.edit),
+        delete: !!(e.delete || s.delete)
+      };
     },
 
     sendInvitation: function(userId) {
@@ -421,13 +723,14 @@
         perms = {};
         this.accessModules.forEach(m => { perms[m] = { view: m !== 'settings', create: false, edit: false, delete: false }; });
       }
-      body.innerHTML = this.accessModules.map(mod => {
-        const row = perms[mod] || {};
+      body.innerHTML = this.uiAccessModules.map(mod => {
+        const row = mod === 'expenses' ? this.mergeExpenseStaffPerm_(perms) : (perms[mod] || {});
+        const label = this.moduleLabels[mod] || mod;
         const cell = (action) =>
           '<td class="text-center px-1 py-1.5"><input type="checkbox" data-mod="' + mod + '" data-act="' + action + '" ' +
           (row[action] ? 'checked' : '') + ' class="rounded border-slate-300 text-brand-primary"></td>';
         return '<tr class="border-t border-slate-100">' +
-          '<td class="px-2 py-1.5 font-semibold text-slate-700 capitalize">' + mod + '</td>' +
+          '<td class="px-2 py-1.5 font-semibold text-slate-700">' + label + '</td>' +
           cell('view') + cell('create') + cell('edit') + cell('delete') +
           '</tr>';
       }).join('');
@@ -451,6 +754,13 @@
         const act = cb.getAttribute('data-act');
         if (perms[mod] && act) perms[mod][act] = !!cb.checked;
       });
+      // Keep Staff API gates in sync with the merged Expenses & Staff UI row
+      perms.staff = {
+        view: !!perms.expenses.view,
+        create: !!perms.expenses.create,
+        edit: !!perms.expenses.edit,
+        delete: !!perms.expenses.delete
+      };
       return perms;
     },
 
@@ -1421,7 +1731,7 @@
           const count = (this.allDropdowns[s.key] || []).length;
           const isActive = this.activeSchema && this.activeSchema.key === s.key;
           const activeClass = isActive 
-            ? 'bg-blue-50/80 border-brand-primary/30 text-brand-primary shadow-xs' 
+            ? 'bg-red-50/80 border-brand-primary/30 text-brand-primary shadow-xs' 
             : 'bg-white border-transparent hover:bg-slate-50 text-slate-700';
           
           dskHtml += 
@@ -1432,7 +1742,7 @@
                 '</div>' +
                 '<div class="min-w-0">' +
                   '<h4 class="text-xs font-bold truncate leading-tight">' + s.name + '</h4>' +
-                  '<span class="text-[10px] font-mono font-semibold uppercase ' + (isActive ? 'text-blue-600' : 'text-slate-400') + '">' + s.prefix + '</span>' +
+                  '<span class="text-[10px] font-mono font-semibold uppercase ' + (isActive ? 'text-brand-primary' : 'text-slate-400') + '">' + s.prefix + '</span>' +
                 '</div>' +
               '</div>' +
               '<div class="flex items-center gap-1.5 shrink-0">' +
@@ -1543,11 +1853,11 @@
         });
 
         const btnUp = index > 0 
-           ? '<button type="button" onclick="SettingsApp.moveOption(' + index + ', -1)" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center" title="Move Up"><span class="material-symbols-rounded text-[17px]">arrow_upward</span></button>' 
+           ? '<button type="button" onclick="SettingsApp.moveOption(' + index + ', -1)" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center" title="Move Up"><span class="material-symbols-rounded text-[17px]">arrow_upward</span></button>' 
            : '<div class="w-7 h-7"></div>';
            
         const btnDown = index < (totalLen - 1) 
-           ? '<button type="button" onclick="SettingsApp.moveOption(' + index + ', 1)" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center" title="Move Down"><span class="material-symbols-rounded text-[17px]">arrow_downward</span></button>' 
+           ? '<button type="button" onclick="SettingsApp.moveOption(' + index + ', 1)" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center" title="Move Down"><span class="material-symbols-rounded text-[17px]">arrow_downward</span></button>' 
            : '<div class="w-7 h-7"></div>';
 
         rowHtml += 
@@ -1556,7 +1866,7 @@
                  btnUp +
                  btnDown +
                  '<div class="w-px h-4 bg-slate-200 mx-1"></div>' +
-                 '<button type="button" onclick="SettingsApp.openOptionModal(\'' + safeId + '\')" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-blue-50 rounded-xl transition-colors cursor-pointer flex items-center justify-center" title="Edit"><span class="material-symbols-rounded text-[18px]">edit</span></button>' +
+                 '<button type="button" onclick="SettingsApp.openOptionModal(\'' + safeId + '\')" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded-xl transition-colors cursor-pointer flex items-center justify-center" title="Edit"><span class="material-symbols-rounded text-[18px]">edit</span></button>' +
                  '<button type="button" onclick="SettingsApp.openDeleteModal(\'' + safeId + '\')" class="w-8 h-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer flex items-center justify-center" title="Delete"><span class="material-symbols-rounded text-[18px]">delete</span></button>' +
                '</div>' +
             '</td>' +
@@ -1580,11 +1890,11 @@
           '<div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">' +
             '<div class="flex items-start justify-between gap-2">' +
               '<div>' +
-                '<span class="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-primary bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">' + (opt.id || 'ITEM') + '</span>' +
+                '<span class="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-primary bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">' + (opt.id || 'ITEM') + '</span>' +
                 '<h4 class="text-sm font-bold text-slate-800 mt-1">' + (opt.name || '--') + '</h4>' +
               '</div>' +
               '<div class="flex items-center gap-1 shrink-0">' +
-                '<button type="button" onclick="SettingsApp.openOptionModal(\'' + safeId + '\')" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-brand-primary hover:bg-blue-50 rounded-xl border border-slate-200 transition-colors" title="Edit">' +
+                '<button type="button" onclick="SettingsApp.openOptionModal(\'' + safeId + '\')" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-brand-primary hover:bg-red-50 rounded-xl border border-slate-200 transition-colors" title="Edit">' +
                   '<span class="material-symbols-rounded text-[17px]">edit</span>' +
                 '</button>' +
                 '<button type="button" onclick="SettingsApp.openDeleteModal(\'' + safeId + '\')" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl border border-slate-200 transition-colors" title="Delete">' +

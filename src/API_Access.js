@@ -132,6 +132,57 @@ function bindIdentityToTemporaryKey_(email) {
   return true;
 }
 
+function clearCurrentTemporaryIdentityBinding_() {
+  const key = getTemporaryUserKey_();
+  if (!key) return;
+  try {
+    PropertiesService.getScriptProperties().deleteProperty('lsc_uid_' + key);
+  } catch (error) {
+    // non-fatal
+  }
+  try {
+    authCache_().remove('lsc_uid_' + key);
+  } catch (error) {
+    // non-fatal
+  }
+}
+
+/** Remove leftover lsc_uid_* Script Property bindings for a deleted/disabled user email. */
+function clearIdentityBindingsForEmail_(email) {
+  const normalized = normalizeEmail_(email);
+  if (!normalized) return 0;
+  let removed = 0;
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const all = props.getProperties() || {};
+    Object.keys(all).forEach(function(propKey) {
+      if (String(propKey).indexOf('lsc_uid_') !== 0) return;
+      if (normalizeEmail_(all[propKey]) !== normalized) return;
+      try {
+        props.deleteProperty(propKey);
+        removed += 1;
+      } catch (error) {
+        // continue
+      }
+    });
+  } catch (error) {
+    // non-fatal
+  }
+  // Also drop the current request's cache entry if it matches.
+  try {
+    const key = getTemporaryUserKey_();
+    if (key) {
+      const cached = authCache_().get('lsc_uid_' + key);
+      if (normalizeEmail_(cached) === normalized) {
+        authCache_().remove('lsc_uid_' + key);
+      }
+    }
+  } catch (error) {
+    // non-fatal
+  }
+  return removed;
+}
+
 function emailFromTemporaryKey_() {
   const key = getTemporaryUserKey_();
   if (!key) return '';
@@ -483,6 +534,9 @@ function getCurrentUserContext_() {
   const context = buildUserContext_(userRow, email);
   if (!context.allowed && email) {
     context.error = 'Your email (' + email + ') is not authorized for this app.';
+    // Drop stale session bindings so deleted/disabled users do not linger in Script Properties.
+    clearIdentityBindingsForEmail_(email);
+    clearCurrentTemporaryIdentityBinding_();
   }
   return context;
 }
@@ -591,6 +645,7 @@ function getSetupStatus_(options) {
   let mailOk = false;
   let scriptAppOk = false;
   let calendarOk = false;
+  let deployApiOk = false;
   let triggerOk = false;
   let authError = '';
   let authorizationUrl = '';
@@ -601,6 +656,7 @@ function getSetupStatus_(options) {
     mailOk = servicesFlag;
     scriptAppOk = servicesFlag;
     calendarOk = servicesFlag;
+    deployApiOk = servicesFlag;
     servicesAuthorized = servicesFlag || (setupComplete && driveOk);
   } else {
     try {
@@ -628,6 +684,15 @@ function getSetupStatus_(options) {
       authorizationUrl = getAuthorizationUrlIfNeeded_();
     }
 
+    if (typeof probeDeployApiAccess_ === 'function') {
+      const deployProbe = probeDeployApiAccess_();
+      deployApiOk = !!deployProbe.ok;
+      if (!deployApiOk) {
+        if (!authError) authError = deployProbe.error || 'Publish API permission is missing.';
+        if (!authorizationUrl) authorizationUrl = getAuthorizationUrlIfNeeded_();
+      }
+    }
+
     servicesAuthorized = mailOk && scriptAppOk && calendarOk;
   }
 
@@ -638,6 +703,7 @@ function getSetupStatus_(options) {
     mailOk: mailOk,
     scriptAppOk: scriptAppOk,
     calendarOk: calendarOk,
+    deployApiOk: deployApiOk,
     triggerOk: triggerOk,
     servicesAuthorized: servicesAuthorized,
     setupComplete: setupComplete,
@@ -805,17 +871,32 @@ function escapeHtml_(value) {
 var MODULE_LABELS_ = {
   dashboard: 'Dashboard',
   members: 'Members',
-  staff: 'Staff & Payroll',
-  expenses: 'Expenses',
+  staff: 'Expenses & Staff',
+  expenses: 'Expenses & Staff',
   calendar: 'Calendar',
   settings: 'Settings'
 };
 
+var UI_ACCESS_MODULES_ = ['dashboard', 'members', 'expenses', 'calendar', 'settings'];
+
+function mergeExpenseStaffPerm_(permissions) {
+  const e = (permissions && permissions.expenses) || {};
+  const s = (permissions && permissions.staff) || {};
+  return {
+    view: !!(e.view || s.view),
+    create: !!(e.create || s.create),
+    edit: !!(e.edit || s.edit),
+    delete: !!(e.delete || s.delete)
+  };
+}
+
 /** Human-readable page list for the invitation email, e.g. [{ page: 'Members', level: 'View only' }]. */
 function describeAccess_(permissions) {
   const rows = [];
-  ACCESS_MODULES.forEach(function(mod) {
-    const p = (permissions && permissions[mod]) || {};
+  UI_ACCESS_MODULES_.forEach(function(mod) {
+    const p = mod === 'expenses'
+      ? mergeExpenseStaffPerm_(permissions)
+      : ((permissions && permissions[mod]) || {});
     if (!p.view) return;
     const extras = [];
     if (p.create) extras.push('add');
@@ -858,12 +939,12 @@ function buildInvitationEmail_(opts) {
     '<p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#334155;">' +
     escapeHtml_(inviter) + ' has granted you access to the <strong>' + escapeHtml_(appName) + '</strong> application. ' +
     'Use the button below to open it.</p>' +
-    '<p style="margin:0 0 24px;"><a href="' + escapeHtml_(opts.url) + '" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 26px;border-radius:10px;">Open ' + escapeHtml_(appName) + '</a></p>' +
+    '<p style="margin:0 0 24px;"><a href="' + escapeHtml_(opts.url) + '" style="display:inline-block;background:#CE0002;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 26px;border-radius:10px;">Open ' + escapeHtml_(appName) + '</a></p>' +
     '<p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;">Your access</p>' +
     accessHtml +
     '<p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#64748b;">This link is personal to you, so please do not forward it. ' +
     'If the button does not work, copy this address into your browser:<br>' +
-    '<span style="word-break:break-all;color:#2563eb;">' + escapeHtml_(opts.url) + '</span></p>' +
+    '<span style="word-break:break-all;color:#CE0002;">' + escapeHtml_(opts.url) + '</span></p>' +
     '</div>' +
     '<div style="padding:16px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;">' +
     'You received this email because an administrator of ' + escapeHtml_(appName) + ' added you as a user. If you were not expecting it, you can ignore this message.' +
@@ -1016,6 +1097,20 @@ function api_authorizeServices() {
       };
     }
 
+    if (typeof probeDeployApiAccess_ === 'function') {
+      const deployProbe = probeDeployApiAccess_();
+      if (!deployProbe.ok) {
+        const authUrl = getAuthorizationUrlIfNeeded_();
+        return {
+          success: false,
+          error: deployProbe.error ||
+            'Publish API permission is missing. Complete Google consent (script projects + deployments), enable Apps Script API on the Cloud project if prompted, then click Authorize again.',
+          authorizationUrl: authUrl || '',
+          data: getSetupStatus_()
+        };
+      }
+    }
+
     const settings = readSettingsMapForAccess_();
     if (settings.DRIVE_ID) {
       try {
@@ -1028,7 +1123,7 @@ function api_authorizeServices() {
     upsertSettingKey_('SERVICES_AUTHORIZED', 'YES');
     return {
       success: true,
-      message: 'Google services authorized successfully (Mail, ScriptApp, Calendar).',
+      message: 'Google services authorized successfully (Mail, ScriptApp, Calendar, and web-app publish scopes).',
       data: getSetupStatus_()
     };
   } catch (error) {
@@ -1172,6 +1267,9 @@ function api_saveUser(userData) {
       savedUserId = record.userId;
     }
     invalidateUsersCache_();
+    if (status.toLowerCase() === 'disabled') {
+      clearIdentityBindingsForEmail_(email);
+    }
 
     let message = existing ? 'User updated.' : 'User added.';
     let warning = '';
@@ -1219,6 +1317,7 @@ function api_deleteUser(userId) {
 
     DB.remove('USERS', userId);
     invalidateUsersCache_();
+    clearIdentityBindingsForEmail_(target.email);
 
     return { success: true, message: 'User removed. Their link no longer works.' };
   } catch (error) {
