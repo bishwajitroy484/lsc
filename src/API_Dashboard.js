@@ -648,6 +648,11 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     (financialData.revArr[monthIdx] || 0) +
     (operationalData.expectedCollectionArr[monthIdx] || 0) -
     monthlyExpectedExp;
+  // Unpaid renewals due later this month are not "future months", but they are not collected yet.
+  const unpaidStillDue = (monthIdx) =>
+    (targetYear === today.getFullYear() && monthIdx === currentMIdx)
+      ? (operationalData.expectedCollectionArr[monthIdx] || 0)
+      : 0;
   const slotHasElapsed = (slotIdx) => monthsForSlot(slotIdx).some(m => !isMonthFuture(m));
   const slotHasFuture = (slotIdx) => monthsForSlot(slotIdx).some(m => isMonthFuture(m));
 
@@ -662,10 +667,12 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
   let predictionExpected = selectedIndices.map(slotIdx => {
     const months = monthsForSlot(slotIdx);
     const futureMonths = months.filter(m => isMonthFuture(m));
-    if (!futureMonths.length) return null;
     const elapsedMonths = months.filter(m => !isMonthFuture(m));
-    // Partial current quarter/month group: keep elapsed actual + future forecast on the expected series
+    const unpaidNow = elapsedMonths.reduce((sum, m) => sum + unpaidStillDue(m), 0);
+    if (!futureMonths.length && !unpaidNow) return null;
+    // Elapsed actual + unpaid dues still due this month + forecast for later months
     const total = elapsedMonths.reduce((sum, m) => sum + monthActualNet(m), 0) +
+      unpaidNow +
       futureMonths.reduce((sum, m) => sum + monthForecastNet(m), 0);
     return Number(total.toFixed(2));
   });
@@ -707,7 +714,10 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
   selectedIndices.forEach(slotIdx => {
     monthsForSlot(slotIdx).forEach(monthIdx => {
       if (isMonthFuture(monthIdx)) remainingForecastNet += monthForecastNet(monthIdx);
-      else actualNet += monthActualNet(monthIdx);
+      else {
+        actualNet += monthActualNet(monthIdx);
+        remainingForecastNet += unpaidStillDue(monthIdx);
+      }
     });
   });
 
