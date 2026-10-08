@@ -40,7 +40,7 @@
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
         <div class="w-6 h-6 rounded bg-red-100 text-brand-primary flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance</span></div>
         <p class="text-[11px] sm:text-xs text-red-900/80 font-bold truncate min-w-0">Net-In Hand</p>
-        <span class="metric-tip" tabindex="0" aria-label="About Net-In Hand"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Money left after costs for the selected periods: recognized collections minus operating expenses. “Remaining” is the forecast still expected later this year.</span></span>
+        <span class="metric-tip" tabindex="0" aria-label="About Net-In Hand"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Money already left after costs: recognized collections minus operating expenses. “Remaining” is unpaid renewals still due from today through the rest of the selected year, including later this month, minus estimated future costs.</span></span>
       </div>
       <div class="h-7 flex items-center mb-1 min-w-0"><h2 id="kpi-net" class="text-lg sm:text-xl md:text-2xl font-bold text-red-900 leading-none truncate">--</h2></div>
       <div id="kpi-net-forecast-container" class="mt-auto border-t border-red-200/50 pt-2 min-h-[26px] flex items-center justify-between text-[11px]">
@@ -135,7 +135,7 @@
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1.5 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Net-In-Hand Prediction</h3>
-          <span class="metric-tip" tabindex="0" aria-label="About Net-In-Hand Prediction"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Solid line = actual cash left so far (collections − expenses). Green dotted forecast adds expected renewals and estimated future costs for later periods.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Net-In-Hand Prediction"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Solid line = cash already recognized (collections − expenses). Green dotted forecast adds renewals not yet collected from today onward, including later this month, and estimated future costs.</span></span>
           <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-bold text-emerald-700 shrink-0" aria-label="Green dotted line indicates forecast">
             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Forecast
           </span>

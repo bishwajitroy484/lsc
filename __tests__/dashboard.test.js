@@ -524,6 +524,32 @@ describe('Dashboard Module', () => {
     expect(quarterly.expectedNetArr[3]).toBe(5000 + 37000);
   });
 
+  test('counts unpaid renewals due later this month in Remaining, not only next months', () => {
+    const dashboardApi = loadDashboardApi();
+    // Recognized net through October = 83,000. Two renewals still due 10 Oct and 15 Oct.
+    const revArr = [...new Array(9).fill(0), 83000, 0, 0];
+    const expArr = new Array(12).fill(0);
+    const expectedCollectionArr = new Array(12).fill(0);
+    expectedCollectionArr[9] = 50000; // October, current month
+
+    const metrics = dashboardApi.formatTimePeriods(
+      { revArr, expArr, staffArr: new Array(12).fill(0) },
+      { overdueArr: new Array(12).fill(0), expectedCollectionArr },
+      'Monthly',
+      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      2026,
+      new Date(2026, 9, 8), // 08-Oct-2026
+      { operating: 0, staff: 0 },
+      null
+    );
+
+    expect(metrics.actualNet).toBe(83000);
+    expect(metrics.remainingForecastNet).toBe(50000);
+    expect(metrics.projectedNet).toBe(133000);
+    expect(metrics.actualNetArr[9]).toBe(83000);
+    expect(metrics.expectedNetArr[9]).toBe(133000);
+  });
+
   test('kpis.netInHand matches charts.prediction.actualNet for elapsed periods', () => {
     const dashboardApi = loadDashboardApi();
     const res = dashboardApi.api_getDashboardMetrics('2024', 'Monthly', ['Jan', 'Feb']);
