@@ -425,7 +425,9 @@ describe('Dashboard Module', () => {
     const view = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
     const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
 
-    expect(script).toContain('text-[9px] sm:text-[11px] leading-none sm:leading-tight text-slate-600 font-bold uppercase');
+    expect(script).toContain('text-[9px] sm:text-[11px] leading-none sm:leading-tight text-slate-600 font-bold');
+    expect(script).toContain('rawLabel.charAt(0).toUpperCase()');
+    expect(script).not.toContain('text-slate-600 font-bold uppercase">${label}');
     expect(view).toContain('grid grid-cols-2 gap-1 mt-auto');
     expect(script).not.toContain('truncate max-w-[55px]');
     expect(view).toContain('lg:grid-cols-3');
