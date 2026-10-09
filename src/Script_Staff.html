@@ -807,13 +807,13 @@
 
       return `
         <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onclick="StaffApp.openDetails(${stfJson})">
-          <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${hasActionNeeded ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'} flex items-center justify-center text-[11px] font-bold shrink-0">${initials}</div><div><div class="font-bold text-slate-800 text-xs md:text-sm hover:text-brand-primary transition-colors">${stf.fullName}</div></div></div></td>
-          <td class="px-4 py-3 text-slate-700 text-xs font-medium">${rName}</td>
-          <td class="px-4 py-3 text-slate-600 text-xs">${stf.phone}</td>
-          <td class="px-4 py-3 whitespace-nowrap"><span class="font-bold text-slate-800 text-xs md:text-sm">${amtStr}</span> <span class="text-xs text-slate-400 font-normal">/ mo</span></td>
-          <td class="px-4 py-3">${monthCycleHtml}</td>
-          <td class="px-4 py-3"><span class="text-xs font-bold px-2 py-0.5 rounded border ${sClass}">${sName}</span></td>
-          <td class="px-4 py-3 text-right whitespace-nowrap">
+          <td data-lsc-table="staff" data-col="name" class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${hasActionNeeded ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'} flex items-center justify-center text-[11px] font-bold shrink-0">${initials}</div><div><div class="font-bold text-slate-800 text-xs md:text-sm hover:text-brand-primary transition-colors">${stf.fullName}</div></div></div></td>
+          <td data-lsc-table="staff" data-col="role" class="px-4 py-3 text-slate-700 text-xs font-medium">${rName}</td>
+          <td data-lsc-table="staff" data-col="phone" class="px-4 py-3 text-slate-600 text-xs">${stf.phone}</td>
+          <td data-lsc-table="staff" data-col="salary" class="px-4 py-3 whitespace-nowrap"><span class="font-bold text-slate-800 text-xs md:text-sm">${amtStr}</span> <span class="text-xs text-slate-400 font-normal">/ mo</span></td>
+          <td data-lsc-table="staff" data-col="cycle" class="px-4 py-3">${monthCycleHtml}</td>
+          <td data-lsc-table="staff" data-col="status" class="px-4 py-3"><span class="text-xs font-bold px-2 py-0.5 rounded border ${sClass}">${sName}</span></td>
+          <td data-lsc-table="staff" data-col="actions" class="px-4 py-3 text-right whitespace-nowrap">
             ${payButtonHtml}
             <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">edit</span></button>
             <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">delete</span></button>

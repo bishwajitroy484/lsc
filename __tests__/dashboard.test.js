@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { parseSafeDate, distributeDailyProration } = require('../src/Utils_DB');
 
-function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = []) {
+function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = [], extraMembers = []) {
   const source = fs.readFileSync(path.join(__dirname, '../src/API_Dashboard.js'), 'utf8');
 
   return new Function(
@@ -28,7 +28,8 @@ function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = []) {
         MEMBERS: [
           { memberId: 'MEM-1', fullName: 'Alice Johnson', membershipId: 'PLAN-1', joinDate: '2024-01-05', status: 'Active' },
           { memberId: 'MEM-2', fullName: 'Bob Smith', membershipId: 'PLAN-2', joinDate: '2023-11-15', status: 'Active' },
-          { memberId: 'MEM-3', fullName: 'Charlie Brown', membershipId: 'PLAN-3', joinDate: '2024-02-10', status: 'Inactive' }
+          { memberId: 'MEM-3', fullName: 'Charlie Brown', membershipId: 'PLAN-3', joinDate: '2024-02-10', status: 'Inactive' },
+          ...extraMembers
         ],
         PAYMENTS: [
           { memberId: 'MEM-1', paymentStatus: 'Paid', startDate: '2024-01-05', endDate: '2024-01-31', amount: 2500 },
@@ -65,7 +66,7 @@ function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = []) {
       success: true,
       data: {
         options: {
-          membership: [{ id: 'PLAN-1', name: 'Monthly' }, { id: 'PLAN-2', name: 'Quarterly' }, { id: 'PLAN-3', name: 'Trial' }],
+          membership: [{ id: 'PLAN-1', name: 'Monthly' }, { id: 'PLAN-2', name: 'Quarterly' }, { id: 'PLAN-3', name: 'Trial' }, { id: 'PLAN-4', name: 'Ad-hoc' }],
           paymentstatus: [{ id: 'STATUS-OVERDUE', name: 'Overdue' }],
           batch: [{ id: 'B-1', name: 'Morning' }],
           status: [{ id: 'ACT', name: 'Active' }],
@@ -332,13 +333,146 @@ describe('Dashboard Module', () => {
     expect(view).toMatch(/justify-between min-w-0 overflow-visible/);
     expect(view).toMatch(/h-full min-w-0 overflow-visible/);
     expect(styles).toContain('.metric-tip-bubble');
-    expect(styles).toContain('top: calc(100% + 10px)');
+    expect(styles).toContain('position: fixed');
+    expect(styles).toContain('.metric-tip-bubble.is-open');
+    expect(styles).toContain('.metric-tip-bubble.tip-above::after');
     expect(styles).toContain('font-size: 12px');
     expect(styles).toContain('.apexcharts-tooltip');
     expect(styles).toContain('background: #0f172a !important');
     expect(styles).toContain('z-index: 10050 !important');
     expect(script).toContain("theme: 'dark'");
     expect(script).toContain('commonTooltip');
+  });
+
+  test('period selector drives every main-dashboard metric', () => {
+    const dashboardApi = loadDashboardApi('anchor', [], [
+      { memberId: 'MEM-4', fullName: 'Dana Roy', membershipId: 'PLAN-4', batchId: 'B-1', joinDate: '2024-05-02', status: 'Active' },
+      { memberId: 'MEM-5', fullName: 'Evan Cole', membershipId: 'PLAN-2', batchId: 'B-2', joinDate: '2024-01-20', exitDate: '2024-02-15', status: 'Inactive' }
+    ]);
+    const month = (names) => dashboardApi.api_getDashboardMetrics('2024', 'Monthly', names).data;
+    const quarter = (names) => dashboardApi.api_getDashboardMetrics('2024', 'Quarterly', names).data;
+
+    const jan = month(['Jan']);
+    const feb = month(['Feb']);
+    const janFeb = month(['Jan', 'Feb']);
+    const q1 = quarter(['Q1 (JFM)']);
+    const q2 = quarter(['Q2 (AMJ)']);
+    const q1q2 = quarter(['Q1 (JFM)', 'Q2 (AMJ)']);
+    const q1Short = quarter(['Q1']);
+    const allQuarters = quarter(['Q1 (JFM)', 'Q2 (AMJ)', 'Q3 (JAS)', 'Q4 (OND)']);
+
+    expect(jan.kpis.membersCollected).toBe(2500);
+    expect(feb.kpis.membersCollected).toBe(4000);
+    expect(janFeb.kpis.membersCollected).toBe(6500);
+    expect(q1.kpis.membersCollected).toBe(6500);
+    expect(q2.kpis.membersCollected).toBe(0);
+    expect(q1q2.kpis.membersCollected).toBe(6500);
+    expect(q1Short.kpis.membersCollected).toBe(q1.kpis.membersCollected);
+
+    expect(jan.kpis.staffCost).toBe(52000);
+    expect(jan.kpis.businessExpenses).toBe(2500);
+    expect(jan.kpis.totalOperatingExpenses).toBe(54500);
+    expect(feb.kpis.totalOperatingExpenses).toBe(1300);
+    expect(feb.kpis.staffCost).toBe(0);
+    expect(q1.kpis.totalOperatingExpenses).toBe(56900);
+    expect(q1.kpis.businessExpenses).toBe(4900);
+    expect(q2.kpis.totalOperatingExpenses).toBe(0);
+    expect(q1q2.kpis.totalOperatingExpenses).toBe(56900);
+    expect(q1.kpis.totalOperatingExpenses).toBeGreaterThan(jan.kpis.totalOperatingExpenses);
+    expect(allQuarters.kpis.totalOperatingExpenses).toBe(q1q2.kpis.totalOperatingExpenses);
+    expect(q1.charts.expenseBreakdown.series).toEqual([3400, 1300, 200, 52000]);
+    expect(q2.charts.expenseBreakdown.series).toEqual([]);
+    expect(q1.charts.categories).toEqual(['Q1 (JFM)']);
+    expect(q1q2.charts.categories).toEqual(['Q1 (JFM)', 'Q2 (AMJ)']);
+    expect(janFeb.charts.expenses.reduce((sum, value) => sum + value, 0)).toBe(jan.kpis.totalOperatingExpenses + feb.kpis.totalOperatingExpenses);
+
+    expect(q1.kpis.activeMembers).toBe(3);
+    expect(q1.kpis.activeSegregation).toEqual({ Monthly: 1, Quarterly: 2 });
+    expect(q2.kpis.activeMembers).toBe(3);
+    expect(q2.kpis.activeSegregation).toEqual({ Monthly: 1, Quarterly: 1, 'Ad-hoc': 1 });
+    expect(q1q2.kpis.activeSegregation).toEqual({ Monthly: 1, Quarterly: 2, 'Ad-hoc': 1 });
+    expect(q1q2.kpis.activeMembers).toBe(4);
+    expect(month(['May']).kpis.activeSegregation['Ad-hoc']).toBe(1);
+    expect(month(['Jan']).kpis.activeSegregation['Ad-hoc']).toBeUndefined();
+    expect(q1.charts.batchLabels).not.toContain('Morning');
+    expect(q2.charts.batchLabels).toContain('Morning');
+    expect(q2.charts.batchData[q2.charts.batchLabels.indexOf('Morning')]).toBe(1);
+
+    expect(q1.kpis.netInHand).toBe(Number((q1.kpis.membersCollected - q1.kpis.totalOperatingExpenses).toFixed(2)));
+    expect(q2.kpis.netInHand).toBe(0);
+    expect(jan.kpis.overdueAmount).toBeLessThanOrEqual(q1.kpis.overdueAmount);
+    expect(q1.kpis.overdueAmount).toBeLessThanOrEqual(allQuarters.kpis.overdueAmount);
+  });
+
+  test('period menu keeps its scroll and the selector reloads with a shimmer', () => {
+    const view = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
+    const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
+
+    expect(view).toContain('id="multi-select-menu" onclick="event.stopPropagation()"');
+    expect(view).toContain('right-0 w-full');
+    expect(view).toContain('[scrollbar-gutter:stable]');
+    expect(view).not.toContain('xl:left-0');
+    expect(view).toContain('overflow-y-auto');
+    expect(view).toContain('DashboardState.handleModeSwitch()');
+    expect(script).toContain('const scrollTop = menu.scrollTop');
+    expect(script).toContain('menu.scrollTop = scrollTop');
+    expect(script).toContain("toggleShimmer(true)");
+    expect(script).toContain('kpi-active-segregation');
+    expect(script).toContain('pred-sum-actual');
+  });
+
+  test('dashboard chips, birthdays, and chart rows stay readable', () => {
+    const view = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
+    const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
+
+    expect(script).toContain('text-[11px] leading-tight text-slate-600 font-bold uppercase');
+    expect(script).not.toContain('truncate max-w-[55px]');
+    expect(view).toContain('lg:grid-cols-3');
+    const rev = view.indexOf('>Revenue vs Expenses<');
+    const batch = view.indexOf('>Members by Batch<');
+    const net = view.indexOf('>Net-In-Hand Forecast<');
+    const trend = view.indexOf('>Collection Trend<');
+    const expense = view.indexOf('>Expense Breakdown<');
+    const birthdays = view.indexOf('Upcoming birthdays');
+    expect(rev).toBeGreaterThan(-1);
+    expect(rev).toBeLessThan(batch);
+    expect(batch).toBeLessThan(net);
+    expect(net).toBeLessThan(trend);
+    expect(trend).toBeLessThan(expense);
+    expect(expense).toBeLessThan(birthdays);
+    expect(view).toContain('id="dash-birthdays-list" class="flex-1 overflow-y-auto');
+    expect(script).toContain('No birthdays coming up');
+    expect(script).toContain('🎂 🎉 🥳');
+    expect(script).toContain("days === 0");
+    expect(script).toContain('from-amber-100 via-rose-50 to-fuchsia-50');
+    expect(script).toContain('bg-amber-400 text-amber-950');
+    expect(script).toContain('text-slate-900 truncate');
+    expect(script).toContain('No expenses in this period');
+    expect(script).toContain('No members in this period');
+  });
+
+  test('applies the October client feedback on dashboard, expenses, and settings', () => {
+    const dash = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
+    const dashScript = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
+    const expenses = fs.readFileSync(path.join(__dirname, '../src/View_Expenses.html'), 'utf8');
+    const members = fs.readFileSync(path.join(__dirname, '../src/View_Members.html'), 'utf8');
+    const staff = fs.readFileSync(path.join(__dirname, '../src/View_Staff.html'), 'utf8');
+    const settings = fs.readFileSync(path.join(__dirname, '../src/View_Settings.html'), 'utf8');
+    const state = fs.readFileSync(path.join(__dirname, '../src/Global_State.html'), 'utf8');
+    const access = fs.readFileSync(path.join(__dirname, '../src/API_Access.js'), 'utf8');
+
+    expect(dash).toContain('Net-In-Hand Forecast');
+    expect(dash).not.toContain('Net-In-Hand Prediction');
+    expect(dash).not.toContain('id="chart-staff-trend"');
+    expect(dash).toContain('id="dash-birthdays"');
+    expect(dashScript).toContain('renderDashboardBirthdays');
+    expect(expenses).toContain('leading-tight">Expenses</h1>');
+    expect(members).toContain('Date of Joining');
+    expect(staff).toContain('Date of Joining');
+    expect(settings).toContain('gen-NOTIFY_WA_OVERDUE');
+    expect(settings).toContain('gen-NOTIFY_WA_UPCOMING');
+    expect(state).toContain('api_saveMyTableColumns');
+    expect(access).toContain("'tableColumns'");
   });
 
   test('reflects recognized future revenue from split payments in Net-In-Hand Prediction', () => {

@@ -555,13 +555,54 @@
                 </div>
                 <input type="hidden" id="gen-NOTIFY_WEEKLY_SUBJECT">
                 <textarea id="gen-NOTIFY_WEEKLY_INTRO" class="hidden"></textarea>
+                <p class="text-[10px] text-red-900 px-0.5">
+                  To: <strong id="notification-summary-email">Owner email</strong>
+                  <span class="text-red-700/70"> · </span>
+                  <strong id="notification-summary-freq">Monday 08:00 AM · 7 days</strong>
+                </p>
               </div>
 
-              <p class="text-[10px] text-red-900 px-0.5">
-                To: <strong id="notification-summary-email">Owner email</strong>
-                <span class="text-red-700/70"> · </span>
-                <strong id="notification-summary-freq">Monday 08:00 AM · 7 days</strong>
-              </p>
+              <div class="p-2.5 md:p-3.5 bg-white border border-slate-200 rounded-xl space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-[11px] md:text-xs font-bold text-slate-800">Overdue WhatsApp</p>
+                    <p class="text-[10px] text-slate-500">Used when Notify is tapped on an overdue member.</p>
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" onclick="SettingsApp.openMessageEditor('waOverdue')" class="flex-1 min-w-[88px] h-8 px-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">edit_note</span><span>Edit</span>
+                  </button>
+                  <button type="button" onclick="SettingsApp.previewWhatsAppMessage('waOverdue')" class="flex-1 min-w-[88px] h-8 px-2 bg-red-50 border border-red-100 hover:bg-red-100 text-red-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">visibility</span><span>Preview</span>
+                  </button>
+                  <button type="button" id="btn-test-wa-overdue" onclick="SettingsApp.sendTestNotificationEmail('waOverdue')" class="flex-1 min-w-[88px] h-8 px-2 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 text-emerald-800 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">outgoing_mail</span><span>Send test</span>
+                  </button>
+                </div>
+                <textarea id="gen-NOTIFY_WA_OVERDUE" class="hidden"></textarea>
+              </div>
+
+              <div class="p-2.5 md:p-3.5 bg-white border border-slate-200 rounded-xl space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-[11px] md:text-xs font-bold text-slate-800">Upcoming WhatsApp</p>
+                    <p class="text-[10px] text-slate-500">Used when Notify is tapped on an upcoming renewal.</p>
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" onclick="SettingsApp.openMessageEditor('waUpcoming')" class="flex-1 min-w-[88px] h-8 px-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">edit_note</span><span>Edit</span>
+                  </button>
+                  <button type="button" onclick="SettingsApp.previewWhatsAppMessage('waUpcoming')" class="flex-1 min-w-[88px] h-8 px-2 bg-red-50 border border-red-100 hover:bg-red-100 text-red-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">visibility</span><span>Preview</span>
+                  </button>
+                  <button type="button" id="btn-test-wa-upcoming" onclick="SettingsApp.sendTestNotificationEmail('waUpcoming')" class="flex-1 min-w-[88px] h-8 px-2 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 text-emerald-800 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">outgoing_mail</span><span>Send test</span>
+                  </button>
+                </div>
+                <textarea id="gen-NOTIFY_WA_UPCOMING" class="hidden"></textarea>
+              </div>
             </div>
           </div>
         </div>
@@ -1153,7 +1194,7 @@
         </button>
       </div>
       <div class="p-5 space-y-3 overflow-y-auto no-scrollbar max-h-[70vh]">
-        <div>
+        <div id="notif-editor-subject-wrap">
           <label for="notif-editor-subject" class="block text-[11px] font-semibold text-slate-700 mb-1">Subject</label>
           <input type="text" id="notif-editor-subject" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:border-brand-primary outline-none">
         </div>
@@ -1178,7 +1219,7 @@
     <div id="notification-preview-modal-content" class="bg-white w-full max-w-xl rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 flex flex-col border border-slate-200 overflow-hidden lsc-modal-panel">
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
         <div class="min-w-0">
-          <h2 class="text-sm md:text-base font-bold text-slate-800">Email preview</h2>
+          <h2 id="notif-preview-title" class="text-sm md:text-base font-bold text-slate-800">Email preview</h2>
           <p id="notif-preview-meta" class="text-[10px] text-slate-500 mt-0.5 truncate">Sample recipient</p>
         </div>
         <button type="button" onclick="SettingsApp.closePreviewModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer shrink-0">
@@ -1186,7 +1227,7 @@
         </button>
       </div>
       <div class="px-5 py-3 border-b border-slate-100 shrink-0 space-y-1.5">
-        <div>
+        <div id="notif-preview-subject-wrap">
           <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Subject</p>
           <p id="notif-preview-subject" class="text-xs font-bold text-slate-800 mt-0.5">—</p>
         </div>
@@ -1194,6 +1235,7 @@
       </div>
       <div class="flex-1 overflow-y-auto bg-slate-100 p-3 sm:p-4 min-h-[240px]">
         <div id="notif-preview-loading" class="hidden text-center text-xs text-slate-500 py-10">Loading preview…</div>
+        <pre id="notif-preview-text" class="hidden whitespace-pre-wrap text-xs leading-relaxed text-slate-800 bg-white rounded-xl border border-slate-200 shadow-xs p-4 min-h-[240px]"></pre>
         <iframe id="notif-preview-frame" title="Email preview" class="w-full min-h-[320px] h-[50vh] bg-white rounded-xl border border-slate-200 shadow-xs" sandbox=""></iframe>
       </div>
       <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end shrink-0">

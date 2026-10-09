@@ -358,6 +358,23 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
   });
 });
 
+test('expense KPIs and charts use the dashboard info tips', () => {
+  const view = fs.readFileSync(path.join(__dirname, '../src/View_Expenses.html'), 'utf8');
+  const script = fs.readFileSync(path.join(__dirname, '../src/Script_Expenses.html'), 'utf8');
+  expect(view).toContain('aria-label="About Total Outflow"');
+  expect(view).toContain('aria-label="About Staff Cost"');
+  expect(view).toContain('aria-label="About period average"');
+  expect(view).toContain('aria-label="About Staff count"');
+  expect(view).toContain('aria-label="About Expenses Trend"');
+  expect(view).toContain('aria-label="About Expenses by Category"');
+  expect(view).toContain('metric-tip-bubble');
+  expect(view).toContain('grid-cols-2 xl:grid-cols-3');
+  expect(view).not.toContain('md:grid-cols-4');
+  expect(script).toContain('flex-1 xl:flex-none text-center');
+  expect(view).toContain('id="exp-list-filters-expenses" class="hidden w-full xl:w-auto min-w-0"');
+  expect(view).not.toContain('md:flex md:w-auto md:flex-nowrap');
+});
+
 
 
 

@@ -140,7 +140,7 @@
         html += `
           <tr onclick="window.navigateToMemberDetail(${row.memberId ? `'${row.memberId}'` : 'null'}, ${rowJson})" 
               class="border-b border-slate-50 hover:bg-slate-100/80 transition-colors cursor-pointer group">
-            <td class="px-3 py-2.5">
+            <td data-lsc-table="${type}" data-col="member" class="px-3 py-2.5">
               <div class="flex items-center gap-2.5">
                 <div class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[11px] font-bold shrink-0 shadow-sm group-hover:bg-brand-primary group-hover:text-white transition-colors">${initials}</div>
                 <div>
@@ -149,13 +149,13 @@
                 </div>
               </div>
             </td>
-            <td class="px-3 py-2.5 text-slate-600 font-medium whitespace-nowrap hidden md:table-cell text-xs">${row.plan}</td>
-            <td class="px-3 py-2.5 font-bold text-slate-800 whitespace-nowrap text-xs md:text-sm">${AppUtils.formatCurrency(row.amount)}</td>
-            <td class="px-3 py-2.5 text-slate-500 whitespace-nowrap hidden md:table-cell text-xs">${row.date}</td>
-            <td class="px-3 py-2.5 text-right whitespace-nowrap">
+            <td data-lsc-table="${type}" data-col="plan" class="px-3 py-2.5 text-slate-600 font-medium whitespace-nowrap hidden md:table-cell text-xs">${row.plan}</td>
+            <td data-lsc-table="${type}" data-col="amount" class="px-3 py-2.5 font-bold text-slate-800 whitespace-nowrap text-xs md:text-sm">${AppUtils.formatCurrency(row.amount)}</td>
+            <td data-lsc-table="${type}" data-col="date" class="px-3 py-2.5 text-slate-500 whitespace-nowrap hidden md:table-cell text-xs">${row.date}</td>
+            <td data-lsc-table="${type}" data-col="days" class="px-3 py-2.5 text-right whitespace-nowrap">
               <span class="px-2.5 py-1 rounded text-xs font-bold ${row.status}">${row.days}</span>
             </td>
-            <td class="px-2 md:px-3 py-2.5 text-center whitespace-nowrap" onclick="event.stopPropagation()">
+            <td data-lsc-table="${type}" data-col="notify" class="px-2 md:px-3 py-2.5 text-center whitespace-nowrap" onclick="event.stopPropagation()">
               ${waBtn}
             </td>
           </tr>
@@ -237,6 +237,7 @@
       const validOptions = this.getValidOptions();
       const menu = document.getElementById('multi-select-menu');
       if(!menu) return;
+      const scrollTop = menu.scrollTop;
 
       const allSelected = this.selectedPeriods.length === validOptions.length && validOptions.length > 0;
 
@@ -246,6 +247,7 @@
         html += `<label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer rounded text-xs text-slate-700"><input type="checkbox" value="${opt}" ${isChecked} onchange="DashboardState.togglePeriod(this)" class="accent-brand-primary w-3.5 h-3.5 rounded border-slate-300">${opt.split(' ')[0]}</label>`;
       });
       menu.innerHTML = html;
+      menu.scrollTop = scrollTop;
     },
 
     toggleAll: function(checkbox) {
@@ -309,12 +311,14 @@
   };
 
   function toggleShimmer(isActive) {
-    const kpis = ['kpi-active', 'kpi-collected', 'kpi-overdue', 'kpi-bus-exp', 'kpi-staff-cost', 'kpi-total-exp', 'kpi-net', 'kpi-net-forecast', 'mini-staff-count', 'mini-staff-cost', 'mini-staff-avg'];
-    const chartIds = ['chart-batch', 'chart-rev-exp', 'chart-trend', 'chart-expense-breakdown', 'chart-prediction', 'chart-staff-trend'];
+    const kpis = ['kpi-active', 'kpi-collected', 'kpi-overdue', 'kpi-bus-exp', 'kpi-staff-cost', 'kpi-total-exp', 'kpi-net', 'kpi-net-forecast', 'pred-sum-actual', 'pred-sum-remaining', 'pred-sum-total'];
+    const chartIds = ['chart-batch', 'chart-rev-exp', 'chart-trend', 'chart-expense-breakdown', 'chart-prediction'];
     const tables = ['table-overdue', 'table-upcoming'];
+    const seg = document.getElementById('kpi-active-segregation');
     
     if (isActive) {
       kpis.forEach(id => { const el = document.getElementById(id); if (el) { el.innerHTML = ''; el.classList.add('shimmer', 'rounded-md', 'w-16', 'h-5'); } });
+      if (seg) seg.innerHTML = '<div class="h-4 w-16 shimmer rounded"></div><div class="h-4 w-14 shimmer rounded"></div><div class="h-4 w-12 shimmer rounded"></div>';
       chartIds.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<div class="absolute inset-0 rounded-xl shimmer opacity-50"></div>'; });
       tables.forEach(id => {
          const el = document.getElementById(id); 
@@ -389,9 +393,9 @@
             Object.entries(data.kpis.activeSegregation).forEach(([planName, count]) => {
                if (count > 0) { 
                   segHtml += `
-                    <div class="bg-slate-50 border border-slate-100 rounded px-2 py-0.5 flex items-center gap-1.5 shrink-0">
-                      <span class="text-[10px] text-slate-500 font-bold uppercase truncate max-w-[55px]" title="${planName}">${planName}</span>
-                      <span class="text-xs font-bold text-slate-700">${count}</span>
+                    <div class="bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 flex items-center gap-1 max-w-full">
+                      <span class="text-[11px] leading-tight text-slate-600 font-bold uppercase">${planName}</span>
+                      <span class="text-[10px] leading-none font-bold text-slate-800 shrink-0">${count}</span>
                     </div>`;
                }
             });
@@ -462,8 +466,17 @@
     // 2. Batch
     const elBatch = document.querySelector("#chart-batch");
     if(elBatch) {
+      const batchValues = data.charts.batchData || [];
+      const hasBatch = batchValues.some(function(value) { return Number(value) > 0; });
+      if (!hasBatch) {
+        elBatch.innerHTML = '<div class="h-full flex flex-col items-center justify-center text-center px-3 py-2">' +
+          '<div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-500 flex items-center justify-center mb-2"><span class="material-symbols-rounded text-[26px]">groups</span></div>' +
+          '<p class="text-xs font-bold text-slate-700">No members in this period</p>' +
+          '<p class="text-[10px] text-slate-400 font-medium mt-1 max-w-[180px]">Batch counts show up when someone was a member in the months you selected.</p>' +
+          '</div>';
+      } else {
       window.AppChartConfigs.batch = {
-        series: [{ name: 'Members', data: data.charts.batchData }],
+        series: [{ name: 'Members', data: batchValues }],
         chart: { type: 'bar', height: '100%', toolbar: commonToolbar },
         plotOptions: { bar: { distributed: true, columnWidth: '50%', borderRadius: 4, dataLabels: { position: 'top' } } },
         dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '11px', fontWeight: 600, colors: ["#304758"] } },
@@ -476,6 +489,7 @@
       elBatch.innerHTML = ''; 
       window.AppCharts.batch = new ApexCharts(elBatch, window.AppChartConfigs.batch);
       window.AppCharts.batch.render();
+      }
     }
 
     // 3. Net-In-Hand actuals transition into the payment-based forecast.
@@ -567,21 +581,29 @@
       
       const expSeries = DashboardState.isShowingMisc ? data.charts.expenseBreakdown.miscSeries : data.charts.expenseBreakdown.series;
       const expLabels = DashboardState.isShowingMisc ? data.charts.expenseBreakdown.miscLabels : data.charts.expenseBreakdown.labels;
+      const hasExpense = Array.isArray(expSeries) && expSeries.some(function(value) { return Number(value) > 0; });
 
+      if (!hasExpense) {
+        elExp.innerHTML = '<div class="h-full flex flex-col items-center justify-center text-center px-3 py-2">' +
+          '<div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mb-2"><span class="material-symbols-rounded text-[26px]">receipt_long</span></div>' +
+          '<p class="text-xs font-bold text-slate-700">No expenses in this period</p>' +
+          '<p class="text-[10px] text-slate-400 font-medium mt-1 max-w-[180px]">Utilities and staff costs will appear here once they are recorded.</p>' +
+          '</div>';
+      } else {
       window.AppChartConfigs.exp = {
         series: expSeries,
         labels: expLabels,
         chart: { type: 'donut', height: '100%' },
         colors: ['#3b82f6', '#10b981', '#fbbf24', '#f97316', '#a855f7', '#06b6d4', '#94a3b8', '#e2e8f0', '#6366f1', '#ec4899'],
         plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: DashboardState.isShowingMisc ? 'Total Misc' : 'Total', fontSize: '14px', fontWeight: 600, formatter: function(w) { const tot = w.globals.seriesTotals.reduce((a,b)=>a+b,0); return AppUtils.formatCurrency(tot); } } } } } },
-        legend: { position: 'right', fontSize: '11px', offsetX: -10, offsetY: 20 },
-        responsive: [{ breakpoint: 768, options: { legend: { position: 'bottom', offsetX: 0, offsetY: 0 } } }],
+        legend: { position: 'bottom', fontSize: '10px', offsetY: 0 },
         dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCompactCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 } },
         tooltip: commonTooltip
       };
       elExp.innerHTML = ''; 
       window.AppCharts.exp = new ApexCharts(elExp, window.AppChartConfigs.exp);
       window.AppCharts.exp.render();
+      }
     }
 
     // 6. Staff Cost Trend
@@ -606,13 +628,94 @@
       window.AppCharts.staff.render();
     }
 
+    window.renderDashboardBirthdays(data.birthdays || []);
+
     if (!isRebuild) {
       DashboardTables.init(data.overdue, data.upcoming);
     }
   }
 
+  window.renderDashboardBirthdays = function(list) {
+    const box = document.getElementById('dash-birthdays-list');
+    const countEl = document.getElementById('dash-birthdays-count');
+    const rows = Array.isArray(list) ? list.slice() : [];
+    if (!box) return;
+    rows.sort(function(a, b) { return Number(a.days) - Number(b.days); });
+    if (countEl) countEl.textContent = String(rows.length);
+    if (!rows.length) {
+      box.innerHTML = '<div class="h-full min-h-[140px] flex flex-col items-center justify-center text-center px-3 py-4">' +
+        '<div class="text-[28px] leading-none tracking-wide" aria-hidden="true">🎂 🎉 🥳</div>' +
+        '<p class="text-xs font-bold text-slate-800 mt-2">No birthdays coming up</p>' +
+        '<p class="text-[10px] font-semibold text-fuchsia-600 mt-1">This month and the next two are clear.</p>' +
+        '<div class="text-lg leading-none mt-2 tracking-widest" aria-hidden="true">🎈 🎊 🎁</div>' +
+        '</div>';
+      return;
+    }
+    const monthTones = ['text-rose-600', 'text-amber-600', 'text-fuchsia-600', 'text-violet-600'];
+    const groups = [];
+    const byMonth = {};
+    rows.forEach(function(row) {
+      const key = row.month || 'Upcoming';
+      if (!byMonth[key]) {
+        byMonth[key] = [];
+        groups.push(key);
+      }
+      byMonth[key].push(row);
+    });
+    box.innerHTML = groups.map(function(month, monthIndex) {
+      const monthTone = monthTones[monthIndex % monthTones.length];
+      const items = byMonth[month].map(function(row) {
+        const days = Number(row.days);
+        const isToday = days === 0;
+        const when = isToday ? 'Today' : (days === 1 ? 'Tomorrow' : ('in ' + days + ' days'));
+        const isStaff = row.kind === 'staff';
+        const badge = isStaff
+          ? '<span class="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-100 shrink-0">Staff</span>'
+          : '<span class="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border bg-pink-50 text-pink-700 border-pink-100 shrink-0">Member</span>';
+        const id = String(isStaff ? (row.staffId || '') : (row.memberId || '')).replace(/'/g, '');
+        const name = String(row.name || '').replace(/'/g, '');
+        const rowClass = isToday
+          ? 'bg-gradient-to-r from-amber-100 via-rose-50 to-fuchsia-50 ring-1 ring-amber-300 shadow-sm'
+          : 'hover:bg-rose-50/80';
+        const dayClass = isToday
+          ? 'bg-amber-400 text-amber-950'
+          : 'bg-rose-100 text-rose-700';
+        const whenClass = isToday
+          ? 'text-amber-800'
+          : 'text-pink-700';
+        return '<button type="button" onclick="window.openDashboardBirthday(\'' + (isStaff ? 'staff' : 'member') + '\', \'' + id + '\', \'' + name + '\')" class="w-full flex items-center gap-2 px-1.5 py-1.5 rounded-lg text-left ' + rowClass + '">' +
+          '<span class="w-8 h-8 rounded-lg text-sm font-bold flex items-center justify-center shrink-0 ' + dayClass + '">' + (row.day || '') + (isToday ? '<span class="sr-only"> today</span>' : '') + '</span>' +
+          '<span class="min-w-0 flex-1"><span class="block font-bold text-xs text-slate-900 truncate">' + (row.name || '') + (isToday ? ' 🎂' : '') + '</span>' +
+          '<span class="block text-[10px] font-semibold ' + whenClass + '">' + when + '</span></span>' +
+          badge + '</button>';
+      }).join('');
+      return '<div><p class="text-[10px] font-bold uppercase tracking-wider px-1 mb-1 ' + monthTone + '">' + month + '</p><div class="space-y-0.5">' + items + '</div></div>';
+    }).join('');
+  };
+
+  window.openDashboardBirthday = function(kind, id, name) {
+    if (kind === 'staff') {
+      window.location.hash = '#expenses';
+      let tries = 0;
+      const tryOpen = function() {
+        tries += 1;
+        if (typeof ExpensesHub !== 'undefined' && ExpensesHub.switchListTab) ExpensesHub.switchListTab('staff');
+        if (typeof StaffApp !== 'undefined' && StaffApp.allData && StaffApp.openDetails) {
+          const st = StaffApp.allData.find(function(s) { return String(s.staffId) === String(id); });
+          if (st) StaffApp.openDetails(st);
+          return;
+        }
+        if (tries < 8) setTimeout(tryOpen, 250);
+      };
+      setTimeout(tryOpen, 250);
+      return;
+    }
+    window.navigateToMemberDetail(id || null, { name: name || '' });
+  };
+
   // Global router helper to jump from Dashboard tables directly to Member Details
   window.navigateToMemberDetail = function(memberId, rowData) {
+    rowData = rowData || {};
     window.location.hash = '#members';
     
     const tryOpen = () => {
