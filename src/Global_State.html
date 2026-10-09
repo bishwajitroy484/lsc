@@ -1,6 +1,7 @@
 <script>
   const ActionProgress = {
     _timer: null,
+    _stuck: null,
     _pct: 0,
     _circumference: 2 * Math.PI * 15.5,
 
@@ -31,14 +32,27 @@
       this._pct = 8;
       this._paint();
       if (this._timer) clearInterval(this._timer);
+      if (this._stuck) clearTimeout(this._stuck);
       this._timer = setInterval(() => {
         if (this._pct >= 90) return;
         this._pct = Math.min(90, this._pct + (2 + Math.random() * 6));
         this._paint();
       }, 220);
+      this._stuck = setTimeout(() => {
+        const open = this._els().overlay;
+        if (!open || open.classList.contains('hidden') || this._pct >= 100) return;
+        this.hide();
+        if (window.Toast && typeof Toast.error === 'function') {
+          Toast.error('This is taking too long. If Google asked for permission, finish that window, then try again.');
+        }
+        try {
+          window.dispatchEvent(new CustomEvent('lsc-action-stalled'));
+        } catch (e) { /* ignore */ }
+      }, 45000);
     },
 
     success: function() {
+      if (this._stuck) { clearTimeout(this._stuck); this._stuck = null; }
       if (this._timer) { clearInterval(this._timer); this._timer = null; }
       this._pct = 100;
       this._paint();
@@ -52,6 +66,7 @@
     },
 
     hide: function() {
+      if (this._stuck) { clearTimeout(this._stuck); this._stuck = null; }
       if (this._timer) { clearInterval(this._timer); this._timer = null; }
       const els = this._els();
       if (els.overlay) els.overlay.classList.add('hidden');

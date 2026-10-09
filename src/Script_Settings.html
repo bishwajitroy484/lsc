@@ -470,23 +470,30 @@
       const list = document.getElementById('setup-status-list');
       if (!list || !setup) return;
       const rows = [
-        ['Sheet', setup.spreadsheetOk],
-        ['Settings', setup.settingsOk],
-        ['Drive', setup.driveOk],
-        ['Mail', setup.mailOk],
-        ['ScriptApp', setup.scriptAppOk],
-        ['Calendar', setup.calendarOk],
-        ['Publish API', setup.deployApiOk],
-        ['Trigger', setup.triggerOk],
-        ['Setup done', setup.setupComplete]
+        ['Sheet', setup.spreadsheetOk ? 'ok' : 'missing'],
+        ['Settings', setup.settingsOk ? 'ok' : 'missing'],
+        ['Drive', setup.driveOk ? 'ok' : 'missing'],
+        ['Mail', setup.mailOk ? 'ok' : 'missing'],
+        ['ScriptApp', setup.scriptAppOk ? 'ok' : 'missing'],
+        ['Calendar', setup.calendarOk ? 'ok' : 'missing'],
+        ['Publish API', setup.deployApiOk ? 'ok' : 'missing'],
+        ['Trigger', setup.triggerState || (setup.triggerOk ? 'ok' : 'missing')],
+        ['Setup done', setup.setupComplete ? 'ok' : 'missing']
       ];
       list.innerHTML = rows.map(function(pair) {
-        const ok = !!pair[1];
+        const state = pair[1];
+        const tone = state === 'ok'
+          ? 'bg-emerald-50/70 border-emerald-100 text-emerald-800'
+          : state === 'off'
+            ? 'bg-slate-50 border-slate-200 text-slate-500'
+            : 'bg-amber-50/50 border-amber-200 text-amber-800';
+        const icon = state === 'ok' ? 'check_circle' : state === 'off' ? 'schedule' : 'error';
+        const title = state === 'ok' ? 'OK' : state === 'off' ? 'Not scheduled' : 'Needed';
         return '<div class="flex items-center justify-between gap-0.5 px-1.5 py-1 md:px-2 md:py-1.5 rounded-md md:rounded-lg border min-w-0 ' +
-          (ok ? 'bg-emerald-50/70 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-200 text-amber-800') +
+          tone +
           '"><span class="font-semibold truncate text-[9px] md:text-[11px]">' + pair[0] + '</span>' +
-          '<span class="material-symbols-rounded text-[13px] md:text-[14px] shrink-0" title="' + (ok ? 'OK' : 'Needed') + '">' +
-          (ok ? 'check_circle' : 'error') + '</span></div>';
+          '<span class="material-symbols-rounded text-[13px] md:text-[14px] shrink-0" title="' + title + '">' +
+          icon + '</span></div>';
       }).join('');
       const hint = document.getElementById('setup-auth-hint');
       if (hint) {
@@ -496,6 +503,10 @@
           hint.textContent = 'Google Calendar permission is missing. Click Authorize — if prompted, allow Calendar, then click Authorize again.';
         } else if (!setup.deployApiOk) {
           hint.textContent = 'Publish API is not ready. Click Authorize (allow script projects/deployments). If it still fails, enable Apps Script API on the script’s Cloud project, then Authorize again.';
+        } else if (setup.triggerState === 'missing') {
+          hint.textContent = 'Weekly report is on, but the trigger is not created yet. Click Authorize again, or save the notification settings.';
+        } else if (setup.triggerState === 'off') {
+          hint.textContent = 'Weekly report is off, so the trigger stays unscheduled. Turn the weekly report on if you want that email.';
         } else {
           hint.textContent = 'Sign in as the deployer Google account, then authorize once (Mail, ScriptApp, Calendar, and Publish API).';
         }
@@ -520,12 +531,21 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[15px]">progress_activity</span><span>…</span>';
       }
+      const releaseAuthButton = function() {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = authBtnHtml;
+        }
+      };
+      const onStall = function() {
+        releaseAuthButton();
+        document.removeEventListener('lsc-action-stalled', onStall);
+      };
+      document.addEventListener('lsc-action-stalled', onStall);
       google.script.run
         .withSuccessHandler((res) => {
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = authBtnHtml;
-          }
+          document.removeEventListener('lsc-action-stalled', onStall);
+          releaseAuthButton();
           if (!res || !res.success) {
             if (res && res.authorizationUrl) {
               this.openAuthorizationUrl(res.authorizationUrl);
@@ -542,10 +562,8 @@
           this.refreshDeployStatus();
         })
         .withFailureHandler((err) => {
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = authBtnHtml;
-          }
+          document.removeEventListener('lsc-action-stalled', onStall);
+          releaseAuthButton();
           const msg = err && err.message ? err.message : 'Authorization failed.';
           this.showToast(msg, true);
         })

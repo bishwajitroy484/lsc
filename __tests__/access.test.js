@@ -17,6 +17,8 @@ describe('Access control foundation', () => {
   test('API_Access exposes session, authorize, and user management APIs', () => {
     expect(accessSrc).toContain('function api_getSession');
     expect(accessSrc).toContain('function api_authorizeServices');
+    expect(accessSrc).toContain('syncNotificationTriggers_');
+    expect(accessSrc).toContain('triggerState');
     expect(accessSrc).toContain('calendarOk');
     expect(accessSrc).toContain('deployApiOk');
     expect(accessSrc).toContain('probeCalendarAccess_');
@@ -45,6 +47,8 @@ describe('Access control foundation', () => {
     expect(globalState).toContain('redeemInvite');
     expect(globalState).not.toContain('requestLoginCode');
     expect(globalState).toContain('ActionProgress');
+    expect(globalState).toContain('lsc-action-stalled');
+    expect(globalState).toContain('45000');
   });
 
   test('permission presets include Admin Manager Viewer module CRUD', () => {
