@@ -409,6 +409,9 @@ describe('Dashboard Module', () => {
     const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
 
     expect(view).toContain('id="multi-select-menu" onclick="event.stopPropagation()"');
+    expect(view).toContain('right-0 w-full');
+    expect(view).toContain('[scrollbar-gutter:stable]');
+    expect(view).not.toContain('xl:left-0');
     expect(view).toContain('overflow-y-auto');
     expect(view).toContain('DashboardState.handleModeSwitch()');
     expect(script).toContain('const scrollTop = menu.scrollTop');

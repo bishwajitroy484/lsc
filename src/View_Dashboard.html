@@ -14,12 +14,12 @@
         <option value="Quarterly">Quarterly</option>
       </select>
 
-      <div class="relative w-full">
+      <div class="relative w-full xl:w-36 shrink-0">
         <button onclick="event.stopPropagation(); document.getElementById('multi-select-menu').classList.toggle('hidden')" class="w-full bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 shadow-sm cursor-pointer flex items-center justify-between relative">
           <span id="multi-select-label" class="truncate">All Selected</span>
           <span class="material-symbols-rounded text-[14px] absolute right-1.5 text-slate-500">expand_more</span>
         </button>
-        <div id="multi-select-menu" onclick="event.stopPropagation()" class="hidden absolute top-full mt-1 right-0 xl:left-0 w-[140px] md:w-[150px] bg-white border border-slate-200 shadow-lg rounded-lg max-h-48 overflow-y-auto overscroll-contain z-40 p-2"></div>
+        <div id="multi-select-menu" onclick="event.stopPropagation()" class="hidden absolute top-full mt-1 right-0 w-full bg-white border border-slate-200 shadow-lg rounded-lg max-h-48 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-gutter:stable] z-40 p-2"></div>
       </div>
     </div>
   </header>
@@ -53,7 +53,7 @@
       </div>
       <div class="h-7 flex items-center mb-1 min-w-0"><h2 id="kpi-net" class="text-lg sm:text-xl md:text-2xl font-bold text-red-900 leading-none truncate">--</h2></div>
       <div id="kpi-net-forecast-container" class="mt-auto border-t border-red-200/50 pt-2 min-h-[26px] flex items-center justify-between text-[11px]">
-        <span class="text-red-600/80 font-semibold text-[10px] uppercase tracking-wider">Projected</span>
+        <span class="text-red-600/80 font-semibold text-[11px] sm:text-xs">Projected</span>
         <span id="kpi-net-forecast" class="font-bold text-red-950 bg-white/80 px-2 py-0.5 rounded border border-red-200/60 leading-none shadow-xs">--</span>
       </div>
     </div>

@@ -292,7 +292,7 @@
       const isMonthly = mode === 'Monthly';
       const avgTitle = document.getElementById('kpi-avg-title');
       if (avgTitle) {
-          avgTitle.innerText = isMonthly ? 'MONTHLY AVG' : 'QUARTERLY AVG';
+          avgTitle.innerText = isMonthly ? 'Monthly Avg' : 'Quarterly Avg';
       }
 
       // Calculate Staff Cost for the selected year and selected periods from staffMetrics
@@ -971,7 +971,7 @@
         if (btn) {
           if (name === 'staff') btn.classList.toggle('hidden', !canSt);
           if (name === 'expenses') btn.classList.toggle('hidden', !canExp);
-          btn.className = 'exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors ' +
+          btn.className = 'exp-list-tab flex-1 xl:flex-none text-center px-2 xl:px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors ' +
             (active ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700');
         }
         if (panel) {
