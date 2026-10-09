@@ -9,7 +9,7 @@
     <div class="grid grid-cols-3 xl:flex xl:flex-nowrap items-center gap-1.5 sm:gap-2 w-full xl:w-auto mt-2 xl:mt-0 md:mr-4 xl:mr-8 min-w-0">
       <select id="filter-year" onchange="DashboardState.onFilterChange()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 shadow-sm cursor-pointer focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]"></select>
       
-      <select id="filter-mode" onchange="DashboardState.onFilterChange()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 shadow-sm cursor-pointer focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+      <select id="filter-mode" onchange="DashboardState.handleModeSwitch()" class="w-full appearance-none bg-white pl-2 pr-6 py-1.5 rounded-lg border border-slate-200 text-[10px] md:text-xs font-semibold text-slate-700 shadow-sm cursor-pointer focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
         <option value="Monthly">Monthly</option>
         <option value="Quarterly">Quarterly</option>
       </select>
@@ -19,7 +19,7 @@
           <span id="multi-select-label" class="truncate">All Selected</span>
           <span class="material-symbols-rounded text-[14px] absolute right-1.5 text-slate-500">expand_more</span>
         </button>
-        <div id="multi-select-menu" class="hidden absolute top-full mt-1 right-0 xl:left-0 w-[140px] md:w-[150px] bg-white border border-slate-200 shadow-lg rounded-lg max-h-48 overflow-y-auto z-40 p-2"></div>
+        <div id="multi-select-menu" onclick="event.stopPropagation()" class="hidden absolute top-full mt-1 right-0 xl:left-0 w-[140px] md:w-[150px] bg-white border border-slate-200 shadow-lg rounded-lg max-h-48 overflow-y-auto overscroll-contain z-40 p-2"></div>
       </div>
     </div>
   </header>
@@ -30,10 +30,19 @@
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
         <div class="w-6 h-6 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">group</span></div>
         <p class="text-[11px] sm:text-xs text-slate-500 font-semibold truncate min-w-0">Active Members</p>
-        <span class="metric-tip" tabindex="0" aria-label="About Active Members"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Count of members currently marked Active. Plan chips below show how those actives split across membership types.</span></span>
+        <span class="metric-tip" tabindex="0" aria-label="About Active Members"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Members whose membership covered the selected months or quarters. Plan chips split that same group into Quarterly, Ad-hoc, Trial, and other plans.</span></span>
       </div>
       <div class="h-7 flex items-center mb-1 min-w-0"><h2 id="kpi-active" class="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 leading-none truncate">--</h2></div>
       <div id="kpi-active-segregation" class="flex flex-wrap gap-1 mt-auto border-t border-slate-100 pt-2 min-h-[26px]"></div>
+    </div>
+        
+    <div class="bg-white p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-0 overflow-visible">
+      <div class="flex items-center gap-1.5 mb-2 min-w-0">
+        <div class="w-6 h-6 rounded bg-red-50 text-brand-primary flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance_wallet</span></div>
+        <p class="text-[11px] sm:text-xs text-slate-500 font-semibold truncate min-w-0">Total Collected</p>
+        <span class="metric-tip" tabindex="0" aria-label="About Total Collected"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Sum of member payments marked Paid/Completed in the selected year and months/quarters. Uses your Anchor or Split revenue recognition setting.</span></span>
+      </div>
+      <div class="h-7 flex items-center min-w-0"><h2 id="kpi-collected" class="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 leading-none truncate">--</h2></div>
     </div>
     
     <div class="bg-red-50 p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-red-100 flex flex-col justify-between min-w-0 overflow-visible">
@@ -44,25 +53,16 @@
       </div>
       <div class="h-7 flex items-center mb-1 min-w-0"><h2 id="kpi-net" class="text-lg sm:text-xl md:text-2xl font-bold text-red-900 leading-none truncate">--</h2></div>
       <div id="kpi-net-forecast-container" class="mt-auto border-t border-red-200/50 pt-2 min-h-[26px] flex items-center justify-between text-[11px]">
-        <span class="text-red-600/80 font-semibold text-[10px] uppercase tracking-wider">Remaining</span>
+        <span class="text-red-600/80 font-semibold text-[10px] uppercase tracking-wider">Projected</span>
         <span id="kpi-net-forecast" class="font-bold text-red-950 bg-white/80 px-2 py-0.5 rounded border border-red-200/60 leading-none shadow-xs">--</span>
       </div>
     </div>
     
     <div class="bg-white p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-0 overflow-visible">
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
-        <div class="w-6 h-6 rounded bg-red-50 text-brand-primary flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance_wallet</span></div>
-        <p class="text-[11px] sm:text-xs text-slate-500 font-semibold truncate min-w-0">Total Collected</p>
-        <span class="metric-tip" tabindex="0" aria-label="About Total Collected"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Sum of member payments marked Paid/Completed in the selected year and months/quarters. Uses your Anchor or Split revenue recognition setting.</span></span>
-      </div>
-      <div class="h-7 flex items-center min-w-0"><h2 id="kpi-collected" class="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 leading-none truncate">--</h2></div>
-    </div>
-    
-    <div class="bg-white p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-0 overflow-visible">
-      <div class="flex items-center gap-1.5 mb-2 min-w-0">
         <div class="w-6 h-6 rounded bg-red-50 text-red-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">error</span></div>
         <p class="text-[11px] sm:text-xs text-slate-500 font-semibold truncate min-w-0">Overdue Amount</p>
-        <span class="metric-tip" tabindex="0" aria-label="About Overdue Amount"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Estimated unpaid dues for active members whose next renewal date is already past, limited to amounts falling in the selected year.</span></span>
+        <span class="metric-tip" tabindex="0" aria-label="About Overdue Amount"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Estimated unpaid dues whose billing month falls in the selected months or quarters.</span></span>
       </div>
       <div class="h-7 flex items-center min-w-0"><h2 id="kpi-overdue" class="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 leading-none truncate">--</h2></div>
     </div>
@@ -98,9 +98,9 @@
   </div>
 
   
-  <div class="px-3 sm:px-4 md:px-5 grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4 min-w-0">
+  <div class="px-3 sm:px-4 md:px-5 grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4 min-w-0 items-stretch">
     <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
-      <div class="flex flex-row items-center justify-between mb-3 w-full flex-nowrap gap-1 shrink-0 min-w-0">
+      <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Revenue vs Expenses</h3>
           <span class="metric-tip" tabindex="0" aria-label="About Revenue vs Expenses"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Compares recognized member collections against total operating expenses for each selected month or quarter.</span></span>
@@ -114,12 +114,12 @@
         <div id="chart-rev-exp" class="absolute inset-0"></div>
       </div>
     </div>
-    
+
     <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
-      <div class="flex flex-row items-center justify-between mb-3 w-full flex-nowrap gap-1 shrink-0 min-w-0">
+      <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Members by Batch</h3>
-          <span class="metric-tip" tabindex="0" aria-label="About Members by Batch"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">How many active members sit in each batch (for example Morning/Evening). Inactive members are excluded.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Members by Batch"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Members covered by the selected months or quarters, grouped by batch. People who were not members in that window are left out.</span></span>
         </div>
         <div class="flex items-center gap-1 text-slate-400 shrink-0">
           <button onclick="window.toggleDataLabels('batch', this)" class="text-brand-primary p-0.5 rounded transition-colors" title="Toggle value labels"><span class="material-symbols-rounded text-[16px]">label</span></button>
@@ -130,7 +130,7 @@
         <div id="chart-batch" class="absolute inset-0"></div>
       </div>
     </div>
-    
+
     <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1.5 min-w-0">
@@ -162,12 +162,9 @@
         <div id="chart-prediction" class="absolute inset-0"></div>
       </div>
     </div>
-  </div>
 
-  
-  <div class="px-3 sm:px-4 md:px-5 grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3 md:gap-4 mb-4 min-w-0">
     <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
-      <div class="flex flex-row items-center justify-between mb-3 w-full flex-nowrap gap-1 shrink-0 min-w-0">
+      <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Collection Trend</h3>
           <span class="metric-tip" tabindex="0" aria-label="About Collection Trend"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Period-by-period paid collections vs estimated overdue dues. Helps see whether money coming in is keeping up with unpaid renewals.</span></span>
@@ -186,9 +183,9 @@
         <div id="chart-trend" class="absolute inset-0"></div>
       </div>
     </div>
-    
+
     <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
-      <div class="flex flex-row items-center justify-between mb-3 w-full flex-nowrap gap-1 shrink-0 min-w-0">
+      <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Expense Breakdown</h3>
           <span class="metric-tip" tabindex="0" aria-label="About Expense Breakdown"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Share of operating spend by category in the selected periods, including staff cost. Use View Misc to drill into miscellaneous expense details.</span></span>
@@ -203,18 +200,18 @@
         <div id="chart-expense-breakdown" class="absolute inset-0"></div>
       </div>
     </div>
-  </div>
 
-  <div id="dash-birthdays" class="hidden px-3 sm:px-4 md:px-5 mb-4 min-w-0">
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-      <div class="px-3 py-2 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-2">
-        <h3 class="font-bold text-xs md:text-sm text-slate-800 flex items-center gap-1.5 min-w-0">
-          <span class="material-symbols-rounded text-pink-500 text-[16px] shrink-0">cake</span>
-          <span class="truncate">Birthdays this week</span>
+    <div id="dash-birthdays" class="bg-gradient-to-b from-rose-50 via-amber-50/70 to-white rounded-xl shadow-sm border border-rose-100 overflow-hidden flex flex-col h-full min-w-0 min-h-[220px]">
+      <div class="px-3 py-2.5 border-b border-rose-100 bg-white/70 flex items-center justify-between gap-2 shrink-0">
+        <h3 class="font-bold text-sm text-slate-800 flex items-center gap-1.5 min-w-0">
+          <span class="text-base leading-none shrink-0" aria-hidden="true">🎂</span>
+          <span class="truncate">Upcoming birthdays</span>
         </h3>
-        <span id="dash-birthdays-count" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 border border-pink-100 shrink-0">0</span>
+        <span id="dash-birthdays-count" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 shrink-0">0</span>
       </div>
-      <div id="dash-birthdays-list" class="flex flex-wrap gap-2 p-3"></div>
+      <p class="px-3 pt-2 text-[10px] text-fuchsia-600 font-semibold shrink-0">Members and staff · this month and the next two</p>
+      <div id="dash-birthdays-list" class="flex-1 overflow-y-auto no-scrollbar p-2 space-y-2 min-h-0"></div>
+      <span class="hidden from-amber-100 via-rose-50 to-fuchsia-50 ring-amber-300 bg-amber-400 text-amber-950 bg-rose-100 text-rose-700 text-amber-800 text-rose-600 text-amber-600 text-fuchsia-600 text-violet-600 bg-indigo-50 text-indigo-700 border-indigo-100 bg-sky-50 text-sky-500 bg-amber-50 text-amber-500"></span>
     </div>
   </div>
 

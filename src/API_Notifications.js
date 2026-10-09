@@ -545,10 +545,76 @@ function api_previewNotificationEmail(type, draftConfig) {
  * Sends a sample receipt or weekly report email to the signed-in admin inbox.
  * Uses current (unsaved) draft templates from the Settings form when provided.
  */
+function escapeNotificationHtml_(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function fillWhatsAppSample_(template, kind, gymName) {
+  const gym = gymName || 'LSC';
+  const sample = {
+    name: 'Supreet Kaur',
+    amount: '₹30,000',
+    duedate: '10-Oct-2026',
+    due: '10-Oct-2026',
+    days: kind === 'waoverdue' ? '3' : '2',
+    plan: 'Quarterly',
+    gym: gym,
+    gymname: gym
+  };
+  return String(template || '').replace(/\{\{\s*([a-zA-Z]+)\s*\}\}/g, function(_, raw) {
+    const key = String(raw || '').toLowerCase();
+    return sample[key] != null ? sample[key] : '';
+  });
+}
+
+function defaultWhatsAppBody_(kind) {
+  if (kind === 'waoverdue') {
+    return 'Hi {{name}},\n\nThis is a friendly reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} was due on {{dueDate}} and is now overdue by {{days}} day(s).\n\nPlease complete the payment at your earliest convenience. Thank you!';
+  }
+  return 'Hi {{name}},\n\nA quick reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} is due on {{dueDate}} ({{days}} day(s) left).\n\nPlease arrange payment before the due date. Thank you!';
+}
+
 function api_sendTestNotificationEmail(type, draftConfig) {
   try {
     const gate = requirePermission_('settings', 'edit');
     if (!gate.ok) return gate.response;
+
+    const kindKey = String(type || '').toLowerCase();
+    if (kindKey === 'waoverdue' || kindKey === 'waupcoming') {
+      const draft = draftConfig || {};
+      const gymName = String(draft.gymName || '').trim() || 'LSC';
+      const stored = kindKey === 'waoverdue' ? draft.waOverdueBody : draft.waUpcomingBody;
+      const template = String(stored || '').trim() || defaultWhatsAppBody_(kindKey);
+      const text = fillWhatsAppSample_(template, kindKey, gymName);
+      const label = kindKey === 'waoverdue' ? 'Overdue WhatsApp' : 'Upcoming WhatsApp';
+      const recipient = String(
+        (gate.context && gate.context.email) ||
+        draft.ownerEmail ||
+        ''
+      ).trim();
+      if (!recipient || recipient.indexOf('@') < 0) {
+        return {
+          success: false,
+          error: 'No inbox email available. Sign in with your Google account, or set Owner email under Settings → General.'
+        };
+      }
+      const subject = '[TEST] ' + label;
+      const htmlBody =
+        '<div style="font-family:Arial,sans-serif;color:#0f172a;padding:22px">' +
+        '<div style="margin:0 0 16px;padding:10px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;color:#92400e;font-size:13px;font-weight:600">This is a test email from LSC Settings. No member was notified on WhatsApp.</div>' +
+        '<p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#64748b">' + label + '</p>' +
+        '<pre style="margin:0;white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.5">' + escapeNotificationHtml_(text) + '</pre>' +
+        '</div>';
+      MailApp.sendEmail({ to: recipient, subject: subject, htmlBody: htmlBody });
+      return {
+        success: true,
+        message: 'Test ' + label + ' email sent to ' + recipient + '.',
+        data: { to: recipient, subject: subject, type: kindKey }
+      };
+    }
 
     const config = mergeNotificationDraftConfig_(draftConfig);
     const built = buildSampleNotificationMail_(type, config);

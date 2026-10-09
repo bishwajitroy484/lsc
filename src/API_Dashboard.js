@@ -116,6 +116,8 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
     }
     const chartMetrics = formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today, expenseAverages, actualAnchor);
     const expenseBreakdown = formatExpenseBreakdown(financialData, mode, periods);
+    const membership = summarizeMembershipForPeriods_(members, targetYear, mode, periods, resolveName, dropDowns);
+    const periodOverdue = (chartMetrics.filteredOverdue || []).reduce((sum, value) => sum + (Number(value) || 0), 0);
 
     // Dynamic Greeting Name Extraction based on Login Email
     const email = Session.getActiveUser().getEmail() || "User";
@@ -129,11 +131,11 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
         currencyFormat: currencyFormat,
         userGreetingName: formattedName,
         kpis: {
-          activeMembers: operationalData.activeCount || 0,
-          activeSegregation: operationalData.activeSegregation,
+          activeMembers: membership.activeCount || 0,
+          activeSegregation: membership.activeSegregation,
           staffCount: operationalData.staffCount || 0,
           membersCollected: chartMetrics.membersCollected || 0,
-          overdueAmount: operationalData.snapOverdueAmt || 0,
+          overdueAmount: Number(periodOverdue.toFixed(2)),
           businessExpenses: (chartMetrics.totalOperatingExpenses - chartMetrics.staffCost) || 0,
           staffCost: chartMetrics.staffCost || 0,
           totalOperatingExpenses: chartMetrics.totalOperatingExpenses || 0,
@@ -145,8 +147,8 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
           categories: chartMetrics.filteredLabels,
           revenue: chartMetrics.filteredRev,
           expenses: chartMetrics.filteredExp,
-          batchLabels: operationalData.batchLabels,
-          batchData: operationalData.batchData,
+          batchLabels: membership.batchLabels,
+          batchData: membership.batchData,
           prediction: {
             categories: chartMetrics.predictionLabels,
             actual: chartMetrics.actualNetArr,
@@ -166,8 +168,8 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
           },
           staffTrend: chartMetrics.filteredStaff
         },
-        overdue: operationalData.overdueList,
-        upcoming: operationalData.upcomingList,
+        overdue: filterDashboardRowsToPeriods_(operationalData.overdueList, mode, periods, targetYear),
+        upcoming: filterDashboardRowsToPeriods_(operationalData.upcomingList, mode, periods, targetYear),
         birthdays: operationalData.birthdayList || []
       }
     };
@@ -430,6 +432,30 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
   };
 
   const birthdayList = [];
+  const bdayMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const bdayMonthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const bdayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const bdayEnd = new Date(today.getFullYear(), today.getMonth() + 3, 0);
+  bdayEnd.setHours(23, 59, 59, 999);
+  const pushUpcomingBirthday = (person, kind) => {
+    if (!person || !person.dob) return;
+    const dob = parseSafeDate(person.dob);
+    if (isNaN(dob.getTime())) return;
+    let nextBday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+    if (nextBday < bdayStart) nextBday = new Date(today.getFullYear() + 1, dob.getMonth(), dob.getDate());
+    if (nextBday < bdayStart || nextBday > bdayEnd) return;
+    const daysUntil = Math.round((new Date(nextBday.getFullYear(), nextBday.getMonth(), nextBday.getDate()).getTime() - bdayStart.getTime()) / 86400000);
+    birthdayList.push({
+      kind: kind,
+      memberId: kind === 'member' ? (person.memberId || '') : '',
+      staffId: kind === 'staff' ? (person.staffId || '') : '',
+      name: person.fullName || 'Unknown',
+      date: String(nextBday.getDate()).padStart(2, '0') + '-' + bdayMonths[nextBday.getMonth()],
+      day: nextBday.getDate(),
+      month: bdayMonthNames[nextBday.getMonth()],
+      days: daysUntil
+    });
+  };
 
   members.forEach(m => {
     const statusName = resolveName('MEMBERS', 'status', m.status).toLowerCase();
@@ -443,25 +469,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
 
       const pName = resolveName('MEMBERS', 'membershipId', m.membershipId);
       activeSegregation[pName] = (activeSegregation[pName] || 0) + 1;
-
-      if (m.dob) {
-        const dob = parseSafeDate(m.dob);
-        if (!isNaN(dob.getTime())) {
-          const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          let nextBday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
-          if (nextBday < start) nextBday = new Date(today.getFullYear() + 1, dob.getMonth(), dob.getDate());
-          const daysUntil = Math.round((nextBday.getTime() - start.getTime()) / 86400000);
-          if (daysUntil >= 0 && daysUntil <= 7) {
-            const bdayMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            birthdayList.push({
-              memberId: m.memberId || '',
-              name: m.fullName || 'Unknown',
-              date: String(nextBday.getDate()).padStart(2, '0') + '-' + bdayMonths[nextBday.getMonth()],
-              days: daysUntil
-            });
-          }
-        }
-      }
+      pushUpcomingBirthday(m, 'member');
     }
 
     const joinDate = parseSafeDate(m.joinDate);
@@ -597,6 +605,12 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
            }
        }
     }
+  });
+
+  (staff || []).forEach(s => {
+    const sName = resolveName('STAFF', 'status', s.status).toLowerCase();
+    if (sName.includes('inactive') || sName.includes('in-active') || sName.includes('exit')) return;
+    pushUpcomingBirthday(s, 'staff');
   });
 
   overdueList.sort((a, b) => b.days - a.days);
@@ -773,6 +787,82 @@ function safeNullableNumArray(arr) {
 
 function safeNumArray(arr) { 
   return arr.map(v => (isNaN(v) || v == null) ? 0 : Number(Number(v).toFixed(2))); 
+}
+
+function selectedMonthIndexes_(mode, periods) {
+  const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const quarterLabels = ['Q1 (JFM)', 'Q2 (AMJ)', 'Q3 (JAS)', 'Q4 (OND)'];
+  const isQuarterly = String(mode || '').toLowerCase() === 'quarterly';
+  const available = isQuarterly ? quarterLabels : monthLabels;
+  const requested = Array.isArray(periods) ? periods : (periods ? [periods] : []);
+  const active = requested.length ? requested.map(function(period) { return String(period); }) : available.slice();
+  const months = [];
+  available.forEach(function(label, index) {
+    const shortName = label.split(' ')[0];
+    if (active.indexOf(label) < 0 && active.indexOf(shortName) < 0) return;
+    if (isQuarterly) months.push(index * 3, index * 3 + 1, index * 3 + 2);
+    else months.push(index);
+  });
+  return months;
+}
+
+function memberWasActiveInMonths_(member, resolveName, targetYear, monthIndexes) {
+  if (!member || !monthIndexes.length) return false;
+  const statusName = String(resolveName('MEMBERS', 'status', member.status) || '').toLowerCase();
+  const isInactive = statusName.includes('inactive') || statusName.includes('in-active') || statusName.includes('exit');
+  const join = parseSafeDate(member.joinDate);
+  const start = isNaN(join.getTime()) ? new Date(targetYear, 0, 1) : join;
+  let end;
+  if (isInactive) {
+    const exit = parseSafeDate(member.exitDate);
+    if (isNaN(exit.getTime())) return false;
+    end = exit;
+  } else {
+    end = new Date(targetYear, 11, 31, 23, 59, 59, 999);
+  }
+  return monthIndexes.some(function(monthIndex) {
+    const monthStart = new Date(targetYear, monthIndex, 1);
+    const monthEnd = new Date(targetYear, monthIndex + 1, 0, 23, 59, 59, 999);
+    return start <= monthEnd && end >= monthStart;
+  });
+}
+
+function summarizeMembershipForPeriods_(members, targetYear, mode, periods, resolveName, dropDowns) {
+  const monthIndexes = selectedMonthIndexes_(mode, periods);
+  const activeSegregation = {};
+  const batchCounts = {};
+  let activeCount = 0;
+  const batchOptions = (dropDowns && (dropDowns.batch || dropDowns.Batch_Options)) || [];
+
+  (members || []).forEach(function(member) {
+    if (!memberWasActiveInMonths_(member, resolveName, targetYear, monthIndexes)) return;
+    activeCount++;
+    const planName = resolveName('MEMBERS', 'membershipId', member.membershipId) || 'Unknown';
+    activeSegregation[planName] = (activeSegregation[planName] || 0) + 1;
+    const match = batchOptions.find(function(option) {
+      return String(option.id).trim() === String(member.batchId || '').trim();
+    });
+    const timeName = match ? (match.name || match.label) : resolveName('MEMBERS', 'batchId', member.batchId);
+    const groupName = match ? (match.group || match.Group || '') : '';
+    const batchLabel = groupName ? (timeName + ' (' + groupName + ')') : (timeName || 'Unknown');
+    batchCounts[batchLabel] = (batchCounts[batchLabel] || 0) + 1;
+  });
+
+  return {
+    activeCount: activeCount,
+    activeSegregation: activeSegregation,
+    batchLabels: Object.keys(batchCounts),
+    batchData: safeNumArray(Object.values(batchCounts))
+  };
+}
+
+function filterDashboardRowsToPeriods_(rows, mode, periods, targetYear) {
+  const monthIndexes = selectedMonthIndexes_(mode, periods);
+  return (rows || []).filter(function(row) {
+    const due = parseSafeDate(row && (row.date || row.dueDate));
+    if (isNaN(due.getTime())) return false;
+    return due.getFullYear() === Number(targetYear) && monthIndexes.indexOf(due.getMonth()) >= 0;
+  });
 }
 
 function parseAmt(val) { return Number(String(val).replace(/[^0-9.-]+/g, "")) || 0; }

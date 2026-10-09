@@ -1434,7 +1434,9 @@
         receiptBody: (document.getElementById('gen-NOTIFY_RECEIPT_BODY') || {}).value || '',
         weeklySubject: (document.getElementById('gen-NOTIFY_WEEKLY_SUBJECT') || {}).value || '',
         weeklyIntro: (document.getElementById('gen-NOTIFY_WEEKLY_INTRO') || {}).value || '',
-        weeklyFields: this.getWeeklyFieldsFromUI()
+        weeklyFields: this.getWeeklyFieldsFromUI(),
+        waOverdueBody: (document.getElementById('gen-NOTIFY_WA_OVERDUE') || {}).value || '',
+        waUpcomingBody: (document.getElementById('gen-NOTIFY_WA_UPCOMING') || {}).value || ''
       };
     },
 
@@ -1545,8 +1547,15 @@
     },
 
     sendTestNotificationEmail: function(type) {
-      const kind = type === 'weekly' ? 'weekly' : 'receipt';
-      const btnId = kind === 'weekly' ? 'btn-test-weekly-email' : 'btn-test-receipt-email';
+      const kinds = {
+        weekly: { kind: 'weekly', btn: 'btn-test-weekly-email' },
+        waOverdue: { kind: 'waOverdue', btn: 'btn-test-wa-overdue' },
+        waUpcoming: { kind: 'waUpcoming', btn: 'btn-test-wa-upcoming' },
+        receipt: { kind: 'receipt', btn: 'btn-test-receipt-email' }
+      };
+      const spec = kinds[type] || kinds.receipt;
+      const kind = spec.kind;
+      const btnId = spec.btn;
       const btn = document.getElementById(btnId);
       const originalHtml = btn ? btn.innerHTML : '';
       if (btn) {

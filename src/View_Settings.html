@@ -555,6 +555,11 @@
                 </div>
                 <input type="hidden" id="gen-NOTIFY_WEEKLY_SUBJECT">
                 <textarea id="gen-NOTIFY_WEEKLY_INTRO" class="hidden"></textarea>
+                <p class="text-[10px] text-red-900 px-0.5">
+                  To: <strong id="notification-summary-email">Owner email</strong>
+                  <span class="text-red-700/70"> · </span>
+                  <strong id="notification-summary-freq">Monday 08:00 AM · 7 days</strong>
+                </p>
               </div>
 
               <div class="p-2.5 md:p-3.5 bg-white border border-slate-200 rounded-xl space-y-2">
@@ -570,6 +575,9 @@
                   </button>
                   <button type="button" onclick="SettingsApp.previewWhatsAppMessage('waOverdue')" class="flex-1 min-w-[88px] h-8 px-2 bg-red-50 border border-red-100 hover:bg-red-100 text-red-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
                     <span class="material-symbols-rounded text-[15px]">visibility</span><span>Preview</span>
+                  </button>
+                  <button type="button" id="btn-test-wa-overdue" onclick="SettingsApp.sendTestNotificationEmail('waOverdue')" class="flex-1 min-w-[88px] h-8 px-2 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 text-emerald-800 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">outgoing_mail</span><span>Send test</span>
                   </button>
                 </div>
                 <textarea id="gen-NOTIFY_WA_OVERDUE" class="hidden"></textarea>
@@ -589,15 +597,12 @@
                   <button type="button" onclick="SettingsApp.previewWhatsAppMessage('waUpcoming')" class="flex-1 min-w-[88px] h-8 px-2 bg-red-50 border border-red-100 hover:bg-red-100 text-red-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
                     <span class="material-symbols-rounded text-[15px]">visibility</span><span>Preview</span>
                   </button>
+                  <button type="button" id="btn-test-wa-upcoming" onclick="SettingsApp.sendTestNotificationEmail('waUpcoming')" class="flex-1 min-w-[88px] h-8 px-2 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 text-emerald-800 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <span class="material-symbols-rounded text-[15px]">outgoing_mail</span><span>Send test</span>
+                  </button>
                 </div>
                 <textarea id="gen-NOTIFY_WA_UPCOMING" class="hidden"></textarea>
               </div>
-
-              <p class="text-[10px] text-red-900 px-0.5">
-                To: <strong id="notification-summary-email">Owner email</strong>
-                <span class="text-red-700/70"> · </span>
-                <strong id="notification-summary-freq">Monday 08:00 AM · 7 days</strong>
-              </p>
             </div>
           </div>
         </div>
