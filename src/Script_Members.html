@@ -196,6 +196,67 @@
 
     parseToISODate: AppUtils.parseToISODate,
 
+    paymentSplitFromFields: function(amount, cashValue, upiValue) {
+      const total = Math.round((Number(amount) || 0) * 100) / 100;
+      const cash = Math.round((Number(cashValue) || 0) * 100) / 100;
+      const upi = Math.round((Number(upiValue) || 0) * 100) / 100;
+      if (Math.abs(Math.round((cash + upi) * 100) / 100 - total) > 0.05) {
+        Toast.error('Cash and UPI must add up to the amount paid.');
+        return null;
+      }
+      const modes = this.dropdowns.paymentmode || [];
+      const findMode = function(word) {
+        const hit = modes.find(function(item) {
+          return String(item.name || item.label || '').toLowerCase().indexOf(word) >= 0;
+        });
+        return hit ? (hit.id || hit.value || hit.name) : '';
+      };
+      let paymentMode = 'Split';
+      if (cash > 0 && upi <= 0) paymentMode = findMode('cash') || 'Cash';
+      else if (upi > 0 && cash <= 0) paymentMode = findMode('upi') || 'UPI';
+      return { cashAmount: cash, upiAmount: upi, paymentMode: paymentMode };
+    },
+
+    paymentSplitLabel: function(payment) {
+      if (!payment) return '';
+      const cashSet = payment.cashAmount !== undefined && payment.cashAmount !== null && String(payment.cashAmount).trim() !== '';
+      const upiSet = payment.upiAmount !== undefined && payment.upiAmount !== null && String(payment.upiAmount).trim() !== '';
+      if (cashSet || upiSet) {
+        const parts = [];
+        const cash = Number(payment.cashAmount) || 0;
+        const upi = Number(payment.upiAmount) || 0;
+        if (cash) parts.push('Cash ' + AppUtils.formatCurrency(cash));
+        if (upi) parts.push('UPI ' + AppUtils.formatCurrency(upi));
+        if (parts.length) return parts.join(' · ');
+      }
+      return this.getName('paymentmode', payment.paymentMode) || payment.paymentMode || '';
+    },
+
+    fillPaymentSplitFields: function(cashId, upiId, payment, amount) {
+      const cashEl = document.getElementById(cashId);
+      const upiEl = document.getElementById(upiId);
+      if (!cashEl || !upiEl) return;
+      const cashSet = payment && payment.cashAmount !== undefined && payment.cashAmount !== null && String(payment.cashAmount).trim() !== '';
+      const upiSet = payment && payment.upiAmount !== undefined && payment.upiAmount !== null && String(payment.upiAmount).trim() !== '';
+      if (cashSet || upiSet) {
+        cashEl.value = Number(payment.cashAmount) || 0;
+        upiEl.value = Number(payment.upiAmount) || 0;
+        return;
+      }
+      const modeName = payment ? String(this.getName('paymentmode', payment.paymentMode) || payment.paymentMode || '').toLowerCase() : '';
+      const total = Number(amount) || 0;
+      if (modeName.indexOf('upi') >= 0 || modeName.indexOf('gpay') >= 0 || modeName.indexOf('phonepe') >= 0) {
+        cashEl.value = 0;
+        upiEl.value = total;
+      } else if (modeName.indexOf('cash') >= 0 || !payment) {
+        cashEl.value = total;
+        upiEl.value = 0;
+      } else {
+        cashEl.value = 0;
+        upiEl.value = 0;
+      }
+    },
+
     onDropdownsLoaded: function(response) {
       if (!response || !response.success) {
         const errorText = (response && response.error) ? response.error : 'Failed to load configuration.';
@@ -208,15 +269,12 @@
       const plans = this.dropdowns.membership || [];
       const batches = this.dropdowns.batch || [];
       const statuses = this.dropdowns.status || [];
-      const modes = this.dropdowns.paymentmode || [];
       const payStatuses = this.dropdowns.paymentstatus || this.dropdowns.status || [];
       
       this.populateSelect('mem-plan', plans);
       this.populateSelect('mem-batch', batches, 'groups');
       this.populateSelect('mem-status', statuses);
-      this.populateSelect('pay-mode', modes);
       this.populateSelect('pay-status', payStatuses, null, 'Select Status...');
-      this.populateSelect('mem-pay-mode', modes);
       this.populateSelect('mem-pay-status', payStatuses);
       
       this.populateFilterStatus(statuses);
@@ -880,7 +938,7 @@
                   <div class="text-[9px] ${labelColor} font-bold mt-0.5">${p.cycleLabel}</div>
                   <div class="text-[9px] text-slate-500 mt-0.5">${vStartFmt} to ${vEndFmt}</div>
                 </td>
-                <td class="px-4 py-3"><div class="font-bold text-slate-800">${AppUtils.formatCurrency(pAmt)}</div><div class="text-[9px] text-slate-500">${p.paymentMode}</div></td>
+                <td class="px-4 py-3"><div class="font-bold text-slate-800">${AppUtils.formatCurrency(pAmt)}</div><div class="text-[9px] text-slate-500">${this.paymentSplitLabel(p)}</div></td>
                 <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${badgeClass}">${p.paymentStatus}</span></td>
                 <td class="px-4 py-3 text-right">
                   <div class="inline-flex items-center justify-end gap-1.5">
@@ -891,7 +949,7 @@
               </tr>
             `;
         } else {
-            const modeName = this.getName('paymentmode', p.paymentMode); 
+            const modeName = this.paymentSplitLabel(p); 
             const pStatusName = this.getName('paymentstatus', p.paymentStatus) || p.paymentStatus || 'Completed';
             let rcptHtml = p.receiptUrl ? `<a href="${p.receiptUrl}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1"><span class="material-symbols-rounded text-[12px] align-middle">link</span></a>` : '';
             
@@ -1107,7 +1165,6 @@
               document.getElementById('mem-record-pay').checked = false;
               document.getElementById('mem-pay-fields').classList.add('hidden');
               
-              this.populateSelect('mem-pay-mode', this.dropdowns.paymentmode || []);
               const statusOpts = this.dropdowns.paymentstatus || this.dropdowns.status || [];
               this.populateSelect('mem-pay-status', statusOpts);
               const paidOpt = statusOpts.find(opt => String(opt.name).toLowerCase() === 'paid' || String(opt.name).toLowerCase() === 'completed');
@@ -1198,12 +1255,24 @@
               else calcEnd.setMonth(calcEnd.getMonth() + 1);
           }
 
+          const initialSplit = this.paymentSplitFromFields(
+            payload.membershipAmount,
+            document.getElementById('mem-pay-cash').value,
+            document.getElementById('mem-pay-upi').value
+          );
+          if (!initialSplit) {
+            btn.innerHTML = 'Save Member';
+            btn.disabled = false;
+            return;
+          }
           payload.initialPayment = {
               amount: payload.membershipAmount,
               paidDate: joinFmt,
               startDate: joinFmt,
               endDate: this.formatDateDDMMMYYYY(calcEnd),
-              paymentMode: document.getElementById('mem-pay-mode').value,
+              paymentMode: initialSplit.paymentMode,
+              cashAmount: initialSplit.cashAmount,
+              upiAmount: initialSplit.upiAmount,
               paymentStatus: document.getElementById('mem-pay-status').value
           };
       }
@@ -1237,7 +1306,7 @@
     toggleInitialPaymentFields: function() {
       const enabled = document.getElementById('mem-record-pay')?.checked;
       const fields = document.getElementById('mem-pay-fields');
-      ['mem-pay-mode', 'mem-pay-status'].forEach(id => {
+      ['mem-pay-status'].forEach(id => {
         const field = document.getElementById(id);
         if (field) field.required = Boolean(enabled);
       });
@@ -1314,7 +1383,7 @@
           const rawAmt = String(payment.amount).replace(/[^0-9.-]+/g,"");
           document.getElementById('pay-amount').value = rawAmt ? Number(rawAmt) : '';
           
-          document.getElementById('pay-mode').value = document.getElementById('pay-mode').options[1]?.value || '';
+          this.fillPaymentSplitFields('pay-cash', 'pay-upi', null, rawAmt ? Number(rawAmt) : 0);
           
           const statusOpts = Array.from(document.getElementById('pay-status').options);
           const paidOpt = statusOpts.find(opt => opt.text.toLowerCase() === 'paid' || opt.text.toLowerCase() === 'completed');
@@ -1336,8 +1405,7 @@
           const rawAmt = payment ? String(payment.amount).replace(/[^0-9.-]+/g,"") : (m.membershipAmount ? String(m.membershipAmount).replace(/[^0-9.-]+/g,"") : '');
           document.getElementById('pay-amount').value = rawAmt ? Number(rawAmt) : '';
           
-          const modeOpt = document.getElementById('pay-mode').options[1]?.value || '';
-          document.getElementById('pay-mode').value = payment ? payment.paymentMode : modeOpt;
+          this.fillPaymentSplitFields('pay-cash', 'pay-upi', payment, rawAmt ? Number(rawAmt) : 0);
           
           const defaultStatusOpt = document.getElementById('pay-status').options[1]?.value || '';
           document.getElementById('pay-status').value = payment && payment.paymentStatus ? payment.paymentStatus : defaultStatusOpt;
@@ -1399,12 +1467,26 @@
       btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px] mr-2">progress_activity</span> Processing...';
       btn.disabled = true;
 
+      const amountPaid = Number(document.getElementById('pay-amount').value);
+      const split = this.paymentSplitFromFields(
+        amountPaid,
+        document.getElementById('pay-cash').value,
+        document.getElementById('pay-upi').value
+      );
+      if (!split) {
+        btn.innerHTML = 'Save Payment';
+        btn.disabled = false;
+        return;
+      }
+
       const payload = {
         paymentId: document.getElementById('pay-id').value,
         memberId: this.currentActiveMember.memberId,
-        amount: Number(document.getElementById('pay-amount').value),
+        amount: amountPaid,
         paidDate: this.formatDateDDMMMYYYY(document.getElementById('pay-date').value),
-        paymentMode: document.getElementById('pay-mode').value,
+        paymentMode: split.paymentMode,
+        cashAmount: split.cashAmount,
+        upiAmount: split.upiAmount,
         paymentStatus: statusVal, 
         startDate: this.formatDateDDMMMYYYY(document.getElementById('pay-start').value),
         endDate: this.formatDateDDMMMYYYY(document.getElementById('pay-end').value),

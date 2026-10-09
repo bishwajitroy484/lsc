@@ -17,7 +17,7 @@ var LSC_TOOLTIPS = {
     revenueVsExpenses: 'Compares recognized member collections against total operating expenses for each selected month or quarter.',
     membersByBatch: 'Members covered by the selected months or quarters, grouped by batch. People who were not members in that window are left out.',
     netInHandForecast: 'Solid line = cash already recognized (collections − expenses). Green dotted line adds renewals not yet collected from today onward, including later this month, and estimated future costs.',
-    collectionTrend: 'Period-by-period paid collections vs estimated overdue dues. Helps see whether money coming in is keeping up with unpaid renewals.',
+    cashVsUpi: 'How much of the recognized member collections arrived as cash and how much as UPI, for each selected month or quarter. A split payment is counted once: ₹10,000 cash and ₹20,000 UPI is one ₹30,000 collection.',
     expenseBreakdown: 'Share of operating spend by category in the selected periods, including staff cost. Use View Misc to drill into miscellaneous expense details.',
     overdueTable: 'Active members whose next renewal date is already past. Amount is the estimated unpaid dues; days show how late they are. Ad-hoc/trial plans are excluded.',
     upcomingTable: 'Active members due to renew within the next 7 days (including today). Amount is the expected renewal value for their plan. Ad-hoc/trial plans are excluded.'

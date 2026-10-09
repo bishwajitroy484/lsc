@@ -271,6 +271,51 @@ function mergeMemberUpdatePayload_(existing, incoming) {
   return merged;
 }
 
+function ensurePaymentSplitHeaders_() {
+  try {
+    if (typeof SpreadsheetApp === 'undefined' || typeof SPREADSHEET_ID === 'undefined') return false;
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName('PAYMENTS');
+    if (!sheet) return false;
+    const lastCol = Math.max(sheet.getLastColumn(), 1);
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0] || [];
+    ['cashAmount', 'upiAmount'].forEach(function(name) {
+      const present = headers.some(function(header) {
+        return String(header || '').replace(/\*/g, '').trim() === name;
+      });
+      if (!present) {
+        const col = sheet.getLastColumn() + 1;
+        sheet.getRange(1, col).setValue(name);
+        headers.push(name);
+      }
+    });
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function roundPaymentMoney_(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function applyPaymentSplit_(paymentData) {
+  if (!paymentData) return;
+  const cashRaw = paymentData.cashAmount;
+  const upiRaw = paymentData.upiAmount;
+  const cashSet = cashRaw !== undefined && cashRaw !== null && String(cashRaw).trim() !== '';
+  const upiSet = upiRaw !== undefined && upiRaw !== null && String(upiRaw).trim() !== '';
+  if (!cashSet && !upiSet) return;
+  const amount = roundPaymentMoney_(paymentData.amount);
+  const cash = roundPaymentMoney_(cashRaw);
+  const upi = roundPaymentMoney_(upiRaw);
+  if (Math.abs(roundPaymentMoney_(cash + upi) - amount) > 0.05) {
+    throw new Error('Cash and UPI must add up to the amount paid.');
+  }
+  paymentData.cashAmount = cash;
+  paymentData.upiAmount = upi;
+}
+
 function api_saveMember(memberData) {
   try {
     const isNew = !(memberData && memberData.memberId);
@@ -333,6 +378,8 @@ function api_saveMember(memberData) {
           initialPayment.updatedAt = now;
           initialPayment.updatedBy = userEmail;
           delete initialPayment.notes;
+          ensurePaymentSplitHeaders_();
+          applyPaymentSplit_(initialPayment);
           DB.create('PAYMENTS', initialPayment);
           if (typeof maybeSendPaymentReceipt_ === 'function') {
             maybeSendPaymentReceipt_(initialPayment);
@@ -452,6 +499,8 @@ function api_recordPayment(paymentData) {
     paymentData.updatedAt = now;
     paymentData.updatedBy = userEmail;
     delete paymentData.notes;
+    ensurePaymentSplitHeaders_();
+    applyPaymentSplit_(paymentData);
 
     let savedData;
     if (paymentData.paymentId) {

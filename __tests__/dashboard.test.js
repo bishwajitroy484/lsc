@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { parseSafeDate, distributeDailyProration } = require('../src/Utils_DB');
 
-function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = [], extraMembers = []) {
+function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = [], extraMembers = [], extraPayments = []) {
   const source = fs.readFileSync(path.join(__dirname, '../src/API_Dashboard.js'), 'utf8');
 
   return new Function(
@@ -35,7 +35,8 @@ function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = [], extra
           { memberId: 'MEM-1', paymentStatus: 'Paid', startDate: '2024-01-05', endDate: '2024-01-31', amount: 2500 },
           { memberId: 'MEM-1', paymentStatus: 'STATUS-OVERDUE', startDate: '2024-01-05', endDate: '2024-01-31', amount: 1500 },
           { memberId: 'MEM-2', paymentStatus: 'Paid', startDate: '2024-02-10', endDate: '2024-02-28', amount: 4000 },
-          { memberId: 'MEM-2', paymentStatus: 'Unpaid', startDate: '2024-03-01', endDate: '2024-03-31', amount: 4000 }
+          { memberId: 'MEM-2', paymentStatus: 'Unpaid', startDate: '2024-03-01', endDate: '2024-03-31', amount: 4000 },
+          ...extraPayments
         ],
         EXPENSES: [
           { categoryId: 'CAT-1', amount: 2500, date: '2024-01-15' },
@@ -68,6 +69,7 @@ function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = [], extra
         options: {
           membership: [{ id: 'PLAN-1', name: 'Monthly' }, { id: 'PLAN-2', name: 'Quarterly' }, { id: 'PLAN-3', name: 'Trial' }, { id: 'PLAN-4', name: 'Ad-hoc' }],
           paymentstatus: [{ id: 'STATUS-OVERDUE', name: 'Overdue' }],
+          paymentmode: [{ id: 'MODE-CASH', name: 'Cash' }, { id: 'MODE-UPI', name: 'UPI' }],
           batch: [{ id: 'B-1', name: 'Morning' }],
           status: [{ id: 'ACT', name: 'Active' }],
           expenseCats: [{ id: 'CAT-1', name: 'Rent' }, { id: 'CAT-2', name: 'Utilities' }, { id: 'CAT-3', name: 'Misc' }]
@@ -99,9 +101,47 @@ describe('Dashboard Module', () => {
     expect(response.data.charts).toHaveProperty('expenses');
     expect(response.data.kpis.membersCollected).toBe(6500);
     expect(response.data.charts.revenue).toEqual([2500, 4000]);
-    expect(response.data.charts.collectionTrend.collected).toEqual([2500, 4000]);
+    expect(response.data.charts.paymentModes.cash).toEqual([0, 0]);
+    expect(response.data.charts.paymentModes.upi).toEqual([0, 0]);
     expect(response.data.charts.expenseBreakdown.labels).toEqual(['Rent', 'Utilities', 'Staff Cost']);
     expect(response.data.charts.expenseBreakdown.series).toEqual([2500, 1300, 52000]);
+  });
+
+  test('a split cash and UPI payment is one collection in revenue, the chart, and net-in-hand', () => {
+    const dashboardApi = loadDashboardApi('anchor', [], [], [
+      {
+        memberId: 'MEM-1',
+        paymentStatus: 'Paid',
+        startDate: '2024-01-05',
+        endDate: '2024-01-31',
+        paidDate: '2024-01-05',
+        amount: 30000,
+        cashAmount: 10000,
+        upiAmount: 20000,
+        paymentMode: 'Split'
+      },
+      {
+        memberId: 'MEM-2',
+        paymentStatus: 'Paid',
+        startDate: '2024-02-10',
+        endDate: '2024-02-28',
+        paidDate: '2024-02-10',
+        amount: 4000,
+        paymentMode: 'MODE-UPI'
+      }
+    ]);
+    const response = dashboardApi.api_getDashboardMetrics('2024', 'Monthly', ['Jan', 'Feb']);
+    const charts = response.data.charts;
+    const kpis = response.data.kpis;
+
+    expect(charts.revenue[0]).toBeCloseTo(32500);
+    expect(charts.revenue[1]).toBeCloseTo(8000);
+    expect(charts.paymentModes.cash[0]).toBeCloseTo(10000);
+    expect(charts.paymentModes.upi[0]).toBeCloseTo(20000);
+    expect(charts.paymentModes.cash[1]).toBeCloseTo(0);
+    expect(charts.paymentModes.upi[1]).toBeCloseTo(4000);
+    expect(kpis.membersCollected).toBeCloseTo(40500);
+    expect(kpis.netInHand).toBeCloseTo(kpis.membersCollected - kpis.totalOperatingExpenses);
   });
 
   test('expense breakdown follows selected months and quarters', () => {
@@ -317,7 +357,7 @@ describe('Dashboard Module', () => {
   test('keeps the Net-In-Hand chart fixed as an area chart without a chart type selector', () => {
     const view = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
     const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
-    const predictionConfig = script.slice(script.indexOf('// 3. Net-In-Hand'), script.indexOf('// 4. Collection Trend'));
+    const predictionConfig = script.slice(script.indexOf('// 3. Net-In-Hand'), script.indexOf('// 4. Cash vs UPI'));
 
     expect(view).not.toContain('toggle-pred');
     expect(predictionConfig).toContain("type: 'area'");
@@ -439,7 +479,7 @@ describe('Dashboard Module', () => {
     const rev = view.indexOf('>Revenue vs Expenses<');
     const batch = view.indexOf('>Members by Batch<');
     const net = view.indexOf('>Net-In-Hand Forecast<');
-    const trend = view.indexOf('>Collection Trend<');
+    const trend = view.indexOf('>Cash vs UPI<');
     const expense = view.indexOf('>Expense Breakdown<');
     const birthdays = view.indexOf('Upcoming birthdays');
     expect(rev).toBeGreaterThan(-1);

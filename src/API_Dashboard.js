@@ -158,7 +158,10 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
             remainingForecastNet: chartMetrics.remainingForecastNet || 0,
             projectedNet: chartMetrics.projectedNet != null ? chartMetrics.projectedNet : ((chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0)
           },
-          collectionTrend: { collected: chartMetrics.filteredRev, overdue: chartMetrics.filteredOverdue },
+          paymentModes: {
+            cash: chartMetrics.filteredCash || [],
+            upi: chartMetrics.filteredUpi || []
+          },
           expenseBreakdown: {
             series: expenseBreakdown.series,
             labels: expenseBreakdown.labels,
@@ -245,8 +248,32 @@ function createDropdownResolver(dropdownMetaRows, dropDownOptions) {
   };
 }
 
+function paymentHasSplitAmounts_(payment) {
+  if (!payment) return false;
+  const cashRaw = payment.cashAmount;
+  const upiRaw = payment.upiAmount;
+  const cashSet = cashRaw !== undefined && cashRaw !== null && String(cashRaw).trim() !== '';
+  const upiSet = upiRaw !== undefined && upiRaw !== null && String(upiRaw).trim() !== '';
+  return cashSet || upiSet;
+}
+
+function paymentModeParts_(payment, resolveName) {
+  const amount = parseAmt(payment.amount);
+  if (paymentHasSplitAmounts_(payment)) {
+    return { cash: parseAmt(payment.cashAmount), upi: parseAmt(payment.upiAmount) };
+  }
+  const mode = String(resolveName('PAYMENTS', 'paymentMode', payment.paymentMode) || payment.paymentMode || '').toLowerCase();
+  if (mode.indexOf('upi') >= 0 || mode.indexOf('gpay') >= 0 || mode.indexOf('phonepe') >= 0 || mode.indexOf('google pay') >= 0) {
+    return { cash: 0, upi: amount };
+  }
+  if (mode.indexOf('cash') >= 0) return { cash: amount, upi: 0 };
+  return { cash: 0, upi: 0 };
+}
+
 function processFinancials(payments, expenses, salaries, targetYear, resolveName, accrualMode) {
   let revArr = new Array(12).fill(0);
+  let cashArr = new Array(12).fill(0);
+  let upiArr = new Array(12).fill(0);
   let expArr = new Array(12).fill(0);
   let staffArr = new Array(12).fill(0);    
   let catBreakdownByMonth = {};
@@ -267,7 +294,11 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
 
   payments.forEach(p => {
     if (!isSuccess(resolveName('PAYMENTS', 'paymentStatus', p.paymentStatus))) return;
-    distributeAmount(p.startDate, p.endDate, p.paidDate, parseAmt(p.amount), revArr);
+    const amount = parseAmt(p.amount);
+    distributeAmount(p.startDate, p.endDate, p.paidDate, amount, revArr);
+    const parts = paymentModeParts_(p, resolveName);
+    if (parts.cash) distributeAmount(p.startDate, p.endDate, p.paidDate, parts.cash, cashArr);
+    if (parts.upi) distributeAmount(p.startDate, p.endDate, p.paidDate, parts.upi, upiArr);
   });
 
   expenses.forEach(e => {
@@ -301,7 +332,7 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
     addBreakdownAmount(catBreakdownByMonth, 'Staff Cost', s.startDate, s.endDate, s.paidDate, amt);
   });
 
-  return { revArr, expArr, staffArr, catBreakdownByMonth, miscBreakdownByMonth };
+  return { revArr, cashArr, upiArr, expArr, staffArr, catBreakdownByMonth, miscBreakdownByMonth };
 }
 
 function formatExpenseBreakdown(financialData, mode, periods) {
@@ -630,12 +661,17 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
   
   let totalSlots = isQuarterly ? 4 : 12;
   let finalLabels = []; let finalRev = []; let finalExp = []; let finalStaff = []; let finalOverdue = [];
+  let finalCash = []; let finalUpi = [];
   let finalExpectedCollections = []; let finalExpectedExpenses = [];
+  const cashArr = financialData.cashArr || [];
+  const upiArr = financialData.upiArr || [];
 
   if (isQuarterly) {
     for(let i = 0; i < totalSlots; i++) {
       finalLabels.push(quarterLabels[i]);
       finalRev.push((financialData.revArr[i*3]||0) + (financialData.revArr[i*3+1]||0) + (financialData.revArr[i*3+2]||0));
+      finalCash.push((cashArr[i*3]||0) + (cashArr[i*3+1]||0) + (cashArr[i*3+2]||0));
+      finalUpi.push((upiArr[i*3]||0) + (upiArr[i*3+1]||0) + (upiArr[i*3+2]||0));
       finalExp.push((financialData.expArr[i*3]||0) + (financialData.expArr[i*3+1]||0) + (financialData.expArr[i*3+2]||0));
       finalStaff.push((financialData.staffArr[i*3]||0) + (financialData.staffArr[i*3+1]||0) + (financialData.staffArr[i*3+2]||0));
       finalOverdue.push((operationalData.overdueArr[i*3]||0) + (operationalData.overdueArr[i*3+1]||0) + (operationalData.overdueArr[i*3+2]||0));
@@ -646,6 +682,8 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     for(let i = 0; i < totalSlots; i++) {
       finalLabels.push(monthLabels[i]);
       finalRev.push(financialData.revArr[i]||0);
+      finalCash.push(cashArr[i]||0);
+      finalUpi.push(upiArr[i]||0);
       finalExp.push(financialData.expArr[i]||0);
       finalStaff.push(financialData.staffArr[i]||0);
       finalOverdue.push(operationalData.overdueArr[i]||0);
@@ -655,11 +693,13 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
   }
 
   const filteredLabels = []; const filteredRev = []; const filteredExp = []; const filteredStaff = []; const filteredOverdue = [];
+  const filteredCash = []; const filteredUpi = [];
   const activePeriods = (periods && periods.length > 0) ? periods : finalLabels;
   
   finalLabels.forEach((lbl, idx) => {
     if (activePeriods.includes(lbl) || activePeriods.includes(lbl.split(' ')[0])) {
       filteredLabels.push(lbl); filteredRev.push(finalRev[idx]); filteredExp.push(finalExp[idx]);
+      filteredCash.push(finalCash[idx]); filteredUpi.push(finalUpi[idx]);
       filteredStaff.push(finalStaff[idx]); filteredOverdue.push(finalOverdue[idx]);
     }
   });
@@ -765,6 +805,8 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
   return {
     filteredLabels,
     filteredRev: safeNumArray(filteredRev),
+    filteredCash: safeNumArray(filteredCash),
+    filteredUpi: safeNumArray(filteredUpi),
     filteredExp: safeNumArray(filteredExp),
     filteredStaff: safeNumArray(filteredStaff),
     filteredOverdue: safeNumArray(filteredOverdue),

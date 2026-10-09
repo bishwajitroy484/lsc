@@ -83,7 +83,7 @@ var DEFAULT_SHEET_HEADERS = {
   ],
   PAYMENTS: [
     'paymentId', 'memberId', 'amount', 'paidDate', 'startDate', 'endDate',
-    'paymentMode', 'paymentStatus', 'notes', 'createdAt', 'updatedAt',
+    'paymentMode', 'cashAmount', 'upiAmount', 'paymentStatus', 'notes', 'createdAt', 'updatedAt',
     'createdBy', 'updatedBy'
   ],
   STAFF: [

@@ -547,14 +547,15 @@
       window.AppCharts.pred.render();
     }
 
-    // 4. Collection Trend (connectNulls: true added)
+    // 4. Cash vs UPI
     const elTrend = document.querySelector("#chart-trend");
     if(elTrend) {
       const trendType = document.getElementById('toggle-trend')?.value || 'line';
+      const paymentModes = data.charts.paymentModes || {};
       window.AppChartConfigs.trend = {
         series: [
-          { name: 'Collected', data: data.charts.collectionTrend.collected },
-          { name: 'Overdue', data: data.charts.collectionTrend.overdue }
+          { name: 'Cash', data: paymentModes.cash || [] },
+          { name: 'UPI', data: paymentModes.upi || [] }
         ],
         chart: { type: trendType, height: '100%', toolbar: commonToolbar, zoom: { enabled: true } },
         dataLabels: { ...dlOptions, offsetY: -10 },

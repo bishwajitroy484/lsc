@@ -582,7 +582,8 @@ describe('Members Module', () => {
       expect(batchFilter.value).toBe('BATCH-1');
       expect(planFilter.innerHTML).toContain('All Memberships');
       expect(planFilter.value).toBe('PLAN-1');
-      expect(document.getElementById('mem-pay-mode').innerHTML).toContain('MODE-CASH');
+      expect(document.getElementById('mem-pay-cash')).toBeTruthy();
+      expect(document.getElementById('mem-pay-upi')).toBeTruthy();
       expect(document.getElementById('mem-pay-status').innerHTML).toContain('PAY-PAID');
 
       const payFields = document.getElementById('mem-pay-fields');
