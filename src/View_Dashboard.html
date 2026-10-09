@@ -33,7 +33,7 @@
         <span class="metric-tip" tabindex="0" aria-label="About Active Members"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Members whose membership covered the selected months or quarters. Plan chips split that same group into Quarterly, Ad-hoc, Trial, and other plans.</span></span>
       </div>
       <div class="h-7 flex items-center mb-1 min-w-0"><h2 id="kpi-active" class="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 leading-none truncate">--</h2></div>
-      <div id="kpi-active-segregation" class="flex flex-wrap gap-1 mt-auto border-t border-slate-100 pt-2 min-h-[26px]"></div>
+      <div id="kpi-active-segregation" class="grid grid-cols-2 gap-1 mt-auto border-t border-slate-100 pt-1.5 sm:flex sm:flex-wrap sm:gap-1 sm:pt-2 min-h-[26px]"></div>
     </div>
         
     <div class="bg-white p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between min-w-0 overflow-visible">
@@ -223,7 +223,6 @@
           <span class="truncate">Overdue</span>
           <span class="metric-tip" tabindex="0" aria-label="About Overdue table"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Active members whose next renewal date is already past. Amount is the estimated unpaid dues; days show how late they are. Ad-hoc/trial plans are excluded.</span></span>
         </h3>
-        <button type="button" onclick="TableColumns.open('overdue', this)" class="shrink-0 h-7 w-7 border border-slate-200 rounded-lg inline-flex items-center justify-center text-slate-500 hover:bg-white" title="Show or hide columns"><span class="material-symbols-rounded text-[16px]">view_column</span></button>
         <div class="relative w-[32%] max-w-[10rem] sm:w-48 shrink-0 min-w-[6.5rem]">
           <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[14px]">search</span>
           <input type="text" placeholder="Search..." onkeyup="DashboardTables.search('overdue', this.value)" class="w-full pl-7 pr-2 py-1 text-[10px] md:text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary shadow-sm bg-white">
@@ -233,12 +232,12 @@
         <table class="w-full text-left border-collapse">
           <thead class="sticky top-0 z-20 shadow-sm">
             <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider cursor-pointer select-none">
-              <th data-lsc-table="overdue" data-col="member" class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'name')"><div class="flex items-center">Member <span id="sort-overdue-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th data-lsc-table="overdue" data-col="plan" class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'plan')"><div class="flex items-center">Plan <span id="sort-overdue-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th data-lsc-table="overdue" data-col="amount" class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'amount')"><div class="flex items-center">Amount <span id="sort-overdue-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th data-lsc-table="overdue" data-col="date" class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'date')"><div class="flex items-center">Due Date <span id="sort-overdue-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th data-lsc-table="overdue" data-col="days" class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days Overdue</span><span class="sm:hidden">Days</span> <span id="sort-overdue-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th data-lsc-table="overdue" data-col="notify" class="bg-white px-2 md:px-3 py-2.5 font-bold text-center border-b border-slate-100 w-12 md:w-16"><span class="hidden md:inline">Notify</span><span class="md:hidden">WA</span></th>
+              <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'name')"><div class="flex items-center">Member <span id="sort-overdue-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'plan')"><div class="flex items-center">Plan <span id="sort-overdue-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'amount')"><div class="flex items-center">Amount <span id="sort-overdue-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'date')"><div class="flex items-center">Due Date <span id="sort-overdue-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days Overdue</span><span class="sm:hidden">Days</span> <span id="sort-overdue-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-2 md:px-3 py-2.5 font-bold text-center border-b border-slate-100 w-12 md:w-16"><span class="hidden md:inline">Notify</span><span class="md:hidden">WA</span></th>
             </tr>
           </thead>
           <tbody id="table-overdue" class="text-xs text-slate-700"></tbody>
@@ -253,7 +252,6 @@
           <span class="truncate">Upcoming</span>
           <span class="metric-tip" tabindex="0" aria-label="About Upcoming table"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Active members due to renew within the next 7 days (including today). Amount is the expected renewal value for their plan. Ad-hoc/trial plans are excluded.</span></span>
         </h3>
-        <button type="button" onclick="TableColumns.open('upcoming', this)" class="shrink-0 h-7 w-7 border border-slate-200 rounded-lg inline-flex items-center justify-center text-slate-500 hover:bg-white" title="Show or hide columns"><span class="material-symbols-rounded text-[16px]">view_column</span></button>
         <div class="relative w-[32%] max-w-[10rem] sm:w-48 shrink-0 min-w-[6.5rem]">
           <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[14px]">search</span>
           <input type="text" placeholder="Search..." onkeyup="DashboardTables.search('upcoming', this.value)" class="w-full pl-7 pr-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary shadow-sm bg-white">
@@ -263,12 +261,12 @@
         <table class="w-full text-left border-collapse">
           <thead class="sticky top-0 z-20 shadow-sm">
             <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider cursor-pointer select-none">
-              <th data-lsc-table="upcoming" data-col="member" class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'name')"><div class="flex items-center">Member <span id="sort-upcoming-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th data-lsc-table="upcoming" data-col="plan" class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'plan')"><div class="flex items-center">Plan <span id="sort-upcoming-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th data-lsc-table="upcoming" data-col="amount" class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'amount')"><div class="flex items-center">Amount <span id="sort-upcoming-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th data-lsc-table="upcoming" data-col="date" class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'date')"><div class="flex items-center">Due Date <span id="sort-upcoming-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th data-lsc-table="upcoming" data-col="days" class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days Left</span><span class="sm:hidden">Days</span> <span id="sort-upcoming-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th data-lsc-table="upcoming" data-col="notify" class="bg-white px-2 md:px-3 py-2.5 font-bold text-center border-b border-slate-100 w-12 md:w-16"><span class="hidden md:inline">Notify</span><span class="md:hidden">WA</span></th>
+              <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'name')"><div class="flex items-center">Member <span id="sort-upcoming-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'plan')"><div class="flex items-center">Plan <span id="sort-upcoming-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'amount')"><div class="flex items-center">Amount <span id="sort-upcoming-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'date')"><div class="flex items-center">Due Date <span id="sort-upcoming-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days Left</span><span class="sm:hidden">Days</span> <span id="sort-upcoming-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-2 md:px-3 py-2.5 font-bold text-center border-b border-slate-100 w-12 md:w-16"><span class="hidden md:inline">Notify</span><span class="md:hidden">WA</span></th>
             </tr>
           </thead>
           <tbody id="table-upcoming" class="text-xs text-slate-700"></tbody>

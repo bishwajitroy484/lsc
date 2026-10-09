@@ -12,6 +12,13 @@
     
     deleteState: { type: null, id: null }, 
     currentActiveMember: null,
+
+    statusBadgeClass: function(name) {
+      const lower = String(name || '').toLowerCase();
+      if (lower.includes('in-active') || lower.includes('inactive')) return 'bg-red-50 text-red-700 border-red-200';
+      if (lower === 'active') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      return 'bg-slate-50 text-slate-600 border-slate-200';
+    },
     currentMemberPayments: [], 
     effectiveDueDate: null, 
     chartInstance: null,
@@ -348,9 +355,7 @@
       const sName = this.getName('status', member.status);
       const sLower = String(sName).toLowerCase();
       
-      let sClass = 'bg-slate-50 text-slate-600 border-slate-200';
-      if (sLower === 'active') sClass = 'bg-red-50 text-brand-primary border-red-200';
-      if (sLower.includes('in-active') || sLower.includes('inactive')) sClass = 'bg-red-50 text-red-600 border-red-200';
+      const sClass = this.statusBadgeClass(sLower);
 
       const planName = this.getName('membership', member.membershipId);
       const batchName = this.getName('batch', member.batchId);
@@ -384,7 +389,7 @@
 
       return `
         <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer group" onclick="MembersApp.openDetails(${memberJson})">
-          <td data-lsc-table="members" data-col="profile" class="px-4 py-3">
+          <td class="px-4 py-3">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[11px] font-bold shrink-0 shadow-sm border border-slate-200">
                  ${avatarHtml}
@@ -395,17 +400,17 @@
               </div>
             </div>
           </td>
-          <td data-lsc-table="members" data-col="plan" class="px-4 py-3">
+          <td class="px-4 py-3">
              <div class="text-xs md:text-sm text-slate-800 font-bold">${planName}</div>
              <div class="text-[11px] text-slate-500 font-medium mt-0.5">${batchName} <span class="font-bold uppercase tracking-wider ${groupBadgeColor}">(${groupName})</span></div>
           </td>
-          <td data-lsc-table="members" data-col="financials" class="px-4 py-3">
+          <td class="px-4 py-3">
              <div class="text-[11px] text-slate-500 font-medium mb-0.5">Joined: <span class="font-bold text-slate-700">${joinStr}</span></div>
              <div class="text-[11px] text-slate-500 font-medium mb-1">Due: <span class="font-bold text-slate-700">${dueStr}</span></div>
              <div><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${dueInfo.class} uppercase tracking-wider">${dueInfo.text}</span></div>
           </td>
-          <td data-lsc-table="members" data-col="status" class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} uppercase tracking-wider">${sName}</span></td>
-          <td data-lsc-table="members" data-col="actions" class="px-4 py-3 text-right">
+          <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} uppercase tracking-wider">${sName}</span></td>
+          <td class="px-4 py-3 text-right">
             <button onclick="event.stopPropagation(); MembersApp.openModal(${memberJson})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded-full transition-colors">
                <span class="material-symbols-rounded text-[18px]">edit</span>
             </button>
@@ -417,9 +422,7 @@
       const sName = this.getName('status', member.status);
       const sLower = String(sName).toLowerCase();
       
-      let sClass = 'bg-slate-50 text-slate-600 border-slate-200';
-      if (sLower === 'active') sClass = 'bg-red-50 text-brand-primary border-red-200';
-      if (sLower.includes('in-active') || sLower.includes('inactive')) sClass = 'bg-red-50 text-red-600 border-red-200';
+      const sClass = this.statusBadgeClass(sLower);
 
       const planName = this.getName('membership', member.membershipId);
       const batchName = this.getName('batch', member.batchId);

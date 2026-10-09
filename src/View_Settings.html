@@ -670,6 +670,19 @@
           </div>
         </div>
 
+        <div id="factory-reset-section" class="hidden bg-white border border-red-200 rounded-2xl shadow-xs overflow-hidden">
+          <div class="px-4 md:px-5 py-3.5 md:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="min-w-0">
+              <h3 class="font-bold text-sm text-slate-800">Factory Reset Application Data</h3>
+              <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">Erases members, payments, staff, salary, expenses, and the due events on the owner calendar. Settings and dropdowns stay.</p>
+            </div>
+            <button type="button" id="btn-factory-reset" onclick="SettingsApp.openFactoryResetModal()" class="shrink-0 h-9 px-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer">
+              <span class="material-symbols-rounded text-[16px]">delete_forever</span>
+              <span>Factory Reset Application Data</span>
+            </button>
+          </div>
+        </div>
+
         </div>
       </div>
 
@@ -1119,6 +1132,20 @@
             <button type="submit" id="btn-save-opt" class="flex-1 px-4 py-2.5 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-xs hover:bg-brand-hover active:scale-98 transition-all cursor-pointer">Save Option</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="factory-reset-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs opacity-0 pointer-events-none transition-opacity duration-200 z-[150] flex lsc-modal-overlay">
+    <div id="factory-reset-modal-content" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-200 p-6 text-center border border-slate-200 lsc-modal-panel">
+      <div class="w-14 h-14 rounded-2xl bg-red-50 text-red-500 border border-red-100 flex items-center justify-center mx-auto mb-3.5">
+        <span class="material-symbols-rounded text-3xl">delete_forever</span>
+      </div>
+      <h3 class="text-base font-bold text-slate-800 mb-1">Factory Reset Application Data</h3>
+      <p class="text-xs text-slate-500 mb-5 leading-relaxed">It will erase all the existing data of Members, Payments, Staff, Salary, Expenses, and Calendar Events. Are you sure?</p>
+      <div class="flex gap-2.5">
+        <button type="button" id="btn-factory-reset-cancel" onclick="SettingsApp.closeFactoryResetModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors cursor-pointer">Cancel</button>
+        <button type="button" id="btn-factory-reset-confirm" onclick="SettingsApp.confirmFactoryReset()" class="flex-1 px-4 py-2.5 bg-red-500 text-white font-bold text-xs rounded-xl hover:bg-red-600 shadow-xs active:scale-98 transition-all cursor-pointer">Delete</button>
       </div>
     </div>
   </div>
