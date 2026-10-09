@@ -292,7 +292,7 @@
       const isMonthly = mode === 'Monthly';
       const avgTitle = document.getElementById('kpi-avg-title');
       if (avgTitle) {
-          avgTitle.innerText = isMonthly ? 'MONTHLY AVG' : 'QUARTERLY AVG';
+          avgTitle.innerText = isMonthly ? 'Monthly Avg' : 'Quarterly Avg';
       }
 
       // Calculate Staff Cost for the selected year and selected periods from staffMetrics
@@ -562,14 +562,14 @@
 
       return `
         <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-          <td class="px-4 py-3 font-medium text-slate-700 text-xs">${dateStr}</td>
-          <td class="px-4 py-3">
+          <td data-lsc-table="exp-expenses" data-col="date" class="px-4 py-3 font-medium text-slate-700 text-xs">${dateStr}</td>
+          <td data-lsc-table="exp-expenses" data-col="category" class="px-4 py-3">
             <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${color}"></span><span class="font-semibold text-slate-800 text-xs truncate max-w-[140px]">${cName}</span></div>
           </td>
-          <td class="px-4 py-3 text-slate-700 text-xs">${safeDesc}</td>
-          <td class="px-4 py-3 font-bold text-slate-800 text-xs md:text-sm">${amtStr}${rcptHtml}</td>
-          <td class="px-4 py-3 text-slate-500 capitalize text-xs">${creator}</td>
-          <td class="px-4 py-3 text-right">
+          <td data-lsc-table="exp-expenses" data-col="description" class="px-4 py-3 text-slate-700 text-xs">${safeDesc}</td>
+          <td data-lsc-table="exp-expenses" data-col="amount" class="px-4 py-3 font-bold text-slate-800 text-xs md:text-sm">${amtStr}${rcptHtml}</td>
+          <td data-lsc-table="exp-expenses" data-col="addedBy" class="px-4 py-3 text-slate-500 capitalize text-xs">${creator}</td>
+          <td data-lsc-table="exp-expenses" data-col="actions" class="px-4 py-3 text-right">
             <button onclick="ExpensesApp.openModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[17px]">edit</span></button>
             <button onclick="ExpensesApp.openDeleteModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[17px]">delete</span></button>
           </td>
@@ -971,7 +971,7 @@
         if (btn) {
           if (name === 'staff') btn.classList.toggle('hidden', !canSt);
           if (name === 'expenses') btn.classList.toggle('hidden', !canExp);
-          btn.className = 'exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors ' +
+          btn.className = 'exp-list-tab flex-1 xl:flex-none text-center px-2 xl:px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors ' +
             (active ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700');
         }
         if (panel) {
@@ -1139,13 +1139,13 @@
               actions = '<button onclick="ExpensesHub.openStaffFromAll(\'' + String(r.staffId).replace(/'/g, '') + '\')" class="w-6 h-6 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[14px]">visibility</span></button>';
             }
             return '<tr class="border-b border-slate-50 hover:bg-slate-50">' +
-              '<td class="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">' + dateFmt + '</td>' +
-              '<td class="px-4 py-3">' + typeBadge + '</td>' +
-              '<td class="px-4 py-3 font-bold text-slate-800">' + (r.name || '--') + '</td>' +
-              '<td class="px-4 py-3 text-slate-600">' + (r.description || '--') + '</td>' +
-              '<td class="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">' + amt + '</td>' +
-              '<td class="px-4 py-3">' + statusBadge + '</td>' +
-              '<td class="px-4 py-3 text-right">' + actions + '</td></tr>';
+              '<td data-lsc-table="exp-all" data-col="date" class="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">' + dateFmt + '</td>' +
+              '<td data-lsc-table="exp-all" data-col="type" class="px-4 py-3">' + typeBadge + '</td>' +
+              '<td data-lsc-table="exp-all" data-col="name" class="px-4 py-3 font-bold text-slate-800">' + (r.name || '--') + '</td>' +
+              '<td data-lsc-table="exp-all" data-col="description" class="px-4 py-3 text-slate-600">' + (r.description || '--') + '</td>' +
+              '<td data-lsc-table="exp-all" data-col="amount" class="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">' + amt + '</td>' +
+              '<td data-lsc-table="exp-all" data-col="status" class="px-4 py-3">' + statusBadge + '</td>' +
+              '<td data-lsc-table="exp-all" data-col="actions" class="px-4 py-3 text-right">' + actions + '</td></tr>';
           }).join('');
         }
       }

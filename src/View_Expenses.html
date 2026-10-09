@@ -5,7 +5,7 @@
       <div class="flex items-center gap-3">
         <span onclick="window.location.hash='#dashboard'" class="material-symbols-rounded text-slate-600 cursor-pointer hover:bg-slate-100 rounded-full p-1 transition-colors">arrow_back</span>
         <div>
-          <h1 class="text-xl font-bold text-slate-800 leading-tight">Expenses &amp; Staff</h1>
+          <h1 class="text-xl font-bold text-slate-800 leading-tight">Expenses</h1>
           <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Manage operating costs and staff payroll in one place</p>
         </div>
       </div>
@@ -44,67 +44,61 @@
 
   <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
 
-    <!-- Desktop: all KPIs in one row · Mobile: 2×2 -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3 mb-3 md:mb-4">
-      <!-- 1: Total Outflow -->
+    <!-- Two KPIs per row on phone and tablet. Three per row only on a wide desktop. -->
+    <div class="grid grid-cols-2 xl:grid-cols-3 gap-2.5 md:gap-3 mb-3 md:mb-4">
       <div class="bg-emerald-50/50 p-2.5 md:p-3 rounded-xl border border-emerald-100 flex flex-col justify-center min-w-0">
-        <div class="flex items-center gap-1.5 mb-1">
+        <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">account_balance_wallet</span>
-          <p class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase truncate">Total Outflow</p>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Total Outflow</p>
+          <span class="metric-tip" tabindex="0" aria-label="About Total Outflow"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Recorded gym expenses plus paid staff cost for the selected year and months or quarters.</span></span>
         </div>
-        <h2 id="kpi-total-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">₹0</h2>
+        <h2 id="kpi-total-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
       </div>
 
-      <!-- 2: Staff Cost + Other Expenses -->
-      <div class="bg-slate-50/80 p-2.5 md:p-3 rounded-xl border border-slate-200 min-w-0">
-        <p class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase mb-1.5 truncate">Cost Split</p>
-        <div class="grid grid-cols-2 gap-1.5 sm:gap-2">
-          <div class="min-w-0 border-r border-slate-200 pr-1.5 sm:pr-2">
-            <div class="flex items-center gap-1 mb-0.5">
-              <span class="w-4 h-4 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[11px] shrink-0">badge</span>
-              <p class="text-[8px] sm:text-[9px] text-slate-500 font-bold uppercase truncate">Staff Cost</p>
-            </div>
-            <h2 id="kpi-staff-exp" class="text-xs sm:text-sm md:text-base font-bold text-slate-800 truncate">₹0</h2>
-          </div>
-          <div class="min-w-0 pl-0.5">
-            <div class="flex items-center gap-1 mb-0.5">
-              <span class="w-4 h-4 rounded bg-red-100 text-brand-primary flex items-center justify-center material-symbols-rounded text-[11px] shrink-0">receipt_long</span>
-              <p class="text-[8px] sm:text-[9px] text-slate-500 font-bold uppercase truncate">Other</p>
-            </div>
-            <h2 id="kpi-other-exp" class="text-xs sm:text-sm md:text-base font-bold text-slate-800 truncate">₹0</h2>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3: Period average -->
       <div class="bg-amber-50/50 p-2.5 md:p-3 rounded-xl border border-amber-100 flex flex-col justify-center min-w-0">
-        <div class="flex items-center gap-1.5 mb-1">
+        <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">calendar_month</span>
-          <p id="kpi-avg-title" class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase truncate">Monthly Avg</p>
+          <p id="kpi-avg-title" class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Monthly Avg</p>
+          <span class="metric-tip" tabindex="0" aria-label="About period average"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Total outflow divided by how many months or quarters you selected.</span></span>
         </div>
-        <h2 id="kpi-avg-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800 truncate">₹0</h2>
+        <h2 id="kpi-avg-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
       </div>
 
-      <!-- 4: Total Staff + Action Needed -->
-      <div onclick="ExpensesHub.switchListTab('staff'); StaffApp.scrollToActionNeeded && StaffApp.scrollToActionNeeded();" class="bg-cyan-50/40 p-2.5 md:p-3 rounded-xl border border-cyan-100 min-w-0 cursor-pointer hover:border-cyan-200 hover:shadow-sm transition-all" title="Open Staff list">
-        <p class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase mb-1.5 truncate">Staff Snapshot</p>
-        <div class="grid grid-cols-2 gap-1.5 sm:gap-2">
-          <div class="min-w-0 border-r border-cyan-100/80 pr-1.5 sm:pr-2">
-            <div class="flex items-center gap-1 mb-0.5">
-              <span class="w-4 h-4 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[11px] shrink-0">group</span>
-              <p class="text-[8px] sm:text-[9px] text-slate-500 font-bold uppercase truncate">Staff</p>
-            </div>
-            <h2 id="kpi-total-staff" class="text-xs sm:text-sm md:text-base font-bold text-slate-800 truncate">--</h2>
-          </div>
-          <div class="min-w-0 pl-0.5">
-            <div class="flex items-center gap-1 mb-0.5">
-              <span class="w-4 h-4 rounded bg-orange-100 text-orange-700 flex items-center justify-center material-symbols-rounded text-[11px] shrink-0">pending_actions</span>
-              <p class="text-[8px] sm:text-[9px] text-slate-500 font-bold uppercase truncate">Action</p>
-            </div>
-            <h2 id="kpi-action-needed" class="text-xs sm:text-sm md:text-base font-bold text-amber-700 leading-tight truncate">--</h2>
-            <p id="kpi-action-needed-sub" class="text-[8px] sm:text-[9px] font-medium text-slate-500 mt-0.5 leading-tight line-clamp-2 hidden md:line-clamp-1">--</p>
-          </div>
+      <div class="bg-white p-2.5 md:p-3 rounded-xl border border-slate-200 flex flex-col justify-center min-w-0">
+        <div class="flex items-center gap-1.5 mb-1 min-w-0">
+          <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">badge</span>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Staff Cost</p>
+          <span class="metric-tip" tabindex="0" aria-label="About Staff Cost"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Paid staff salary amounts recognized in the selected periods. Pending or failed salary rows are not counted.</span></span>
         </div>
+        <h2 id="kpi-staff-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
+      </div>
+
+      <div class="bg-white p-2.5 md:p-3 rounded-xl border border-slate-200 flex flex-col justify-center min-w-0">
+        <div class="flex items-center gap-1.5 mb-1 min-w-0">
+          <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-red-100 text-brand-primary flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">receipt_long</span>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Other Expenses</p>
+          <span class="metric-tip" tabindex="0" aria-label="About Other expenses"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Recorded gym expenses such as rent, power, and supplies in the selected periods. Staff payroll is counted separately.</span></span>
+        </div>
+        <h2 id="kpi-other-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
+      </div>
+
+      <div onclick="ExpensesHub.switchListTab('staff'); StaffApp.scrollToActionNeeded && StaffApp.scrollToActionNeeded();" class="bg-cyan-50/40 p-2.5 md:p-3 rounded-xl border border-cyan-100 flex flex-col justify-center min-w-0 cursor-pointer hover:border-cyan-200 hover:shadow-sm transition-all" title="Open Staff list">
+        <div class="flex items-center gap-1.5 mb-1 min-w-0">
+          <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">group</span>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Staff</p>
+          <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Staff count"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">People whose status is Active. The rest of this card opens the staff list.</span></span>
+        </div>
+        <h2 id="kpi-total-staff" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">--</h2>
+      </div>
+
+      <div onclick="ExpensesHub.switchListTab('staff'); StaffApp.scrollToActionNeeded && StaffApp.scrollToActionNeeded();" class="bg-cyan-50/40 p-2.5 md:p-3 rounded-xl border border-cyan-100 flex flex-col justify-center min-w-0 cursor-pointer hover:border-cyan-200 hover:shadow-sm transition-all" title="Open Staff list">
+        <div class="flex items-center gap-1.5 mb-1 min-w-0">
+          <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-orange-100 text-orange-700 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">pending_actions</span>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Action</p>
+          <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Action needed"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Staff with at least one salary cycle still unpaid. The rest of this card opens the staff list.</span></span>
+        </div>
+        <h2 id="kpi-action-needed" class="text-sm sm:text-base md:text-lg font-bold text-amber-700 leading-tight">--</h2>
+        <p id="kpi-action-needed-sub" class="text-[10px] sm:text-[11px] font-medium text-slate-500 mt-0.5 leading-tight">--</p>
       </div>
     </div>
 
@@ -112,7 +106,10 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-5">
       <div class="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col min-w-0">
         <div class="flex items-center justify-between mb-2 gap-2">
-          <h3 class="font-bold text-sm text-slate-800 truncate">Expenses Trend</h3>
+          <div class="flex items-center gap-1 min-w-0">
+            <h3 class="font-bold text-sm text-slate-800 truncate">Expenses Trend</h3>
+            <span class="metric-tip" tabindex="0" aria-label="About Expenses Trend"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Staff cost and other expenses for each selected month or quarter. Switch the chart between bar, area, and line.</span></span>
+          </div>
           <select id="chart-type-toggle" onchange="ExpensesApp.renderCharts()" class="shrink-0 appearance-none bg-slate-50 pl-2.5 pr-6 py-1 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
             <option value="bar">Bar Chart</option>
             <option value="area">Area Chart</option>
@@ -127,7 +124,10 @@
       </div>
       <div class="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col min-w-0">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="font-bold text-sm text-slate-800 truncate">Expenses by Category</h3>
+          <div class="flex items-center gap-1 min-w-0">
+            <h3 class="font-bold text-sm text-slate-800 truncate">Expenses by Category</h3>
+            <span class="metric-tip" tabindex="0" aria-label="About Expenses by Category"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Share of spend by category in the selected periods, with staff cost included as its own slice.</span></span>
+          </div>
         </div>
         <div class="relative w-full flex-1 min-h-[200px] md:min-h-[220px]">
           <div id="chart-expense-breakdown" class="absolute inset-0 flex items-center justify-center">
@@ -143,31 +143,40 @@
 
     <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
       <div class="p-3 md:p-4 border-b border-slate-100 flex flex-col gap-3 bg-slate-50/50">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div class="flex items-center gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
-            <button type="button" id="exp-list-tab-all" onclick="ExpensesHub.switchListTab('all')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white text-slate-800 shadow-sm">All Records</button>
-            <button type="button" id="exp-list-tab-staff" onclick="ExpensesHub.switchListTab('staff')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-slate-700">Staff</button>
-            <button type="button" id="exp-list-tab-expenses" onclick="ExpensesHub.switchListTab('expenses')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-slate-700">Expenses</button>
-          </div>
-          <div id="exp-list-filters-expenses" class="flex flex-nowrap items-center gap-2 w-full sm:w-auto">
-            <div class="relative flex-1 sm:w-44 shrink-0">
-              <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[16px]">search</span>
-              <input type="text" id="search-table" onkeyup="ExpensesApp.searchTable(this.value)" placeholder="Search..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary bg-white">
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
+          <div class="flex items-center gap-2 w-full xl:w-auto min-w-0">
+            <div class="flex flex-1 xl:flex-none gap-1 p-1 bg-slate-100 rounded-xl min-w-0">
+              <button type="button" id="exp-list-tab-all" onclick="ExpensesHub.switchListTab('all')" class="exp-list-tab flex-1 xl:flex-none text-center px-2 xl:px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white text-slate-800 shadow-sm whitespace-nowrap">All Records</button>
+              <button type="button" id="exp-list-tab-staff" onclick="ExpensesHub.switchListTab('staff')" class="exp-list-tab flex-1 xl:flex-none text-center px-2 xl:px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-slate-700 whitespace-nowrap">Staff</button>
+              <button type="button" id="exp-list-tab-expenses" onclick="ExpensesHub.switchListTab('expenses')" class="exp-list-tab flex-1 xl:flex-none text-center px-2 xl:px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-slate-700 whitespace-nowrap">Expenses</button>
             </div>
-            <select id="filter-table-cat" onchange="ExpensesApp.filterTable()" class="shrink-0 appearance-none bg-white pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_6px_center]">
-              <option value="All">All Categories</option>
-            </select>
+            <button type="button" onclick="TableColumns.openExpenses(this)" class="shrink-0 h-8 px-2.5 border border-slate-200 rounded-lg inline-flex items-center justify-center gap-1 text-slate-600 hover:bg-white text-[11px] font-bold whitespace-nowrap" title="Show or hide columns">
+              <span class="material-symbols-rounded text-[16px]">view_column</span><span class="hidden sm:inline">Columns</span>
+            </button>
           </div>
-          <div id="exp-list-filters-all" class="hidden flex flex-nowrap items-center gap-2 w-full sm:w-auto">
-            <div class="relative flex-1 sm:w-44 shrink-0">
-              <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[16px]">search</span>
-              <input type="text" id="all-search-table" onkeyup="ExpensesHub.searchAllRecords(this.value)" placeholder="Search all..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary bg-white">
+          <div id="exp-list-filters-expenses" class="hidden w-full xl:w-auto min-w-0">
+            <div class="grid grid-cols-1 min-[400px]:grid-cols-[minmax(0,1fr)_auto] items-center gap-2 xl:flex xl:flex-nowrap">
+              <div class="relative min-w-0 xl:w-52">
+                <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[16px]">search</span>
+                <input type="text" id="search-table" onkeyup="ExpensesApp.searchTable(this.value)" placeholder="Search..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary bg-white">
+              </div>
+              <select id="filter-table-cat" onchange="ExpensesApp.filterTable()" class="w-full xl:w-auto appearance-none bg-white pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_6px_center]">
+                <option value="All">All Categories</option>
+              </select>
             </div>
-            <select id="all-filter-type" onchange="ExpensesHub.filterAllRecords()" class="shrink-0 appearance-none bg-white pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_6px_center]">
-              <option value="All">All Types</option>
-              <option value="staff">Staff</option>
-              <option value="expense">Expense</option>
-            </select>
+          </div>
+          <div id="exp-list-filters-all" class="w-full xl:w-auto min-w-0">
+            <div class="grid grid-cols-1 min-[400px]:grid-cols-[minmax(0,1fr)_auto] items-center gap-2 xl:flex xl:flex-nowrap">
+              <div class="relative min-w-0 xl:w-52">
+                <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[16px]">search</span>
+                <input type="text" id="all-search-table" onkeyup="ExpensesHub.searchAllRecords(this.value)" placeholder="Search all..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-primary bg-white">
+              </div>
+              <select id="all-filter-type" onchange="ExpensesHub.filterAllRecords()" class="w-full xl:w-auto appearance-none bg-white pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_6px_center]">
+                <option value="All">All Types</option>
+                <option value="staff">Staff</option>
+                <option value="expense">Expense</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -178,13 +187,13 @@
           <table class="w-full text-left border-collapse min-w-[780px]">
             <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
               <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider">
-                <th class="px-4 py-3">Date</th>
-                <th class="px-4 py-3">Type</th>
-                <th class="px-4 py-3">Name / Category</th>
-                <th class="px-4 py-3">Description</th>
-                <th class="px-4 py-3">Amount</th>
-                <th class="px-4 py-3">Status</th>
-                <th class="px-4 py-3 text-right">Actions</th>
+                <th data-lsc-table="exp-all" data-col="date" class="px-4 py-3">Date</th>
+                <th data-lsc-table="exp-all" data-col="type" class="px-4 py-3">Type</th>
+                <th data-lsc-table="exp-all" data-col="name" class="px-4 py-3">Name / Category</th>
+                <th data-lsc-table="exp-all" data-col="description" class="px-4 py-3">Description</th>
+                <th data-lsc-table="exp-all" data-col="amount" class="px-4 py-3">Amount</th>
+                <th data-lsc-table="exp-all" data-col="status" class="px-4 py-3">Status</th>
+                <th data-lsc-table="exp-all" data-col="actions" class="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="desktop-all-body" class="text-xs text-slate-700"></tbody>
@@ -199,18 +208,18 @@
           <table class="w-full text-left border-collapse min-w-[700px]">
             <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
               <tr class="text-[11px] uppercase text-slate-500 font-bold select-none tracking-wider">
-                <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('date')">
+                <th data-lsc-table="exp-expenses" data-col="date" class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('date')">
                   <div class="flex items-center gap-1">Date <span id="sort-icon-date" class="material-symbols-rounded text-[14px]">arrow_downward</span></div>
                 </th>
-                <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('category')">
+                <th data-lsc-table="exp-expenses" data-col="category" class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('category')">
                   <div class="flex items-center gap-1">Category <span id="sort-icon-category" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></div>
                 </th>
-                <th class="px-4 py-3">Description</th>
-                <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('amount')">
+                <th data-lsc-table="exp-expenses" data-col="description" class="px-4 py-3">Description</th>
+                <th data-lsc-table="exp-expenses" data-col="amount" class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('amount')">
                   <div class="flex items-center gap-1">Amount <span id="sort-icon-amount" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></div>
                 </th>
-                <th class="px-4 py-3">Added By</th>
-                <th class="px-4 py-3 text-right">Actions</th>
+                <th data-lsc-table="exp-expenses" data-col="addedBy" class="px-4 py-3">Added By</th>
+                <th data-lsc-table="exp-expenses" data-col="actions" class="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="desktop-expense-body" class="text-xs text-slate-700"></tbody>

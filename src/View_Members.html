@@ -13,13 +13,17 @@
         </div>
       </div>
       
-      <button onclick="MembersApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-brand-hover transition-colors shrink-0">
-        <span class="material-symbols-rounded text-[18px]">add</span>
-      </button>
-      
-      <button onclick="MembersApp.openModal()" class="hidden md:flex shrink-0 h-9 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-brand-hover transition-colors">
-        <span class="material-symbols-rounded text-[18px]">add</span><span class="font-semibold text-sm">Add Member</span>
-      </button>
+      <div class="flex items-center gap-2 shrink-0">
+        <button type="button" onclick="TableColumns.open('members', this)" class="h-8 md:h-9 px-2 md:px-3 border border-slate-200 rounded-lg inline-flex items-center gap-1 text-slate-600 hover:bg-slate-50 text-xs md:text-sm font-semibold" title="Show or hide columns">
+          <span class="material-symbols-rounded text-[18px]">view_column</span><span class="hidden sm:inline">Columns</span>
+        </button>
+        <button onclick="MembersApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-brand-hover transition-colors shrink-0">
+          <span class="material-symbols-rounded text-[18px]">add</span>
+        </button>
+        <button onclick="MembersApp.openModal()" class="hidden md:flex shrink-0 h-9 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-brand-hover transition-colors">
+          <span class="material-symbols-rounded text-[18px]">add</span><span class="font-semibold text-sm">Add Member</span>
+        </button>
+      </div>
     </header>
 
     <div class="bg-white px-4 md:px-6 py-3 shrink-0 shadow-sm flex flex-col md:flex-row md:items-center gap-3">
@@ -53,11 +57,11 @@
         <table class="w-full text-left border-collapse">
           <thead class="bg-slate-50 border-b border-slate-200">
             <tr class="text-[11px] md:text-xs uppercase text-slate-500 font-bold tracking-wider">
-              <th class="px-4 py-3">Member Profile</th>
-              <th class="px-4 py-3">Membership & Batch</th>
-              <th class="px-4 py-3">Financials & Dates</th>
-              <th class="px-4 py-3">Status</th>
-              <th class="px-4 py-3 text-right">Actions</th>
+              <th data-lsc-table="members" data-col="profile" class="px-4 py-3">Member Profile</th>
+              <th data-lsc-table="members" data-col="plan" class="px-4 py-3">Membership & Batch</th>
+              <th data-lsc-table="members" data-col="financials" class="px-4 py-3">Financials & Dates</th>
+              <th data-lsc-table="members" data-col="status" class="px-4 py-3">Status</th>
+              <th data-lsc-table="members" data-col="actions" class="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody id="desktop-table-body" class="text-xs text-slate-700"></tbody>
@@ -119,27 +123,27 @@
           
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-4">
             <div>
-              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">Membership</p>
+              <p class="text-[11px] sm:text-xs text-slate-500 font-semibold mb-0.5">Membership</p>
               <p id="det-plan" class="font-bold text-slate-800 text-xs md:text-sm">--</p>
             </div>
             <div>
-              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">Batch</p>
+              <p class="text-[11px] sm:text-xs text-slate-500 font-semibold mb-0.5">Batch</p>
               <p id="det-batch" class="font-bold text-slate-800 text-xs md:text-sm">--</p>
             </div>
             <div>
-              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">Amount</p>
+              <p class="text-[11px] sm:text-xs text-slate-500 font-semibold mb-0.5">Amount</p>
               <p id="det-amount" class="font-bold text-slate-800 text-xs md:text-sm">--</p>
             </div>
             <div>
-              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">Joined</p>
+              <p class="text-[11px] sm:text-xs text-slate-500 font-semibold mb-0.5">Joined</p>
               <p id="det-join" class="font-bold text-slate-800 text-xs md:text-sm">--</p>
             </div>
             <div>
-              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">Next Due</p>
+              <p class="text-[11px] sm:text-xs text-slate-500 font-semibold mb-0.5">Next Due</p>
               <p id="det-due-date" class="font-bold text-slate-800 text-xs md:text-sm">--</p>
             </div>
             <div>
-              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide mb-0.5">DOB</p>
+              <p class="text-[11px] sm:text-xs text-slate-500 font-semibold mb-0.5">DOB</p>
               <p id="det-dob" class="font-bold text-slate-800 text-xs md:text-sm">--</p>
             </div>
           </div>
@@ -162,16 +166,16 @@
 
           <div class="grid grid-cols-3 gap-2 mb-4 pb-4 border-b border-slate-100">
             <div>
-              <p class="text-[8px] text-slate-400 font-bold uppercase tracking-wide">All Time LTV</p>
+              <p class="text-[11px] sm:text-xs text-slate-500 font-semibold">All Time LTV</p>
               <h3 id="det-ltv-all" class="text-sm md:text-base font-bold text-slate-800">...</h3>
             </div>
             <div>
-              <p class="text-[8px] text-slate-400 font-bold uppercase tracking-wide"><span id="lbl-year-ltv"></span>
+              <p class="text-[11px] sm:text-xs text-slate-500 font-semibold"><span id="lbl-year-ltv"></span>
                 Earned</p>
               <h3 id="det-ltv-year" class="text-sm md:text-base font-bold text-brand-primary">...</h3>
             </div>
             <div>
-              <p class="text-[8px] text-slate-400 font-bold uppercase tracking-wide">Payments</p>
+              <p class="text-[11px] sm:text-xs text-slate-500 font-semibold">Payments</p>
               <h3 id="det-ltv-count" class="text-sm md:text-base font-bold text-slate-800">...</h3>
             </div>
           </div>
@@ -337,7 +341,7 @@
 
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Join Date</label>
+                    <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Date of Joining</label>
                     <div class="relative">
                       <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
                       <input type="text" id="mem-join" placeholder="DD-MMM-YYYY" onchange="MembersApp.onPlanOrBatchChange()" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm text-slate-700">

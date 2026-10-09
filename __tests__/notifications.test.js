@@ -122,4 +122,20 @@ describe('notification report helpers', () => {
     expect(payload.subject).toContain('[TEST]');
     expect(payload.cc).toBeUndefined();
   });
+
+  test('api_sendTestNotificationEmail sends a sample overdue WhatsApp message to the signed-in admin', () => {
+    const api = loadNotificationsApi();
+    const res = api.api_sendTestNotificationEmail('waOverdue', {
+      gymName: 'LSC',
+      waOverdueBody: 'Hi {{name}}, {{amount}} was due on {{dueDate}}.'
+    });
+    expect(res.success).toBe(true);
+    expect(res.data.type).toBe('waoverdue');
+    expect(res.data.to).toBe('admin@gym.com');
+    const payload = api._mailApp.sendEmail.mock.calls[0][0];
+    expect(payload.subject).toContain('[TEST] Overdue WhatsApp');
+    expect(payload.htmlBody).toContain('Supreet Kaur');
+    expect(payload.htmlBody).toContain('10-Oct-2026');
+    expect(payload.htmlBody).toContain('This is a test email');
+  });
 });
