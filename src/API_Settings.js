@@ -429,7 +429,58 @@ function api_saveGeneralSettings(settingsArray) {
   }
 }
 
-var FACTORY_RESET_SHEETS_ = ['MEMBERS', 'PAYMENTS', 'EXPENSES', 'SALARY'];
+var FACTORY_RESET_SHEETS_ = ['MEMBERS', 'PAYMENTS', 'STAFF', 'SALARY', 'EXPENSES'];
+
+function clearFactoryResetCalendarEvents_() {
+  var removed = 0;
+  if (typeof CalendarApp === 'undefined') return { removed: 0, skipped: true };
+  var cal;
+  try {
+    cal = CalendarApp.getDefaultCalendar();
+  } catch (error) {
+    return { removed: 0, skipped: true, error: String(error && error.message ? error.message : error) };
+  }
+
+  var seen = {};
+  try {
+    var members = (typeof DB !== 'undefined' && DB.read) ? (DB.read('MEMBERS') || []) : [];
+    members.forEach(function(member) {
+      var eventId = String(member && member.dueCalendarEventId || '').trim();
+      if (!eventId || seen[eventId]) return;
+      seen[eventId] = true;
+      try {
+        var stored = cal.getEventById(eventId);
+        if (stored) {
+          stored.deleteEvent();
+          removed++;
+        }
+      } catch (error) { /* keep going so one bad event does not stop the reset */ }
+    });
+  } catch (error) { /* member ids are optional; the title sweep still runs */ }
+
+  try {
+    var start = new Date();
+    start.setFullYear(start.getFullYear() - 2);
+    var end = new Date();
+    end.setFullYear(end.getFullYear() + 3);
+    var events = cal.getEvents(start, end) || [];
+    events.forEach(function(event) {
+      var title = '';
+      var description = '';
+      try { title = String(event.getTitle() || ''); } catch (e) { title = ''; }
+      try { description = String(event.getDescription() || ''); } catch (e) { description = ''; }
+      var isLscDue = title.indexOf('Due: ') === 0 && description.indexOf('Created automatically by LSC Gym Management.') >= 0;
+      if (!isLscDue) return;
+      try {
+        event.deleteEvent();
+        removed++;
+      } catch (error) { /* leave the sheet reset to finish */ }
+    });
+  } catch (error) {
+    return { removed: removed, skipped: true, error: String(error && error.message ? error.message : error) };
+  }
+  return { removed: removed, skipped: false };
+}
 
 function api_factoryResetApplicationData() {
   try {
@@ -438,6 +489,7 @@ function api_factoryResetApplicationData() {
     if (!gate.context || !gate.context.isOwner) {
       return { success: false, error: 'Only the gym owner can reset application data.', code: 'FORBIDDEN' };
     }
+    const calendar = clearFactoryResetCalendarEvents_();
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const cleared = [];
     FACTORY_RESET_SHEETS_.forEach(function(name) {
@@ -448,10 +500,15 @@ function api_factoryResetApplicationData() {
       if (typeof DB !== 'undefined' && DB._invalidateSheet) DB._invalidateSheet(name);
       cleared.push(name);
     });
+    var message = 'Members, payments, staff, salary, expenses, and calendar events were cleared.';
+    if (calendar && calendar.skipped) {
+      message += ' Calendar cleanup could not finish. Re-authorize Google services, then run the reset again to remove any remaining due events.';
+    }
     return {
       success: true,
-      message: 'Members, payments, expenses, and salary records were cleared.',
-      cleared: cleared
+      message: message,
+      cleared: cleared,
+      calendarEventsRemoved: calendar ? calendar.removed : 0
     };
   } catch (error) {
     return { success: false, error: error.message || String(error) };

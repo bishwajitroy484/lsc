@@ -81,6 +81,7 @@ function createSettingsApi(overrides = {}) {
     'api_uploadImageToDrive',
     'requirePermission_',
     'requireAnyViewPermission_',
+    'CalendarApp',
     `
       ${source};
       return { 
@@ -101,7 +102,8 @@ function createSettingsApi(overrides = {}) {
     _colToLetter,
     mockUploadImage,
     overrides.requirePermission_ || allowGate,
-    overrides.requireAnyViewPermission_ || allowGate
+    overrides.requireAnyViewPermission_ || allowGate,
+    overrides.CalendarApp
   );
 
   return { api, sheet: defaultSheet, sheetsService: defaultSheets.Spreadsheets, dummyRange, mockUploadImage };
@@ -533,28 +535,50 @@ describe('Settings Module', () => {
 });
 
 describe('Factory reset application data', () => {
-  test('owner clear deletes data rows on Members, Payments, Expenses, and Salary', () => {
+  test('owner clear deletes data rows on Members, Payments, Staff, Salary, and Expenses', () => {
     const sheet = {
       getLastRow: jest.fn(() => 5),
       deleteRows: jest.fn()
     };
     const invalidate = jest.fn();
-    const getSheetByName = jest.fn((name) => (name === 'SALARY' ? null : sheet));
+    const stored = { deleteEvent: jest.fn() };
+    const dueEvent = {
+      getTitle: () => 'Due: Ada (LSC-MEM-1)',
+      getDescription: () => 'Plan: Quarterly\n\nCreated automatically by LSC Gym Management.',
+      deleteEvent: jest.fn()
+    };
+    const personal = {
+      getTitle: () => 'Dentist',
+      getDescription: () => 'Personal appointment',
+      deleteEvent: jest.fn()
+    };
     const { api } = createSettingsApi({
-      DB: { read: jest.fn(() => []), _invalidateSheet: invalidate },
+      DB: {
+        read: jest.fn(() => [{ memberId: 'LSC-MEM-1', dueCalendarEventId: 'evt-1' }]),
+        _invalidateSheet: invalidate
+      },
       SpreadsheetApp: {
-        openById: jest.fn(() => ({ getSheetByName: getSheetByName }))
+        openById: jest.fn(() => ({ getSheetByName: jest.fn(() => sheet) }))
+      },
+      CalendarApp: {
+        getDefaultCalendar: () => ({
+          getEventById: jest.fn(() => stored),
+          getEvents: jest.fn(() => [dueEvent, personal])
+        })
       }
     });
 
     const response = api.api_factoryResetApplicationData();
 
     expect(response.success).toBe(true);
-    expect(response.cleared).toEqual(['MEMBERS', 'PAYMENTS', 'EXPENSES']);
-    expect(sheet.deleteRows).toHaveBeenCalledTimes(3);
+    expect(response.cleared).toEqual(['MEMBERS', 'PAYMENTS', 'STAFF', 'SALARY', 'EXPENSES']);
+    expect(sheet.deleteRows).toHaveBeenCalledTimes(5);
     expect(sheet.deleteRows).toHaveBeenCalledWith(2, 4);
-    expect(invalidate).toHaveBeenCalledWith('MEMBERS');
-    expect(invalidate).not.toHaveBeenCalledWith('SALARY');
+    expect(invalidate).toHaveBeenCalledWith('STAFF');
+    expect(stored.deleteEvent).toHaveBeenCalled();
+    expect(dueEvent.deleteEvent).toHaveBeenCalled();
+    expect(personal.deleteEvent).not.toHaveBeenCalled();
+    expect(response.calendarEventsRemoved).toBe(2);
   });
 
   test('a non-owner cannot reset application data', () => {
@@ -577,7 +601,7 @@ describe('Factory reset application data', () => {
     const view = fs.readFileSync(path.join(__dirname, '../src/View_Settings.html'), 'utf8');
     const script = fs.readFileSync(path.join(__dirname, '../src/Script_Settings.html'), 'utf8');
     expect(view).toContain('Factory Reset Application Data');
-    expect(view).toContain('It will erase all the existing data of Members, Payments, Expenses, and Salary. Are you sure?');
+    expect(view).toContain('It will erase all the existing data of Members, Payments, Staff, Salary, Expenses, and Calendar Events. Are you sure?');
     expect(view).toContain('SettingsApp.confirmFactoryReset()');
     expect(script).toContain('api_factoryResetApplicationData');
     expect(script).toContain("resetSection.classList.toggle('hidden', !isOwner)");
