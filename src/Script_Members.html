@@ -395,6 +395,10 @@
             this.applyFilters();
             if(typeof callback === 'function') callback();
         })
+        .withFailureHandler((err) => {
+            Toast.error((err && err.message) || 'Could not load members.');
+            if(typeof callback === 'function') callback();
+        })
         .api_getMembers();
     },
 
@@ -1283,21 +1287,29 @@
           };
       }
 
+      const reopenMemberId = this.currentActiveMember && this.currentActiveMember.memberId;
+      this.closeModal();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
           btn.innerHTML = 'Save Member'; btn.disabled = false;
           if(res.success) {
             Toast.success(res.message);
-            this.closeModal(); 
             this.fetchData(() => {
-                if (this.currentActiveMember && this.currentActiveMember.memberId === payload.memberId) { 
-                    const freshMember = this.allData.find(m => m.memberId === payload.memberId);
-                    if (freshMember) this.openDetails(freshMember);
-                }
+                const freshId = (res.data && res.data.memberId) || payload.memberId || reopenMemberId;
+                if (!freshId) return;
+                const freshMember = this.allData.find(m => String(m.memberId) === String(freshId));
+                if (freshMember && reopenMemberId) this.openDetails(freshMember);
             });
-          } else { 
-            Toast.error(res.error); 
+          } else {
+            Toast.error(res.error);
+            this.fetchData();
           }
+        })
+        .withFailureHandler((err) => {
+          btn.innerHTML = 'Save Member'; btn.disabled = false;
+          Toast.error((err && err.message) || 'Could not save the member.');
+          this.fetchData();
         })
         .api_saveMember(payload);
     },
@@ -1491,28 +1503,28 @@
       const txnField = document.getElementById('pay-txn').value;
       if (txnField) payload.txnId = txnField;
 
+      const reopenMemberId = this.currentActiveMember && this.currentActiveMember.memberId;
+      this.closeRecordPayment();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
           btn.innerHTML = 'Save Payment'; btn.disabled = false;
           if(res.success) {
             Toast.success(res.message);
-            this.closeRecordPayment();
-            
-            const targetMember = this.allData.find(m => m.memberId === payload.memberId);
-            if (targetMember && payload.endDate) {
-                const nextDue = new Date(this.parseToISODate(payload.endDate));
-                targetMember.dueDate = this.formatDateDDMMMYYYY(nextDue);
-            }
-            
             this.fetchData(() => {
-                if (this.currentActiveMember) {
-                    const freshMember = this.allData.find(m => m.memberId === this.currentActiveMember.memberId);
-                    if(freshMember) this.openDetails(freshMember);
-                }
+                if (!reopenMemberId) return;
+                const freshMember = this.allData.find(m => String(m.memberId) === String(reopenMemberId));
+                if(freshMember) this.openDetails(freshMember);
             });
-          } else { 
-            Toast.error(res.error); 
+          } else {
+            Toast.error(res.error);
+            this.fetchData();
           }
+        })
+        .withFailureHandler((err) => {
+          btn.innerHTML = 'Save Payment'; btn.disabled = false;
+          Toast.error((err && err.message) || 'Could not save the payment.');
+          this.fetchData();
         })
         .api_recordPayment(payload);
     },
@@ -1541,34 +1553,44 @@
 
     confirmDelete: function() {
       if(!this.deleteState.id) return;
-      
-      if(this.deleteState.type === 'member') {
+
+      const deleteType = this.deleteState.type;
+      const deleteId = this.deleteState.id;
+      const reopenMemberId = this.currentActiveMember && this.currentActiveMember.memberId;
+      this.closeDeleteModal();
+      this.showShimmer();
+      if(deleteType === 'member') {
         google.script.run
           .withSuccessHandler((res) => {
-            this.closeDeleteModal();
             if(res.success) {
               Toast.success(res.message);
               this.closeDetails();
               this.fetchData();
-            } else { Toast.error(res.error); }
+            } else {
+              Toast.error(res.error);
+              this.fetchData();
+            }
           })
-          .api_deleteMember(this.deleteState.id);
+          .withFailureHandler(() => { this.fetchData(); })
+          .api_deleteMember(deleteId);
       } 
-      else if (this.deleteState.type === 'payment') {
+      else if (deleteType === 'payment') {
         google.script.run
           .withSuccessHandler((res) => {
-            this.closeDeleteModal();
             if(res.success) {
               Toast.success(res.message);
               this.fetchData(() => {
-                  if (this.currentActiveMember) {
-                      const freshMember = this.allData.find(m => m.memberId === this.currentActiveMember.memberId);
-                      if (freshMember) this.openDetails(freshMember);
-                  }
+                  if (!reopenMemberId) return;
+                  const freshMember = this.allData.find(m => String(m.memberId) === String(reopenMemberId));
+                  if (freshMember) this.openDetails(freshMember);
               });
-            } else { Toast.error(res.error); }
+            } else {
+              Toast.error(res.error);
+              this.fetchData();
+            }
           })
-          .api_deletePayment(this.deleteState.id);
+          .withFailureHandler(() => { this.fetchData(); })
+          .api_deletePayment(deleteId);
       }
     }
   };

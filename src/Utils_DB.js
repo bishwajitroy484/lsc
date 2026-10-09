@@ -234,15 +234,26 @@ const DB = {
     return null;
   },
 
+  _cacheGen_: function () {
+    const cache = this._scriptCache();
+    if (!cache) return '0';
+    try { return cache.get('lsc_db_gen') || '0'; } catch (e) { return '0'; }
+  },
+
+  _cacheKey_: function (key) {
+    return this._cacheGen_() + ':' + key;
+  },
+
   _cacheGet: function (key) {
-    if (__dbMemCache[key] !== undefined) return __dbMemCache[key];
+    const scoped = this._cacheKey_(key);
+    if (__dbMemCache[scoped] !== undefined) return __dbMemCache[scoped];
     const cache = this._scriptCache();
     if (!cache) return null;
     try {
-      const raw = cache.get('lsc_db_' + key);
+      const raw = cache.get('lsc_db_' + scoped);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      __dbMemCache[key] = parsed;
+      __dbMemCache[scoped] = parsed;
       return parsed;
     } catch (e) {
       return null;
@@ -250,30 +261,24 @@ const DB = {
   },
 
   _cachePut: function (key, value) {
-    __dbMemCache[key] = value;
+    const scoped = this._cacheKey_(key);
+    __dbMemCache[scoped] = value;
     const cache = this._scriptCache();
     if (!cache) return;
     try {
       const raw = JSON.stringify(value);
       // Script Cache max ~100KB per entry; skip oversized sheets silently
-      if (raw.length < 90000) cache.put('lsc_db_' + key, raw, DB_READ_CACHE_TTL_SEC);
+      if (raw.length < 90000) cache.put('lsc_db_' + scoped, raw, DB_READ_CACHE_TTL_SEC);
     } catch (e) { /* ignore */ }
   },
 
   _invalidateSheet: function (sheetName) {
-    Object.keys(__dbMemCache).forEach((key) => {
-      if (key === 'read:' + sheetName || key.indexOf(sheetName) !== -1) {
-        delete __dbMemCache[key];
-      }
-    });
+    __dbMemCache = {};
     const cache = this._scriptCache();
     if (!cache) return;
     try {
-      cache.remove('lsc_db_read:' + sheetName);
-      // Drop any batch keys that included this sheet (best-effort; TTL also covers it)
-      Object.keys(__dbMemCache).forEach((key) => {
-        if (key.indexOf('batch:') === 0) cache.remove('lsc_db_' + key);
-      });
+      // Bump the generation so the next read misses every sheet and batch entry.
+      cache.put('lsc_db_gen', String(Date.now()), 21600);
     } catch (e) { /* ignore */ }
   },
 

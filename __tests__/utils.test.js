@@ -1,4 +1,4 @@
-const { colToLetter, _colToLetter, parseSafeDate, distributeDailyProration } = require('../src/Utils_DB');
+const { colToLetter, _colToLetter, parseSafeDate, distributeDailyProration, DB } = require('../src/Utils_DB');
 
 describe('Universal Column Converter (colToLetter)', () => {
   test('correctly converts 1-based indices to column letters', () => {
@@ -401,5 +401,30 @@ describe('Client Shared Utilities (AppUtils in Global_State.html)', () => {
         expect(source).toContain(`AppUtils.validateRequiredFields('${formId}')`);
       });
     });
+  });
+});
+
+describe('DB read cache', () => {
+  test('a write drops cached sheet and batch reads so the next load is current', () => {
+    const store = {};
+    global.CacheService = {
+      getScriptCache: () => ({
+        get: (key) => (Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null),
+        put: (key, value) => { store[key] = value; },
+        remove: (key) => { delete store[key]; }
+      })
+    };
+
+    DB._cachePut('read:MEMBERS', [{ memberId: 'OLD' }]);
+    DB._cachePut('batch:MEMBERS|PAYMENTS', { MEMBERS: [{ memberId: 'OLD' }] });
+    expect(DB._cacheGet('read:MEMBERS')[0].memberId).toBe('OLD');
+    expect(DB._cacheGet('batch:MEMBERS|PAYMENTS').MEMBERS[0].memberId).toBe('OLD');
+
+    DB._invalidateSheet('MEMBERS');
+
+    expect(DB._cacheGet('read:MEMBERS')).toBeNull();
+    expect(DB._cacheGet('batch:MEMBERS|PAYMENTS')).toBeNull();
+
+    delete global.CacheService;
   });
 });
