@@ -428,3 +428,32 @@ function api_saveGeneralSettings(settingsArray) {
     return { success: false, error: error.toString() };
   }
 }
+
+var FACTORY_RESET_SHEETS_ = ['MEMBERS', 'PAYMENTS', 'EXPENSES', 'SALARY'];
+
+function api_factoryResetApplicationData() {
+  try {
+    const gate = requirePermission_('settings', 'edit');
+    if (!gate.ok) return gate.response;
+    if (!gate.context || !gate.context.isOwner) {
+      return { success: false, error: 'Only the gym owner can reset application data.', code: 'FORBIDDEN' };
+    }
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const cleared = [];
+    FACTORY_RESET_SHEETS_.forEach(function(name) {
+      const sheet = ss.getSheetByName(name);
+      if (!sheet) return;
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) sheet.deleteRows(2, lastRow - 1);
+      if (typeof DB !== 'undefined' && DB._invalidateSheet) DB._invalidateSheet(name);
+      cleared.push(name);
+    });
+    return {
+      success: true,
+      message: 'Members, payments, expenses, and salary records were cleared.',
+      cleared: cleared
+    };
+  } catch (error) {
+    return { success: false, error: error.message || String(error) };
+  }
+}

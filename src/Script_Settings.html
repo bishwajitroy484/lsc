@@ -128,6 +128,56 @@
       if (saveDeployBtn) saveDeployBtn.classList.toggle('hidden', !isOwner);
       const deployInput = document.getElementById('deploy-deployment-id');
       if (deployInput) deployInput.readOnly = !isOwner;
+      const resetSection = document.getElementById('factory-reset-section');
+      if (resetSection) resetSection.classList.toggle('hidden', !isOwner);
+    },
+
+    openFactoryResetModal: function() {
+      const backdrop = document.getElementById('factory-reset-modal');
+      const content = document.getElementById('factory-reset-modal-content');
+      const confirmBtn = document.getElementById('btn-factory-reset-confirm');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Delete';
+      }
+      if (backdrop) backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      if (content) content.classList.remove('scale-95', 'opacity-0');
+    },
+
+    closeFactoryResetModal: function() {
+      const backdrop = document.getElementById('factory-reset-modal');
+      const content = document.getElementById('factory-reset-modal-content');
+      if (backdrop) backdrop.classList.add('opacity-0', 'pointer-events-none');
+      if (content) content.classList.add('scale-95', 'opacity-0');
+    },
+
+    confirmFactoryReset: function() {
+      const confirmBtn = document.getElementById('btn-factory-reset-confirm');
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Deleting...';
+      }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Delete';
+          }
+          if (res && res.success) {
+            this.closeFactoryResetModal();
+            this.showToast(res.message || 'Application data cleared.', false);
+          } else {
+            this.showToast((res && res.error) || 'Could not reset application data.', true);
+          }
+        })
+        .withFailureHandler((err) => {
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Delete';
+          }
+          this.showToast((err && err.message) || 'Could not reset application data.', true);
+        })
+        .api_factoryResetApplicationData();
     },
 
     refreshSetupStatus: function() {

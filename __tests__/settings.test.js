@@ -89,7 +89,8 @@ function createSettingsApi(overrides = {}) {
         api_saveSchema,
         api_saveDropdownOptions,
         api_getGeneralSettings, 
-        api_saveGeneralSettings 
+        api_saveGeneralSettings,
+        api_factoryResetApplicationData
       };
     `
   )(
@@ -528,5 +529,57 @@ describe('Settings Module', () => {
       expect(mockImg.classList.add).toHaveBeenCalledWith('hidden');
       expect(mockFallback.classList.remove).toHaveBeenCalledWith('hidden');
     });
+  });
+});
+
+describe('Factory reset application data', () => {
+  test('owner clear deletes data rows on Members, Payments, Expenses, and Salary', () => {
+    const sheet = {
+      getLastRow: jest.fn(() => 5),
+      deleteRows: jest.fn()
+    };
+    const invalidate = jest.fn();
+    const getSheetByName = jest.fn((name) => (name === 'SALARY' ? null : sheet));
+    const { api } = createSettingsApi({
+      DB: { read: jest.fn(() => []), _invalidateSheet: invalidate },
+      SpreadsheetApp: {
+        openById: jest.fn(() => ({ getSheetByName: getSheetByName }))
+      }
+    });
+
+    const response = api.api_factoryResetApplicationData();
+
+    expect(response.success).toBe(true);
+    expect(response.cleared).toEqual(['MEMBERS', 'PAYMENTS', 'EXPENSES']);
+    expect(sheet.deleteRows).toHaveBeenCalledTimes(3);
+    expect(sheet.deleteRows).toHaveBeenCalledWith(2, 4);
+    expect(invalidate).toHaveBeenCalledWith('MEMBERS');
+    expect(invalidate).not.toHaveBeenCalledWith('SALARY');
+  });
+
+  test('a non-owner cannot reset application data', () => {
+    const sheet = { getLastRow: jest.fn(() => 5), deleteRows: jest.fn() };
+    const { api } = createSettingsApi({
+      requirePermission_: () => ({ ok: true, context: { isOwner: false, allowed: true } }),
+      SpreadsheetApp: {
+        openById: jest.fn(() => ({ getSheetByName: jest.fn(() => sheet) }))
+      }
+    });
+
+    const response = api.api_factoryResetApplicationData();
+
+    expect(response.success).toBe(false);
+    expect(response.code).toBe('FORBIDDEN');
+    expect(sheet.deleteRows).not.toHaveBeenCalled();
+  });
+
+  test('settings shows the factory reset confirmation before deleting', () => {
+    const view = fs.readFileSync(path.join(__dirname, '../src/View_Settings.html'), 'utf8');
+    const script = fs.readFileSync(path.join(__dirname, '../src/Script_Settings.html'), 'utf8');
+    expect(view).toContain('Factory Reset Application Data');
+    expect(view).toContain('It will erase all the existing data of Members, Payments, Expenses, and Salary. Are you sure?');
+    expect(view).toContain('SettingsApp.confirmFactoryReset()');
+    expect(script).toContain('api_factoryResetApplicationData');
+    expect(script).toContain("resetSection.classList.toggle('hidden', !isOwner)");
   });
 });
