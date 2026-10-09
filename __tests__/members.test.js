@@ -584,7 +584,8 @@ describe('Members Module', () => {
       expect(planFilter.value).toBe('PLAN-1');
       expect(document.getElementById('mem-pay-cash')).toBeTruthy();
       expect(document.getElementById('mem-pay-upi')).toBeTruthy();
-      expect(document.getElementById('mem-pay-status').innerHTML).toContain('PAY-PAID');
+      expect(MembersApp.paidStatusId()).toBe('PAY-PAID');
+      expect(MembersApp.activeStatusId()).toBe('STATUS-ACTIVE');
 
       const payFields = document.getElementById('mem-pay-fields');
       MembersApp.toggleInitialPaymentFields();
@@ -601,7 +602,8 @@ describe('Members Module', () => {
       MembersApp.dropdowns = {
         membership: [
           { id: 'PLAN-QUARTERLY', name: 'Quarterly', frequency: 'Quarterly' },
-          { id: 'PLAN-TRIAL', name: 'Trial', frequency: 'Trial' }
+          { id: 'PLAN-TRIAL', name: 'Trial', frequency: 'Trial' },
+          { id: 'PLAN-ADHOC', name: 'Ad-hoc', frequency: 'Ad-hoc' }
         ],
         batch: [
           { id: 'BATCH-ADULT', name: 'Morning', groups: 'Adult' },
@@ -625,7 +627,14 @@ describe('Members Module', () => {
       document.getElementById('mem-plan').value = 'PLAN-TRIAL';
       MembersApp.onPlanOrBatchChange();
       expect(document.getElementById('mem-amount').value).toBe('3000');
+      expect(document.getElementById('mem-exit-container').classList.remove).toHaveBeenCalledWith('hidden');
+      expect(document.getElementById('mem-exit-date').required).toBe(true);
 
+      document.getElementById('mem-plan').value = 'PLAN-ADHOC';
+      MembersApp.onPlanOrBatchChange();
+      expect(document.getElementById('mem-exit-date').required).toBe(true);
+
+      document.getElementById('mem-plan').value = 'PLAN-TRIAL';
       document.getElementById('mem-join').value = '01-Oct-2026';
       document.getElementById('mem-exit-date').value = '04-Oct-2026';
       MembersApp.onPlanOrBatchChange();

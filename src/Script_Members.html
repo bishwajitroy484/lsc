@@ -296,7 +296,6 @@
       this.populateSelect('mem-batch', batches, 'groups');
       this.populateSelect('mem-status', statuses);
       this.populateSelect('pay-status', payStatuses, null, 'Select Status...');
-      this.populateSelect('mem-pay-status', payStatuses);
       
       this.populateFilterStatus(statuses);
       this.populateSelect('filter-batch', batches, null, 'All Batches', true);
@@ -1112,22 +1111,42 @@
       }
     },
 
+    activeStatusId: function() {
+      const statuses = this.dropdowns.status || [];
+      const active = statuses.find(opt => String(opt.name || opt.label || opt.id || '').trim().toLowerCase() === 'active');
+      return active ? active.id : '';
+    },
+
+    paidStatusId: function() {
+      const statusOpts = this.dropdowns.paymentstatus || this.dropdowns.status || [];
+      const paid = statusOpts.find(opt => {
+        const name = String(opt.name || opt.label || '').trim().toLowerCase();
+        return name === 'paid' || name === 'completed';
+      });
+      return paid ? paid.id : '';
+    },
+
+    isNonRecurringPlan: function(planMatch) {
+      const planName = planMatch ? `${planMatch.name || ''} ${planMatch.frequency || ''}`.toLowerCase() : '';
+      return planName.includes('trial') || planName.includes('adhoc') || planName.includes('ad-hoc');
+    },
+
     onStatusChange: function() {
       const statusId = document.getElementById('mem-status').value;
       const statusName = this.getName('status', statusId).toLowerCase();
       const exitContainer = document.getElementById('mem-exit-container');
+      const exitField = document.getElementById('mem-exit-date');
       
       const planId = document.getElementById('mem-plan').value;
       const planMatch = (this.dropdowns.membership || []).find(p => p.id === planId);
-      const planName = planMatch ? String(planMatch.name).toLowerCase() : '';
-      const isNonRecurring = planName.includes('trial') || planName.includes('adhoc') || planName.includes('ad-hoc');
+      const isNonRecurring = this.isNonRecurringPlan(planMatch);
 
       if (statusName.includes('inactive') || statusName.includes('in-active') || isNonRecurring) {
         exitContainer.classList.remove('hidden');
-        document.getElementById('mem-exit-date').required = true;
+        exitField.required = true;
       } else {
         exitContainer.classList.add('hidden');
-        document.getElementById('mem-exit-date').required = false;
+        exitField.required = false;
       }
     },
 
@@ -1158,8 +1177,9 @@
       
       document.getElementById('mem-plan').value = member ? member.membershipId : 'All';
       
-      const statOpt = document.getElementById('mem-status').options[1]?.value || '';
-      document.getElementById('mem-status').value = member ? member.status : statOpt;
+      const statusField = document.getElementById('mem-status-field');
+      if (statusField) statusField.classList.toggle('hidden', !member);
+      document.getElementById('mem-status').value = member ? member.status : (this.activeStatusId() || document.getElementById('mem-status').options[1]?.value || '');
       
       this.setDatePicker('mem-dob', member && member.dob ? member.dob : '');
       this.setDatePicker('mem-join', member && member.joinDate ? member.joinDate : '');
@@ -1177,10 +1197,6 @@
               document.getElementById('mem-record-pay').checked = false;
               document.getElementById('mem-pay-fields').classList.add('hidden');
               
-              const statusOpts = this.dropdowns.paymentstatus || this.dropdowns.status || [];
-              this.populateSelect('mem-pay-status', statusOpts);
-              const paidOpt = statusOpts.find(opt => String(opt.name).toLowerCase() === 'paid' || String(opt.name).toLowerCase() === 'completed');
-              if(paidOpt) document.getElementById('mem-pay-status').value = paidOpt.id;
           }
       }
 
@@ -1244,7 +1260,7 @@
         dob: dobFmt,
         gender: document.getElementById('mem-gender').value,
         email: document.getElementById('mem-email').value,
-        status: document.getElementById('mem-status').value,
+        status: isNew ? (this.activeStatusId() || document.getElementById('mem-status').value) : document.getElementById('mem-status').value,
         membershipId: planVal,
         batchId: batchVal,
         joinDate: joinFmt,
@@ -1283,7 +1299,7 @@
               paymentMode: initialSplit.paymentMode,
               cashAmount: initialSplit.cashAmount,
               upiAmount: initialSplit.upiAmount,
-              paymentStatus: document.getElementById('mem-pay-status').value
+              paymentStatus: this.paidStatusId()
           };
       }
 
@@ -1324,11 +1340,9 @@
     toggleInitialPaymentFields: function() {
       const enabled = document.getElementById('mem-record-pay')?.checked;
       const fields = document.getElementById('mem-pay-fields');
-      ['mem-pay-status'].forEach(id => {
-        const field = document.getElementById(id);
-        if (field) field.required = Boolean(enabled);
-      });
-      if (fields) fields.classList.toggle('hidden', !enabled);
+      if (!fields) return;
+      fields.classList.toggle('hidden', !enabled);
+      fields.classList.toggle('grid', Boolean(enabled));
     },
 
     onPlanOrBatchChange: function() {

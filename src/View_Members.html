@@ -212,18 +212,18 @@
   <div id="member-modal"
     class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[100] flex items-end md:items-center justify-center sm:p-4 lsc-modal-sheet">
     <div id="member-modal-content"
-      class="bg-white w-full max-w-3xl md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh] lsc-modal-sheet-panel">
+      class="bg-white w-full max-w-3xl lg:max-w-4xl md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh] lsc-modal-sheet-panel">
 
       
       <div
-        class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0 bg-slate-50 rounded-t-2xl">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm">
-            <span class="material-symbols-rounded text-xl">person_add</span>
+        class="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0 bg-slate-50 rounded-t-2xl">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm">
+            <span class="material-symbols-rounded text-[18px]">person_add</span>
           </div>
           <div>
-            <h2 id="modal-title" class="text-lg font-bold text-slate-800 leading-tight">Add Member</h2>
-            <p class="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Member Profile & Configuration</p>
+            <h2 id="modal-title" class="text-base font-bold text-slate-800 leading-tight">Add Member</h2>
+            <p class="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Profile and membership</p>
           </div>
         </div>
         <button onclick="MembersApp.closeModal()" class="w-8 h-8 flex items-center justify-center bg-white text-slate-500 rounded-full hover:bg-slate-200 shadow-sm border border-slate-100 transition-colors">
@@ -235,11 +235,11 @@
       <form id="member-form" novalidate onsubmit="MembersApp.saveMember(event)" class="flex-1 flex flex-col overflow-hidden">
 
         
-        <div class="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar bg-white">
+        <div class="flex-1 overflow-y-auto p-3 md:p-4 no-scrollbar bg-white">
           <input type="hidden" id="mem-id">
 
-          <div class="flex flex-col gap-4">
-            <div class="bg-red-50/30 p-3 md:p-4 rounded-xl border border-red-100/50">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-red-50/30 p-3 rounded-xl border border-red-100/50">
               <h4
                 class="text-[11px] font-bold text-brand-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
                 <span class="material-symbols-rounded text-[14px]">badge</span> Personal Information
@@ -309,7 +309,7 @@
               </div>
             </div>
 
-            <div class="bg-emerald-50/30 p-3 md:p-4 rounded-xl border border-emerald-100/50">
+            <div class="bg-emerald-50/30 p-3 rounded-xl border border-emerald-100/50">
               <h4
                 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                 <span class="material-symbols-rounded text-[14px]">card_membership</span> Membership Details
@@ -344,26 +344,21 @@
                       <input type="text" id="mem-join" placeholder="DD-MMM-YYYY" onchange="MembersApp.onPlanOrBatchChange()" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm text-slate-700">
                     </div>
                   </div>
-                  <div>
+                  <div id="mem-status-field">
                     <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Account Status</label>
                     <div class="relative">
                       <select id="mem-status" onchange="MembersApp.onStatusChange()" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
                       <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
                     </div>
                   </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 mt-1">
-                  <div id="mem-exit-container" class="hidden col-span-2 sm:col-span-1">
-                    <label class="block text-[9px] font-bold text-red-500 mb-1 uppercase tracking-wide">Exit Date (Required)</label>
+                  <div id="mem-exit-container" class="hidden">
+                    <label class="block text-[9px] font-bold text-red-500 mb-1 uppercase tracking-wide">Exit Date *</label>
                     <div class="relative">
                       <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-red-400 pointer-events-none">calendar_month</span>
                       <input type="text" id="mem-exit-date" placeholder="DD-MMM-YYYY" onchange="MembersApp.onPlanOrBatchChange()" class="date-field w-full px-2.5 py-2 bg-red-50/30 border border-red-200 rounded-lg text-xs font-bold text-slate-700 focus:border-red-400 outline-none shadow-sm">
                     </div>
                   </div>
-                  
-                  
-                  <div class="col-span-2 sm:col-span-1 ml-auto w-full">
+                  <div>
                     <label class="block text-[9px] font-bold text-brand-primary mb-1 uppercase tracking-wide">Calculated Fee (₹) *</label>
                     <div class="relative flex items-center">
                       <span class="absolute left-2.5 font-bold text-slate-500 text-[14px]">₹</span>
@@ -372,59 +367,43 @@
                   </div>
                 </div>
 
-                <div class="hidden">
-                  <input type="number" id="mem-amount" class="w-full pl-6 pr-3 py-2 bg-white border border-brand-primary/30 rounded-lg text-sm font-bold text-slate-800 focus:border-brand-primary outline-none shadow-sm ring-1 ring-brand-primary/10">
-                </div>
+              </div>
+            </div>
 
+            <div id="upfront-payment-container" class="sm:col-span-2 bg-red-50/30 p-3 rounded-xl border border-red-100/50 transition-all">
+              <div class="flex items-center justify-between gap-3">
+                <h4 class="text-[11px] font-bold text-brand-primary uppercase tracking-wider flex items-center gap-1.5">
+                  <span class="material-symbols-rounded text-[14px]">payments</span> Capture Initial Payment
+                </h4>
+                <label class="flex items-center gap-2 cursor-pointer shrink-0">
+                  <input type="checkbox" id="mem-record-pay" onchange="MembersApp.toggleInitialPaymentFields()" class="w-3.5 h-3.5 text-brand-primary rounded border-slate-300 focus:ring-brand-primary">
+                  <span class="text-[9px] font-bold text-slate-600 uppercase tracking-wide">Record Now</span>
+                </label>
+              </div>
+
+              <div id="mem-pay-fields" class="hidden grid-cols-2 gap-3 border-t border-red-100/50 pt-3 mt-3">
+                 <div>
+                   <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Cash</label>
+                   <div class="relative flex items-center">
+                     <span class="absolute left-2.5 font-bold text-slate-500 text-xs">₹</span>
+                     <input type="number" id="mem-pay-cash" min="0" step="0.01" value="0" class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
+                   </div>
+                 </div>
+                 <div>
+                   <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">UPI</label>
+                   <div class="relative flex items-center">
+                     <span class="absolute left-2.5 font-bold text-slate-500 text-xs">₹</span>
+                     <input type="number" id="mem-pay-upi" min="0" step="0.01" value="0" class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
+                   </div>
+                 </div>
+                 <p class="col-span-2 text-[10px] text-slate-500 font-medium">Cash and UPI must add up to the fee. A new payment is saved as Paid.</p>
               </div>
             </div>
           </div>
         </div>
 
-        
-            <div id="upfront-payment-container" class="bg-red-50/30 p-3 md:p-4 rounded-xl border border-red-100/50 mt-4 transition-all">
-              <div class="flex items-center justify-between">
-                <h4 class="text-[11px] font-bold text-brand-primary uppercase tracking-wider flex items-center gap-1.5">
-                  <span class="material-symbols-rounded text-[14px]">payments</span> Capture Initial Payment
-                </h4>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" id="mem-record-pay" onchange="MembersApp.toggleInitialPaymentFields()" class="w-3.5 h-3.5 text-brand-primary rounded border-slate-300 focus:ring-brand-primary">
-                  <span class="text-[9px] font-bold text-slate-600 uppercase tracking-wide">Record Now</span>
-                </label>
-              </div>
-              
-              <div id="mem-pay-fields" class="hidden flex flex-col gap-3 border-t border-red-100/50 pt-3 mt-3">
-                 <div class="grid grid-cols-2 gap-3">
-                   <div>
-                     <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Cash</label>
-                     <div class="relative flex items-center">
-                       <span class="absolute left-2.5 font-bold text-slate-500 text-xs">₹</span>
-                       <input type="number" id="mem-pay-cash" min="0" step="0.01" value="0" class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
-                     </div>
-                   </div>
-                   <div>
-                     <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">UPI</label>
-                     <div class="relative flex items-center">
-                       <span class="absolute left-2.5 font-bold text-slate-500 text-xs">₹</span>
-                       <input type="number" id="mem-pay-upi" min="0" step="0.01" value="0" class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
-                     </div>
-                   </div>
-                   <p class="col-span-2 text-[10px] text-slate-500 font-medium">Cash and UPI must add up to the membership amount. Use 0 on the side that was not used.</p>
-                   <div class="col-span-2">
-                     <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Status *</label>
-                     <div class="relative">
-                       <select id="mem-pay-status" required class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
-                       <span class="material-symbols-rounded absolute right-2 top-1.5 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
-                     </div>
-                   </div>
-                 </div>
-              </div>
-            </div>
-            
-
-        
         <div
-          class="p-4 bg-white border-t border-slate-100 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex justify-end gap-3 pb-2 md:pb-2">
+          class="p-3 md:px-4 bg-white border-t border-slate-100 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex justify-end gap-3">
           <button type="button" onclick="MembersApp.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors">Cancel</button>
           <button type="submit" id="btn-save-member" class="px-6 py-2.5 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-md shadow-red-500/20 hover:bg-brand-hover flex items-center justify-center gap-2 transition-all">Save Member</button>
         </div>
