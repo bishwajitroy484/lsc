@@ -196,6 +196,27 @@
 
     parseToISODate: AppUtils.parseToISODate,
 
+    isQuarterPlan: function(planName) {
+      return String(planName || '').toUpperCase().indexOf('QUARTER') >= 0;
+    },
+
+    cycleEndFromStart: function(start, planName) {
+      const end = new Date(start);
+      const name = String(planName || '').toUpperCase();
+      if (name.indexOf('QUARTER') >= 0) end.setDate(end.getDate() + 90);
+      else if (name.indexOf('YEAR') >= 0) end.setFullYear(end.getFullYear() + 1);
+      else if (name.indexOf('TRIAL') >= 0) end.setDate(end.getDate() + 7);
+      else if (name.indexOf('ADHOC') >= 0 || name.indexOf('AD-HOC') >= 0) end.setDate(end.getDate() + 1);
+      else end.setMonth(end.getMonth() + 1);
+      return end;
+    },
+
+    nextCycleStart: function(cycleEnd, planName) {
+      const next = new Date(cycleEnd);
+      if (!this.isQuarterPlan(planName)) next.setDate(next.getDate() + 1);
+      return next;
+    },
+
     paymentSplitFromFields: function(amount, cashValue, upiValue) {
       const total = Math.round((Number(amount) || 0) * 100) / 100;
       const cash = Math.round((Number(cashValue) || 0) * 100) / 100;
@@ -823,7 +844,7 @@
       if (currentDue && !isNaN(currentDue)) {
           const plans = this.dropdowns.membership || [];
           const planMatch = plans.find(p => p.id === m.membershipId);
-          const planName = String(planMatch && planMatch.name ? planMatch.name : '').toUpperCase();
+          const planName = String(`${planMatch && planMatch.name ? planMatch.name : ''} ${planMatch && planMatch.frequency ? planMatch.frequency : ''}`).toUpperCase();
           
           const validPaymentsCount = this.currentMemberPayments.filter(p => {
               return this.isPaidPayment(p);
@@ -836,13 +857,7 @@
           
           while (currentDue < today && iterCount <= maxCycles) {
               let vStart = new Date(currentDue);
-              let vEnd = new Date(currentDue);
-              
-              if (planName.includes('QUARTER')) vEnd.setMonth(vEnd.getMonth() + 3);
-              else if (planName.includes('YEAR')) vEnd.setFullYear(vEnd.getFullYear() + 1);
-              else if (planName.includes('TRIAL')) vEnd.setDate(vEnd.getDate() + 7);
-              else if (planName.includes('ADHOC') || planName.includes('AD-HOC')) vEnd.setDate(vEnd.getDate() + 1);
-              else vEnd.setMonth(vEnd.getMonth() + 1); 
+              let vEnd = this.cycleEndFromStart(vStart, planName);
               
               const cycleText = isNonRecurring ? 'Expired / Unpaid' : `Missed Cycle ${iterCount}`;
 
@@ -857,20 +872,13 @@
                   virtualEndDate: vEnd.toISOString()
               });
               
-              currentDue = new Date(vEnd);
-              currentDue.setDate(currentDue.getDate() + 1); 
+              currentDue = this.nextCycleStart(vEnd, planName);
               iterCount++;
           }
           
           if (isActive && !isNonRecurring && iterCount <= maxCycles && currentDue >= today) {
               let vStart = new Date(currentDue);
-              let vEnd = new Date(currentDue);
-              
-              if (planName.includes('QUARTER')) vEnd.setMonth(vEnd.getMonth() + 3);
-              else if (planName.includes('YEAR')) vEnd.setFullYear(vEnd.getFullYear() + 1);
-              else if (planName.includes('TRIAL')) vEnd.setDate(vEnd.getDate() + 7);
-              else if (planName.includes('ADHOC') || planName.includes('AD-HOC')) vEnd.setDate(vEnd.getDate() + 1);
-              else vEnd.setMonth(vEnd.getMonth() + 1); 
+              let vEnd = this.cycleEndFromStart(vStart, planName); 
               
               virtualRecords.push({
                   isVirtual: true,
@@ -1243,16 +1251,14 @@
       if (isNew && document.getElementById('mem-record-pay') && document.getElementById('mem-record-pay').checked) {
           const plans = this.dropdowns.membership || [];
           const planMatch = plans.find(p => p.id === planVal);
-          const planName = planMatch ? (planMatch.name || '').toUpperCase() : '';
+          const planName = planMatch ? `${planMatch.name || ''} ${planMatch.frequency || ''}`.toUpperCase() : '';
           
           let calcEnd = new Date(this.parseToISODate(joinFmt));
           
           if (exitFmt) {
               calcEnd = new Date(this.parseToISODate(exitFmt));
           } else {
-              if (planName.includes('QUARTER')) calcEnd.setMonth(calcEnd.getMonth() + 3);
-              else if (planName.includes('YEAR')) calcEnd.setFullYear(calcEnd.getFullYear() + 1);
-              else calcEnd.setMonth(calcEnd.getMonth() + 1);
+              calcEnd = this.cycleEndFromStart(calcEnd, planName);
           }
 
           const initialSplit = this.paymentSplitFromFields(
@@ -1415,7 +1421,7 @@
 
           const plans = this.dropdowns.membership || [];
           const planMatch = plans.find(p => p.id === m.membershipId);
-          const planName = planMatch && (planMatch.name || '').toUpperCase();
+          const planName = planMatch ? `${planMatch.name || ''} ${planMatch.frequency || ''}`.toUpperCase() : '';
 
           let calcStartObj, calcEndObj;
 
@@ -1427,23 +1433,12 @@
               const sortedPayments = [...payments].sort((a, b) => new Date(b.endDate || b.paidDate) - new Date(a.endDate || a.paidDate));
               
               if (sortedPayments.length > 0 && sortedPayments[0].endDate) {
-                  calcStartObj = new Date(sortedPayments[0].endDate);
-                  calcStartObj.setDate(calcStartObj.getDate() + 1); 
+                  calcStartObj = this.nextCycleStart(new Date(sortedPayments[0].endDate), planName);
               } else {
                   calcStartObj = m.joinDate ? new Date(m.joinDate) : new Date();
               }
 
-              calcEndObj = new Date(calcStartObj);
-              
-              if (planName.includes('QUARTER')) {
-                  calcEndObj.setMonth(calcEndObj.getMonth() + 3);
-              } else if (planName.includes('TRIAL')) {
-                  calcEndObj.setDate(calcEndObj.getDate() + 7);
-              } else if (planName.includes('ADHOC') || planName.includes('AD-HOC')) {
-                  calcEndObj.setDate(calcEndObj.getDate() + 1);
-              } else {
-                  calcEndObj.setMonth(calcEndObj.getMonth() + 1);
-              }
+              calcEndObj = this.cycleEndFromStart(calcStartObj, planName);
           }
 
           this.setDatePicker('pay-date', payment && payment.paidDate ? payment.paidDate : new Date());

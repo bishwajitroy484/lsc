@@ -199,10 +199,11 @@ function api_getMembers() {
           if (baseDateStr) {
             let d = new Date(baseDateStr);
             if (!isNaN(d)) {
-              if (freq.includes('MONTH')) d.setMonth(d.getMonth() + 1);
-              else if (freq.includes('QUARTER')) d.setMonth(d.getMonth() + 3);
-              else if (freq.includes('HALF')) d.setMonth(d.getMonth() + 6);
-              else if (freq.includes('YEAR') || freq.includes('ANNUAL')) d.setFullYear(d.getFullYear() + 1);
+              const planBlob = freq + ' ' + pName;
+              if (planBlob.includes('QUARTER')) d.setDate(d.getDate() + 90);
+              else if (planBlob.includes('HALF')) d.setMonth(d.getMonth() + 6);
+              else if (planBlob.includes('YEAR') || planBlob.includes('ANNUAL')) d.setFullYear(d.getFullYear() + 1);
+              else if (planBlob.includes('MONTH')) d.setMonth(d.getMonth() + 1);
               nextDue = formatToDDMMMYYYY(d);
             }
           }

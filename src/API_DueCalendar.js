@@ -94,6 +94,7 @@ function deleteDueCalendarEvent_(eventId) {
 
 function createDueCalendarEvent_(member, dueDate, config, planName, payment) {
   const start = new Date(dueDate.getTime());
+  start.setDate(start.getDate() - 2);
   start.setHours(config.hour, 0, 0, 0);
   const end = new Date(start.getTime() + config.durationMin * 60 * 1000);
 

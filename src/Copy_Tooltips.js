@@ -9,15 +9,15 @@ var LSC_TOOLTIPS = {
   dashboard: {
     activeMembers: 'Members whose membership covered the selected months or quarters. Plan chips split that same group into Quarterly, Ad-hoc, Trial, and other plans.',
     totalCollected: 'Sum of member payments marked Paid/Completed in the selected year and months/quarters. Uses your Anchor or Split revenue recognition setting.',
-    netInHand: 'Money already left after costs: recognized collections minus operating expenses. “Remaining” is unpaid renewals still due from today through the rest of the selected year, including later this month, minus estimated future costs.',
+    netInHand: 'Money already left after costs: collections already received minus operating expenses. “Projected” is renewals not yet received from today through the rest of the selected year, including a due later this month, minus estimated future costs.',
     overdueAmount: 'Estimated unpaid dues whose billing month falls in the selected months or quarters.',
     operatingExpenses: 'All running costs for the selected periods: gym/utilities expenses plus paid staff salaries. Total = Utilities + Staff.',
     utilities: 'Recorded gym expenses (rent, power, supplies, etc.) recognized in the selected periods. Excludes staff salary payments.',
     staffCost: 'Paid staff salary/cost amounts recognized in the selected periods. Pending or failed salary rows are not counted.',
     revenueVsExpenses: 'Compares recognized member collections against total operating expenses for each selected month or quarter.',
     membersByBatch: 'Members covered by the selected months or quarters, grouped by batch. People who were not members in that window are left out.',
-    netInHandForecast: 'Solid line = cash already recognized (collections − expenses). Green dotted line adds renewals not yet collected from today onward, including later this month, and estimated future costs.',
-    cashVsUpi: 'How much of the recognized member collections arrived as cash and how much as UPI, for each selected month or quarter. A split payment is counted once: ₹10,000 cash and ₹20,000 UPI is one ₹30,000 collection.',
+    netInHandForecast: 'Actual is money already received minus expenses. Projected is renewals not yet received, including a payment due later this month, minus estimated future costs. A due on 20 Oct is Projected on 9 Oct, and moves to Actual only after it is received.',
+    cashVsUpi: 'Combined bar of member payments already marked Cash or UPI, using the payment-mode names from your dropdown. Yes shows each mode as a percent of that period. No shows the rupee amounts. A split payment is counted once.',
     expenseBreakdown: 'Share of operating spend by category in the selected periods, including staff cost. Use View Misc to drill into miscellaneous expense details.',
     overdueTable: 'Active members whose next renewal date is already past. Amount is the estimated unpaid dues; days show how late they are. Ad-hoc/trial plans are excluded.',
     upcomingTable: 'Active members due to renew within the next 7 days (including today). Amount is the expected renewal value for their plan. Ad-hoc/trial plans are excluded.'

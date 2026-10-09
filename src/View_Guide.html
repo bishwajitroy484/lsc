@@ -214,11 +214,11 @@
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">Net-In Hand</p>
             <div class="rounded-lg bg-amber-50 border border-amber-100 px-2.5 py-2 text-[11px] text-amber-950 leading-relaxed font-medium mb-1.5">
-              Actual = collections recognized − expenses for elapsed periods<br>
-              Remaining = forecast collections − forecast expenses for later periods<br>
-              Projected total = Actual + Remaining
+              Actual = collections already received − expenses<br>
+              Projected = renewals not yet received, including later this month, − estimated future costs<br>
+              Total = Actual + Projected
             </div>
-            <p class="text-[11px] text-slate-600 leading-relaxed">The card shows Actual plus a <strong>Remaining</strong> badge. The chart summary bar shows Actual / Remaining / Total. Future periods use prepaid recognition (important in Split mode), expected renewals from next due dates (skip overdue, ad-hoc, trial), trailing expense averages, and active staff salary run-rate.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">The card shows Actual plus a <strong>Projected</strong> badge. The chart summary bar shows Actual / Projected / Total. A renewal due later this month stays on Projected until the payment is received. Quarterly renewals are 90 days from the join or cycle date.</p>
           </div>
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">Total Collected</p>
@@ -243,7 +243,7 @@
             <li><strong>Revenue vs Expenses</strong> — bars of recognized revenue and expenses per period.</li>
             <li><strong>Members by Batch</strong> — active members grouped by batch.</li>
             <li><strong>Net-In-Hand Forecast</strong> — area chart; solid = actual, dotted = forecast.</li>
-            <li><strong>Cash vs UPI</strong> — recognized collections split by cash and UPI for each selected month or quarter.</li>
+            <li><strong>Cash vs UPI</strong> — one combined bar per period. Yes shows the cash and UPI share as a percent. No shows the rupee amounts. Names come from the payment-mode dropdown.</li>
             <li><strong>Expense Breakdown</strong> — donut by category (includes staff cost); misc details available.</li>
           </ul>
         </div>
@@ -354,7 +354,7 @@
           <li><strong>Next due</strong> — latest paid payment <strong>endDate</strong> (same as Members, Dashboard, and Google Calendar). Paid/Completed statuses only.</li>
           <li><strong>Actions</strong> — Open member; WhatsApp renewal reminder. Optional GCal synced badge when a quarterly due event exists.</li>
           <li>Year list matches Dashboard / Members / Staff / Expenses (includes current year even with no data).</li>
-          <li><strong>Google Calendar reminders</strong> — optional in Settings → General. When enabled, each paid <em>quarterly</em> payment creates a timed event on the owner calendar for the next due date (<code>endDate</code>); renewing replaces the previous event. Trial/Ad-hoc/Monthly/Annual are skipped. No backfill of existing members.</li>
+          <li><strong>Google Calendar reminders</strong> — optional in Settings → General. A quarterly cycle is 90 days (10 Oct joins through 8 Jan, and the next cycle starts 8 Jan). The calendar event is placed <strong>2 days before</strong> that due date. Renewing replaces the previous event. Trial/Ad-hoc/Monthly/Annual are skipped.</li>
         </ul>
       </div>
     </section>

@@ -257,10 +257,10 @@ describe('Dashboard Module', () => {
       members, [], payments, 2024, new Date(2024, 0, 15), resolveName, dropDowns, 'anchor'
     );
 
-    expect(forecast.expectedCollectionArr[0]).toBe(0);
-    expect(forecast.expectedCollectionArr[1]).toBe(3000);
-    expect(forecast.expectedCollectionArr[2]).toBe(0);
-    expect(forecast.expectedCollectionArr[4]).toBe(3000);
+    expect(forecast.expectedCollectionArr[0]).toBe(3000);
+    expect(forecast.expectedCollectionArr[1]).toBe(0);
+    expect(forecast.expectedCollectionArr[3]).toBe(3000);
+    expect(forecast.expectedCollectionArr[4]).toBe(0);
   });
 
   test('split recognition prorates expected quarterly payments across their coverage months', () => {
@@ -286,9 +286,11 @@ describe('Dashboard Module', () => {
       members, [], payments, 2024, new Date(2024, 0, 15), resolveName, dropDowns, 'split'
     );
 
-    expect(forecast.expectedCollectionArr[1]).toBeCloseTo(3000 * 29 / 90, 2);
-    expect(forecast.expectedCollectionArr[2]).toBeCloseTo(3000 * 31 / 90, 2);
-    expect(forecast.expectedCollectionArr[3]).toBeCloseTo(3000 * 30 / 90, 2);
+    const coverageDays = 90;
+    expect(forecast.expectedCollectionArr[0]).toBeCloseTo(3000 * 1 / coverageDays, 2);
+    expect(forecast.expectedCollectionArr[1]).toBeCloseTo(3000 * 29 / coverageDays, 2);
+    expect(forecast.expectedCollectionArr[2]).toBeCloseTo(3000 * 31 / coverageDays, 2);
+    expect(forecast.expectedCollectionArr[3]).toBeCloseTo(3000 * 30 / coverageDays, 2);
   });
 
   test('does not forecast overdue or ad-hoc members as upcoming collections', () => {
@@ -350,7 +352,7 @@ describe('Dashboard Module', () => {
 
     expect(metrics.predictionLabels).toEqual(['Jan', 'Feb', 'Mar']);
     expect(metrics.actualNetArr).toEqual([8000, null, null]);
-    expect(metrics.expectedNetArr).toEqual([8000, 600, -300]);
+    expect(metrics.expectedNetArr).toEqual([null, 600, -300]);
     expect(metrics.transitionIndex).toBe(0);
   });
 
@@ -475,6 +477,11 @@ describe('Dashboard Module', () => {
     expect(script).not.toContain('text-slate-600 font-bold uppercase">${label}');
     expect(view).toContain('grid grid-cols-2 gap-1 mt-auto');
     expect(script).not.toContain('truncate max-w-[55px]');
+    expect(view).toContain('id="toggle-trend-percent"');
+    expect(view).toContain('>Projected:<');
+    expect(view).not.toContain('id="toggle-trend"');
+    expect(script).toContain("stackType: showPercent ? '100%' : 'normal'");
+    expect(script).toContain('paymentModes.cashLabel');
     expect(view).toContain('lg:grid-cols-3');
     const rev = view.indexOf('>Revenue vs Expenses<');
     const batch = view.indexOf('>Members by Batch<');
@@ -556,8 +563,8 @@ describe('Dashboard Module', () => {
     expect(metrics.actualNetArr[10]).toBeNull(); // Nov
     expect(metrics.actualNetArr[11]).toBeNull(); // Dec
 
-    // Future periods Oct and Nov must reflect recognized revenue and NOT drop to 0
-    expect(metrics.expectedNetArr[8]).toBe(9700);
+    // Current month has no unpaid due, so Projected does not repeat Actual.
+    expect(metrics.expectedNetArr[8]).toBeNull();
     expect(metrics.expectedNetArr[9]).toBe(10100);
     expect(metrics.expectedNetArr[10]).toBe(9800);
     // Dec combines recognized revenue from active payment (5200) + future expected renewal (5000)
@@ -712,7 +719,7 @@ describe('Dashboard Module', () => {
     // Q4 chart point must still expose forecast uplift (not treat whole quarter as elapsed)
     expect(quarterly.transitionIndex).toBe(3);
     expect(quarterly.actualNetArr[3]).toBe(5000);
-    expect(quarterly.expectedNetArr[3]).toBe(5000 + 37000);
+    expect(quarterly.expectedNetArr[3]).toBe(37000);
   });
 
   test('counts unpaid renewals due later this month in Remaining, not only next months', () => {
@@ -738,7 +745,33 @@ describe('Dashboard Module', () => {
     expect(metrics.remainingForecastNet).toBe(50000);
     expect(metrics.projectedNet).toBe(133000);
     expect(metrics.actualNetArr[9]).toBe(83000);
-    expect(metrics.expectedNetArr[9]).toBe(133000);
+    expect(metrics.expectedNetArr[9]).toBe(50000);
+  });
+
+  test('a renewal due later this month stays on Projected and off Actual', () => {
+    const dashboardApi = loadDashboardApi();
+    const revArr = new Array(12).fill(0);
+    revArr[9] = 12000;
+    const expArr = new Array(12).fill(0);
+    expArr[9] = 2000;
+    const expectedCollectionArr = new Array(12).fill(0);
+    expectedCollectionArr[9] = 30000;
+
+    const metrics = dashboardApi.formatTimePeriods(
+      { revArr, expArr, staffArr: new Array(12).fill(0) },
+      { overdueArr: new Array(12).fill(0), expectedCollectionArr },
+      'Monthly',
+      ['Oct'],
+      2026,
+      new Date(2026, 9, 9),
+      { operating: 0, staff: 0 },
+      null
+    );
+
+    expect(metrics.actualNetArr[0]).toBe(10000);
+    expect(metrics.expectedNetArr[0]).toBe(30000);
+    expect(metrics.actualNet).toBe(10000);
+    expect(metrics.remainingForecastNet).toBe(30000);
   });
 
   test('kpis.netInHand matches charts.prediction.actualNet for elapsed periods', () => {

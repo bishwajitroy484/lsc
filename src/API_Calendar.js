@@ -91,13 +91,14 @@ function api_getCalendarData(month, year) {
       return d;
     };
 
-    const frequencyMonthsFromPlan = (planMeta, planName) => {
+    const advancePlanCycle = (date, planMeta, planName) => {
       const blob = String(((planMeta && planMeta.frequency) || '') + ' ' + (planName || '')).toLowerCase();
-      if (blob.includes('year') || blob.includes('annual')) return 12;
-      if (blob.includes('half')) return 6;
-      if (blob.includes('quarter')) return 3;
-      if (blob.includes('month')) return 1;
-      return 1;
+      const due = new Date(date.getTime());
+      if (blob.includes('quarter')) due.setDate(due.getDate() + 90);
+      else if (blob.includes('year') || blob.includes('annual')) due.setFullYear(due.getFullYear() + 1);
+      else if (blob.includes('half')) due.setMonth(due.getMonth() + 6);
+      else due.setMonth(due.getMonth() + 1);
+      return due;
     };
 
     const formatDueLabel = (dateObj) => {
@@ -119,9 +120,7 @@ function api_getCalendarData(month, year) {
 
         const paidDate = parseDate(latest.paidDate || latest.date || member.joinDate);
         if (paidDate) {
-          const due = new Date(paidDate.getTime());
-          due.setMonth(due.getMonth() + frequencyMonthsFromPlan(planMeta, planName));
-          return due;
+          return advancePlanCycle(paidDate, planMeta, planName);
         }
       }
 

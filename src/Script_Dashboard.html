@@ -374,7 +374,7 @@
       safeSetText('kpi-net-forecast', formatCurrency(remainingNet));
       const forecastEl = document.getElementById('kpi-net-forecast');
       if (forecastEl) {
-        forecastEl.title = `Actual: ${formatCurrency(data.kpis.netInHand)} | Remaining Forecast: ${remainingNet >= 0 ? '+' : ''}${formatCurrency(remainingNet)}`;
+        forecastEl.title = `Actual: ${formatCurrency(data.kpis.netInHand)} | Projected: ${remainingNet >= 0 ? '+' : ''}${formatCurrency(remainingNet)}`;
       }
 
       const projNet = data.kpis.projectedNet != null ? data.kpis.projectedNet : data.kpis.netInHand;
@@ -501,7 +501,7 @@
       window.AppChartConfigs.pred = {
         series: [
           { name: 'Actual', data: prediction.actual || [] },
-          { name: 'Predicted', data: prediction.expected || [] }
+          { name: 'Projected', data: prediction.expected || [] }
         ],
         chart: {
           type: 'area',
@@ -536,9 +536,7 @@
         dataLabels: {
           ...dlOptions,
           offsetY: -10,
-          formatter: (val, opts) => opts.seriesIndex === 1 && opts.dataPointIndex === prediction.transitionIndex
-            ? ''
-            : (val ? AppUtils.formatCompactCurrency(val) : '')
+          formatter: (val) => (val ? AppUtils.formatCompactCurrency(val) : '')
         },
         grid: commonGrid
       };
@@ -550,21 +548,47 @@
     // 4. Cash vs UPI
     const elTrend = document.querySelector("#chart-trend");
     if(elTrend) {
-      const trendType = document.getElementById('toggle-trend')?.value || 'line';
+      const showPercent = (document.getElementById('toggle-trend-percent')?.value || 'yes') !== 'no';
       const paymentModes = data.charts.paymentModes || {};
+      const percentLabel = (val, opts) => {
+        const series = (opts && opts.w && opts.w.config && opts.w.config.series) || [];
+        const idx = opts ? opts.dataPointIndex : 0;
+        const total = series.reduce((sum, item) => sum + (Number(item.data && item.data[idx]) || 0), 0);
+        const raw = Number(series[opts.seriesIndex] && series[opts.seriesIndex].data[idx]) || 0;
+        if (!total || !raw) return '';
+        return Math.round((raw / total) * 100) + '%';
+      };
       window.AppChartConfigs.trend = {
         series: [
-          { name: 'Cash', data: paymentModes.cash || [] },
-          { name: 'UPI', data: paymentModes.upi || [] }
+          { name: paymentModes.cashLabel || 'Cash', data: paymentModes.cash || [] },
+          { name: paymentModes.upiLabel || 'UPI', data: paymentModes.upi || [] }
         ],
-        chart: { type: trendType, height: '100%', toolbar: commonToolbar, zoom: { enabled: true } },
-        dataLabels: { ...dlOptions, offsetY: -10 },
-        stroke: { curve: 'smooth', width: trendType === 'bar' ? 0 : 2, connectNulls: true },
-        markers: { size: trendType === 'bar' ? 0 : 4 },
+        chart: {
+          type: 'bar',
+          stacked: true,
+          stackType: showPercent ? '100%' : 'normal',
+          height: '100%',
+          toolbar: commonToolbar
+        },
+        plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 2 } },
+        dataLabels: {
+          enabled: showPercent,
+          formatter: percentLabel,
+          style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] }
+        },
         xaxis: commonXAxis,
-        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
-        tooltip: commonTooltip,
-        colors: ['#10b981', '#ef4444'],
+        yaxis: {
+          max: showPercent ? 100 : undefined,
+          labels: {
+            formatter: (val) => showPercent ? (Math.round(val) + '%') : AppUtils.formatCurrency(val),
+            style: { fontSize: '11px', colors: '#64748b' }
+          }
+        },
+        tooltip: {
+          ...commonTooltip,
+          y: { formatter: (val) => AppUtils.formatCurrency(val) }
+        },
+        colors: ['#10b981', '#3b82f6'],
         legend: { position: 'bottom', horizontalAlign: 'center', offsetY: 5, fontSize: '11px' },
         grid: commonGrid
       };
