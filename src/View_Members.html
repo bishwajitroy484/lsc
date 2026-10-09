@@ -14,9 +14,6 @@
       </div>
       
       <div class="flex items-center gap-2 shrink-0">
-        <button type="button" onclick="TableColumns.open('members', this)" class="h-8 md:h-9 px-2 md:px-3 border border-slate-200 rounded-lg inline-flex items-center gap-1 text-slate-600 hover:bg-slate-50 text-xs md:text-sm font-semibold" title="Show or hide columns">
-          <span class="material-symbols-rounded text-[18px]">view_column</span><span class="hidden sm:inline">Columns</span>
-        </button>
         <button onclick="MembersApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-brand-hover transition-colors shrink-0">
           <span class="material-symbols-rounded text-[18px]">add</span>
         </button>
@@ -57,11 +54,11 @@
         <table class="w-full text-left border-collapse">
           <thead class="bg-slate-50 border-b border-slate-200">
             <tr class="text-[11px] md:text-xs uppercase text-slate-500 font-bold tracking-wider">
-              <th data-lsc-table="members" data-col="profile" class="px-4 py-3">Member Profile</th>
-              <th data-lsc-table="members" data-col="plan" class="px-4 py-3">Membership & Batch</th>
-              <th data-lsc-table="members" data-col="financials" class="px-4 py-3">Financials & Dates</th>
-              <th data-lsc-table="members" data-col="status" class="px-4 py-3">Status</th>
-              <th data-lsc-table="members" data-col="actions" class="px-4 py-3 text-right">Actions</th>
+              <th class="px-4 py-3">Member Profile</th>
+              <th class="px-4 py-3">Membership & Batch</th>
+              <th class="px-4 py-3">Financials & Dates</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody id="desktop-table-body" class="text-xs text-slate-700"></tbody>
