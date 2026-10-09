@@ -50,7 +50,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">account_balance_wallet</span>
           <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Total Outflow</p>
-          <span class="metric-tip" tabindex="0" aria-label="About Total Outflow"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Recorded gym expenses plus paid staff cost for the selected year and months or quarters.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Total Outflow"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.totalOutflow') ?></span></span>
         </div>
         <h2 id="kpi-total-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
       </div>
@@ -59,7 +59,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">calendar_month</span>
           <p id="kpi-avg-title" class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Monthly Avg</p>
-          <span class="metric-tip" tabindex="0" aria-label="About period average"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Total outflow divided by how many months or quarters you selected.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About period average"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.periodAverage') ?></span></span>
         </div>
         <h2 id="kpi-avg-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
       </div>
@@ -68,7 +68,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">badge</span>
           <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Staff Cost</p>
-          <span class="metric-tip" tabindex="0" aria-label="About Staff Cost"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Paid staff salary amounts recognized in the selected periods. Pending or failed salary rows are not counted.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Staff Cost"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.staffCost') ?></span></span>
         </div>
         <h2 id="kpi-staff-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
       </div>
@@ -77,7 +77,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-red-100 text-brand-primary flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">receipt_long</span>
           <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Other Expenses</p>
-          <span class="metric-tip" tabindex="0" aria-label="About Other expenses"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Recorded gym expenses such as rent, power, and supplies in the selected periods. Staff payroll is counted separately.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Other expenses"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.otherExpenses') ?></span></span>
         </div>
         <h2 id="kpi-other-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
       </div>
@@ -86,7 +86,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">group</span>
           <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Staff</p>
-          <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Staff count"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">People whose status is Active. The rest of this card opens the staff list.</span></span>
+          <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Staff count"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.staffCount') ?></span></span>
         </div>
         <h2 id="kpi-total-staff" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">--</h2>
       </div>
@@ -95,7 +95,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-orange-100 text-orange-700 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">pending_actions</span>
           <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Action</p>
-          <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Action needed"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Staff with at least one salary cycle still unpaid. The rest of this card opens the staff list.</span></span>
+          <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Action needed"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.actionNeeded') ?></span></span>
         </div>
         <h2 id="kpi-action-needed" class="text-sm sm:text-base md:text-lg font-bold text-amber-700 leading-tight">--</h2>
         <p id="kpi-action-needed-sub" class="text-[10px] sm:text-[11px] font-medium text-slate-500 mt-0.5 leading-tight">--</p>
@@ -108,7 +108,7 @@
         <div class="flex items-center justify-between mb-2 gap-2">
           <div class="flex items-center gap-1 min-w-0">
             <h3 class="font-bold text-sm text-slate-800 truncate">Expenses Trend</h3>
-            <span class="metric-tip" tabindex="0" aria-label="About Expenses Trend"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Staff cost and other expenses for each selected month or quarter. Switch the chart between bar, area, and line.</span></span>
+            <span class="metric-tip" tabindex="0" aria-label="About Expenses Trend"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.expensesTrend') ?></span></span>
           </div>
           <select id="chart-type-toggle" onchange="ExpensesApp.renderCharts()" class="shrink-0 appearance-none bg-slate-50 pl-2.5 pr-6 py-1 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
             <option value="bar">Bar Chart</option>
@@ -126,7 +126,7 @@
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-1 min-w-0">
             <h3 class="font-bold text-sm text-slate-800 truncate">Expenses by Category</h3>
-            <span class="metric-tip" tabindex="0" aria-label="About Expenses by Category"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Share of spend by category in the selected periods, with staff cost included as its own slice.</span></span>
+            <span class="metric-tip" tabindex="0" aria-label="About Expenses by Category"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.expensesByCategory') ?></span></span>
           </div>
         </div>
         <div class="relative w-full flex-1 min-h-[200px] md:min-h-[220px]">

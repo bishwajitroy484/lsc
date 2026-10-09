@@ -330,6 +330,11 @@ describe('Dashboard Module', () => {
     const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
 
     expect(view).toContain('metric-tip-bubble');
+    expect(view).toContain("tooltipCopy_('dashboard.activeMembers')");
+    expect(view).not.toContain('Plan chips split that same group');
+    const tips = fs.readFileSync(path.join(__dirname, '../src/Copy_Tooltips.js'), 'utf8');
+    expect(tips).toContain('Plan chips split that same group');
+    expect(tips).toContain('function tooltipCopy_');
     expect(view).toMatch(/justify-between min-w-0 overflow-visible/);
     expect(view).toMatch(/h-full min-w-0 overflow-visible/);
     expect(styles).toContain('.metric-tip-bubble');
