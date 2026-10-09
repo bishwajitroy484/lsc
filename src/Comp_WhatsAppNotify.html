@@ -28,6 +28,23 @@
       return Math.round((b - a) / 86400000);
     },
 
+    applyTemplate: function(template, ctx) {
+      return String(template || '').replace(/\{\{\s*([a-zA-Z]+)\s*\}\}/g, function(_, raw) {
+        const key = String(raw || '').toLowerCase();
+        if (key === 'gym' || key === 'gymname') return ctx.gym;
+        if (key === 'duedate' || key === 'due') return ctx.dueDate;
+        if (ctx[key] == null) return '';
+        return String(ctx[key]);
+      });
+    },
+
+    customTemplate: function(type) {
+      const branding = (window.LSC_SESSION && window.LSC_SESSION.branding) || {};
+      if (type === 'overdue') return String(branding.waOverdue || '').trim();
+      if (type === 'upcoming') return String(branding.waUpcoming || '').trim();
+      return '';
+    },
+
     buildTemplate: function(type, row) {
       const gym = this.getGymName();
       const name = row.name || 'Member';
@@ -38,6 +55,17 @@
       const days = row.days;
       const plan = row.plan || 'membership';
       const period = row.period || '';
+      const custom = (type === 'overdue' || type === 'upcoming') ? this.customTemplate(type) : '';
+      if (custom) {
+        return this.applyTemplate(custom, {
+          gym: gym,
+          name: name,
+          amount: amount,
+          dueDate: dueDate,
+          days: days,
+          plan: plan
+        });
+      }
 
       if (type === 'overdue') {
         return (

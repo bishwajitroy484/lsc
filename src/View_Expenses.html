@@ -5,7 +5,7 @@
       <div class="flex items-center gap-3">
         <span onclick="window.location.hash='#dashboard'" class="material-symbols-rounded text-slate-600 cursor-pointer hover:bg-slate-100 rounded-full p-1 transition-colors">arrow_back</span>
         <div>
-          <h1 class="text-xl font-bold text-slate-800 leading-tight">Expenses &amp; Staff</h1>
+          <h1 class="text-xl font-bold text-slate-800 leading-tight">Expenses</h1>
           <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Manage operating costs and staff payroll in one place</p>
         </div>
       </div>
@@ -144,10 +144,15 @@
     <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
       <div class="p-3 md:p-4 border-b border-slate-100 flex flex-col gap-3 bg-slate-50/50">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div class="flex items-center gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
-            <button type="button" id="exp-list-tab-all" onclick="ExpensesHub.switchListTab('all')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white text-slate-800 shadow-sm">All Records</button>
-            <button type="button" id="exp-list-tab-staff" onclick="ExpensesHub.switchListTab('staff')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-slate-700">Staff</button>
-            <button type="button" id="exp-list-tab-expenses" onclick="ExpensesHub.switchListTab('expenses')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-slate-700">Expenses</button>
+          <div class="flex items-center gap-2 w-full sm:w-auto min-w-0">
+            <div class="flex items-center gap-1 p-1 bg-slate-100 rounded-xl flex-1 sm:flex-none overflow-x-auto no-scrollbar">
+              <button type="button" id="exp-list-tab-all" onclick="ExpensesHub.switchListTab('all')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white text-slate-800 shadow-sm">All Records</button>
+              <button type="button" id="exp-list-tab-staff" onclick="ExpensesHub.switchListTab('staff')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-slate-700">Staff</button>
+              <button type="button" id="exp-list-tab-expenses" onclick="ExpensesHub.switchListTab('expenses')" class="exp-list-tab shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-slate-700">Expenses</button>
+            </div>
+            <button type="button" onclick="TableColumns.openExpenses(this)" class="shrink-0 h-8 px-2.5 border border-slate-200 rounded-lg inline-flex items-center gap-1 text-slate-600 hover:bg-white text-[11px] font-bold" title="Show or hide columns">
+              <span class="material-symbols-rounded text-[16px]">view_column</span><span>Columns</span>
+            </button>
           </div>
           <div id="exp-list-filters-expenses" class="flex flex-nowrap items-center gap-2 w-full sm:w-auto">
             <div class="relative flex-1 sm:w-44 shrink-0">
@@ -178,13 +183,13 @@
           <table class="w-full text-left border-collapse min-w-[780px]">
             <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
               <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider">
-                <th class="px-4 py-3">Date</th>
-                <th class="px-4 py-3">Type</th>
-                <th class="px-4 py-3">Name / Category</th>
-                <th class="px-4 py-3">Description</th>
-                <th class="px-4 py-3">Amount</th>
-                <th class="px-4 py-3">Status</th>
-                <th class="px-4 py-3 text-right">Actions</th>
+                <th data-lsc-table="exp-all" data-col="date" class="px-4 py-3">Date</th>
+                <th data-lsc-table="exp-all" data-col="type" class="px-4 py-3">Type</th>
+                <th data-lsc-table="exp-all" data-col="name" class="px-4 py-3">Name / Category</th>
+                <th data-lsc-table="exp-all" data-col="description" class="px-4 py-3">Description</th>
+                <th data-lsc-table="exp-all" data-col="amount" class="px-4 py-3">Amount</th>
+                <th data-lsc-table="exp-all" data-col="status" class="px-4 py-3">Status</th>
+                <th data-lsc-table="exp-all" data-col="actions" class="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="desktop-all-body" class="text-xs text-slate-700"></tbody>
@@ -199,18 +204,18 @@
           <table class="w-full text-left border-collapse min-w-[700px]">
             <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
               <tr class="text-[11px] uppercase text-slate-500 font-bold select-none tracking-wider">
-                <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('date')">
+                <th data-lsc-table="exp-expenses" data-col="date" class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('date')">
                   <div class="flex items-center gap-1">Date <span id="sort-icon-date" class="material-symbols-rounded text-[14px]">arrow_downward</span></div>
                 </th>
-                <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('category')">
+                <th data-lsc-table="exp-expenses" data-col="category" class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('category')">
                   <div class="flex items-center gap-1">Category <span id="sort-icon-category" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></div>
                 </th>
-                <th class="px-4 py-3">Description</th>
-                <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('amount')">
+                <th data-lsc-table="exp-expenses" data-col="description" class="px-4 py-3">Description</th>
+                <th data-lsc-table="exp-expenses" data-col="amount" class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('amount')">
                   <div class="flex items-center gap-1">Amount <span id="sort-icon-amount" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></div>
                 </th>
-                <th class="px-4 py-3">Added By</th>
-                <th class="px-4 py-3 text-right">Actions</th>
+                <th data-lsc-table="exp-expenses" data-col="addedBy" class="px-4 py-3">Added By</th>
+                <th data-lsc-table="exp-expenses" data-col="actions" class="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="desktop-expense-body" class="text-xs text-slate-700"></tbody>

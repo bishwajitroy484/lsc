@@ -24,6 +24,7 @@
       'NOTIFY_REPORT_DAYS', 'NOTIFY_WEEKLY_CC', 'NOTIFY_WEEKLY_FIELDS',
       'NOTIFY_RECEIPT_SUBJECT', 'NOTIFY_RECEIPT_BODY',
       'NOTIFY_WEEKLY_SUBJECT', 'NOTIFY_WEEKLY_INTRO',
+      'NOTIFY_WA_OVERDUE', 'NOTIFY_WA_UPCOMING',
       'ENABLE_CALENDAR_DUE_EVENTS', 'CALENDAR_DUE_HOUR', 'CALENDAR_DUE_DURATION_MIN'
     ],
     checkboxKeys: [
@@ -55,6 +56,20 @@
           '• Upcoming renewals (next {{reportDays}} days): {{upcomingCount}}\n' +
           '• Already overdue: {{overdueCount}}\n\n' +
           'Member details are listed in the tables below so you can follow up promptly.'
+      },
+      waOverdue: {
+        subject: '',
+        body:
+          'Hi {{name}},\n\n' +
+          'This is a friendly reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} was due on {{dueDate}} and is now overdue by {{days}} day(s).\n\n' +
+          'Please complete the payment at your earliest convenience. Thank you!'
+      },
+      waUpcoming: {
+        subject: '',
+        body:
+          'Hi {{name}},\n\n' +
+          'A quick reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} is due on {{dueDate}} ({{days}} day(s) left).\n\n' +
+          'Please arrange payment before the due date. Thank you!'
       }
     },
 
@@ -981,6 +996,10 @@
        const weeklyIntro = document.getElementById('gen-NOTIFY_WEEKLY_INTRO');
        if (weeklySubject && !String(weeklySubject.value || '').trim()) weeklySubject.value = this.defaultTemplates.weekly.subject;
        if (weeklyIntro && !String(weeklyIntro.value || '').trim()) weeklyIntro.value = this.defaultTemplates.weekly.body;
+       const waOverdue = document.getElementById('gen-NOTIFY_WA_OVERDUE');
+       const waUpcoming = document.getElementById('gen-NOTIFY_WA_UPCOMING');
+       if (waOverdue && !String(waOverdue.value || '').trim()) waOverdue.value = this.defaultTemplates.waOverdue.body;
+       if (waUpcoming && !String(waUpcoming.value || '').trim()) waUpcoming.value = this.defaultTemplates.waUpcoming.body;
 
        this.applyWeeklyFieldsToUI();
        this.syncWeeklyFields();
@@ -1300,12 +1319,21 @@
     },
 
     openMessageEditor: function(type) {
-      this.editingMessageType = type === 'weekly' ? 'weekly' : 'receipt';
+      const kinds = {
+        receipt: 'receipt',
+        weekly: 'weekly',
+        waOverdue: 'waOverdue',
+        waUpcoming: 'waUpcoming'
+      };
+      this.editingMessageType = kinds[type] || 'receipt';
       const titleEl = document.getElementById('notif-editor-title');
       const hintEl = document.getElementById('notif-editor-hint');
       const placeholdersEl = document.getElementById('notif-editor-placeholders');
+      const subjectWrap = document.getElementById('notif-editor-subject-wrap');
       const subjectEl = document.getElementById('notif-editor-subject');
       const bodyEl = document.getElementById('notif-editor-body');
+      const isWa = this.editingMessageType === 'waOverdue' || this.editingMessageType === 'waUpcoming';
+      if (subjectWrap) subjectWrap.classList.toggle('hidden', isWa);
 
       if (this.editingMessageType === 'receipt') {
         if (titleEl) titleEl.textContent = 'Payment receipt message';
@@ -1317,7 +1345,7 @@
         const b = document.getElementById('gen-NOTIFY_RECEIPT_BODY');
         if (subjectEl) subjectEl.value = (s && s.value) || this.defaultTemplates.receipt.subject;
         if (bodyEl) bodyEl.value = (b && b.value) || this.defaultTemplates.receipt.body;
-      } else {
+      } else if (this.editingMessageType === 'weekly') {
         if (titleEl) titleEl.textContent = 'Weekly report message';
         if (hintEl) hintEl.textContent = 'Intro text for the admin renewal report. Tables of members are added automatically below this message.';
         if (placeholdersEl) {
@@ -1327,6 +1355,20 @@
         const b = document.getElementById('gen-NOTIFY_WEEKLY_INTRO');
         if (subjectEl) subjectEl.value = (s && s.value) || this.defaultTemplates.weekly.subject;
         if (bodyEl) bodyEl.value = (b && b.value) || this.defaultTemplates.weekly.body;
+      } else if (this.editingMessageType === 'waOverdue') {
+        if (titleEl) titleEl.textContent = 'Overdue WhatsApp message';
+        if (hintEl) hintEl.textContent = 'This message opens in WhatsApp when Notify is tapped on an overdue member.';
+        if (placeholdersEl) placeholdersEl.textContent = 'Placeholders: {{name}}, {{amount}}, {{dueDate}}, {{days}}, {{plan}}, {{gymName}}';
+        const b = document.getElementById('gen-NOTIFY_WA_OVERDUE');
+        if (subjectEl) subjectEl.value = '';
+        if (bodyEl) bodyEl.value = (b && b.value) || this.defaultTemplates.waOverdue.body;
+      } else {
+        if (titleEl) titleEl.textContent = 'Upcoming WhatsApp message';
+        if (hintEl) hintEl.textContent = 'This message opens in WhatsApp when Notify is tapped on an upcoming renewal.';
+        if (placeholdersEl) placeholdersEl.textContent = 'Placeholders: {{name}}, {{amount}}, {{dueDate}}, {{days}}, {{plan}}, {{gymName}}';
+        const b = document.getElementById('gen-NOTIFY_WA_UPCOMING');
+        if (subjectEl) subjectEl.value = '';
+        if (bodyEl) bodyEl.value = (b && b.value) || this.defaultTemplates.waUpcoming.body;
       }
 
       this.openModalById('notification-message-modal', 'notification-message-modal-content');
@@ -1358,10 +1400,16 @@
         const b = document.getElementById('gen-NOTIFY_RECEIPT_BODY');
         if (s) s.value = subject;
         if (b) b.value = body;
-      } else {
+      } else if (type === 'weekly') {
         const s = document.getElementById('gen-NOTIFY_WEEKLY_SUBJECT');
         const b = document.getElementById('gen-NOTIFY_WEEKLY_INTRO');
         if (s) s.value = subject;
+        if (b) b.value = body;
+      } else if (type === 'waOverdue') {
+        const b = document.getElementById('gen-NOTIFY_WA_OVERDUE');
+        if (b) b.value = body;
+      } else if (type === 'waUpcoming') {
+        const b = document.getElementById('gen-NOTIFY_WA_UPCOMING');
         if (b) b.value = body;
       }
 
@@ -1390,8 +1438,67 @@
       };
     },
 
+    publishWhatsAppTemplates: function() {
+      if (!window.LSC_SESSION) window.LSC_SESSION = {};
+      if (!window.LSC_SESSION.branding) window.LSC_SESSION.branding = {};
+      const overdue = document.getElementById('gen-NOTIFY_WA_OVERDUE');
+      const upcoming = document.getElementById('gen-NOTIFY_WA_UPCOMING');
+      window.LSC_SESSION.branding.waOverdue = overdue ? overdue.value : '';
+      window.LSC_SESSION.branding.waUpcoming = upcoming ? upcoming.value : '';
+    },
+
+    previewWhatsAppMessage: function(type) {
+      const kind = type === 'waUpcoming' ? 'waUpcoming' : 'waOverdue';
+      const fieldId = kind === 'waUpcoming' ? 'gen-NOTIFY_WA_UPCOMING' : 'gen-NOTIFY_WA_OVERDUE';
+      const stored = document.getElementById(fieldId);
+      const template = (stored && String(stored.value || '').trim()) || this.defaultTemplates[kind].body;
+      const gymNameEl = document.getElementById('gen-GYM_NAME');
+      const gym = (gymNameEl && gymNameEl.value.trim()) || 'LSC';
+      const sample = {
+        name: 'Supreet Kaur',
+        amount: '₹30,000',
+        dueDate: '10-Oct-2026',
+        days: kind === 'waOverdue' ? '3' : '2',
+        plan: 'Quarterly',
+        gym: gym,
+        gymName: gym
+      };
+      const text = String(template).replace(/\{\{\s*([a-zA-Z]+)\s*\}\}/g, function(_, raw) {
+        const key = String(raw || '').toLowerCase();
+        if (key === 'gym' || key === 'gymname') return sample.gym;
+        if (key === 'duedate' || key === 'due') return sample.dueDate;
+        return sample[key] != null ? String(sample[key]) : '';
+      });
+      const title = document.getElementById('notif-preview-title');
+      const metaEl = document.getElementById('notif-preview-meta');
+      const subjectWrap = document.getElementById('notif-preview-subject-wrap');
+      const textEl = document.getElementById('notif-preview-text');
+      const frame = document.getElementById('notif-preview-frame');
+      const loadingEl = document.getElementById('notif-preview-loading');
+      const ccRow = document.getElementById('notif-preview-cc');
+      if (title) title.textContent = kind === 'waOverdue' ? 'Overdue WhatsApp preview' : 'Upcoming WhatsApp preview';
+      if (metaEl) metaEl.textContent = 'Sample member · Supreet Kaur';
+      if (subjectWrap) subjectWrap.classList.add('hidden');
+      if (ccRow) ccRow.classList.add('hidden');
+      if (loadingEl) loadingEl.classList.add('hidden');
+      if (frame) frame.classList.add('hidden');
+      if (textEl) {
+        textEl.textContent = text;
+        textEl.classList.remove('hidden');
+      }
+      this.openModalById('notification-preview-modal', 'notification-preview-modal-content');
+    },
+
     previewNotificationEmail: function(type) {
       const kind = type === 'weekly' ? 'weekly' : 'receipt';
+      const title = document.getElementById('notif-preview-title');
+      const textEl = document.getElementById('notif-preview-text');
+      const subjectWrap = document.getElementById('notif-preview-subject-wrap');
+      if (title) title.textContent = 'Email preview';
+      if (textEl) textEl.classList.add('hidden');
+      if (subjectWrap) subjectWrap.classList.remove('hidden');
+      const frameShow = document.getElementById('notif-preview-frame');
+      if (frameShow) frameShow.classList.remove('hidden');
       const metaEl = document.getElementById('notif-preview-meta');
       const subjectEl = document.getElementById('notif-preview-subject');
       const ccRow = document.getElementById('notif-preview-cc');
@@ -1560,6 +1667,7 @@
                AppUtils.applyAppBranding(currentLogoId, currentGymName);
                const currentCurrency = (document.getElementById('gen-CURRENCY_FORMAT') || {}).value || 'Indian';
                AppUtils.setCurrencyFormat(currentCurrency);
+               this.publishWhatsAppTemplates();
            } else {
                const err = (res && res.error) ? res.error : "Failed to save settings.";
                this.showToast(err, true);

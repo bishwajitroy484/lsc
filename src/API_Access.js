@@ -44,7 +44,8 @@ var USERS_HEADERS_ = [
   'invitedBy',
   'loginToken',
   'createdAt',
-  'updatedAt'
+  'updatedAt',
+  'tableColumns'
 ];
 
 /** Request-scoped caches (Apps Script keeps globals for one execution). */
@@ -280,6 +281,12 @@ function buildSessionPayload_(context) {
         currencyFormat: setup.currencyFormat || 'Indian'
       };
     }
+    if (!needsLogin && typeof readSettingsMap_ === 'function') {
+      const settings = readSettingsMap_();
+      branding = branding || {};
+      branding.waOverdue = settings.NOTIFY_WA_OVERDUE || '';
+      branding.waUpcoming = settings.NOTIFY_WA_UPCOMING || '';
+    }
   } catch (error) {
     setup = null;
     branding = null;
@@ -304,9 +311,43 @@ function buildSessionPayload_(context) {
     isDeployer: !!(context.email && effectiveEmail && context.email === effectiveEmail),
     setup: setup,
     branding: branding,
+    tableColumns: parseUserTableColumns_(context.email),
     webAppUrl: getWebAppUrl_(),
     modules: ACCESS_MODULES
   };
+}
+
+function parseUserTableColumns_(email) {
+  if (!email) return {};
+  try {
+    const row = findUserByEmail_(email);
+    const raw = row && (row.tableColumns || '');
+    if (!raw) return {};
+    const parsed = typeof raw === 'object' ? raw : JSON.parse(String(raw));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function api_saveMyTableColumns(payload) {
+  try {
+    ensureUsersSheet_();
+    if (typeof DB !== 'undefined' && DB._invalidateSheet) DB._invalidateSheet('USERS');
+    const context = getCurrentUserContext_();
+    if (!context.userId) return { success: false, error: 'Sign in required.' };
+    const src = payload && typeof payload === 'object' ? payload : {};
+    const clean = {};
+    Object.keys(src).forEach(function(table) {
+      if (!Array.isArray(src[table])) return;
+      clean[String(table)] = src[table].map(function(id) { return String(id); }).filter(Boolean).slice(0, 30);
+    });
+    DB.update('USERS', context.userId, { tableColumns: JSON.stringify(clean) });
+    invalidateUsersCache_();
+    return { success: true, data: clean };
+  } catch (error) {
+    return { success: false, error: error.message || String(error) };
+  }
 }
 
 function issueSessionForEmail_(email) {

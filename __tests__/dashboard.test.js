@@ -332,13 +332,39 @@ describe('Dashboard Module', () => {
     expect(view).toMatch(/justify-between min-w-0 overflow-visible/);
     expect(view).toMatch(/h-full min-w-0 overflow-visible/);
     expect(styles).toContain('.metric-tip-bubble');
-    expect(styles).toContain('top: calc(100% + 10px)');
+    expect(styles).toContain('position: fixed');
+    expect(styles).toContain('.metric-tip-bubble.is-open');
+    expect(styles).toContain('.metric-tip-bubble.tip-above::after');
     expect(styles).toContain('font-size: 12px');
     expect(styles).toContain('.apexcharts-tooltip');
     expect(styles).toContain('background: #0f172a !important');
     expect(styles).toContain('z-index: 10050 !important');
     expect(script).toContain("theme: 'dark'");
     expect(script).toContain('commonTooltip');
+  });
+
+  test('applies the October client feedback on dashboard, expenses, and settings', () => {
+    const dash = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
+    const dashScript = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
+    const expenses = fs.readFileSync(path.join(__dirname, '../src/View_Expenses.html'), 'utf8');
+    const members = fs.readFileSync(path.join(__dirname, '../src/View_Members.html'), 'utf8');
+    const staff = fs.readFileSync(path.join(__dirname, '../src/View_Staff.html'), 'utf8');
+    const settings = fs.readFileSync(path.join(__dirname, '../src/View_Settings.html'), 'utf8');
+    const state = fs.readFileSync(path.join(__dirname, '../src/Global_State.html'), 'utf8');
+    const access = fs.readFileSync(path.join(__dirname, '../src/API_Access.js'), 'utf8');
+
+    expect(dash).toContain('Net-In-Hand Forecast');
+    expect(dash).not.toContain('Net-In-Hand Prediction');
+    expect(dash).not.toContain('id="chart-staff-trend"');
+    expect(dash).toContain('id="dash-birthdays"');
+    expect(dashScript).toContain('renderDashboardBirthdays');
+    expect(expenses).toContain('leading-tight">Expenses</h1>');
+    expect(members).toContain('Date of Joining');
+    expect(staff).toContain('Date of Joining');
+    expect(settings).toContain('gen-NOTIFY_WA_OVERDUE');
+    expect(settings).toContain('gen-NOTIFY_WA_UPCOMING');
+    expect(state).toContain('api_saveMyTableColumns');
+    expect(access).toContain("'tableColumns'");
   });
 
   test('reflects recognized future revenue from split payments in Net-In-Hand Prediction', () => {

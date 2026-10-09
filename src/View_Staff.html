@@ -27,13 +27,13 @@
         <table class="w-full text-left border-collapse min-w-[750px]">
           <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
             <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider select-none">
-              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('name')">Name <span id="sort-icon-name" class="material-symbols-rounded text-[14px]">arrow_downward</span></th>
-              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('role')">Role <span id="sort-icon-role" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
-              <th class="px-4 py-3">Phone</th>
-              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('salary')">Salary / Month <span id="sort-icon-salary" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
-              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('date')">Month / Cycle <span id="sort-icon-date" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
-              <th class="px-4 py-3">Status</th>
-              <th class="px-4 py-3 text-right">Actions</th>
+              <th data-lsc-table="staff" data-col="name" class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('name')">Name <span id="sort-icon-name" class="material-symbols-rounded text-[14px]">arrow_downward</span></th>
+              <th data-lsc-table="staff" data-col="role" class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('role')">Role <span id="sort-icon-role" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
+              <th data-lsc-table="staff" data-col="phone" class="px-4 py-3">Phone</th>
+              <th data-lsc-table="staff" data-col="salary" class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('salary')">Salary / Month <span id="sort-icon-salary" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
+              <th data-lsc-table="staff" data-col="cycle" class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('date')">Month / Cycle <span id="sort-icon-date" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
+              <th data-lsc-table="staff" data-col="status" class="px-4 py-3">Status</th>
+              <th data-lsc-table="staff" data-col="actions" class="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody id="desktop-staff-body" class="text-xs text-slate-700"></tbody>
@@ -87,7 +87,7 @@
             <div><p class="text-slate-500 font-medium mb-1">Reporting To</p><p id="det-stf-reportingTo" class="font-bold text-slate-800">--</p></div>
             <div><p class="text-slate-500 font-medium mb-1">Monthly Salary</p><p id="det-stf-salary" class="font-bold text-slate-800">--</p></div>
             <div><p class="text-slate-500 font-medium mb-1">Status</p><p id="det-stf-info-status" class="font-bold text-slate-800">--</p></div>
-            <div><p class="text-slate-500 font-medium mb-1">Join Date</p><p id="det-stf-join" class="font-bold text-slate-800">--</p></div>
+            <div><p class="text-slate-500 font-medium mb-1">Date of Joining</p><p id="det-stf-join" class="font-bold text-slate-800">--</p></div>
             <div><p class="text-slate-500 font-medium mb-1">Date of Birth</p><p id="det-stf-dob" class="font-bold text-slate-800">--</p></div>
           </div>
         </div>
@@ -150,7 +150,7 @@
             </div>
             
             <div>
-               <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Join Date *</label>
+               <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Date of Joining *</label>
                <div class="relative"><span class="material-symbols-rounded absolute right-2.5 top-1.5 text-[16px] text-slate-400 pointer-events-none">calendar_month</span><input type="text" id="stf-join" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
             </div>
             <div>
