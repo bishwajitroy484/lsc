@@ -425,7 +425,8 @@ describe('Dashboard Module', () => {
     const view = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
     const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
 
-    expect(script).toContain('text-[11px] leading-tight text-slate-600 font-bold uppercase');
+    expect(script).toContain('text-[9px] sm:text-[11px] leading-none sm:leading-tight text-slate-600 font-bold uppercase');
+    expect(view).toContain('grid grid-cols-2 gap-1 mt-auto');
     expect(script).not.toContain('truncate max-w-[55px]');
     expect(view).toContain('lg:grid-cols-3');
     const rev = view.indexOf('>Revenue vs Expenses<');
@@ -471,8 +472,17 @@ describe('Dashboard Module', () => {
     expect(staff).toContain('Date of Joining');
     expect(settings).toContain('gen-NOTIFY_WA_OVERDUE');
     expect(settings).toContain('gen-NOTIFY_WA_UPCOMING');
-    expect(state).toContain('api_saveMyTableColumns');
-    expect(access).toContain("'tableColumns'");
+    expect(state).not.toContain('TableColumns');
+    expect(state).not.toContain('api_saveMyTableColumns');
+    expect(access).not.toContain('tableColumns');
+    expect(dash).not.toContain('TableColumns');
+    expect(expenses).not.toContain('TableColumns');
+    expect(members).not.toContain('TableColumns');
+    const membersScript = fs.readFileSync(path.join(__dirname, '../src/Script_Members.html'), 'utf8');
+    const staffScript = fs.readFileSync(path.join(__dirname, '../src/Script_Staff.html'), 'utf8');
+    expect(membersScript).toContain("if (lower === 'active') return 'bg-emerald-50 text-emerald-700 border-emerald-200'");
+    expect(membersScript).toContain("return 'bg-red-50 text-red-700 border-red-200'");
+    expect(staffScript).toContain('this.statusBadgeClass(sName)');
   });
 
   test('reflects recognized future revenue from split payments in Net-In-Hand Prediction', () => {
