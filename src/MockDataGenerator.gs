@@ -78,22 +78,22 @@ var DEFAULT_SHEET_HEADERS = {
   MEMBERS: [
     'memberId', 'fullName', 'phone', 'email', 'gender', 'dob',
     'joinDate', 'exitDate', 'status', 'membershipId', 'batchId',
-    'membershipAmount', 'notes', 'profileImage', 'createdAt', 'updatedAt',
+    'membershipAmount', 'profileImage', 'createdAt', 'updatedAt',
     'createdBy', 'updatedBy'
   ],
   PAYMENTS: [
     'paymentId', 'memberId', 'amount', 'paidDate', 'startDate', 'endDate',
-    'paymentMode', 'paymentStatus', 'notes', 'createdAt', 'updatedAt',
+    'paymentMode', 'cashAmount', 'upiAmount', 'expectedAmount', 'pendingAmount', 'paymentStatus', 'receiptUrl', 'createdAt', 'updatedAt',
     'createdBy', 'updatedBy'
   ],
   STAFF: [
     'staffId', 'fullName', 'role', 'reportingTo', 'phone', 'email', 'dob',
-    'salary', 'joinDate', 'exitDate', 'status', 'notes', 'createdAt', 'updatedAt',
+    'salary', 'joinDate', 'exitDate', 'status', 'createdAt', 'updatedAt',
     'createdBy', 'updatedBy'
   ],
   SALARY: [
     'paymentId', 'staffId', 'creditType', 'amount', 'paidDate', 'startDate', 'endDate',
-    'paymentMode', 'paymentStatus', 'receiptUrl', 'notes', 'createdAt', 'updatedAt',
+    'paymentMode', 'paymentStatus', 'receiptUrl', 'createdAt', 'updatedAt',
     'createdBy', 'updatedBy'
   ],
   EXPENSES: [
@@ -351,7 +351,7 @@ function buildMembersAndPayments(today, cfg) {
   var KIDS_ADHOC = 3500;
   var TRIAL_FEE = 2000;
 
-  function addPayment(memberId, amount, paidDate, startDate, endDate, mode, status, notes) {
+  function addPayment(memberId, amount, paidDate, startDate, endDate, mode, status) {
     payments.push({
       paymentId: mockGenerateId('PAY'),
       memberId: memberId,
@@ -361,7 +361,6 @@ function buildMembersAndPayments(today, cfg) {
       endDate: mockFormatDDMMMYYYY(endDate),
       paymentMode: mode || cfg.modeUPI,
       paymentStatus: status || cfg.payStatusPaid,
-      notes: notes || '',
       createdAt: nowIso,
       updatedAt: nowIso,
       createdBy: adminEmail,
@@ -402,7 +401,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchAdultMorning,
     membershipAmount: ADULT_FEE,
-    notes: 'Adult Morning Batch. Renewal due in 2 days.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -426,7 +424,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchKidsEvening,
     membershipAmount: KIDS_FEE,
-    notes: 'Kids Evening Batch (Age 9). Parent: Rajesh Joshi. Due in 2 days.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -450,7 +447,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchAdultEvening,
     membershipAmount: ADULT_FEE,
-    notes: 'Adult Evening Batch. Renewal due in 10 days.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -474,7 +470,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchKidsEvening,
     membershipAmount: KIDS_FEE,
-    notes: 'Kids Evening Batch (Age 11). Parent: Alok Banerjee. Due in 10 days.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -498,7 +493,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchAdultMorning,
     membershipAmount: ADULT_FEE,
-    notes: 'Adult Morning Batch. Membership expires and due today.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -522,7 +516,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchAdultEvening,
     membershipAmount: ADULT_FEE,
-    notes: 'Adult Evening Batch. Overdue by 5 days.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -547,7 +540,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchKidsMorning,
     membershipAmount: KIDS_FEE,
-    notes: 'Kids Morning Batch (Age 8). Parent: Neha Kapoor. Overdue by 15 days.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -571,7 +563,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchAdultEvening,
     membershipAmount: ADULT_FEE,
-    notes: 'Adult Evening Batch. Overdue by 30 days.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -595,7 +586,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchKidsMorning,
     membershipAmount: KIDS_FEE,
-    notes: 'Kids Morning Batch (Age 10). Parent: Sunita Desai. Active with 45 days left.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -619,7 +609,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchAdultMorning,
     membershipAmount: ADULT_FEE,
-    notes: 'Adult Morning Batch. Active with 50 days left.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -643,7 +632,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planAdHoc,
     batchId: cfg.batchAdultEvening,
     membershipAmount: ADULT_ADHOC,
-    notes: 'Adult Ad-Hoc 5-session pack holder.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -672,7 +660,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planAdHoc,
     batchId: cfg.batchKidsMorning,
     membershipAmount: KIDS_ADHOC,
-    notes: 'Kids Ad-hoc session pack. Parent: Meenakshi Rawat.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -697,7 +684,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planTrial,
     batchId: cfg.batchAdultMorning,
     membershipAmount: TRIAL_FEE,
-    notes: '7-day introductory trial member.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -722,7 +708,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchAdultMorning,
     membershipAmount: ADULT_FEE,
-    notes: 'Relocated to another city. Membership completed and closed on 30-Jun-2025.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -747,7 +732,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchAdultEvening,
     membershipAmount: ADULT_FEE,
-    notes: 'Completed 3 quarters. Discontinued due to injury recovery.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -773,7 +757,6 @@ function buildMembersAndPayments(today, cfg) {
     membershipId: cfg.planQuarterly,
     batchId: cfg.batchKidsMorning,
     membershipAmount: KIDS_FEE,
-    notes: 'Kids Morning. Parent: S. Chatterjee. Left on 31-Aug-2025.',
     profileImage: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -821,7 +804,6 @@ function buildMembersAndPayments(today, cfg) {
         membershipId: cfg.planQuarterly,
         batchId: c.batch,
         membershipAmount: c.amt,
-        notes: (c.amt === KIDS_FEE ? 'Kids' : 'Adult') + ' Quarterly Subscriber.',
         profileImage: '',
         createdAt: nowIso,
         updatedAt: nowIso,
@@ -865,7 +847,6 @@ function buildStaffAndSalary(today, cfg) {
       joinDate: new Date(2025, 0, 1),
       exitDate: null,
       status: cfg.statusActive,
-      notes: 'Head Fitness Coach & Program Director.'
     },
     {
       fullName: 'Sneha Kulkarni',
@@ -878,7 +859,6 @@ function buildStaffAndSalary(today, cfg) {
       joinDate: new Date(2025, 0, 1),
       exitDate: null,
       status: cfg.statusActive,
-      notes: 'Assistant Coach & Operations Coordinator.'
     }
   ];
 
@@ -896,7 +876,6 @@ function buildStaffAndSalary(today, cfg) {
       joinDate: mockFormatDDMMMYYYY(stfDef.joinDate),
       exitDate: '',
       status: cfg.statusActive,
-      notes: stfDef.notes,
       createdAt: nowIso,
       updatedAt: nowIso,
       createdBy: adminEmail,
@@ -926,7 +905,6 @@ function buildStaffAndSalary(today, cfg) {
         paymentMode: cfg.modeBank,
         paymentStatus: payStatus,
         receiptUrl: '',
-        notes: 'Monthly salary disbursement for ' + mockFormatDDMMMYYYY(startOfMonth).substring(3),
         createdAt: nowIso,
         updatedAt: nowIso,
         createdBy: adminEmail,
@@ -947,7 +925,6 @@ function buildStaffAndSalary(today, cfg) {
           paymentMode: cfg.modeBank,
           paymentStatus: cfg.payStatusPaid,
           receiptUrl: '',
-          notes: 'Diwali Festive Bonus 2025',
           createdAt: nowIso,
           updatedAt: nowIso,
           createdBy: adminEmail,
@@ -969,7 +946,6 @@ function buildStaffAndSalary(today, cfg) {
           paymentMode: cfg.modeBank,
           paymentStatus: cfg.payStatusPaid,
           receiptUrl: '',
-          notes: 'FY26 Q1 Performance Bonus',
           createdAt: nowIso,
           updatedAt: nowIso,
           createdBy: adminEmail,

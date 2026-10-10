@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { parseSafeDate, distributeDailyProration } = require('../src/Utils_DB');
 
-function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = [], extraMembers = []) {
+function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = [], extraMembers = [], extraPayments = []) {
   const source = fs.readFileSync(path.join(__dirname, '../src/API_Dashboard.js'), 'utf8');
 
   return new Function(
@@ -35,7 +35,8 @@ function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = [], extra
           { memberId: 'MEM-1', paymentStatus: 'Paid', startDate: '2024-01-05', endDate: '2024-01-31', amount: 2500 },
           { memberId: 'MEM-1', paymentStatus: 'STATUS-OVERDUE', startDate: '2024-01-05', endDate: '2024-01-31', amount: 1500 },
           { memberId: 'MEM-2', paymentStatus: 'Paid', startDate: '2024-02-10', endDate: '2024-02-28', amount: 4000 },
-          { memberId: 'MEM-2', paymentStatus: 'Unpaid', startDate: '2024-03-01', endDate: '2024-03-31', amount: 4000 }
+          { memberId: 'MEM-2', paymentStatus: 'Unpaid', startDate: '2024-03-01', endDate: '2024-03-31', amount: 4000 },
+          ...extraPayments
         ],
         EXPENSES: [
           { categoryId: 'CAT-1', amount: 2500, date: '2024-01-15' },
@@ -68,6 +69,7 @@ function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = [], extra
         options: {
           membership: [{ id: 'PLAN-1', name: 'Monthly' }, { id: 'PLAN-2', name: 'Quarterly' }, { id: 'PLAN-3', name: 'Trial' }, { id: 'PLAN-4', name: 'Ad-hoc' }],
           paymentstatus: [{ id: 'STATUS-OVERDUE', name: 'Overdue' }],
+          paymentmode: [{ id: 'MODE-CASH', name: 'Cash' }, { id: 'MODE-UPI', name: 'UPI' }],
           batch: [{ id: 'B-1', name: 'Morning' }],
           status: [{ id: 'ACT', name: 'Active' }],
           expenseCats: [{ id: 'CAT-1', name: 'Rent' }, { id: 'CAT-2', name: 'Utilities' }, { id: 'CAT-3', name: 'Misc' }]
@@ -99,9 +101,47 @@ describe('Dashboard Module', () => {
     expect(response.data.charts).toHaveProperty('expenses');
     expect(response.data.kpis.membersCollected).toBe(6500);
     expect(response.data.charts.revenue).toEqual([2500, 4000]);
-    expect(response.data.charts.collectionTrend.collected).toEqual([2500, 4000]);
+    expect(response.data.charts.paymentModes.cash).toEqual([0, 0]);
+    expect(response.data.charts.paymentModes.upi).toEqual([0, 0]);
     expect(response.data.charts.expenseBreakdown.labels).toEqual(['Rent', 'Utilities', 'Staff Cost']);
     expect(response.data.charts.expenseBreakdown.series).toEqual([2500, 1300, 52000]);
+  });
+
+  test('a split cash and UPI payment is one collection in revenue, the chart, and net-in-hand', () => {
+    const dashboardApi = loadDashboardApi('anchor', [], [], [
+      {
+        memberId: 'MEM-1',
+        paymentStatus: 'Paid',
+        startDate: '2024-01-05',
+        endDate: '2024-01-31',
+        paidDate: '2024-01-05',
+        amount: 30000,
+        cashAmount: 10000,
+        upiAmount: 20000,
+        paymentMode: 'Split'
+      },
+      {
+        memberId: 'MEM-2',
+        paymentStatus: 'Paid',
+        startDate: '2024-02-10',
+        endDate: '2024-02-28',
+        paidDate: '2024-02-10',
+        amount: 4000,
+        paymentMode: 'MODE-UPI'
+      }
+    ]);
+    const response = dashboardApi.api_getDashboardMetrics('2024', 'Monthly', ['Jan', 'Feb']);
+    const charts = response.data.charts;
+    const kpis = response.data.kpis;
+
+    expect(charts.revenue[0]).toBeCloseTo(32500);
+    expect(charts.revenue[1]).toBeCloseTo(8000);
+    expect(charts.paymentModes.cash[0]).toBeCloseTo(10000);
+    expect(charts.paymentModes.upi[0]).toBeCloseTo(20000);
+    expect(charts.paymentModes.cash[1]).toBeCloseTo(0);
+    expect(charts.paymentModes.upi[1]).toBeCloseTo(4000);
+    expect(kpis.membersCollected).toBeCloseTo(40500);
+    expect(kpis.netInHand).toBeCloseTo(kpis.membersCollected - kpis.totalOperatingExpenses);
   });
 
   test('expense breakdown follows selected months and quarters', () => {
@@ -217,10 +257,10 @@ describe('Dashboard Module', () => {
       members, [], payments, 2024, new Date(2024, 0, 15), resolveName, dropDowns, 'anchor'
     );
 
-    expect(forecast.expectedCollectionArr[0]).toBe(0);
-    expect(forecast.expectedCollectionArr[1]).toBe(3000);
-    expect(forecast.expectedCollectionArr[2]).toBe(0);
-    expect(forecast.expectedCollectionArr[4]).toBe(3000);
+    expect(forecast.expectedCollectionArr[0]).toBe(3000);
+    expect(forecast.expectedCollectionArr[1]).toBe(0);
+    expect(forecast.expectedCollectionArr[3]).toBe(3000);
+    expect(forecast.expectedCollectionArr[4]).toBe(0);
   });
 
   test('split recognition prorates expected quarterly payments across their coverage months', () => {
@@ -246,9 +286,11 @@ describe('Dashboard Module', () => {
       members, [], payments, 2024, new Date(2024, 0, 15), resolveName, dropDowns, 'split'
     );
 
-    expect(forecast.expectedCollectionArr[1]).toBeCloseTo(3000 * 29 / 90, 2);
-    expect(forecast.expectedCollectionArr[2]).toBeCloseTo(3000 * 31 / 90, 2);
-    expect(forecast.expectedCollectionArr[3]).toBeCloseTo(3000 * 30 / 90, 2);
+    const coverageDays = 90;
+    expect(forecast.expectedCollectionArr[0]).toBeCloseTo(3000 * 1 / coverageDays, 2);
+    expect(forecast.expectedCollectionArr[1]).toBeCloseTo(3000 * 29 / coverageDays, 2);
+    expect(forecast.expectedCollectionArr[2]).toBeCloseTo(3000 * 31 / coverageDays, 2);
+    expect(forecast.expectedCollectionArr[3]).toBeCloseTo(3000 * 30 / coverageDays, 2);
   });
 
   test('does not forecast overdue or ad-hoc members as upcoming collections', () => {
@@ -310,14 +352,14 @@ describe('Dashboard Module', () => {
 
     expect(metrics.predictionLabels).toEqual(['Jan', 'Feb', 'Mar']);
     expect(metrics.actualNetArr).toEqual([8000, null, null]);
-    expect(metrics.expectedNetArr).toEqual([8000, 600, -300]);
+    expect(metrics.expectedNetArr).toEqual([null, 600, -300]);
     expect(metrics.transitionIndex).toBe(0);
   });
 
   test('keeps the Net-In-Hand chart fixed as an area chart without a chart type selector', () => {
     const view = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
     const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
-    const predictionConfig = script.slice(script.indexOf('// 3. Net-In-Hand'), script.indexOf('// 4. Collection Trend'));
+    const predictionConfig = script.slice(script.indexOf('// 3. Net-In-Hand'), script.indexOf('// 4. Cash vs UPI'));
 
     expect(view).not.toContain('toggle-pred');
     expect(predictionConfig).toContain("type: 'area'");
@@ -330,6 +372,11 @@ describe('Dashboard Module', () => {
     const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
 
     expect(view).toContain('metric-tip-bubble');
+    expect(view).toContain("tooltipCopy_('dashboard.activeMembers')");
+    expect(view).not.toContain('Plan chips split that same group');
+    const tips = fs.readFileSync(path.join(__dirname, '../src/Copy_Tooltips.js'), 'utf8');
+    expect(tips).toContain('Plan chips split that same group');
+    expect(tips).toContain('function tooltipCopy_');
     expect(view).toMatch(/justify-between min-w-0 overflow-visible/);
     expect(view).toMatch(/h-full min-w-0 overflow-visible/);
     expect(styles).toContain('.metric-tip-bubble');
@@ -425,14 +472,21 @@ describe('Dashboard Module', () => {
     const view = fs.readFileSync(path.join(__dirname, '../src/View_Dashboard.html'), 'utf8');
     const script = fs.readFileSync(path.join(__dirname, '../src/Script_Dashboard.html'), 'utf8');
 
-    expect(script).toContain('text-[9px] sm:text-[11px] leading-none sm:leading-tight text-slate-600 font-bold uppercase');
+    expect(script).toContain('text-[9px] sm:text-[11px] leading-none sm:leading-tight text-slate-600 font-bold');
+    expect(script).toContain('rawLabel.charAt(0).toUpperCase()');
+    expect(script).not.toContain('text-slate-600 font-bold uppercase">${label}');
     expect(view).toContain('grid grid-cols-2 gap-1 mt-auto');
     expect(script).not.toContain('truncate max-w-[55px]');
+    expect(view).toContain('id="toggle-trend-percent"');
+    expect(view).toContain('>Projected:<');
+    expect(view).not.toContain('id="toggle-trend"');
+    expect(script).toContain("stackType: showPercent ? '100%' : 'normal'");
+    expect(script).toContain('paymentModes.cashLabel');
     expect(view).toContain('lg:grid-cols-3');
     const rev = view.indexOf('>Revenue vs Expenses<');
     const batch = view.indexOf('>Members by Batch<');
     const net = view.indexOf('>Net-In-Hand Forecast<');
-    const trend = view.indexOf('>Collection Trend<');
+    const trend = view.indexOf('>Cash vs UPI<');
     const expense = view.indexOf('>Expense Breakdown<');
     const birthdays = view.indexOf('Upcoming birthdays');
     expect(rev).toBeGreaterThan(-1);
@@ -509,8 +563,8 @@ describe('Dashboard Module', () => {
     expect(metrics.actualNetArr[10]).toBeNull(); // Nov
     expect(metrics.actualNetArr[11]).toBeNull(); // Dec
 
-    // Future periods Oct and Nov must reflect recognized revenue and NOT drop to 0
-    expect(metrics.expectedNetArr[8]).toBe(9700);
+    // Current month has no unpaid due, so Projected does not repeat Actual.
+    expect(metrics.expectedNetArr[8]).toBeNull();
     expect(metrics.expectedNetArr[9]).toBe(10100);
     expect(metrics.expectedNetArr[10]).toBe(9800);
     // Dec combines recognized revenue from active payment (5200) + future expected renewal (5000)
@@ -665,7 +719,7 @@ describe('Dashboard Module', () => {
     // Q4 chart point must still expose forecast uplift (not treat whole quarter as elapsed)
     expect(quarterly.transitionIndex).toBe(3);
     expect(quarterly.actualNetArr[3]).toBe(5000);
-    expect(quarterly.expectedNetArr[3]).toBe(5000 + 37000);
+    expect(quarterly.expectedNetArr[3]).toBe(37000);
   });
 
   test('counts unpaid renewals due later this month in Remaining, not only next months', () => {
@@ -691,7 +745,33 @@ describe('Dashboard Module', () => {
     expect(metrics.remainingForecastNet).toBe(50000);
     expect(metrics.projectedNet).toBe(133000);
     expect(metrics.actualNetArr[9]).toBe(83000);
-    expect(metrics.expectedNetArr[9]).toBe(133000);
+    expect(metrics.expectedNetArr[9]).toBe(50000);
+  });
+
+  test('a renewal due later this month stays on Projected and off Actual', () => {
+    const dashboardApi = loadDashboardApi();
+    const revArr = new Array(12).fill(0);
+    revArr[9] = 12000;
+    const expArr = new Array(12).fill(0);
+    expArr[9] = 2000;
+    const expectedCollectionArr = new Array(12).fill(0);
+    expectedCollectionArr[9] = 30000;
+
+    const metrics = dashboardApi.formatTimePeriods(
+      { revArr, expArr, staffArr: new Array(12).fill(0) },
+      { overdueArr: new Array(12).fill(0), expectedCollectionArr },
+      'Monthly',
+      ['Oct'],
+      2026,
+      new Date(2026, 9, 9),
+      { operating: 0, staff: 0 },
+      null
+    );
+
+    expect(metrics.actualNetArr[0]).toBe(10000);
+    expect(metrics.expectedNetArr[0]).toBe(30000);
+    expect(metrics.actualNet).toBe(10000);
+    expect(metrics.remainingForecastNet).toBe(30000);
   });
 
   test('kpis.netInHand matches charts.prediction.actualNet for elapsed periods', () => {

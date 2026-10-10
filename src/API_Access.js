@@ -653,6 +653,7 @@ function getSetupStatus_(options) {
   let calendarOk = false;
   let deployApiOk = false;
   let triggerOk = false;
+  let weeklyWanted = false;
   let authError = '';
   let authorizationUrl = '';
   let servicesAuthorized = false;
@@ -702,6 +703,19 @@ function getSetupStatus_(options) {
     servicesAuthorized = mailOk && scriptAppOk && calendarOk;
   }
 
+  try {
+    if (typeof getNotificationConfig_ === 'function') {
+      const notify = getNotificationConfig_(settings);
+      weeklyWanted = !!(notify && notify.masterEnabled && notify.weeklyReportEnabled);
+    }
+  } catch (error) {}
+
+  let triggerState = 'off';
+  if (!quick) {
+    if (triggerOk) triggerState = 'ok';
+    else if (weeklyWanted) triggerState = 'missing';
+  }
+
   return {
     spreadsheetOk: spreadsheetOk,
     settingsOk: settingsOk,
@@ -711,6 +725,8 @@ function getSetupStatus_(options) {
     calendarOk: calendarOk,
     deployApiOk: deployApiOk,
     triggerOk: triggerOk,
+    triggerState: triggerState,
+    weeklyReportEnabled: weeklyWanted,
     servicesAuthorized: servicesAuthorized,
     setupComplete: setupComplete,
     authError: authError,
@@ -1127,9 +1143,18 @@ function api_authorizeServices() {
     }
 
     upsertSettingKey_('SERVICES_AUTHORIZED', 'YES');
+    let triggerNote = '';
+    try {
+      if (typeof syncNotificationTriggers_ === 'function') {
+        const synced = syncNotificationTriggers_(readSettingsMapForAccess_());
+        if (synced && synced.scheduled) triggerNote = ' Weekly report trigger is set.';
+      }
+    } catch (triggerError) {
+      triggerNote = '';
+    }
     return {
       success: true,
-      message: 'Google services authorized successfully (Mail, ScriptApp, Calendar, and web-app publish scopes).',
+      message: 'Google services authorized successfully (Mail, ScriptApp, Calendar, and web-app publish scopes).' + triggerNote,
       data: getSetupStatus_()
     };
   } catch (error) {

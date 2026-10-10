@@ -214,11 +214,11 @@
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">Net-In Hand</p>
             <div class="rounded-lg bg-amber-50 border border-amber-100 px-2.5 py-2 text-[11px] text-amber-950 leading-relaxed font-medium mb-1.5">
-              Actual = collections recognized − expenses for elapsed periods<br>
-              Remaining = forecast collections − forecast expenses for later periods<br>
-              Projected total = Actual + Remaining
+              Actual = collections already received − expenses<br>
+              Projected = renewals not yet received, including later this month, − estimated future costs<br>
+              Total = Actual + Projected
             </div>
-            <p class="text-[11px] text-slate-600 leading-relaxed">The card shows Actual plus a <strong>Remaining</strong> badge. The chart summary bar shows Actual / Remaining / Total. Future periods use prepaid recognition (important in Split mode), expected renewals from next due dates (skip overdue, ad-hoc, trial), trailing expense averages, and active staff salary run-rate.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">The card shows Actual plus a <strong>Projected</strong> badge. The chart summary bar shows Actual / Projected / Total. A renewal due later this month stays on Projected until the payment is received. Quarterly renewals are 90 days from the join or cycle date.</p>
           </div>
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">Total Collected</p>
@@ -243,7 +243,7 @@
             <li><strong>Revenue vs Expenses</strong> — bars of recognized revenue and expenses per period.</li>
             <li><strong>Members by Batch</strong> — active members grouped by batch.</li>
             <li><strong>Net-In-Hand Forecast</strong> — area chart; solid = actual, dotted = forecast.</li>
-            <li><strong>Collection Trend</strong> — collected vs overdue series (chart type toggle).</li>
+            <li><strong>Cash vs UPI</strong> — one combined bar per period. Yes shows the cash and UPI share as a percent. No shows the rupee amounts. Names come from the payment-mode dropdown.</li>
             <li><strong>Expense Breakdown</strong> — donut by category (includes staff cost); misc details available.</li>
           </ul>
         </div>
@@ -257,7 +257,7 @@
     </section>
 
     <!-- 5 Members -->
-    <section id="guide-sec-members" data-guide-section="members" data-guide-search="members LSC-MEM payments trial ad-hoc exit photo insights filters phone" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+    <section id="guide-sec-members" data-guide-section="members" data-guide-search="members LSC-MEM payments trial ad-hoc exit photo insights filters phone cash upi partial pending receipt" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
       <button type="button" data-guide-toggle="members" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
         <span class="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 border border-teal-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">groups</span></span>
         <div class="flex-1 min-w-0">
@@ -273,11 +273,12 @@
         <p class="text-xs text-slate-600 leading-relaxed pt-3">Add and edit members (name, <strong>10-digit phone</strong>, email, gender, DOB, join/exit, status, plan, batch, amount, photo). On edit, leaving optional fields blank keeps the existing saved values — only the fields you change are updated. New IDs look like <code class="text-[10px] bg-slate-100 px-1 rounded">LSC-MEM-1</code>, <code class="text-[10px] bg-slate-100 px-1 rounded">LSC-MEM-2</code>, …</p>
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>Filters</strong> — status (All / Active / Due Soon / Overdue), batch, plan, and search; selections stay visible while filtering.</li>
-          <li><strong>Payments</strong> — record payments anytime; optional initial payment when adding. Coverage length follows the plan (e.g. monthly +1 month, quarterly +3, yearly +1 year, trial +7 days, ad-hoc +1 day).</li>
-          <li><strong>Next due</strong> — latest paid coverage <strong>endDate</strong> (same everywhere); otherwise from plan frequency / join. Ad-hoc &amp; trial always show <strong>No Due Date</strong> on both the list and detail (exit date governs the plan, not a renewal due).</li>
+          <li><strong>Add member</strong> — a new member starts as <strong>Active</strong>. Personal details are image and name, date of birth and phone, then gender and email. Initial payment stays open under membership: enter cash and UPI, or leave both at 0 to skip.</li>
+          <li><strong>Payments</strong> — Record and Edit use one compact form. Cash and UPI must be numbers; the amount paid is their sum. There is no status, transaction ID, or receipt link to type. Paying the cycle fee saves <strong>Paid</strong>. Paying less saves <strong>Pending</strong> and the remaining balance. A receipt image is optional. The list, detail, and history show <strong>Partial</strong> plus that pending amount.</li>
+          <li><strong>Next due</strong> — latest covering payment <strong>endDate</strong> (Paid/Completed, or a partial payment that still has a balance). Overdue rows do not move the due date. Ad-hoc &amp; trial always show <strong>No Due Date</strong> on both the list and detail (exit date governs the plan, not a renewal due).</li>
           <li><strong>Trial fee</strong> — daily rate × inclusive days between join and exit; recalculates when plan or dates change.</li>
           <li><strong>Ad-hoc / trial exit</strong> — exit date required; when that date arrives, status becomes Inactive (on load and by a daily check).</li>
-          <li><strong>Insights</strong> — per-member earnings charts; only Paid/Completed payments count as collected.</li>
+          <li><strong>Insights</strong> — per-member cash and UPI bars. Switch Amount or Percent, and Monthly or Quarterly, for the selected year. On a phone the chart stays inside the card, and payment history stacks so the page does not scroll sideways. Money received on paid and partial payments is included.</li>
           <li><strong>Photo</strong> — stored in Drive and linked on the member row.</li>
         </ul>
       </div>
@@ -351,10 +352,10 @@
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>KPIs</strong> — Overdue, Due ≤2, Due 3–7, This month.</li>
           <li><strong>Who appears</strong> — Active members only. Recurring plans show renewals/overdue; ad-hoc &amp; trial show <em>exit date</em> only (no renewal due).</li>
-          <li><strong>Next due</strong> — latest paid payment <strong>endDate</strong> (same as Members, Dashboard, and Google Calendar). Paid/Completed statuses only.</li>
+          <li><strong>Next due</strong> — latest covering payment <strong>endDate</strong> (same as Members, Dashboard, and Google Calendar). Paid/Completed, or a partial payment that still has a pending balance. Overdue rows do not count.</li>
           <li><strong>Actions</strong> — Open member; WhatsApp renewal reminder. Optional GCal synced badge when a quarterly due event exists.</li>
           <li>Year list matches Dashboard / Members / Staff / Expenses (includes current year even with no data).</li>
-          <li><strong>Google Calendar reminders</strong> — optional in Settings → General. When enabled, each paid <em>quarterly</em> payment creates a timed event on the owner calendar for the next due date (<code>endDate</code>); renewing replaces the previous event. Trial/Ad-hoc/Monthly/Annual are skipped. No backfill of existing members.</li>
+          <li><strong>Google Calendar reminders</strong> — optional in Settings → General. A quarterly cycle is 90 days (10 Oct joins through 8 Jan, and the next cycle starts 8 Jan). The calendar event is placed <strong>2 days before</strong> that due date. Renewing replaces the previous event. Trial/Ad-hoc/Monthly/Annual are skipped.</li>
         </ul>
       </div>
     </section>
@@ -395,7 +396,7 @@
     </section>
 
     <!-- 10 Money rules -->
-    <section id="guide-sec-money" data-guide-section="money" data-guide-search="money anchor split accrual cash currency indian standard paid completed recognition" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+    <section id="guide-sec-money" data-guide-section="money" data-guide-search="money anchor split accrual cash upi currency indian standard paid completed pending partial recognition" class="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
       <button type="button" data-guide-toggle="money" class="w-full flex items-center gap-3 px-3.5 sm:px-4 py-3 text-left cursor-pointer hover:bg-slate-50/80">
         <span class="w-9 h-9 rounded-xl bg-yellow-50 text-yellow-800 border border-yellow-100 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[20px]">payments</span></span>
         <div class="flex-1 min-w-0">
@@ -420,7 +421,7 @@
         </div>
         <div class="rounded-xl border border-slate-200 p-3 space-y-1.5">
           <p class="text-[11px] font-bold text-slate-800">What counts as collected</p>
-          <p class="text-[11px] text-slate-600 leading-relaxed">Only payment (and salary) statuses that mean <strong>Paid</strong> or <strong>Completed</strong>. Overdue, unpaid, pending, and failed stay visible in history but do not inflate “collected” KPIs.</p>
+          <p class="text-[11px] text-slate-600 leading-relaxed">Dashboard collected totals and salary costs use <strong>Paid</strong> or <strong>Completed</strong> only. Overdue and failed rows stay visible in history but do not inflate those KPIs. A member payment that is only partly paid still counts the money received: the pending balance is tracked separately, and that received cash and UPI appear on the member’s Payment Insights chart.</p>
         </div>
         <div class="rounded-xl border border-slate-200 p-3 space-y-1.5">
           <p class="text-[11px] font-bold text-slate-800">Currency display</p>
@@ -451,17 +452,17 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div class="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
             <p class="text-[11px] font-bold text-pink-900 mb-1">Payment receipt</p>
-            <p class="text-[11px] text-slate-600 leading-relaxed">When a new payment is recorded as Paid/Completed and the member has an email, a receipt can be sent. Templates are editable with placeholders like member name, plan, amount, dates. Use <strong>Send test</strong> in Settings to receive a sample in your own inbox.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">When a new payment is recorded as Paid/Completed and the member has an email, a receipt can be sent. A partial Pending payment does not send that email. Templates are editable with placeholders like member name, plan, amount, dates. Use <strong>Send test</strong> in Settings to receive a sample in your own inbox.</p>
           </div>
           <div class="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
             <p class="text-[11px] font-bold text-pink-900 mb-1">Weekly report</p>
             <p class="text-[11px] text-slate-600 leading-relaxed">Scheduled email to the owner (plus CC list) with upcoming and overdue members. Choose day, time, days-ahead window, and which table columns appear. Preview samples or use <strong>Send test</strong> to email a sample report to yourself from Settings.</p>
           </div>
         </div>
-        <p class="text-[11px] text-slate-500 leading-relaxed">Note: the weekly report’s “due” uses payment end dates; the Calendar screen’s next due is usually end date + 1 day. Both are intentional for their jobs.</p>
+        <p class="text-[11px] text-slate-500 leading-relaxed">The weekly report and the Calendar screen both use the covering payment’s end date as the next due. A quarterly Google Calendar reminder is placed 2 days before that date.</p>
         <div class="rounded-xl border border-teal-100 bg-teal-50/40 p-3">
           <p class="text-[11px] font-bold text-teal-900 mb-1">Google Calendar due events</p>
-          <p class="text-[11px] text-slate-600 leading-relaxed">Separate toggle under Settings → General. Opt-in, quarterly only, timed (not all-day) events on the deployer/owner calendar. When you mark a quarterly payment as paid, the previous due event is deleted and a new event is created for the next due date (`endDate`). Turning the feature off clears leftover events. Re-authorize Google services once after deploy so Calendar access is granted.</p>
+          <p class="text-[11px] text-slate-600 leading-relaxed">Separate toggle under Settings → General. Opt-in, quarterly only, timed (not all-day) events on the deployer/owner calendar. When a quarterly payment covers the cycle — full payment or a partial payment that still has a balance — the previous due event is deleted and a new event is created 2 days before that cycle’s end date. Turning the feature off clears leftover events. Re-authorize Google services once after deploy so Calendar access is granted.</p>
         </div>
       </div>
     </section>

@@ -261,6 +261,7 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
       expect(createdRecord.receiptFileId).toBe('DRIVE_FILE_999');
       expect(createdRecord.base64Image).toBeUndefined();
       expect(createdRecord.imageName).toBeUndefined();
+      expect(createdRecord.notes).toBeUndefined();
       expect(createdRecord.createdBy).toBe('admin@lsc.com');
     });
 
@@ -368,6 +369,10 @@ test('expense KPIs and charts use the dashboard info tips', () => {
   expect(view).toContain('aria-label="About Expenses Trend"');
   expect(view).toContain('aria-label="About Expenses by Category"');
   expect(view).toContain('metric-tip-bubble');
+  expect(view).toContain("tooltipCopy_('expenses.totalOutflow')");
+  expect(view).not.toContain('Recorded gym expenses plus paid staff cost');
+  const tips = fs.readFileSync(path.join(__dirname, '../src/Copy_Tooltips.js'), 'utf8');
+  expect(tips).toContain('Recorded gym expenses plus paid staff cost');
   expect(view).toContain('grid-cols-2 xl:grid-cols-3');
   expect(view).not.toContain('md:grid-cols-4');
   expect(script).toContain('flex-1 xl:flex-none text-center');

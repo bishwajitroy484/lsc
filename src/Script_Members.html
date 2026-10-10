@@ -196,6 +196,109 @@
 
     parseToISODate: AppUtils.parseToISODate,
 
+    isQuarterPlan: function(planName) {
+      return String(planName || '').toUpperCase().indexOf('QUARTER') >= 0;
+    },
+
+    cycleEndFromStart: function(start, planName) {
+      const end = new Date(start);
+      const name = String(planName || '').toUpperCase();
+      if (name.indexOf('QUARTER') >= 0) end.setDate(end.getDate() + 90);
+      else if (name.indexOf('YEAR') >= 0) end.setFullYear(end.getFullYear() + 1);
+      else if (name.indexOf('TRIAL') >= 0) end.setDate(end.getDate() + 7);
+      else if (name.indexOf('ADHOC') >= 0 || name.indexOf('AD-HOC') >= 0) end.setDate(end.getDate() + 1);
+      else end.setMonth(end.getMonth() + 1);
+      return end;
+    },
+
+    nextCycleStart: function(cycleEnd, planName) {
+      const next = new Date(cycleEnd);
+      if (!this.isQuarterPlan(planName)) next.setDate(next.getDate() + 1);
+      return next;
+    },
+
+    parseMoneyInput: function(value) {
+      const text = String(value === undefined || value === null ? '' : value).trim();
+      if (text === '') return 0;
+      if (!/^\d+(\.\d{1,2})?$/.test(text)) return null;
+      const amount = Number(text);
+      if (!Number.isFinite(amount) || amount < 0) return null;
+      return Math.round(amount * 100) / 100;
+    },
+
+    paymentSplitFromFields: function(cashValue, upiValue) {
+      const cash = this.parseMoneyInput(cashValue);
+      const upi = this.parseMoneyInput(upiValue);
+      if (cash === null || upi === null) {
+        Toast.error('Cash and UPI must be numbers, 0 or more.');
+        return null;
+      }
+      const total = Math.round((cash + upi) * 100) / 100;
+      const modes = this.dropdowns.paymentmode || [];
+      const findMode = function(word) {
+        const needle = String(word || '').trim().toLowerCase();
+        const labelOf = function(item) {
+          return String(item.name || item.label || item.value || '').trim().toLowerCase();
+        };
+        const keyOf = function(item) {
+          return String(item.id || item.key || '').trim().toLowerCase();
+        };
+        const exact = modes.find(function(item) {
+          return keyOf(item) === needle || labelOf(item) === needle;
+        });
+        const hit = exact || modes.find(function(item) {
+          return keyOf(item).indexOf(needle) >= 0 || labelOf(item).indexOf(needle) >= 0;
+        });
+        return hit ? (hit.id || hit.key || hit.name) : '';
+      };
+      let paymentMode = findMode('split') || 'Split';
+      if (cash > 0 && upi <= 0) paymentMode = findMode('cash') || 'Cash';
+      else if (upi > 0 && cash <= 0) paymentMode = findMode('upi') || 'UPI';
+      return { cashAmount: cash, upiAmount: upi, amount: total, paymentMode: paymentMode };
+    },
+
+    paymentSplitLabel: function(payment) {
+      if (!payment) return '';
+      const modeLabel = this.getName('paymentmode', payment.paymentMode) || payment.paymentMode || '';
+      const cashSet = payment.cashAmount !== undefined && payment.cashAmount !== null && String(payment.cashAmount).trim() !== '';
+      const upiSet = payment.upiAmount !== undefined && payment.upiAmount !== null && String(payment.upiAmount).trim() !== '';
+      const parts = [];
+      if (cashSet || upiSet) {
+        const cash = Number(payment.cashAmount) || 0;
+        const upi = Number(payment.upiAmount) || 0;
+        if (cash) parts.push('Cash ' + AppUtils.formatCurrency(cash));
+        if (upi) parts.push('UPI ' + AppUtils.formatCurrency(upi));
+      }
+      if (modeLabel && parts.length) return modeLabel + ' · ' + parts.join(' · ');
+      if (parts.length) return parts.join(' · ');
+      return modeLabel;
+    },
+
+    fillPaymentSplitFields: function(cashId, upiId, payment, amount) {
+      const cashEl = document.getElementById(cashId);
+      const upiEl = document.getElementById(upiId);
+      if (!cashEl || !upiEl) return;
+      const cashSet = payment && payment.cashAmount !== undefined && payment.cashAmount !== null && String(payment.cashAmount).trim() !== '';
+      const upiSet = payment && payment.upiAmount !== undefined && payment.upiAmount !== null && String(payment.upiAmount).trim() !== '';
+      if (cashSet || upiSet) {
+        cashEl.value = Number(payment.cashAmount) || 0;
+        upiEl.value = Number(payment.upiAmount) || 0;
+        return;
+      }
+      const modeName = payment ? String(this.getName('paymentmode', payment.paymentMode) || payment.paymentMode || '').toLowerCase() : '';
+      const total = Number(amount) || 0;
+      if (modeName.indexOf('upi') >= 0 || modeName.indexOf('gpay') >= 0 || modeName.indexOf('phonepe') >= 0) {
+        cashEl.value = 0;
+        upiEl.value = total;
+      } else if (modeName.indexOf('cash') >= 0 || !payment) {
+        cashEl.value = total;
+        upiEl.value = 0;
+      } else {
+        cashEl.value = 0;
+        upiEl.value = 0;
+      }
+    },
+
     onDropdownsLoaded: function(response) {
       if (!response || !response.success) {
         const errorText = (response && response.error) ? response.error : 'Failed to load configuration.';
@@ -208,16 +311,12 @@
       const plans = this.dropdowns.membership || [];
       const batches = this.dropdowns.batch || [];
       const statuses = this.dropdowns.status || [];
-      const modes = this.dropdowns.paymentmode || [];
       const payStatuses = this.dropdowns.paymentstatus || this.dropdowns.status || [];
       
       this.populateSelect('mem-plan', plans);
       this.populateSelect('mem-batch', batches, 'groups');
       this.populateSelect('mem-status', statuses);
-      this.populateSelect('pay-mode', modes);
       this.populateSelect('pay-status', payStatuses, null, 'Select Status...');
-      this.populateSelect('mem-pay-mode', modes);
-      this.populateSelect('mem-pay-status', payStatuses);
       
       this.populateFilterStatus(statuses);
       this.populateSelect('filter-batch', batches, null, 'All Batches', true);
@@ -300,8 +399,13 @@
 
     getName: function(type, id) {
       if(!id || !this.dropdowns[type]) return id || '--';
-      const match = this.dropdowns[type].find(item => item.id === id);
-      return match ? match.name : id;
+      const raw = String(id).trim();
+      const match = this.dropdowns[type].find(item => {
+        const key = String(item.id || item.key || '').trim();
+        return key === raw || key.toLowerCase() === raw.toLowerCase();
+      });
+      if (!match) return id;
+      return match.name || match.label || match.value || id;
     },
 
     isPaidPayment: function(payment) {
@@ -314,6 +418,10 @@
         .withSuccessHandler((res) => {
             this.onDataLoaded(res);
             this.applyFilters();
+            if(typeof callback === 'function') callback();
+        })
+        .withFailureHandler((err) => {
+            Toast.error((err && err.message) || 'Could not load members.');
             if(typeof callback === 'function') callback();
         })
         .api_getMembers();
@@ -407,7 +515,7 @@
           <td class="px-4 py-3">
              <div class="text-[11px] text-slate-500 font-medium mb-0.5">Joined: <span class="font-bold text-slate-700">${joinStr}</span></div>
              <div class="text-[11px] text-slate-500 font-medium mb-1">Due: <span class="font-bold text-slate-700">${dueStr}</span></div>
-             <div><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${dueInfo.class} uppercase tracking-wider">${dueInfo.text}</span></div>
+             <div><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${Number(member.pendingAmount) > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : dueInfo.class} uppercase tracking-wider">${Number(member.pendingAmount) > 0 ? ('Partial · Pending ' + AppUtils.formatCurrency(member.pendingAmount)) : dueInfo.text}</span></div>
           </td>
           <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} uppercase tracking-wider">${sName}</span></td>
           <td class="px-4 py-3 text-right">
@@ -467,7 +575,7 @@
           
           <div class="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
             <div><span class="text-slate-400">Plan:</span> <span class="font-bold text-slate-700">${planName}</span></div>
-            <div class="text-right"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${dueInfo.class} uppercase tracking-wider">${dueInfo.text}</span></div>
+            <div class="text-right"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${Number(member.pendingAmount) > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : dueInfo.class} uppercase tracking-wider">${Number(member.pendingAmount) > 0 ? ('Pending ' + AppUtils.formatCurrency(member.pendingAmount)) : dueInfo.text}</span></div>
             <div class="col-span-2 flex justify-between items-center">
                <div><span class="text-slate-400">Batch:</span> <span class="font-bold text-slate-700">${batchName} <span class="${groupBadgeColor}">(${groupName})</span></span></div>
                <div><span class="text-slate-400">Joined:</span> <span class="font-bold text-slate-700">${joinStr}</span></div>
@@ -596,12 +704,15 @@
       document.getElementById('det-due-days').innerHTML = '<div class="h-4 w-20 shimmer rounded inline-block"></div>';
 
       this.currentMemberPayments = [];
+      const historyShimmer = '<div class="h-14 w-full shimmer"></div><div class="h-14 w-full shimmer"></div><div class="h-14 w-full shimmer"></div>';
+      const historyCards = document.getElementById('det-history-cards');
+      if (historyCards) historyCards.innerHTML = historyShimmer;
       document.getElementById('det-history-body').innerHTML = `
         <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded mb-2"></div></td></tr>
         <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded mb-2"></div></td></tr>
         <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded"></div></td></tr>
       `;
-      document.getElementById('member-revenue-chart').innerHTML = '<div class="w-full h-[180px] shimmer rounded-lg opacity-50"></div>';
+      document.getElementById('member-revenue-chart').innerHTML = '<div class="w-full h-full shimmer rounded-lg opacity-50"></div>';
       document.getElementById('det-ltv-all').innerHTML = '<div class="h-4 w-12 shimmer rounded mt-1"></div>';
       document.getElementById('det-ltv-year').innerHTML = '<div class="h-4 w-12 shimmer rounded mt-1"></div>';
       document.getElementById('det-ltv-count').innerHTML = '<div class="h-4 w-6 shimmer rounded mt-1"></div>';
@@ -654,7 +765,7 @@
         
         if (this.currentMemberPayments && this.currentMemberPayments.length > 0) {
             const validPayments = this.currentMemberPayments.filter(p => {
-                return p.endDate && this.isPaidPayment(p);
+                return p.endDate && (this.isPaidPayment(p) || this.isPartialPayment(p));
             });
             
             validPayments.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
@@ -725,6 +836,16 @@
         if (mainStatusName.toLowerCase() === 'overdue' || mainStatusName.toLowerCase() === 'in-active') sClass = 'bg-red-50 text-red-600 border-red-100';
         if (mainStatusName === 'Expired') sClass = 'bg-slate-100 text-slate-600 border-slate-200';
 
+        const openPartial = (this.currentMemberPayments || []).reduce((sum, payment) => {
+          return sum + (this.isPartialPayment(payment) ? Number(String(payment.pendingAmount || 0).replace(/[^0-9.-]+/g, '')) : 0);
+        }, 0);
+        if (openPartial > 0 && !statLower.includes('inactive') && !statLower.includes('in-active')) {
+          mainStatusName = 'Partial';
+          sClass = 'bg-amber-50 text-amber-700 border-amber-200';
+          dueBadge.innerText = 'Pending ' + AppUtils.formatCurrency(openPartial);
+          dueBadge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200';
+        }
+
         document.getElementById('det-status').innerText = mainStatusName;
         document.getElementById('det-status').className = `text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${sClass}`;
     },
@@ -752,6 +873,7 @@
 
     renderPaymentHistory: function() {
       const tBody = document.getElementById('det-history-body');
+      const cardList = document.getElementById('det-history-cards');
       
       let virtualRecords = [];
       const m = this.currentActiveMember;
@@ -765,7 +887,7 @@
       if (currentDue && !isNaN(currentDue)) {
           const plans = this.dropdowns.membership || [];
           const planMatch = plans.find(p => p.id === m.membershipId);
-          const planName = String(planMatch && planMatch.name ? planMatch.name : '').toUpperCase();
+          const planName = String(`${planMatch && planMatch.name ? planMatch.name : ''} ${planMatch && planMatch.frequency ? planMatch.frequency : ''}`).toUpperCase();
           
           const validPaymentsCount = this.currentMemberPayments.filter(p => {
               return this.isPaidPayment(p);
@@ -778,13 +900,7 @@
           
           while (currentDue < today && iterCount <= maxCycles) {
               let vStart = new Date(currentDue);
-              let vEnd = new Date(currentDue);
-              
-              if (planName.includes('QUARTER')) vEnd.setMonth(vEnd.getMonth() + 3);
-              else if (planName.includes('YEAR')) vEnd.setFullYear(vEnd.getFullYear() + 1);
-              else if (planName.includes('TRIAL')) vEnd.setDate(vEnd.getDate() + 7);
-              else if (planName.includes('ADHOC') || planName.includes('AD-HOC')) vEnd.setDate(vEnd.getDate() + 1);
-              else vEnd.setMonth(vEnd.getMonth() + 1); 
+              let vEnd = this.cycleEndFromStart(vStart, planName);
               
               const cycleText = isNonRecurring ? 'Expired / Unpaid' : `Missed Cycle ${iterCount}`;
 
@@ -799,20 +915,13 @@
                   virtualEndDate: vEnd.toISOString()
               });
               
-              currentDue = new Date(vEnd);
-              currentDue.setDate(currentDue.getDate() + 1); 
+              currentDue = this.nextCycleStart(vEnd, planName);
               iterCount++;
           }
           
           if (isActive && !isNonRecurring && iterCount <= maxCycles && currentDue >= today) {
               let vStart = new Date(currentDue);
-              let vEnd = new Date(currentDue);
-              
-              if (planName.includes('QUARTER')) vEnd.setMonth(vEnd.getMonth() + 3);
-              else if (planName.includes('YEAR')) vEnd.setFullYear(vEnd.getFullYear() + 1);
-              else if (planName.includes('TRIAL')) vEnd.setDate(vEnd.getDate() + 7);
-              else if (planName.includes('ADHOC') || planName.includes('AD-HOC')) vEnd.setDate(vEnd.getDate() + 1);
-              else vEnd.setMonth(vEnd.getMonth() + 1); 
+              let vEnd = this.cycleEndFromStart(vStart, planName); 
               
               virtualRecords.push({
                   isVirtual: true,
@@ -831,11 +940,14 @@
       combinedHistory.sort((a,b) => new Date(this.parseToISODate(b.paidDate)) - new Date(this.parseToISODate(a.paidDate)));
 
       if(combinedHistory.length === 0) {
+        const empty = '<div class="text-center py-6 text-xs font-bold text-slate-400">No payment history found.</div>';
         tBody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-xs font-bold text-slate-400">No payment history found.</td></tr>';
+        if (cardList) cardList.innerHTML = empty;
         return;
       }
       
       let phtml = '';
+      let cardsHtml = '';
       const memberPhone = (m && m.phone) || '';
       const memberName = (m && m.fullName) || 'Member';
       const planLabel = this.getName('membership', m && m.membershipId) || 'membership';
@@ -873,6 +985,7 @@
               `WhatsAppNotify.open('${waType}', ${waRowJson}, event)`
             );
             
+            const payNowBtn = `<button onclick="MembersApp.openRecordPayment(${pJson})" class="h-8 px-2.5 text-brand-primary border border-red-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm inline-flex items-center justify-center transition-colors shrink-0">Pay Now</button>`;
             phtml += `
               <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 group transition-colors ${rowClass}">
                 <td class="px-4 py-3">
@@ -880,20 +993,44 @@
                   <div class="text-[9px] ${labelColor} font-bold mt-0.5">${p.cycleLabel}</div>
                   <div class="text-[9px] text-slate-500 mt-0.5">${vStartFmt} to ${vEndFmt}</div>
                 </td>
-                <td class="px-4 py-3"><div class="font-bold text-slate-800">${AppUtils.formatCurrency(pAmt)}</div><div class="text-[9px] text-slate-500">${p.paymentMode}</div></td>
+                <td class="px-4 py-3"><div class="font-bold text-slate-800">${AppUtils.formatCurrency(pAmt)}</div><div class="text-[9px] text-slate-500">${this.paymentSplitLabel(p)}</div></td>
                 <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${badgeClass}">${p.paymentStatus}</span></td>
                 <td class="px-4 py-3 text-right">
                   <div class="inline-flex items-center justify-end gap-1.5">
                     ${waBtn}
-                    <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-auto px-3 py-1.5 text-brand-primary border border-red-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm inline-flex items-center justify-center transition-colors">Pay Now</button>
+                    ${payNowBtn}
                   </div>
                 </td>
               </tr>
             `;
+            cardsHtml += `
+              <div class="px-3 py-3 ${rowClass}">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="font-bold text-xs text-slate-800">${p.paidDate}</div>
+                    <div class="text-[10px] ${labelColor} font-bold mt-0.5">${p.cycleLabel}</div>
+                    <div class="text-[10px] text-slate-500 mt-0.5 break-words">${vStartFmt} to ${vEndFmt}</div>
+                  </div>
+                  <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 max-w-[46%] text-right whitespace-normal leading-tight ${badgeClass}">${p.paymentStatus}</span>
+                </div>
+                <div class="mt-2 flex items-end justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="font-bold text-sm text-slate-800">${AppUtils.formatCurrency(pAmt)}</div>
+                    <div class="text-[10px] text-slate-500 break-words">${this.paymentSplitLabel(p)}</div>
+                  </div>
+                  <div class="flex items-center gap-1 shrink-0">${waBtn}${payNowBtn}</div>
+                </div>
+              </div>
+            `;
         } else {
-            const modeName = this.getName('paymentmode', p.paymentMode); 
-            const pStatusName = this.getName('paymentstatus', p.paymentStatus) || p.paymentStatus || 'Completed';
-            let rcptHtml = p.receiptUrl ? `<a href="${p.receiptUrl}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1"><span class="material-symbols-rounded text-[12px] align-middle">link</span></a>` : '';
+            const modeName = this.paymentSplitLabel(p); 
+            const pStatusName = this.isPartialPayment(p)
+              ? ('Partial · Pending ' + AppUtils.formatCurrency(p.pendingAmount || 0))
+              : (this.getName('paymentstatus', p.paymentStatus) || p.paymentStatus || 'Completed');
+            const receiptHref = p.receiptUrl
+              ? (String(p.receiptUrl).indexOf('http') === 0 ? p.receiptUrl : ('https://drive.google.com/file/d/' + p.receiptUrl + '/view'))
+              : '';
+            let rcptHtml = receiptHref ? `<a href="${receiptHref}" target="_blank" onclick="event.stopPropagation()" class="text-brand-primary hover:underline ml-1"><span class="material-symbols-rounded text-[12px] align-middle">image</span></a>` : '';
             
            let statColor = 'text-emerald-600 bg-emerald-50 border-emerald-100';
             if (pStatusName.toLowerCase().includes('pending')) statColor = 'text-amber-600 bg-amber-50 border-amber-100';
@@ -929,6 +1066,8 @@
               );
             }
 
+            const editBtn = `<button onclick="MembersApp.openRecordPayment(${pJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[16px]">edit</span></button>`;
+            const deleteBtn = `<button onclick="MembersApp.openDeleteModal('payment', '${p.paymentId}', '${this.formatDateDDMMMYYYY(p.paidDate)} Payment')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[16px]">delete</span></button>`;
             phtml += `
               <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 group transition-colors">
                 <td class="px-4 py-3">
@@ -941,34 +1080,63 @@
                   <div class="flex items-center justify-end gap-1">
                     ${waBtn}
                     <div class="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onclick="MembersApp.openRecordPayment(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
-                      <button onclick="MembersApp.openDeleteModal('payment', '${p.paymentId}', '${this.formatDateDDMMMYYYY(p.paidDate)} Payment')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
+                      ${editBtn}
+                      ${deleteBtn}
                     </div>
                   </div>
                 </td>
               </tr>
             `;
+            cardsHtml += `
+              <div class="px-3 py-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="font-bold text-xs text-slate-800">${this.formatDateDDMMMYYYY(p.paidDate)}</div>
+                    <div class="text-[10px] text-slate-500 mt-0.5 break-words">${coverageHtml.replace('text-[9px]', 'text-[10px]')}</div>
+                  </div>
+                  <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 max-w-[46%] text-right whitespace-normal leading-tight ${statColor}">${pStatusName}</span>
+                </div>
+                <div class="mt-2 flex items-end justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="font-bold text-sm text-slate-800">${AppUtils.formatCurrency(pAmt)}${rcptHtml}</div>
+                    <div class="text-[10px] text-slate-500 break-words">${modeName}</div>
+                  </div>
+                  <div class="flex items-center gap-0.5 shrink-0">${waBtn}${editBtn}${deleteBtn}</div>
+                </div>
+              </div>
+            `;
         }
       });
       tBody.innerHTML = phtml;
+      if (cardList) cardList.innerHTML = cardsHtml;
     },
 
     renderChart: function() {
       const selectedYear = parseInt(document.getElementById('filter-ltv').value);
       const viewMode = document.getElementById('filter-ltv-mode')?.value || 'monthly';
+      const showPercent = (document.getElementById('filter-ltv-split')?.value || 'amount') === 'percent';
       document.getElementById('lbl-year-ltv').innerText = selectedYear;
 
       const allTimeAmount = this.currentMemberPayments.reduce((sum, p) => {
-        if (!this.isPaidPayment(p)) return sum;
+        if (!this.isPaidPayment(p) && !this.isPartialPayment(p)) return sum;
         return sum + Number(String(p.amount || 0).replace(/[^0-9.-]+/g,""));
       }, 0);
       
       document.getElementById('det-ltv-all').innerText = AppUtils.formatCurrency(allTimeAmount);
 
-      const yearMetrics = this.chartMetrics[selectedYear] || { monthly: new Array(12).fill(0), quarterly: [0, 0, 0, 0], totalEarned: 0 };
+      const yearMetrics = this.chartMetrics[selectedYear] || {
+        monthly: new Array(12).fill(0),
+        quarterly: [0, 0, 0, 0],
+        cashMonthly: new Array(12).fill(0),
+        upiMonthly: new Array(12).fill(0),
+        cashQuarterly: [0, 0, 0, 0],
+        upiQuarterly: [0, 0, 0, 0],
+        totalEarned: 0
+      };
       
       let categories = [];
-      let chartData = [];
+      let cashData = [];
+      let upiData = [];
 
       const dlOptions = {
         enabled: true,
@@ -987,16 +1155,21 @@
         }
       };
 
+      const narrow = window.innerWidth < 640;
       if (viewMode === 'quarterly') {
-          categories = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
-          chartData = yearMetrics.quarterly;
+          categories = narrow
+            ? ['Q1', 'Q2', 'Q3', 'Q4']
+            : ['Q1 Jan–Mar', 'Q2 Apr–Jun', 'Q3 Jul–Sep', 'Q4 Oct–Dec'];
+          cashData = yearMetrics.cashQuarterly || [0, 0, 0, 0];
+          upiData = yearMetrics.upiQuarterly || [0, 0, 0, 0];
       } else {
           categories = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          chartData = yearMetrics.monthly;
+          cashData = yearMetrics.cashMonthly || new Array(12).fill(0);
+          upiData = yearMetrics.upiMonthly || new Array(12).fill(0);
       }
       
       const yearPayments = this.currentMemberPayments.filter(p => {
-        if (!this.isPaidPayment(p)) return false;
+        if (!this.isPaidPayment(p) && !this.isPartialPayment(p)) return false;
         
         let sd = new Date(this.parseToISODate(p.startDate || p.paidDate));
         let ed = new Date(this.parseToISODate(p.endDate || p.paidDate));
@@ -1006,21 +1179,60 @@
       document.getElementById('det-ltv-year').innerText = AppUtils.formatCurrency(yearMetrics.totalEarned);
       document.getElementById('det-ltv-count').innerText = yearPayments.length;
 
+      const percentLabel = (val, opts) => {
+        const series = (opts && opts.w && opts.w.config && opts.w.config.series) || [];
+        const idx = opts ? opts.dataPointIndex : 0;
+        const total = series.reduce((sum, item) => sum + (Number(item.data && item.data[idx]) || 0), 0);
+        const raw = Number(series[opts.seriesIndex] && series[opts.seriesIndex].data[idx]) || 0;
+        if (!total || !raw) return '';
+        return Math.round((raw / total) * 100) + '%';
+      };
+      const rotateMonths = narrow && viewMode !== 'quarterly';
       const options = {
-        series: [{ name: 'Earned', data: chartData.map(v => Number(v.toFixed(2))) }],
-        chart: { type: 'bar', height: '100%', toolbar: { show: false }, stacked: false },
-        plotOptions: { bar: { borderRadius: 2, columnWidth: '55%' } },
-        dataLabels: { ...dlOptions, offsetY: -10 },
+        series: [
+          { name: 'Cash', data: cashData.map(v => Number(Number(v || 0).toFixed(2))) },
+          { name: 'UPI', data: upiData.map(v => Number(Number(v || 0).toFixed(2))) }
+        ],
+        chart: {
+          type: 'bar',
+          width: '100%',
+          height: '100%',
+          toolbar: { show: false },
+          stacked: true,
+          stackType: showPercent ? '100%' : 'normal',
+          parentHeightOffset: 0,
+          redrawOnParentResize: true
+        },
+        plotOptions: { bar: { borderRadius: 2, columnWidth: narrow ? '62%' : '55%', dataLabels: { position: 'center' } } },
+        dataLabels: narrow
+          ? { enabled: false }
+          : (showPercent
+            ? { enabled: true, formatter: percentLabel, style: { fontSize: '10px', fontWeight: 600, colors: ['#0f172a'] } }
+            : { ...dlOptions, offsetY: 0 }),
         xaxis: { 
-            categories: categories, 
-            labels: { style: { fontSize: '11px', colors: '#64748b' } }, 
+            categories: categories,
+            labels: {
+              rotate: rotateMonths ? -45 : 0,
+              rotateAlways: rotateMonths,
+              hideOverlappingLabels: true,
+              trim: true,
+              style: { fontSize: narrow ? '9px' : '11px', colors: '#64748b' }
+            },
             axisBorder: { show: false }, axisTicks: { show: false } 
         },
-        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
+        yaxis: {
+          max: showPercent ? 100 : undefined,
+          labels: {
+            formatter: (val) => showPercent
+              ? (Math.round(val) + '%')
+              : (narrow && AppUtils.formatCompactCurrency ? AppUtils.formatCompactCurrency(val) : AppUtils.formatCurrency(val)),
+            style: { fontSize: narrow ? '9px' : '11px', colors: '#64748b' }
+          }
+        },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
-        colors: ['#10b981'], 
-        legend: { position: 'top', horizontalAlign: 'right', fontSize: '11px', markers: { radius: 10 } },
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 24, right: 10, bottom: 4, left: 10 } }
+        colors: ['#10b981', '#3b82f6'],
+        legend: { position: 'top', horizontalAlign: narrow ? 'left' : 'right', fontSize: narrow ? '10px' : '11px', markers: { radius: 10 } },
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: narrow ? 4 : 16, right: 8, bottom: rotateMonths ? 8 : 4, left: 4 } }
       };
 
       const container = document.querySelector("#member-revenue-chart");
@@ -1029,6 +1241,18 @@
         if(this.chartInstance) this.chartInstance.destroy();
         this.chartInstance = new ApexCharts(container, options);
         this.chartInstance.render();
+      }
+      this._lastChartWidth = window.innerWidth;
+      if (!this._chartResizeBound) {
+        this._chartResizeBound = true;
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+          if (window.innerWidth === this._lastChartWidth) return;
+          const details = document.getElementById('view-details');
+          if (!details || details.classList.contains('translate-x-full')) return;
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(() => this.renderChart(), 150);
+        });
       }
     },
 
@@ -1042,22 +1266,61 @@
       }
     },
 
+    activeStatusId: function() {
+      const statuses = this.dropdowns.status || [];
+      const active = statuses.find(opt => String(opt.name || opt.label || opt.id || '').trim().toLowerCase() === 'active');
+      return active ? active.id : '';
+    },
+
+    paidStatusId: function() {
+      const statusOpts = this.dropdowns.paymentstatus || this.dropdowns.status || [];
+      const paid = statusOpts.find(opt => {
+        const name = String(opt.name || opt.label || '').trim().toLowerCase();
+        return name === 'paid' || name === 'completed';
+      });
+      return paid ? paid.id : '';
+    },
+
+    pendingStatusId: function() {
+      const statusOpts = this.dropdowns.paymentstatus || this.dropdowns.status || [];
+      const pending = statusOpts.find(opt => {
+        const name = String(opt.name || opt.label || '').trim().toLowerCase();
+        return name === 'pending' || name === 'partial' || name.indexOf('partial') >= 0;
+      });
+      return pending ? pending.id : '';
+    },
+
+    isPartialPayment: function(payment) {
+      if (!payment || payment.isVirtual) return false;
+      const pending = Number(String(payment.pendingAmount || 0).replace(/[^0-9.-]+/g, ''));
+      if (pending > 0.009) return true;
+      const paid = Number(String(payment.amount || 0).replace(/[^0-9.-]+/g, ''));
+      const expected = Number(String(payment.expectedAmount || 0).replace(/[^0-9.-]+/g, ''));
+      const status = String(this.getName('paymentstatus', payment.paymentStatus) || payment.paymentStatus || '').toLowerCase();
+      return (status.indexOf('pending') >= 0 || status.indexOf('partial') >= 0) && paid > 0 && expected > paid;
+    },
+
+    isNonRecurringPlan: function(planMatch) {
+      const planName = planMatch ? `${planMatch.name || ''} ${planMatch.frequency || ''}`.toLowerCase() : '';
+      return planName.includes('trial') || planName.includes('adhoc') || planName.includes('ad-hoc');
+    },
+
     onStatusChange: function() {
       const statusId = document.getElementById('mem-status').value;
       const statusName = this.getName('status', statusId).toLowerCase();
       const exitContainer = document.getElementById('mem-exit-container');
+      const exitField = document.getElementById('mem-exit-date');
       
       const planId = document.getElementById('mem-plan').value;
       const planMatch = (this.dropdowns.membership || []).find(p => p.id === planId);
-      const planName = planMatch ? String(planMatch.name).toLowerCase() : '';
-      const isNonRecurring = planName.includes('trial') || planName.includes('adhoc') || planName.includes('ad-hoc');
+      const isNonRecurring = this.isNonRecurringPlan(planMatch);
 
       if (statusName.includes('inactive') || statusName.includes('in-active') || isNonRecurring) {
         exitContainer.classList.remove('hidden');
-        document.getElementById('mem-exit-date').required = true;
+        exitField.required = true;
       } else {
         exitContainer.classList.add('hidden');
-        document.getElementById('mem-exit-date').required = false;
+        exitField.required = false;
       }
     },
 
@@ -1088,8 +1351,9 @@
       
       document.getElementById('mem-plan').value = member ? member.membershipId : 'All';
       
-      const statOpt = document.getElementById('mem-status').options[1]?.value || '';
-      document.getElementById('mem-status').value = member ? member.status : statOpt;
+      const statusField = document.getElementById('mem-status-field');
+      if (statusField) statusField.classList.toggle('hidden', !member);
+      document.getElementById('mem-status').value = member ? member.status : (this.activeStatusId() || document.getElementById('mem-status').options[1]?.value || '');
       
       this.setDatePicker('mem-dob', member && member.dob ? member.dob : '');
       this.setDatePicker('mem-join', member && member.joinDate ? member.joinDate : '');
@@ -1100,20 +1364,12 @@
       
       const payContainer = document.getElementById('upfront-payment-container');
       if (payContainer) {
-          if (member) {
-              payContainer.classList.add('hidden'); 
-          } else {
-              payContainer.classList.remove('hidden'); 
-              document.getElementById('mem-record-pay').checked = false;
-              document.getElementById('mem-pay-fields').classList.add('hidden');
-              
-              this.populateSelect('mem-pay-mode', this.dropdowns.paymentmode || []);
-              const statusOpts = this.dropdowns.paymentstatus || this.dropdowns.status || [];
-              this.populateSelect('mem-pay-status', statusOpts);
-              const paidOpt = statusOpts.find(opt => String(opt.name).toLowerCase() === 'paid' || String(opt.name).toLowerCase() === 'completed');
-              if(paidOpt) document.getElementById('mem-pay-status').value = paidOpt.id;
-          }
+          payContainer.classList.toggle('hidden', Boolean(member));
       }
+      const cashField = document.getElementById('mem-pay-cash');
+      const upiField = document.getElementById('mem-pay-upi');
+      if (cashField) cashField.value = 0;
+      if (upiField) upiField.value = 0;
 
       this.filterBatchesByAge(member && member.dob ? member.dob : '');
       if (member && member.batchId) {
@@ -1175,7 +1431,7 @@
         dob: dobFmt,
         gender: document.getElementById('mem-gender').value,
         email: document.getElementById('mem-email').value,
-        status: document.getElementById('mem-status').value,
+        status: isNew ? (this.activeStatusId() || document.getElementById('mem-status').value) : document.getElementById('mem-status').value,
         membershipId: planVal,
         batchId: batchVal,
         joinDate: joinFmt,
@@ -1183,46 +1439,69 @@
         membershipAmount: Number(document.getElementById('mem-amount').value)
       };
       
-      if (isNew && document.getElementById('mem-record-pay') && document.getElementById('mem-record-pay').checked) {
+      const cashNow = Number(document.getElementById('mem-pay-cash') && document.getElementById('mem-pay-cash').value) || 0;
+      const upiNow = Number(document.getElementById('mem-pay-upi') && document.getElementById('mem-pay-upi').value) || 0;
+      if (isNew && (cashNow > 0 || upiNow > 0)) {
           const plans = this.dropdowns.membership || [];
           const planMatch = plans.find(p => p.id === planVal);
-          const planName = planMatch ? (planMatch.name || '').toUpperCase() : '';
+          const planName = planMatch ? `${planMatch.name || ''} ${planMatch.frequency || ''}`.toUpperCase() : '';
           
           let calcEnd = new Date(this.parseToISODate(joinFmt));
           
           if (exitFmt) {
               calcEnd = new Date(this.parseToISODate(exitFmt));
           } else {
-              if (planName.includes('QUARTER')) calcEnd.setMonth(calcEnd.getMonth() + 3);
-              else if (planName.includes('YEAR')) calcEnd.setFullYear(calcEnd.getFullYear() + 1);
-              else calcEnd.setMonth(calcEnd.getMonth() + 1);
+              calcEnd = this.cycleEndFromStart(calcEnd, planName);
           }
 
+          const initialSplit = this.paymentSplitFromFields(
+            document.getElementById('mem-pay-cash').value,
+            document.getElementById('mem-pay-upi').value
+          );
+          if (!initialSplit) {
+            btn.innerHTML = 'Save Member';
+            btn.disabled = false;
+            return;
+          }
+          const expectedFee = Number(payload.membershipAmount) || 0;
+          const pendingFee = Math.max(0, Math.round((expectedFee - initialSplit.amount) * 100) / 100);
           payload.initialPayment = {
-              amount: payload.membershipAmount,
+              amount: initialSplit.amount,
+              expectedAmount: expectedFee,
+              pendingAmount: pendingFee,
               paidDate: joinFmt,
               startDate: joinFmt,
               endDate: this.formatDateDDMMMYYYY(calcEnd),
-              paymentMode: document.getElementById('mem-pay-mode').value,
-              paymentStatus: document.getElementById('mem-pay-status').value
+              paymentMode: initialSplit.paymentMode,
+              cashAmount: initialSplit.cashAmount,
+              upiAmount: initialSplit.upiAmount,
+              paymentStatus: pendingFee > 0 ? (this.pendingStatusId() || this.paidStatusId()) : this.paidStatusId()
           };
       }
 
+      const reopenMemberId = this.currentActiveMember && this.currentActiveMember.memberId;
+      this.closeModal();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
           btn.innerHTML = 'Save Member'; btn.disabled = false;
           if(res.success) {
             Toast.success(res.message);
-            this.closeModal(); 
             this.fetchData(() => {
-                if (this.currentActiveMember && this.currentActiveMember.memberId === payload.memberId) { 
-                    const freshMember = this.allData.find(m => m.memberId === payload.memberId);
-                    if (freshMember) this.openDetails(freshMember);
-                }
+                const freshId = (res.data && res.data.memberId) || payload.memberId || reopenMemberId;
+                if (!freshId) return;
+                const freshMember = this.allData.find(m => String(m.memberId) === String(freshId));
+                if (freshMember && reopenMemberId) this.openDetails(freshMember);
             });
-          } else { 
-            Toast.error(res.error); 
+          } else {
+            Toast.error(res.error);
+            this.fetchData();
           }
+        })
+        .withFailureHandler((err) => {
+          btn.innerHTML = 'Save Member'; btn.disabled = false;
+          Toast.error((err && err.message) || 'Could not save the member.');
+          this.fetchData();
         })
         .api_saveMember(payload);
     },
@@ -1232,16 +1511,6 @@
       document.getElementById('member-modal-content').classList.add('translate-y-full', 'md:translate-y-10', 'opacity-0');
       document.getElementById('member-form').reset();
       AppUtils.clearValidationState('member-form');
-    },
-
-    toggleInitialPaymentFields: function() {
-      const enabled = document.getElementById('mem-record-pay')?.checked;
-      const fields = document.getElementById('mem-pay-fields');
-      ['mem-pay-mode', 'mem-pay-status'].forEach(id => {
-        const field = document.getElementById(id);
-        if (field) field.required = Boolean(enabled);
-      });
-      if (fields) fields.classList.toggle('hidden', !enabled);
     },
 
     onPlanOrBatchChange: function() {
@@ -1303,85 +1572,119 @@
       this.onStatusChange();
     },
 
+    previewReceipt: function(input) {
+      const box = document.getElementById('pay-receipt-preview-container');
+      const img = document.getElementById('pay-receipt-preview');
+      if (!input.files || !input.files[0] || !box || !img) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        img.src = e.target.result;
+        box.classList.remove('hidden');
+      };
+      reader.readAsDataURL(input.files[0]);
+    },
+
+    setReceiptPreview: function(fileId) {
+      const box = document.getElementById('pay-receipt-preview-container');
+      const img = document.getElementById('pay-receipt-preview');
+      const hidden = document.getElementById('pay-receipt');
+      const file = document.getElementById('pay-receipt-file');
+      if (file) file.value = '';
+      if (hidden) hidden.value = fileId || '';
+      if (!box || !img) return;
+      if (fileId) {
+        img.src = this.getSafeAvatarUrl(fileId);
+        box.classList.remove('hidden');
+      } else {
+        img.src = '';
+        box.classList.add('hidden');
+      }
+    },
+
+    setExpectedFee: function(amount) {
+      const expected = Math.round((Number(amount) || 0) * 100) / 100;
+      const hidden = document.getElementById('pay-expected');
+      const label = document.getElementById('pay-expected-label');
+      if (hidden) hidden.value = String(expected);
+      if (label) label.value = expected ? AppUtils.formatCurrency(expected) : '—';
+      this.syncPaymentAmount();
+    },
+
+    syncPaymentAmount: function() {
+      const cash = this.parseMoneyInput(document.getElementById('pay-cash')?.value);
+      const upi = this.parseMoneyInput(document.getElementById('pay-upi')?.value);
+      const amountEl = document.getElementById('pay-amount');
+      const pendingEl = document.getElementById('pay-pending');
+      const expected = Number(document.getElementById('pay-expected')?.value) || 0;
+      if (cash === null || upi === null) {
+        if (amountEl) amountEl.value = '';
+        if (pendingEl) {
+          pendingEl.textContent = 'Enter numbers only';
+          pendingEl.className = 'text-[11px] font-bold text-red-600 text-right';
+        }
+        return;
+      }
+      const paid = Math.round((cash + upi) * 100) / 100;
+      if (amountEl) amountEl.value = String(paid);
+      const pending = Math.max(0, Math.round((expected - paid) * 100) / 100);
+      if (pendingEl) {
+        if (!expected || pending <= 0) {
+          pendingEl.textContent = 'Fully paid';
+          pendingEl.className = 'text-[11px] font-bold text-emerald-700 text-right';
+        } else {
+          pendingEl.textContent = 'Pending ' + AppUtils.formatCurrency(pending);
+          pendingEl.className = 'text-[11px] font-bold text-amber-700 text-right';
+        }
+      }
+    },
+
     openRecordPayment: function(payment = null) {
       const m = this.currentActiveMember;
       if(!m) return;
-      
-      if (payment && payment.isVirtual) {
-          document.getElementById('pay-modal-title').innerText = payment.paymentStatus === 'UPCOMING' ? 'Pay Upcoming Cycle' : 'Pay Overdue Cycle';
-          document.getElementById('pay-id').value = ''; 
-          
-          const rawAmt = String(payment.amount).replace(/[^0-9.-]+/g,"");
-          document.getElementById('pay-amount').value = rawAmt ? Number(rawAmt) : '';
-          
-          document.getElementById('pay-mode').value = document.getElementById('pay-mode').options[1]?.value || '';
-          
-          const statusOpts = Array.from(document.getElementById('pay-status').options);
-          const paidOpt = statusOpts.find(opt => opt.text.toLowerCase() === 'paid' || opt.text.toLowerCase() === 'completed');
-          document.getElementById('pay-status').value = paidOpt ? paidOpt.value : (statusOpts[1]?.value || '');
-          
-          document.getElementById('pay-txn').value = '';
-          document.getElementById('pay-receipt').value = '';
+      const fee = Number(String(m.membershipAmount || 0).replace(/[^0-9.-]+/g, '')) || 0;
 
+      if (payment && payment.isVirtual) {
+          document.getElementById('pay-modal-title').innerText = payment.paymentStatus === 'UPCOMING' ? 'Record Payment' : 'Record Payment';
+          document.getElementById('pay-id').value = '';
+          const rawAmt = Number(String(payment.amount || fee).replace(/[^0-9.-]+/g, '')) || fee;
+          this.fillPaymentSplitFields('pay-cash', 'pay-upi', null, 0);
+          this.setExpectedFee(rawAmt);
+          this.setReceiptPreview('');
           this.setDatePicker('pay-date', new Date());
           this.setDatePicker('pay-start', new Date(payment.virtualStartDate));
           this.setDatePicker('pay-end', new Date(payment.virtualEndDate));
-          
           document.getElementById('pay-header-due').innerText = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'Auto-calculated after payment';
-      } 
-      else {
+      } else {
           document.getElementById('pay-modal-title').innerText = payment ? 'Edit Payment' : 'Record Payment';
           document.getElementById('pay-id').value = payment ? payment.paymentId : '';
-          
-          const rawAmt = payment ? String(payment.amount).replace(/[^0-9.-]+/g,"") : (m.membershipAmount ? String(m.membershipAmount).replace(/[^0-9.-]+/g,"") : '');
-          document.getElementById('pay-amount').value = rawAmt ? Number(rawAmt) : '';
-          
-          const modeOpt = document.getElementById('pay-mode').options[1]?.value || '';
-          document.getElementById('pay-mode').value = payment ? payment.paymentMode : modeOpt;
-          
-          const defaultStatusOpt = document.getElementById('pay-status').options[1]?.value || '';
-          document.getElementById('pay-status').value = payment && payment.paymentStatus ? payment.paymentStatus : defaultStatusOpt;
-          
-          document.getElementById('pay-txn').value = payment && payment.txnId ? payment.txnId : '';
-          document.getElementById('pay-receipt').value = payment && payment.receiptUrl ? payment.receiptUrl : '';
+          const expected = payment && payment.expectedAmount
+            ? Number(String(payment.expectedAmount).replace(/[^0-9.-]+/g, ''))
+            : fee;
+          const recorded = payment ? Number(String(payment.amount || 0).replace(/[^0-9.-]+/g, '')) : 0;
+          this.fillPaymentSplitFields('pay-cash', 'pay-upi', payment, recorded);
+          this.setExpectedFee(expected || fee);
+          this.setReceiptPreview(payment && payment.receiptUrl ? payment.receiptUrl : '');
 
           const plans = this.dropdowns.membership || [];
           const planMatch = plans.find(p => p.id === m.membershipId);
-          const planName = planMatch && (planMatch.name || '').toUpperCase();
-
+          const planName = planMatch ? `${planMatch.name || ''} ${planMatch.frequency || ''}`.toUpperCase() : '';
           let calcStartObj, calcEndObj;
-
           if (payment) {
               calcStartObj = payment.startDate ? new Date(payment.startDate) : new Date();
               calcEndObj = payment.endDate ? new Date(payment.endDate) : new Date();
           } else {
               const payments = this.currentMemberPayments || [];
               const sortedPayments = [...payments].sort((a, b) => new Date(b.endDate || b.paidDate) - new Date(a.endDate || a.paidDate));
-              
               if (sortedPayments.length > 0 && sortedPayments[0].endDate) {
-                  calcStartObj = new Date(sortedPayments[0].endDate);
-                  calcStartObj.setDate(calcStartObj.getDate() + 1); 
+                  calcStartObj = this.nextCycleStart(new Date(sortedPayments[0].endDate), planName);
               } else {
                   calcStartObj = m.joinDate ? new Date(m.joinDate) : new Date();
               }
-
-              calcEndObj = new Date(calcStartObj);
-              
-              if (planName.includes('QUARTER')) {
-                  calcEndObj.setMonth(calcEndObj.getMonth() + 3);
-              } else if (planName.includes('TRIAL')) {
-                  calcEndObj.setDate(calcEndObj.getDate() + 7);
-              } else if (planName.includes('ADHOC') || planName.includes('AD-HOC')) {
-                  calcEndObj.setDate(calcEndObj.getDate() + 1);
-              } else {
-                  calcEndObj.setMonth(calcEndObj.getMonth() + 1);
-              }
+              calcEndObj = this.cycleEndFromStart(calcStartObj, planName);
           }
-
           this.setDatePicker('pay-date', payment && payment.paidDate ? payment.paidDate : new Date());
           this.setDatePicker('pay-start', calcStartObj);
           this.setDatePicker('pay-end', calcEndObj);
-
           document.getElementById('pay-header-due').innerText = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'Auto-calculated after payment';
       }
 
@@ -1389,53 +1692,88 @@
       document.getElementById('payment-modal-content').classList.remove('translate-y-full', 'md:translate-y-10', 'opacity-0');
     },
 
-    submitPayment: function(e) {
+    submitPayment: async function(e) {
       e.preventDefault();
       if (!AppUtils.validateRequiredFields('payment-form')) return;
-
-      const statusVal = document.getElementById('pay-status').value;
 
       const btn = document.getElementById('btn-submit-payment');
       btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px] mr-2">progress_activity</span> Processing...';
       btn.disabled = true;
 
+      const split = this.paymentSplitFromFields(
+        document.getElementById('pay-cash').value,
+        document.getElementById('pay-upi').value
+      );
+      if (!split || split.amount <= 0) {
+        if (split && split.amount <= 0) Toast.error('Enter a cash or UPI amount.');
+        btn.innerHTML = 'Save Payment';
+        btn.disabled = false;
+        return;
+      }
+
+      const expected = Number(document.getElementById('pay-expected').value) || 0;
+      const pending = Math.max(0, Math.round((expected - split.amount) * 100) / 100);
+      const fileInput = document.getElementById('pay-receipt-file');
+      let base64Image = null;
+      let imageName = null;
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        imageName = file.name;
+        try {
+          base64Image = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (error) => reject(error);
+          });
+        } catch (error) {
+          Toast.error('Could not read the receipt image.');
+          btn.innerHTML = 'Save Payment';
+          btn.disabled = false;
+          return;
+        }
+      }
+
       const payload = {
         paymentId: document.getElementById('pay-id').value,
         memberId: this.currentActiveMember.memberId,
-        amount: Number(document.getElementById('pay-amount').value),
+        amount: split.amount,
+        expectedAmount: expected,
+        pendingAmount: pending,
         paidDate: this.formatDateDDMMMYYYY(document.getElementById('pay-date').value),
-        paymentMode: document.getElementById('pay-mode').value,
-        paymentStatus: statusVal, 
+        paymentMode: split.paymentMode,
+        cashAmount: split.cashAmount,
+        upiAmount: split.upiAmount,
+        paymentStatus: pending > 0 ? (this.pendingStatusId() || this.paidStatusId()) : this.paidStatusId(),
         startDate: this.formatDateDDMMMYYYY(document.getElementById('pay-start').value),
         endDate: this.formatDateDDMMMYYYY(document.getElementById('pay-end').value),
-        receiptUrl: document.getElementById('pay-receipt').value
+        receiptUrl: document.getElementById('pay-receipt').value,
+        base64Image: base64Image,
+        imageName: imageName
       };
-      
-      const txnField = document.getElementById('pay-txn').value;
-      if (txnField) payload.txnId = txnField;
 
+      const reopenMemberId = this.currentActiveMember && this.currentActiveMember.memberId;
+      this.closeRecordPayment();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
           btn.innerHTML = 'Save Payment'; btn.disabled = false;
           if(res.success) {
             Toast.success(res.message);
-            this.closeRecordPayment();
-            
-            const targetMember = this.allData.find(m => m.memberId === payload.memberId);
-            if (targetMember && payload.endDate) {
-                const nextDue = new Date(this.parseToISODate(payload.endDate));
-                targetMember.dueDate = this.formatDateDDMMMYYYY(nextDue);
-            }
-            
             this.fetchData(() => {
-                if (this.currentActiveMember) {
-                    const freshMember = this.allData.find(m => m.memberId === this.currentActiveMember.memberId);
-                    if(freshMember) this.openDetails(freshMember);
-                }
+                if (!reopenMemberId) return;
+                const freshMember = this.allData.find(m => String(m.memberId) === String(reopenMemberId));
+                if(freshMember) this.openDetails(freshMember);
             });
-          } else { 
-            Toast.error(res.error); 
+          } else {
+            Toast.error(res.error);
+            this.fetchData();
           }
+        })
+        .withFailureHandler((err) => {
+          btn.innerHTML = 'Save Payment'; btn.disabled = false;
+          Toast.error((err && err.message) || 'Could not save the payment.');
+          this.fetchData();
         })
         .api_recordPayment(payload);
     },
@@ -1464,34 +1802,44 @@
 
     confirmDelete: function() {
       if(!this.deleteState.id) return;
-      
-      if(this.deleteState.type === 'member') {
+
+      const deleteType = this.deleteState.type;
+      const deleteId = this.deleteState.id;
+      const reopenMemberId = this.currentActiveMember && this.currentActiveMember.memberId;
+      this.closeDeleteModal();
+      this.showShimmer();
+      if(deleteType === 'member') {
         google.script.run
           .withSuccessHandler((res) => {
-            this.closeDeleteModal();
             if(res.success) {
               Toast.success(res.message);
               this.closeDetails();
               this.fetchData();
-            } else { Toast.error(res.error); }
+            } else {
+              Toast.error(res.error);
+              this.fetchData();
+            }
           })
-          .api_deleteMember(this.deleteState.id);
+          .withFailureHandler(() => { this.fetchData(); })
+          .api_deleteMember(deleteId);
       } 
-      else if (this.deleteState.type === 'payment') {
+      else if (deleteType === 'payment') {
         google.script.run
           .withSuccessHandler((res) => {
-            this.closeDeleteModal();
             if(res.success) {
               Toast.success(res.message);
               this.fetchData(() => {
-                  if (this.currentActiveMember) {
-                      const freshMember = this.allData.find(m => m.memberId === this.currentActiveMember.memberId);
-                      if (freshMember) this.openDetails(freshMember);
-                  }
+                  if (!reopenMemberId) return;
+                  const freshMember = this.allData.find(m => String(m.memberId) === String(reopenMemberId));
+                  if (freshMember) this.openDetails(freshMember);
               });
-            } else { Toast.error(res.error); }
+            } else {
+              Toast.error(res.error);
+              this.fetchData();
+            }
           })
-          .api_deletePayment(this.deleteState.id);
+          .withFailureHandler(() => { this.fetchData(); })
+          .api_deletePayment(deleteId);
       }
     }
   };

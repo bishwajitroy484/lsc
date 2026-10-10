@@ -241,11 +241,16 @@
       return match ? match.name : id;
     },
 
-    fetchData: function() {
+    fetchData: function(callback) {
       google.script.run
         .withSuccessHandler((res) => {
            this.onDataLoaded(res);
            this.applyGlobalFilters();
+           if (typeof callback === 'function') callback();
+        })
+        .withFailureHandler((err) => {
+           Toast.error("Error loading staff data: " + (err && err.message ? err.message : 'Unknown error'));
+           if (typeof callback === 'function') callback();
         })
         .api_getStaff();
     },
@@ -333,7 +338,10 @@
       // Clearly delegate to our separated functions
       this.calculateKPIs(selectedYear, mode);
       this.renderCharts();
-      this.filterTable(); 
+      this.filterTable();
+      if (typeof ExpensesHub !== 'undefined' && ExpensesHub.refreshAllRecords) {
+        ExpensesHub.refreshAllRecords();
+      }
     },
 
     getStaffCycles: function(stf, staffPayments = null) {
@@ -1261,18 +1269,29 @@
         status: document.getElementById('stf-status')?.value
       };
 
+      const reopenStaffId = this.currentActiveStaff && this.currentActiveStaff.staffId;
+      this.closeModal();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
           if(btn) { btn.innerHTML = `Save Staff`; btn.disabled = false; }
           if(res.success) {
             Toast.success(res.message);
-            this.closeModal();
-            this.showShimmer();
+            this.fetchData(() => {
+              const freshId = (res.data && res.data.staffId) || payload.staffId || reopenStaffId;
+              if (!reopenStaffId || !freshId) return;
+              const fresh = this.allData.find(s => String(s.staffId) === String(freshId));
+              if (fresh) this.openDetails(fresh);
+            });
+          } else {
+            Toast.error(res.error);
             this.fetchData();
-            if(this.currentActiveStaff && this.currentActiveStaff.staffId === payload.staffId) {
-                this.openDetails(payload);
-            }
-          } else { Toast.error(res.error); }
+          }
+        })
+        .withFailureHandler((err) => {
+          if(btn) { btn.innerHTML = `Save Staff`; btn.disabled = false; }
+          Toast.error((err && err.message) || 'Could not save the staff record.');
+          this.fetchData();
         })
         .api_saveStaff(payload);
     },
@@ -1389,15 +1408,31 @@
          payload.endDate = '';
       }
 
+      const reopenStaffId = this.currentActiveStaff && this.currentActiveStaff.staffId;
+      this.closeTransactionModal();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
           if(btn) { btn.innerHTML = `Save Record`; btn.disabled = false; }
           if(res.success) {
             Toast.success(res.message);
-            this.closeTransactionModal();
+            this.fetchData(() => {
+              if (!reopenStaffId) return;
+              const fresh = this.allData.find(s => String(s.staffId) === String(reopenStaffId));
+              if (fresh) {
+                this.currentActiveStaff = fresh;
+                this.generatePaymentHistory();
+              }
+            });
+          } else {
+            Toast.error(res.error);
             this.fetchData();
-            this.generatePaymentHistory(); 
-          } else { Toast.error(res.error); }
+          }
+        })
+        .withFailureHandler((err) => {
+          if(btn) { btn.innerHTML = `Save Record`; btn.disabled = false; }
+          Toast.error((err && err.message) || 'Could not save the transaction.');
+          this.fetchData();
         })
         .api_recordStaffTransaction(payload);
     },
@@ -1423,30 +1458,46 @@
 
     confirmDelete: function() {
       if(!this.deleteState.id) return;
-      
-      if(this.deleteState.type === 'staff') {
+
+      const deleteType = this.deleteState.type;
+      const deleteId = this.deleteState.id;
+      const reopenStaffId = this.currentActiveStaff && this.currentActiveStaff.staffId;
+      this.closeDeleteModal();
+      this.showShimmer();
+      if(deleteType === 'staff') {
         google.script.run
           .withSuccessHandler((res) => {
-            this.closeDeleteModal();
             if(res.success) {
               Toast.success(res.message);
-              this.closeDetails(); 
-              this.showShimmer();
+              this.closeDetails();
               this.fetchData();
-            } else { Toast.error(res.error); }
+            } else {
+              Toast.error(res.error);
+              this.fetchData();
+            }
           })
-          .api_deleteStaff(this.deleteState.id);
-      } else if(this.deleteState.type === 'payment') {
+          .withFailureHandler(() => { this.fetchData(); })
+          .api_deleteStaff(deleteId);
+      } else if(deleteType === 'payment') {
         google.script.run
           .withSuccessHandler((res) => {
-            this.closeDeleteModal();
             if(res.success) {
               Toast.success(res.message);
+              this.fetchData(() => {
+                if (!reopenStaffId) return;
+                const fresh = this.allData.find(s => String(s.staffId) === String(reopenStaffId));
+                if (fresh) {
+                  this.currentActiveStaff = fresh;
+                  this.generatePaymentHistory();
+                }
+              });
+            } else {
+              Toast.error(res.error);
               this.fetchData();
-              this.generatePaymentHistory();
-            } else { Toast.error(res.error); }
+            }
           })
-          .api_deleteStaffTransaction(this.deleteState.id);
+          .withFailureHandler(() => { this.fetchData(); })
+          .api_deleteStaffTransaction(deleteId);
       }
     }
   };

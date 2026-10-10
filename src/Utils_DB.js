@@ -70,9 +70,9 @@ const DB = {
   /**
    * Creates a record targeting specific cells to preserve row formulas.
    */
-  create: function (sheetName, recordObj) {
+  create: function (sheetName, recordObj, headersOverride) {
     const meta = this._getSheetMeta(sheetName);
-    const headers = meta.headers;
+    const headers = (headersOverride && headersOverride.length) ? headersOverride : meta.headers;
     const newRow = meta.nextRow;
 
     recordObj.createdAt = new Date().toISOString();
@@ -93,10 +93,10 @@ const DB = {
   /**
    * Updates an existing record by looking up its row number via ID.
    */
-  update: function (sheetName, recordId, updateObj) {
+  update: function (sheetName, recordId, updateObj, headersOverride) {
     const meta = this._getSheetMeta(sheetName);
     const records = this._rowsToRecords(meta.values);
-    const headers = meta.headers;
+    const headers = (headersOverride && headersOverride.length) ? headersOverride : meta.headers;
 
     // Find the record matching the primary ID
     const target = records.find(r =>
@@ -194,6 +194,7 @@ const DB = {
       headers.forEach((header, index) => {
         if (header) {
           const cleanKey = header.replace('*', '').trim();
+          if (cleanKey.toLowerCase() === 'notes') return;
           obj[cleanKey] = row[index] !== undefined ? row[index] : "";
         }
       });
@@ -234,15 +235,26 @@ const DB = {
     return null;
   },
 
+  _cacheGen_: function () {
+    const cache = this._scriptCache();
+    if (!cache) return '0';
+    try { return cache.get('lsc_db_gen') || '0'; } catch (e) { return '0'; }
+  },
+
+  _cacheKey_: function (key) {
+    return this._cacheGen_() + ':' + key;
+  },
+
   _cacheGet: function (key) {
-    if (__dbMemCache[key] !== undefined) return __dbMemCache[key];
+    const scoped = this._cacheKey_(key);
+    if (__dbMemCache[scoped] !== undefined) return __dbMemCache[scoped];
     const cache = this._scriptCache();
     if (!cache) return null;
     try {
-      const raw = cache.get('lsc_db_' + key);
+      const raw = cache.get('lsc_db_' + scoped);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      __dbMemCache[key] = parsed;
+      __dbMemCache[scoped] = parsed;
       return parsed;
     } catch (e) {
       return null;
@@ -250,30 +262,24 @@ const DB = {
   },
 
   _cachePut: function (key, value) {
-    __dbMemCache[key] = value;
+    const scoped = this._cacheKey_(key);
+    __dbMemCache[scoped] = value;
     const cache = this._scriptCache();
     if (!cache) return;
     try {
       const raw = JSON.stringify(value);
       // Script Cache max ~100KB per entry; skip oversized sheets silently
-      if (raw.length < 90000) cache.put('lsc_db_' + key, raw, DB_READ_CACHE_TTL_SEC);
+      if (raw.length < 90000) cache.put('lsc_db_' + scoped, raw, DB_READ_CACHE_TTL_SEC);
     } catch (e) { /* ignore */ }
   },
 
   _invalidateSheet: function (sheetName) {
-    Object.keys(__dbMemCache).forEach((key) => {
-      if (key === 'read:' + sheetName || key.indexOf(sheetName) !== -1) {
-        delete __dbMemCache[key];
-      }
-    });
+    __dbMemCache = {};
     const cache = this._scriptCache();
     if (!cache) return;
     try {
-      cache.remove('lsc_db_read:' + sheetName);
-      // Drop any batch keys that included this sheet (best-effort; TTL also covers it)
-      Object.keys(__dbMemCache).forEach((key) => {
-        if (key.indexOf('batch:') === 0) cache.remove('lsc_db_' + key);
-      });
+      // Bump the generation so the next read misses every sheet and batch entry.
+      cache.put('lsc_db_gen', String(Date.now()), 21600);
     } catch (e) { /* ignore */ }
   },
 
@@ -307,21 +313,30 @@ const DB = {
     return this._withSheetsRetry(() => Sheets.Spreadsheets.Values.batchGet(SPREADSHEET_ID, { ranges: ranges }));
   },
 
+  _payloadKeyForHeader_: function (header) {
+    const clean = String(header || '').replace(/\*/g, '').trim();
+    const compact = clean.toLowerCase().replace(/[\s_-]+/g, '');
+    if (compact === 'cash' || compact === 'cashamount' || compact === 'cashpayment') return 'cashAmount';
+    if (compact === 'upi' || compact === 'upiamount' || compact === 'upipayment') return 'upiAmount';
+    return clean;
+  },
+
   _buildUpdateRanges: function (sheetName, rowNumber, headers, payloadObj) {
     const dataRanges = [];
 
     headers.forEach((header, index) => {
-      // 1. If the header has a '*', skip it entirely to protect the formula
-      if (header.includes('*')) return;
+      const raw = String(header || '');
+      // Formula columns are marked with '*' and must stay untouched.
+      if (!raw || raw.includes('*')) return;
 
-      // 2. Map the payload key (which won't have a '*')
-      const cleanKey = header.trim();
+      const key = this._payloadKeyForHeader_(raw);
+      if (!key || key.toLowerCase() === 'notes') return;
 
-      if (payloadObj.hasOwnProperty(cleanKey)) {
+      if (Object.prototype.hasOwnProperty.call(payloadObj, key)) {
         const colLetter = this._indexToLetter(index + 1);
         dataRanges.push({
           range: `${sheetName}!${colLetter}${rowNumber}`,
-          values: [[payloadObj[cleanKey]]]
+          values: [[payloadObj[key]]]
         });
       }
     });

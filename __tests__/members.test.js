@@ -160,6 +160,50 @@ describe('Members Module', () => {
     expect(response.chartMetrics[2026].totalEarned).toBe(30000);
     expect(response.chartMetrics[2026].monthly[5]).toBe(30000);
     expect(response.chartMetrics[2026].monthly[8]).toBe(0);
+    expect(response.chartMetrics[2026].cashMonthly[5]).toBe(30000);
+    expect(response.chartMetrics[2026].upiMonthly[5]).toBe(0);
+    expect(response.chartMetrics[2026].cashQuarterly[1]).toBe(30000);
+    expect(response.chartMetrics[2026].upiQuarterly[1]).toBe(0);
+  });
+
+  test('member insight splits cash and UPI for monthly and quarterly views and includes partial receipts', () => {
+    const membersApi = loadMembersApi({
+      MEMBERS: [],
+      PAYMENTS: [
+        { memberId: 'MEM-1', paymentStatus: 'STATUS-PAID', startDate: '2026-06-01', endDate: '2026-06-30', paidDate: '2026-06-01', amount: 30000, cashAmount: 10000, upiAmount: 20000 },
+        { memberId: 'MEM-1', paymentStatus: 'STATUS-PENDING', startDate: '2026-09-01', endDate: '2026-09-30', paidDate: '2026-09-01', amount: 3000, cashAmount: 1000, upiAmount: 2000, expectedAmount: 30000, pendingAmount: 27000 },
+        { memberId: 'MEM-1', paymentStatus: 'STATUS-OVERDUE', startDate: '2026-10-01', endDate: '2026-10-31', paidDate: '2026-10-01', amount: 30000 }
+      ],
+      SETTINGS: [{ key: 'Revenue_Recognition', value: 'anchor' }]
+    }, {
+      success: true,
+      data: {
+        options: {
+          paymentstatus: [
+            { id: 'STATUS-PAID', name: 'Paid' },
+            { id: 'STATUS-PENDING', name: 'Pending' },
+            { id: 'STATUS-OVERDUE', name: 'Overdue' }
+          ]
+        }
+      }
+    });
+
+    const response = membersApi.api_getMemberPayments('MEM-1');
+    const year = response.chartMetrics[2026];
+
+    expect(response.success).toBe(true);
+    expect(year.totalEarned).toBe(33000);
+    expect(year.monthly[5]).toBe(30000);
+    expect(year.cashMonthly[5]).toBe(10000);
+    expect(year.upiMonthly[5]).toBe(20000);
+    expect(year.monthly[8]).toBe(3000);
+    expect(year.cashMonthly[8]).toBe(1000);
+    expect(year.upiMonthly[8]).toBe(2000);
+    expect(year.monthly[9]).toBe(0);
+    expect(year.cashQuarterly[1]).toBe(10000);
+    expect(year.upiQuarterly[1]).toBe(20000);
+    expect(year.cashQuarterly[2]).toBe(1000);
+    expect(year.upiQuarterly[2]).toBe(2000);
   });
 
   test('api_getMembers does not treat a dropdown-ID overdue payment as paid coverage', () => {
@@ -177,6 +221,44 @@ describe('Members Module', () => {
 
     expect(response.success).toBe(true);
     expect(response.data[0].dueDate).toBe('10-Jan-2024');
+    expect(response.data[0].pendingAmount).toBe(0);
+  });
+
+  test('a partial payment moves the due date to the cycle end and keeps the pending balance', () => {
+    const membersApi = loadMembersApi({
+      MEMBERS: [
+        { memberId: 'MEM-1', fullName: 'Alice Johnson', membershipId: 'PLAN-1', joinDate: '2024-01-10', phone: '9876543210', status: 'Active' }
+      ],
+      PAYMENTS: [
+        {
+          memberId: 'MEM-1',
+          paymentStatus: 'STATUS-PENDING',
+          endDate: '2026-11-09',
+          amount: 10000,
+          expectedAmount: 30000,
+          pendingAmount: 20000,
+          paidDate: '2026-10-09'
+        }
+      ],
+      SETTINGS: []
+    }, {
+      success: true,
+      data: {
+        options: {
+          membership: [{ id: 'PLAN-1', name: 'Monthly', frequency: 'MONTHLY' }],
+          paymentstatus: [
+            { id: 'STATUS-PAID', name: 'Paid' },
+            { id: 'STATUS-PENDING', name: 'Pending' }
+          ]
+        }
+      }
+    });
+
+    const response = membersApi.api_getMembers();
+
+    expect(response.success).toBe(true);
+    expect(response.data[0].dueDate).toBe('09-Nov-2026');
+    expect(response.data[0].pendingAmount).toBe(20000);
   });
 
   test('api_getMembers sets No Due Date (N/A) for trial and ad-hoc even with paid coverage', () => {
@@ -422,6 +504,90 @@ describe('Members Module', () => {
     expect(payload.gender).toBe('Female');
   });
 
+  test('a cash and UPI payment stores the Split dropdown key and both amounts', () => {
+    const membersApi = loadMembersApi(
+      { MEMBERS: [], PAYMENTS: [], SETTINGS: [] },
+      {
+        success: true,
+        data: {
+          options: {
+            paymentmode: [
+              { id: 'PM-CASH', name: 'Cash' },
+              { id: 'PM-UPI', name: 'UPI' },
+              { id: 'PM-SPLIT', name: 'Split' }
+            ]
+          }
+        }
+      }
+    );
+    const result = membersApi.api_saveMember({
+      fullName: 'Split Member',
+      phone: '9123456789',
+      membershipAmount: 30000,
+      initialPayment: {
+        amount: 30000,
+        cashAmount: 10000,
+        upiAmount: 20000,
+        paymentMode: 'Split'
+      }
+    });
+    expect(result.success).toBe(true);
+    const paymentCall = membersApi.db.create.mock.calls.find(call => call[0] === 'PAYMENTS');
+    expect(paymentCall[1].paymentMode).toBe('PM-SPLIT');
+    expect(paymentCall[1].cashAmount).toBe(10000);
+    expect(paymentCall[1].upiAmount).toBe(20000);
+  });
+
+  test('a smaller cash and UPI payment is stored as a partial balance', () => {
+    const membersApi = loadMembersApi(
+      { MEMBERS: [], PAYMENTS: [], SETTINGS: [] },
+      {
+        success: true,
+        data: {
+          options: {
+            paymentmode: [
+              { id: 'PM-CASH', name: 'Cash' },
+              { id: 'PM-UPI', name: 'UPI' },
+              { id: 'PM-SPLIT', name: 'Split' }
+            ]
+          }
+        }
+      }
+    );
+    const result = membersApi.api_saveMember({
+      fullName: 'Partial Member',
+      phone: '9123456780',
+      membershipAmount: 30000,
+      initialPayment: {
+        amount: 10000,
+        expectedAmount: 30000,
+        cashAmount: 4000,
+        upiAmount: 6000
+      }
+    });
+    expect(result.success).toBe(true);
+    const paymentCall = membersApi.db.create.mock.calls.find(call => call[0] === 'PAYMENTS');
+    expect(paymentCall[1].amount).toBe(10000);
+    expect(paymentCall[1].pendingAmount).toBe(20000);
+    expect(paymentCall[1].paymentMode).toBe('PM-SPLIT');
+  });
+
+  test('cash and UPI reject values that are not numbers', () => {
+    const membersApi = loadMembersApi({ MEMBERS: [], PAYMENTS: [], SETTINGS: [] });
+    const result = membersApi.api_saveMember({
+      fullName: 'Bad Payment',
+      phone: '9123456781',
+      membershipAmount: 30000,
+      initialPayment: {
+        amount: 10,
+        cashAmount: 'ten',
+        upiAmount: 0
+      }
+    });
+    expect(result.success).toBe(false);
+    expect(String(result.error)).toMatch(/numbers/i);
+  });
+
   test('api_saveMember create still allows optional blanks', () => {
     const membersApi = loadMembersApi({ MEMBERS: [], PAYMENTS: [], SETTINGS: [] });
     const result = membersApi.api_saveMember({
@@ -533,7 +699,6 @@ describe('Members Module', () => {
           joinDate: '2026-01-10',
           dueDate: '2026-04-10',
           status: 'Active',
-          notes: ''
         });
       }
       MembersApp.filteredData = records;
@@ -582,16 +747,10 @@ describe('Members Module', () => {
       expect(batchFilter.value).toBe('BATCH-1');
       expect(planFilter.innerHTML).toContain('All Memberships');
       expect(planFilter.value).toBe('PLAN-1');
-      expect(document.getElementById('mem-pay-mode').innerHTML).toContain('MODE-CASH');
-      expect(document.getElementById('mem-pay-status').innerHTML).toContain('PAY-PAID');
-
-      const payFields = document.getElementById('mem-pay-fields');
-      MembersApp.toggleInitialPaymentFields();
-      expect(payFields.classList.toggle).toHaveBeenCalledWith('hidden', true);
-
-      document.getElementById('mem-record-pay').checked = true;
-      MembersApp.toggleInitialPaymentFields();
-      expect(payFields.classList.toggle).toHaveBeenCalledWith('hidden', false);
+      expect(document.getElementById('mem-pay-cash')).toBeTruthy();
+      expect(document.getElementById('mem-pay-upi')).toBeTruthy();
+      expect(MembersApp.paidStatusId()).toBe('PAY-PAID');
+      expect(MembersApp.activeStatusId()).toBe('STATUS-ACTIVE');
       MembersApp.dropdowns = originalDropdowns;
     });
 
@@ -600,7 +759,8 @@ describe('Members Module', () => {
       MembersApp.dropdowns = {
         membership: [
           { id: 'PLAN-QUARTERLY', name: 'Quarterly', frequency: 'Quarterly' },
-          { id: 'PLAN-TRIAL', name: 'Trial', frequency: 'Trial' }
+          { id: 'PLAN-TRIAL', name: 'Trial', frequency: 'Trial' },
+          { id: 'PLAN-ADHOC', name: 'Ad-hoc', frequency: 'Ad-hoc' }
         ],
         batch: [
           { id: 'BATCH-ADULT', name: 'Morning', groups: 'Adult' },
@@ -624,7 +784,14 @@ describe('Members Module', () => {
       document.getElementById('mem-plan').value = 'PLAN-TRIAL';
       MembersApp.onPlanOrBatchChange();
       expect(document.getElementById('mem-amount').value).toBe('3000');
+      expect(document.getElementById('mem-exit-container').classList.remove).toHaveBeenCalledWith('hidden');
+      expect(document.getElementById('mem-exit-date').required).toBe(true);
 
+      document.getElementById('mem-plan').value = 'PLAN-ADHOC';
+      MembersApp.onPlanOrBatchChange();
+      expect(document.getElementById('mem-exit-date').required).toBe(true);
+
+      document.getElementById('mem-plan').value = 'PLAN-TRIAL';
       document.getElementById('mem-join').value = '01-Oct-2026';
       document.getElementById('mem-exit-date').value = '04-Oct-2026';
       MembersApp.onPlanOrBatchChange();

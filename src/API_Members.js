@@ -171,7 +171,13 @@ function api_getMembers() {
     const enrichedMembers = members.map(m => {
       let mPayments = paymentsByMember[m.memberId] || [];
 
-      mPayments = mPayments.filter(p => isPaidPaymentStatus(p.paymentStatus, paymentStatuses));
+      const pendingAmount = mPayments.reduce((sum, payment) => {
+        const pending = Number(String(payment.pendingAmount || 0).replace(/[^0-9.-]+/g, ''));
+        return sum + (pending > 0 ? pending : 0);
+      }, 0);
+      m.pendingAmount = Math.round(pendingAmount * 100) / 100;
+
+      mPayments = mPayments.filter(p => paymentCoversMembershipCycle_(p, paymentStatuses));
 
       mPayments.sort((a, b) => new Date(b.endDate || b.paidDate || 0) - new Date(a.endDate || a.paidDate || 0));
       const latestPayment = mPayments.length > 0 ? mPayments[0] : null;
@@ -199,10 +205,11 @@ function api_getMembers() {
           if (baseDateStr) {
             let d = new Date(baseDateStr);
             if (!isNaN(d)) {
-              if (freq.includes('MONTH')) d.setMonth(d.getMonth() + 1);
-              else if (freq.includes('QUARTER')) d.setMonth(d.getMonth() + 3);
-              else if (freq.includes('HALF')) d.setMonth(d.getMonth() + 6);
-              else if (freq.includes('YEAR') || freq.includes('ANNUAL')) d.setFullYear(d.getFullYear() + 1);
+              const planBlob = freq + ' ' + pName;
+              if (planBlob.includes('QUARTER')) d.setDate(d.getDate() + 90);
+              else if (planBlob.includes('HALF')) d.setMonth(d.getMonth() + 6);
+              else if (planBlob.includes('YEAR') || planBlob.includes('ANNUAL')) d.setFullYear(d.getFullYear() + 1);
+              else if (planBlob.includes('MONTH')) d.setMonth(d.getMonth() + 1);
               nextDue = formatToDDMMMYYYY(d);
             }
           }
@@ -271,6 +278,109 @@ function mergeMemberUpdatePayload_(existing, incoming) {
   return merged;
 }
 
+function ensurePaymentSplitHeaders_() {
+  try {
+    if (!DB || typeof DB._getSheetMeta !== 'function' || typeof Sheets === 'undefined' || typeof SPREADSHEET_ID === 'undefined' || typeof colToLetter !== 'function') {
+      return null;
+    }
+    const meta = DB._getSheetMeta('PAYMENTS');
+    const headers = (meta.headers || []).slice();
+    const missing = ['cashAmount', 'upiAmount', 'expectedAmount', 'pendingAmount', 'receiptUrl'].filter(function(name) {
+      return !headers.some(function(header) {
+        return DB._payloadKeyForHeader_(header) === name;
+      });
+    });
+    if (missing.length) {
+      const startCol = headers.length + 1;
+      const data = missing.map(function(name, index) {
+        headers.push(name);
+        return {
+          range: 'PAYMENTS!' + colToLetter(startCol + index) + '1',
+          values: [[name]]
+        };
+      });
+      Sheets.Spreadsheets.Values.batchUpdate({ valueInputOption: 'RAW', data: data }, SPREADSHEET_ID);
+    }
+    return headers;
+  } catch (error) {
+    return null;
+  }
+}
+
+function roundPaymentMoney_(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function paymentModeOptions_() {
+  try {
+    if (typeof api_getGlobalDropdowns !== 'function') return [];
+    const data = api_getGlobalDropdowns();
+    const options = data && data.success && data.data && data.data.options;
+    if (!options) return [];
+    return options.paymentmode || options.paymentMode || options.PaymentMode || [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function resolvePaymentModeKey_(word, modes) {
+  const needle = String(word || '').trim().toLowerCase();
+  if (!needle) return '';
+  const list = modes || [];
+  const labelOf = function(item) {
+    return String(item.name || item.label || item.value || '').trim().toLowerCase();
+  };
+  const keyOf = function(item) {
+    return String(item.id || item.key || '').trim().toLowerCase();
+  };
+  const exact = list.find(function(item) {
+    return keyOf(item) === needle || labelOf(item) === needle;
+  });
+  const hit = exact || list.find(function(item) {
+    return keyOf(item).indexOf(needle) >= 0 || labelOf(item).indexOf(needle) >= 0;
+  });
+  if (!hit) return '';
+  return hit.id || hit.key || hit.name || '';
+}
+
+function parsePaymentMoney_(value) {
+  if (value === undefined || value === null || String(value).trim() === '') return 0;
+  const text = String(value).trim().replace(/,/g, '');
+  if (!/^\d+(\.\d+)?$/.test(text)) {
+    throw new Error('Cash and UPI must be numbers, 0 or more.');
+  }
+  return roundPaymentMoney_(text);
+}
+
+function applyPaymentSplit_(paymentData) {
+  if (!paymentData) return;
+  const cashRaw = paymentData.cashAmount;
+  const upiRaw = paymentData.upiAmount;
+  const cashSet = cashRaw !== undefined && cashRaw !== null && String(cashRaw).trim() !== '';
+  const upiSet = upiRaw !== undefined && upiRaw !== null && String(upiRaw).trim() !== '';
+  if (!cashSet && !upiSet) return;
+  const cash = parsePaymentMoney_(cashRaw);
+  const upi = parsePaymentMoney_(upiRaw);
+  paymentData.amount = roundPaymentMoney_(cash + upi);
+  paymentData.cashAmount = cash;
+  paymentData.upiAmount = upi;
+  let word = 'split';
+  if (cash > 0 && upi <= 0) word = 'cash';
+  else if (upi > 0 && cash <= 0) word = 'upi';
+  const modeKey = resolvePaymentModeKey_(word, paymentModeOptions_());
+  if (modeKey) paymentData.paymentMode = modeKey;
+}
+
+function applyPartialBalance_(paymentData) {
+  if (!paymentData) return;
+  const expectedRaw = paymentData.expectedAmount;
+  if (expectedRaw === undefined || expectedRaw === null || String(expectedRaw).trim() === '') return;
+  const expected = parsePaymentMoney_(expectedRaw);
+  const amount = roundPaymentMoney_(paymentData.amount);
+  paymentData.expectedAmount = expected;
+  paymentData.pendingAmount = Math.max(0, roundPaymentMoney_(expected - amount));
+}
+
 function api_saveMember(memberData) {
   try {
     const isNew = !(memberData && memberData.memberId);
@@ -333,7 +443,10 @@ function api_saveMember(memberData) {
           initialPayment.updatedAt = now;
           initialPayment.updatedBy = userEmail;
           delete initialPayment.notes;
-          DB.create('PAYMENTS', initialPayment);
+          const paymentHeaders = ensurePaymentSplitHeaders_();
+          applyPaymentSplit_(initialPayment);
+          applyPartialBalance_(initialPayment);
+          DB.create('PAYMENTS', initialPayment, paymentHeaders);
           if (typeof maybeSendPaymentReceipt_ === 'function') {
             maybeSendPaymentReceipt_(initialPayment);
           }
@@ -401,20 +514,38 @@ function api_getMemberPayments(memberId) {
     // BACKEND MATH: Pre-calculate all years and modes based on Accrual Mode
     const chartMetrics = {};
     const ensureYear = (y) => {
-      if (!chartMetrics[y]) chartMetrics[y] = { monthly: new Array(12).fill(0), quarterly: [0, 0, 0, 0], totalEarned: 0 };
+      if (!chartMetrics[y]) {
+        chartMetrics[y] = {
+          monthly: new Array(12).fill(0),
+          quarterly: [0, 0, 0, 0],
+          cashMonthly: new Array(12).fill(0),
+          upiMonthly: new Array(12).fill(0),
+          cashQuarterly: [0, 0, 0, 0],
+          upiQuarterly: [0, 0, 0, 0],
+          totalEarned: 0
+        };
+      }
     };
 
     memberPayments.forEach(p => {
-      if (!isPaidPaymentStatus(p.paymentStatus, paymentStatuses)) return;
+      if (!paymentCoversMembershipCycle_(p, paymentStatuses)) return;
       let totalAmt = Number(String(p.amount || 0).replace(/[^0-9.-]+/g, ""));
       if (!totalAmt) return;
+      const split = paymentCashUpiShares_(p, totalAmt);
 
-      distributeDailyProration(p.startDate || p.paidDate, p.endDate || p.paidDate, p.paidDate, totalAmt, accrualMode, (cYear, cMonth, intervalAmt) => {
-        ensureYear(cYear);
-        chartMetrics[cYear].totalEarned += intervalAmt;
-        chartMetrics[cYear].monthly[cMonth] += intervalAmt;
-        chartMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += intervalAmt;
-      });
+      const addShare = (share) => {
+        if (!share) return;
+        distributeDailyProration(p.startDate || p.paidDate, p.endDate || p.paidDate, p.paidDate, share.amount, accrualMode, (cYear, cMonth, intervalAmt) => {
+          ensureYear(cYear);
+          chartMetrics[cYear].totalEarned += intervalAmt;
+          chartMetrics[cYear].monthly[cMonth] += intervalAmt;
+          chartMetrics[cYear].quarterly[Math.floor(cMonth / 3)] += intervalAmt;
+          chartMetrics[cYear][share.monthlyKey][cMonth] += intervalAmt;
+          chartMetrics[cYear][share.quarterlyKey][Math.floor(cMonth / 3)] += intervalAmt;
+        });
+      };
+      addShare(split.cash ? { amount: split.cash, monthlyKey: 'cashMonthly', quarterlyKey: 'cashQuarterly' } : null);
+      addShare(split.upi ? { amount: split.upi, monthlyKey: 'upiMonthly', quarterlyKey: 'upiQuarterly' } : null);
     });
 
     return { success: true, data: memberPayments, chartMetrics: chartMetrics, accrualMode: accrualMode, currencyFormat: currencyFormat };
@@ -423,17 +554,48 @@ function api_getMemberPayments(memberId) {
   }
 }
 
-function isPaidPaymentStatus(status, paymentStatuses) {
+function paymentStatusLabel_(status, paymentStatuses) {
   const rawStatus = String(status || '').trim();
   const matchingOption = (paymentStatuses || []).find(option => {
     const optionId = String(option.id || option.value || option.code || '').trim();
     const optionName = String(option.name || option.label || '').trim();
     return optionId === rawStatus || optionName.toLowerCase() === rawStatus.toLowerCase();
   });
-  const statusName = String(matchingOption ? (matchingOption.name || matchingOption.label || matchingOption.id) : rawStatus)
+  return String(matchingOption ? (matchingOption.name || matchingOption.label || matchingOption.id) : rawStatus)
     .trim()
     .toLowerCase();
+}
+
+function isPaidPaymentStatus(status, paymentStatuses) {
+  const statusName = paymentStatusLabel_(status, paymentStatuses);
   return statusName === 'paid' || statusName === 'completed';
+}
+
+function paymentCoversMembershipCycle_(payment, paymentStatuses) {
+  if (!payment) return false;
+  const amount = Number(String(payment.amount || 0).replace(/[^0-9.-]+/g, ''));
+  if (!(amount > 0)) return false;
+  if (isPaidPaymentStatus(payment.paymentStatus, paymentStatuses)) return true;
+  const pending = Number(String(payment.pendingAmount || 0).replace(/[^0-9.-]+/g, ''));
+  if (pending > 0.009) return true;
+  const expected = Number(String(payment.expectedAmount || 0).replace(/[^0-9.-]+/g, ''));
+  const statusName = paymentStatusLabel_(payment.paymentStatus, paymentStatuses);
+  return (statusName === 'pending' || statusName.indexOf('partial') >= 0) && expected > amount;
+}
+
+function paymentCashUpiShares_(payment, totalAmt) {
+  const cashRaw = payment && payment.cashAmount;
+  const upiRaw = payment && payment.upiAmount;
+  const cashSet = cashRaw !== undefined && cashRaw !== null && String(cashRaw).trim() !== '';
+  const upiSet = upiRaw !== undefined && upiRaw !== null && String(upiRaw).trim() !== '';
+  if (cashSet || upiSet) {
+    return { cash: roundPaymentMoney_(cashRaw), upi: roundPaymentMoney_(upiRaw) };
+  }
+  const mode = String((payment && payment.paymentMode) || '').toLowerCase();
+  if (mode.indexOf('upi') >= 0 || mode.indexOf('gpay') >= 0 || mode.indexOf('phonepe') >= 0) {
+    return { cash: 0, upi: totalAmt };
+  }
+  return { cash: totalAmt, upi: 0 };
 }
 
 function api_recordPayment(paymentData) {
@@ -452,15 +614,29 @@ function api_recordPayment(paymentData) {
     paymentData.updatedAt = now;
     paymentData.updatedBy = userEmail;
     delete paymentData.notes;
-
-    let savedData;
-    if (paymentData.paymentId) {
-      savedData = DB.update('PAYMENTS', paymentData.paymentId, paymentData);
-    } else {
+    const paymentHeaders = ensurePaymentSplitHeaders_();
+    applyPaymentSplit_(paymentData);
+    applyPartialBalance_(paymentData);
+    if (isNewPayment) {
       paymentData.paymentId = generateId('PAY');
       paymentData.createdAt = now;
       paymentData.createdBy = userEmail;
-      savedData = DB.create('PAYMENTS', paymentData);
+    }
+    if (paymentData.base64Image && typeof api_uploadImageToDrive === 'function') {
+      const uploadRes = api_uploadImageToDrive(paymentData.base64Image, paymentData.paymentId);
+      if (!uploadRes || !uploadRes.success) {
+        throw new Error('Receipt upload failed: ' + ((uploadRes && uploadRes.error) || 'unknown error'));
+      }
+      paymentData.receiptUrl = uploadRes.fileId;
+    }
+    delete paymentData.base64Image;
+    delete paymentData.imageName;
+
+    let savedData;
+    if (isNewPayment) {
+      savedData = DB.create('PAYMENTS', paymentData, paymentHeaders);
+    } else {
+      savedData = DB.update('PAYMENTS', paymentData.paymentId, paymentData, paymentHeaders);
     }
 
     if (isNewPayment && typeof maybeSendPaymentReceipt_ === 'function') {

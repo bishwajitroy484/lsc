@@ -108,6 +108,10 @@
     parseToISODate: AppUtils.parseToISODate,
 
     showShimmer: function() {
+      ['kpi-total-exp', 'kpi-avg-exp', 'kpi-staff-exp', 'kpi-other-exp', 'kpi-total-staff', 'kpi-action-needed'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<div class="h-6 w-16 shimmer rounded mt-1"></div>';
+      });
       let dHtml = '';
       for(let i=0; i<5; i++){ dHtml += `<tr><td colspan="6" class="px-4 py-4"><div class="h-6 w-full shimmer rounded"></div></td></tr>`; }
       const tb = document.getElementById('desktop-expense-body');
@@ -168,11 +172,16 @@
 
     getColor: function(idx) { return this.colorMap[idx % this.colorMap.length]; },
 
-    fetchData: function() {
+    fetchData: function(callback) {
       google.script.run
         .withSuccessHandler((res) => {
            this.onDataLoaded(res);
            this.applyGlobalFilters();
+           if (typeof callback === 'function') callback();
+        })
+        .withFailureHandler((err) => {
+           Toast.error("Error loading expense data: " + (err && err.message ? err.message : 'Unknown error'));
+           if (typeof callback === 'function') callback();
         })
         .api_getExpenses();
     },
@@ -850,19 +859,23 @@
         imageName: imageName
       };
 
+      this.closeModal();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
           btn.innerHTML = `Save Expense`; btn.disabled = false;
           if(res.success) {
             Toast.success(res.message);
-            this.closeModal();
-            this.showShimmer();
             this.fetchData();
-          } else { Toast.error(res.error); }
+          } else {
+            Toast.error(res.error);
+            this.fetchData();
+          }
         })
         .withFailureHandler((err) => {
           btn.innerHTML = `Save Expense`; btn.disabled = false;
-          Toast.error(err.message || 'Server Error.');
+          Toast.error((err && err.message) || 'Server Error.');
+          this.fetchData();
         })
         .api_saveExpense(payload);
     },
@@ -882,16 +895,21 @@
 
     confirmDelete: function() {
       if(!this.expenseToDelete) return;
+      const expenseId = this.expenseToDelete;
+      this.closeDeleteModal();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
-          this.closeDeleteModal();
           if(res.success) {
             Toast.success(res.message);
-            this.showShimmer();
             this.fetchData();
-          } else { Toast.error(res.error); }
+          } else {
+            Toast.error(res.error);
+            this.fetchData();
+          }
         })
-        .api_deleteExpense(this.expenseToDelete);
+        .withFailureHandler(() => { this.fetchData(); })
+        .api_deleteExpense(expenseId);
     }
   };
 
