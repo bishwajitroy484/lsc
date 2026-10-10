@@ -1180,6 +1180,12 @@
         .api_getStaffTransactions(stf.staffId);
     },
 
+    activeStatusId: function() {
+      const statuses = this.dropdowns.status || this.dropdowns.staffstatus || this.dropdowns.statuses || [];
+      const active = statuses.find(opt => String(opt.name || opt.label || '').trim().toLowerCase() === 'active');
+      return active ? active.id : '';
+    },
+
     onStatusChange: function() {
       const statusId = document.getElementById('stf-status').value;
       const statusName = this.getName('status', statusId).toLowerCase();
@@ -1225,8 +1231,10 @@
       this.setDatePicker('stf-join', stf && stf.joinDate ? stf.joinDate : new Date());
       this.setDatePicker('stf-dob', stf && stf.dob ? stf.dob : '');
       this.setDatePicker('stf-exit-date', stf && stf.exitDate ? stf.exitDate : '');
-      
-      this.safeSetValue('stf-status', stf ? stf.status : '');
+
+      const statusField = document.getElementById('stf-status-field');
+      if (statusField) statusField.classList.toggle('hidden', !stf);
+      this.safeSetValue('stf-status', stf ? stf.status : (this.activeStatusId() || ''));
 
       this.onStatusChange();
 
@@ -1255,6 +1263,7 @@
          btn.disabled = true;
       }
 
+      const isNew = !document.getElementById('stf-id')?.value;
       const payload = {
         staffId: document.getElementById('stf-id')?.value,
         fullName: document.getElementById('stf-name')?.value,
@@ -1265,8 +1274,8 @@
         dob: this.formatDateDDMMMYYYY(document.getElementById('stf-dob')?.value),
         salary: Number(document.getElementById('stf-salary')?.value || 0),
         joinDate: this.formatDateDDMMMYYYY(document.getElementById('stf-join')?.value),
-        exitDate: this.formatDateDDMMMYYYY(document.getElementById('stf-exit-date')?.value),
-        status: document.getElementById('stf-status')?.value
+        exitDate: isNew ? '' : this.formatDateDDMMMYYYY(document.getElementById('stf-exit-date')?.value),
+        status: isNew ? (this.activeStatusId() || document.getElementById('stf-status')?.value) : document.getElementById('stf-status')?.value
       };
 
       const reopenStaffId = this.currentActiveStaff && this.currentActiveStaff.staffId;

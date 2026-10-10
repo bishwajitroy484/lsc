@@ -462,3 +462,61 @@ describe('Staff Module - Action Needed & Salary Cycle Calculations', () => {
     });
   });
 });
+
+function loadStaffSaveApi(dropdownResponse = {
+  success: true,
+  data: {
+    options: {
+      status: [{ id: 'SAT-1', name: 'Active' }, { id: 'SAT-2', name: 'Inactive' }]
+    }
+  }
+}) {
+  const source = fs.readFileSync(path.join(__dirname, '../src/API_Staff.js'), 'utf8');
+  const db = {
+    create: jest.fn((sheet, record) => record),
+    update: jest.fn((sheet, id, payload) => payload)
+  };
+  return new Function(
+    'DB',
+    'api_getGlobalDropdowns',
+    'Session',
+    'generateId',
+    `
+      ${source};
+      return { api_saveStaff, db: DB };
+    `
+  )(
+    db,
+    () => dropdownResponse,
+    { getActiveUser: () => ({ getEmail: () => 'admin@gym.com' }) },
+    (prefix) => `${prefix}-TEST`
+  );
+}
+
+describe('Staff save status', () => {
+  test('a new staff member is stored as Active', () => {
+    const api = loadStaffSaveApi();
+    const result = api.api_saveStaff({
+      fullName: 'New Coach',
+      phone: '9876543210',
+      status: 'SAT-2',
+      exitDate: '01-Oct-2026'
+    });
+    expect(result.success).toBe(true);
+    const record = api.db.create.mock.calls[0][1];
+    expect(record.status).toBe('SAT-1');
+    expect(record.exitDate).toBe('');
+  });
+
+  test('editing a staff member keeps the status that was sent', () => {
+    const api = loadStaffSaveApi();
+    const result = api.api_saveStaff({
+      staffId: 'STF-1',
+      fullName: 'Coach',
+      phone: '9876543210',
+      status: 'SAT-2'
+    });
+    expect(result.success).toBe(true);
+    expect(api.db.update.mock.calls[0][2].status).toBe('SAT-2');
+  });
+});
