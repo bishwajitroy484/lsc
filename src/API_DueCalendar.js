@@ -161,6 +161,9 @@ function findLatestPaidPaymentForMember_(memberId, paymentHint) {
   }
 
   payments = payments.filter(function(p) {
+    if (typeof paymentCoversMembershipCycle_ === 'function') {
+      return paymentCoversMembershipCycle_(p, paymentStatuses);
+    }
     return typeof isPaidPaymentStatus === 'function'
       ? isPaidPaymentStatus(p.paymentStatus, paymentStatuses)
       : true;

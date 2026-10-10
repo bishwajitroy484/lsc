@@ -118,6 +118,7 @@ function api_saveExpense(expenseData) {
     // Clean transient upload fields before saving to DB
     delete expenseData.base64Image;
     delete expenseData.imageName;
+    delete expenseData.notes;
     
     var savedData;
     if (!isNew) {

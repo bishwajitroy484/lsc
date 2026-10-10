@@ -233,7 +233,9 @@ function startOfDay_(date) {
 function computeMemberDueDate_(member, payments, paymentStatuses) {
   const memberPayments = (payments || [])
     .filter(p => String(p.memberId) === String(member.memberId))
-    .filter(p => isPaidPaymentStatus(p.paymentStatus, paymentStatuses))
+    .filter(p => (typeof paymentCoversMembershipCycle_ === 'function'
+      ? paymentCoversMembershipCycle_(p, paymentStatuses)
+      : isPaidPaymentStatus(p.paymentStatus, paymentStatuses)))
     .sort((a, b) => {
       const aDate = parseSafeDate(a.endDate || a.paidDate || 0);
       const bDate = parseSafeDate(b.endDate || b.paidDate || 0);

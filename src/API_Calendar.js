@@ -67,9 +67,11 @@ function api_getCalendarData(month, year) {
     payments.forEach(payment => {
       const memberId = String(payment.memberId || '').trim();
       if (!memberId) return;
-      const paid = typeof isPaidPaymentStatus === 'function'
-        ? isPaidPaymentStatus(payment.paymentStatus, paymentStatuses)
-        : true;
+      const paid = typeof paymentCoversMembershipCycle_ === 'function'
+        ? paymentCoversMembershipCycle_(payment, paymentStatuses)
+        : (typeof isPaidPaymentStatus === 'function'
+          ? isPaidPaymentStatus(payment.paymentStatus, paymentStatuses)
+          : true);
       if (!paid) return;
       if (!paymentsByMember[memberId]) paymentsByMember[memberId] = [];
       paymentsByMember[memberId].push(payment);

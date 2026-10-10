@@ -261,6 +261,7 @@ describe('Expense Module - Staff Cost Integration & Calculations', () => {
       expect(createdRecord.receiptFileId).toBe('DRIVE_FILE_999');
       expect(createdRecord.base64Image).toBeUndefined();
       expect(createdRecord.imageName).toBeUndefined();
+      expect(createdRecord.notes).toBeUndefined();
       expect(createdRecord.createdBy).toBe('admin@lsc.com');
     });
 

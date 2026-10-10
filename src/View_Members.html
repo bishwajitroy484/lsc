@@ -70,7 +70,7 @@
 
   
   <div id="view-details"
-    class="flex-1 flex flex-col h-full w-full absolute inset-0 bg-slate-50 transition-transform duration-300 translate-x-full z-30">
+    class="flex-1 flex flex-col h-full w-full min-w-0 absolute inset-0 bg-slate-50 transition-transform duration-300 translate-x-full z-30 overflow-x-hidden">
 
     <header class="bg-white px-4 md:px-6 py-3 flex items-center justify-between border-b border-slate-200 shrink-0">
       <div class="flex items-center gap-2">
@@ -89,7 +89,7 @@
       </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar pb-24 md:pb-6">
+    <div class="flex-1 overflow-y-auto overflow-x-hidden min-w-0 p-4 md:p-6 no-scrollbar pb-24 md:pb-6">
       <div class="max-w-4xl mx-auto space-y-4 md:space-y-6">
 
         
@@ -147,17 +147,21 @@
         </div>
 
         <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-5">
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-2">
+          <div class="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-2 shrink-0">
               <span class="material-symbols-rounded text-slate-400 text-[18px]">monitoring</span>
-              <h4 class="font-bold text-sm text-slate-800">Payment Insights</h4>
+              <h4 class="font-bold text-sm text-slate-800 whitespace-nowrap">Payment Insights</h4>
             </div>
-            <div class="flex items-center gap-2">
-              <select id="filter-ltv-mode" onchange="MembersApp.renderChart()" class="appearance-none bg-slate-50 pl-3 pr-7 py-1 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+            <div class="grid grid-cols-3 gap-1.5 w-full min-w-0 sm:w-auto">
+              <select id="filter-ltv-split" onchange="MembersApp.renderChart()" class="w-full min-w-0 appearance-none bg-slate-50 pl-2 pr-6 py-1 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_2px_center]">
+                <option value="amount">Amount</option>
+                <option value="percent">Percent</option>
+              </select>
+              <select id="filter-ltv-mode" onchange="MembersApp.renderChart()" class="w-full min-w-0 appearance-none bg-slate-50 pl-2 pr-6 py-1 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_2px_center]">
                 <option value="monthly">Monthly</option>
                 <option value="quarterly">Quarterly</option>
               </select>
-              <select id="filter-ltv" onchange="MembersApp.renderChart()" class="appearance-none bg-slate-50 pl-3 pr-7 py-1 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]"></select>
+              <select id="filter-ltv" onchange="MembersApp.renderChart()" class="w-full min-w-0 appearance-none bg-slate-50 pl-2 pr-6 py-1 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_2px_center]"></select>
             </div>
           </div>
 
@@ -177,8 +181,8 @@
             </div>
           </div>
 
-          <div class="relative w-full h-[180px]">
-            <div id="member-revenue-chart" class="absolute inset-0"></div>
+          <div class="relative w-full min-w-0 overflow-hidden h-[280px] sm:h-[240px]">
+            <div id="member-revenue-chart" class="absolute inset-0 min-w-0 max-w-full"></div>
           </div>
         </div>
 
@@ -189,8 +193,9 @@
               <h4 class="font-bold text-sm text-slate-800">History</h4>
             </div>
           </div>
-          <div class="overflow-x-auto no-scrollbar">
-            <table class="w-full text-left border-collapse min-w-[350px]">
+          <div id="det-history-cards" class="md:hidden divide-y divide-slate-100"></div>
+          <div class="hidden md:block">
+            <table class="w-full text-left border-collapse">
               <thead class="bg-slate-50 border-b border-slate-100">
                 <tr class="text-[9px] uppercase text-slate-400 font-bold">
                   <th class="px-4 py-2">Date & Coverage</th>
@@ -245,67 +250,58 @@
                 <span class="material-symbols-rounded text-[14px]">badge</span> Personal Information
               </h4>
 
-              <div class="flex flex-col gap-3">
+              <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Profile Image</label>
-                  <div class="flex items-center gap-3">
-                    
-                    <div id="mem-profile-preview-container" class="hidden w-10 h-10 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-sm bg-slate-50">
+                  <div class="flex items-center gap-2">
+                    <div id="mem-profile-preview-container" class="hidden w-8 h-8 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-sm bg-slate-50">
                        <img id="mem-profile-preview" src="" class="w-full h-full object-cover">
                     </div>
-                    <div class="relative flex-1">
-                      <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">image</span>
-                      <input type="file" id="mem-profile-file" accept="image/*" onchange="MembersApp.previewImage(this)" class="w-full pl-8 pr-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100 cursor-pointer text-slate-500">
+                    <div class="relative flex-1 min-w-0">
+                      <span class="material-symbols-rounded absolute left-2 top-1.5 text-[16px] text-slate-400">image</span>
+                      <input type="file" id="mem-profile-file" accept="image/*" onchange="MembersApp.previewImage(this)" class="w-full pl-7 pr-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-medium focus:border-brand-primary outline-none shadow-sm file:mr-1 file:py-0.5 file:px-1.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100 cursor-pointer text-slate-500">
                       <input type="hidden" id="mem-profile-url">
                     </div>
                   </div>
                 </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Full Name *</label>
-                    <div class="relative">
-                      <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">person</span>
-                      <input type="text" id="mem-name" required class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Phone Number *</label>
-                    <div class="relative">
-                      <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">call</span>
-                      <input type="tel" id="mem-phone" required pattern="[0-9]{10}" maxlength="10" inputmode="numeric" title="Enter exactly 10 digits." class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
-                    </div>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Date of Birth</label>
-                    <div class="relative">
-                      <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
-                      <input type="text" id="mem-dob" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm text-slate-700">
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Gender</label>
-                    <div class="relative">
-                      <select id="mem-gender" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm appearance-none">
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                      </select>
-                      <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
-                    </div>
-                  </div>
-                </div>
-
                 <div>
-                  <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Email</label>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Full Name *</label>
+                  <div class="relative">
+                    <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">person</span>
+                    <input type="text" id="mem-name" required class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Date of Birth</label>
+                  <div class="relative">
+                    <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
+                    <input type="text" id="mem-dob" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm text-slate-700">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Phone Number *</label>
+                  <div class="relative">
+                    <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">call</span>
+                    <input type="tel" id="mem-phone" required pattern="[0-9]{10}" maxlength="10" inputmode="numeric" title="Enter exactly 10 digits." class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Gender</label>
+                  <div class="relative">
+                    <select id="mem-gender" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm appearance-none">
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                    <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Email</label>
                   <div class="relative">
                     <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">mail</span>
                     <input type="email" id="mem-email" class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
                   </div>
                 </div>
-
               </div>
             </div>
 
@@ -367,36 +363,29 @@
                   </div>
                 </div>
 
-              </div>
-            </div>
+                <div id="upfront-payment-container" class="border-t border-emerald-100 pt-3">
+                  <h4 class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-rounded text-[14px]">payments</span> Initial Payment
+                  </h4>
+                  <div id="mem-pay-fields" class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Cash</label>
+                      <div class="relative flex items-center">
+                        <span class="absolute left-2.5 font-bold text-slate-500 text-xs">₹</span>
+                        <input type="number" id="mem-pay-cash" min="0" step="0.01" value="0" class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">UPI</label>
+                      <div class="relative flex items-center">
+                        <span class="absolute left-2.5 font-bold text-slate-500 text-xs">₹</span>
+                        <input type="number" id="mem-pay-upi" min="0" step="0.01" value="0" class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
+                      </div>
+                    </div>
+                    <p class="col-span-2 text-[10px] text-slate-500 font-medium">Leave both at 0 to skip. Otherwise cash and UPI must add up to the fee, and the payment is saved as Paid.</p>
+                  </div>
+                </div>
 
-            <div id="upfront-payment-container" class="sm:col-span-2 bg-red-50/30 p-3 rounded-xl border border-red-100/50 transition-all">
-              <div class="flex items-center justify-between gap-3">
-                <h4 class="text-[11px] font-bold text-brand-primary uppercase tracking-wider flex items-center gap-1.5">
-                  <span class="material-symbols-rounded text-[14px]">payments</span> Capture Initial Payment
-                </h4>
-                <label class="flex items-center gap-2 cursor-pointer shrink-0">
-                  <input type="checkbox" id="mem-record-pay" onchange="MembersApp.toggleInitialPaymentFields()" class="w-3.5 h-3.5 text-brand-primary rounded border-slate-300 focus:ring-brand-primary">
-                  <span class="text-[9px] font-bold text-slate-600 uppercase tracking-wide">Record Now</span>
-                </label>
-              </div>
-
-              <div id="mem-pay-fields" class="hidden grid-cols-2 gap-3 border-t border-red-100/50 pt-3 mt-3">
-                 <div>
-                   <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Cash</label>
-                   <div class="relative flex items-center">
-                     <span class="absolute left-2.5 font-bold text-slate-500 text-xs">₹</span>
-                     <input type="number" id="mem-pay-cash" min="0" step="0.01" value="0" class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
-                   </div>
-                 </div>
-                 <div>
-                   <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">UPI</label>
-                   <div class="relative flex items-center">
-                     <span class="absolute left-2.5 font-bold text-slate-500 text-xs">₹</span>
-                     <input type="number" id="mem-pay-upi" min="0" step="0.01" value="0" class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
-                   </div>
-                 </div>
-                 <p class="col-span-2 text-[10px] text-slate-500 font-medium">Cash and UPI must add up to the fee. A new payment is saved as Paid.</p>
               </div>
             </div>
           </div>
@@ -432,91 +421,66 @@
         <input type="hidden" id="pay-id">
 
         
-        <div class="flex-1 overflow-y-auto no-scrollbar p-5 space-y-4">
+        <div class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3">
+          <input type="hidden" id="pay-expected" value="0">
 
-          <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 flex justify-between items-center">
-            <span class="text-[10px] font-bold text-slate-500 uppercase">Expected Next Due:</span>
+          <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 flex justify-between items-center">
+            <span class="text-[10px] font-bold text-slate-500 uppercase">Expected Next Due</span>
             <span id="pay-header-due" class="text-xs font-bold text-slate-800">--</span>
           </div>
 
-          <div
-            class="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 mt-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <div class="col-span-2 flex justify-between items-center">
-              <p class="text-[9px] font-bold text-slate-600 uppercase tracking-wide">Coverage Period (Auto-calculated)
-              </p>
-            </div>
+          <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Start Date *</label>
-              <div class="relative">
-                <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
-                <input type="text" id="pay-start" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
-              </div>
+              <input type="text" id="pay-start" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
             </div>
             <div>
               <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">End Date *</label>
-              <div class="relative">
-                <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
-                <input type="text" id="pay-end" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
-              </div>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Amount Paid *</label>
-              <div class="relative flex items-center">
-                <span class="absolute left-2.5 font-bold text-slate-500 text-sm">₹</span>
-                <input type="number" id="pay-amount" required class="w-full pl-6 pr-3 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
-              </div>
+              <input type="text" id="pay-end" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
             </div>
             <div>
               <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Paid Date *</label>
-              <div class="relative">
-                <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
-                <input type="text" id="pay-date" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
-              </div>
+              <input type="text" id="pay-date" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
             </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Cash</label>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Cycle Fee</label>
+              <input type="text" id="pay-expected-label" readonly class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none">
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Cash *</label>
               <div class="relative flex items-center">
                 <span class="absolute left-2.5 font-bold text-slate-500 text-sm">₹</span>
-                <input type="number" id="pay-cash" min="0" step="0.01" value="0" class="w-full pl-6 pr-3 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
+                <input type="number" id="pay-cash" min="0" step="0.01" value="0" inputmode="decimal" oninput="MembersApp.syncPaymentAmount()" class="w-full pl-6 pr-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
               </div>
             </div>
             <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">UPI</label>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">UPI *</label>
               <div class="relative flex items-center">
                 <span class="absolute left-2.5 font-bold text-slate-500 text-sm">₹</span>
-                <input type="number" id="pay-upi" min="0" step="0.01" value="0" class="w-full pl-6 pr-3 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
-              </div>
-            </div>
-            <p class="col-span-2 text-[10px] text-slate-500 font-medium">Cash and UPI must add up to Amount Paid. A ₹30,000 fee can be ₹10,000 cash and ₹20,000 UPI.</p>
-            <div class="col-span-2">
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Payment Status *</label>
-              <div class="relative">
-                <select id="pay-status" required class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
-                <span class="material-symbols-rounded absolute right-2 top-1.5 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+                <input type="number" id="pay-upi" min="0" step="0.01" value="0" inputmode="decimal" oninput="MembersApp.syncPaymentAmount()" class="w-full pl-6 pr-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
               </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Transaction ID</label>
-              <input type="text" id="pay-txn" placeholder="Optional" class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm">
+              <p class="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Amount Paid</p>
+              <input type="number" id="pay-amount" readonly class="w-28 bg-transparent text-sm font-bold text-slate-800 outline-none">
             </div>
-            <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt URL</label>
-              <div class="relative">
-                <span class="material-symbols-rounded absolute left-2 top-1.5 text-[16px] text-slate-400">link</span>
-                <input type="url" id="pay-receipt" placeholder="https://..." class="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
+            <p id="pay-pending" class="text-[11px] font-bold text-emerald-700 text-right">Fully paid</p>
+          </div>
+          <p class="text-[10px] text-slate-500 font-medium -mt-1">Amount paid is cash plus UPI. Less than the cycle fee stays as a pending partial payment.</p>
+
+          <div>
+            <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt Image</label>
+            <div class="flex items-center gap-2">
+              <div id="pay-receipt-preview-container" class="hidden w-10 h-10 rounded-lg border border-slate-200 overflow-hidden shrink-0 bg-slate-50">
+                <img id="pay-receipt-preview" src="" alt="" class="w-full h-full object-cover">
               </div>
+              <input type="file" id="pay-receipt-file" accept="image/*" onchange="MembersApp.previewReceipt(this)" class="flex-1 min-w-0 px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-medium focus:border-brand-primary outline-none file:mr-2 file:py-0.5 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-slate-50 file:text-slate-700">
+              <input type="hidden" id="pay-receipt" value="">
             </div>
           </div>
-
         </div>
 
         

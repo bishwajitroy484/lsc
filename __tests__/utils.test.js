@@ -404,6 +404,22 @@ describe('Client Shared Utilities (AppUtils in Global_State.html)', () => {
   });
 });
 
+describe('DB payment columns', () => {
+  test('writes both cash and UPI amounts and does not write notes', () => {
+    const ranges = DB._buildUpdateRanges('PAYMENTS', 2, ['paymentMode', 'cashAmount', 'UPI', 'notes'], {
+      paymentMode: 'Split',
+      cashAmount: 10000,
+      upiAmount: 20000,
+      notes: 'do not store'
+    });
+    const byRange = {};
+    ranges.forEach((range) => { byRange[range.range] = range.values[0][0]; });
+    expect(byRange['PAYMENTS!B2']).toBe(10000);
+    expect(byRange['PAYMENTS!C2']).toBe(20000);
+    expect(Object.keys(byRange)).not.toContain('PAYMENTS!D2');
+  });
+});
+
 describe('DB read cache', () => {
   test('a write drops cached sheet and batch reads so the next load is current', () => {
     const store = {};
