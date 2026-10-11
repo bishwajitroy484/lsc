@@ -65,6 +65,21 @@ function api_getStaff() {
   }
 }
 
+function activeStaffStatusId_() {
+  try {
+    if (typeof api_getGlobalDropdowns !== 'function') return 'SAT-1';
+    const data = api_getGlobalDropdowns();
+    const options = data && data.success && data.data && data.data.options;
+    const statuses = (options && (options.status || options.staffstatus || options.statuses)) || [];
+    const active = statuses.find(function(item) {
+      return String(item.name || item.label || '').trim().toLowerCase() === 'active';
+    });
+    return (active && (active.id || active.value)) || 'SAT-1';
+  } catch (error) {
+    return 'SAT-1';
+  }
+}
+
 function api_saveStaff(staffData) {
   try {
     const isNew = !(staffData && staffData.staffId);
@@ -89,7 +104,8 @@ function api_saveStaff(staffData) {
       staffData.staffId = generateId('STF');
       staffData.createdAt = now;
       staffData.createdBy = userEmail;
-      if (!staffData.status) staffData.status = 'SAT-1'; 
+      staffData.status = activeStaffStatusId_();
+      staffData.exitDate = '';
       savedData = DB.create('STAFF', staffData);
     }
     return { success: true, data: savedData, message: staffData.staffId ? "Staff updated successfully" : "Staff added successfully" };

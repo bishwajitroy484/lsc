@@ -43,7 +43,8 @@ function isQuarterlyPlan_(planMeta) {
   const freq = String(planMeta.frequency || '').toUpperCase();
   const name = String(planMeta.name || planMeta.label || '').toUpperCase();
   const blob = freq + ' ' + name;
-  if (blob.indexOf('AD-HOC') >= 0 || blob.indexOf('ADHOC') >= 0 || blob.indexOf('TRIAL') >= 0) {
+  const compact = blob.replace(/[\s_-]+/g, '');
+  if (compact.indexOf('ADHOC') >= 0 || compact.indexOf('TRIAL') >= 0) {
     return false;
   }
   return blob.indexOf('QUARTER') >= 0;
@@ -94,6 +95,7 @@ function deleteDueCalendarEvent_(eventId) {
 
 function createDueCalendarEvent_(member, dueDate, config, planName, payment) {
   const start = new Date(dueDate.getTime());
+  start.setDate(start.getDate() - 2);
   start.setHours(config.hour, 0, 0, 0);
   const end = new Date(start.getTime() + config.durationMin * 60 * 1000);
 
@@ -160,6 +162,9 @@ function findLatestPaidPaymentForMember_(memberId, paymentHint) {
   }
 
   payments = payments.filter(function(p) {
+    if (typeof paymentCoversMembershipCycle_ === 'function') {
+      return paymentCoversMembershipCycle_(p, paymentStatuses);
+    }
     return typeof isPaidPaymentStatus === 'function'
       ? isPaidPaymentStatus(p.paymentStatus, paymentStatuses)
       : true;

@@ -259,7 +259,7 @@
           ? (item.daysLeft < 0 ? `Exit ${Math.abs(item.daysLeft)}d` : (item.daysLeft === 0 ? 'Exit today' : `Exit ${item.daysLeft}d`))
           : (item.daysLeft < 0 ? `${Math.abs(item.daysLeft)}d overdue` : `${item.daysLeft}d left`);
         const gcalBadge = item.gcalSynced
-          ? '<span class="shrink-0 inline-flex text-[8px] font-bold uppercase tracking-wide px-1 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 whitespace-nowrap">GCal</span>'
+          ? '<span class="shrink-0 inline-flex text-[8px] font-bold tracking-wide px-1 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 whitespace-nowrap">GCal</span>'
           : '';
 
         return `
@@ -385,7 +385,7 @@
             )
             : '';
           const gcalBadge = item.gcalSynced
-            ? '<span class="inline-flex max-w-full text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 whitespace-nowrap">GCal synced</span>'
+            ? '<span class="inline-flex max-w-full text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 whitespace-nowrap">GCal synced</span>'
             : '';
 
           return `

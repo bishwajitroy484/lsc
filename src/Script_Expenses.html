@@ -18,7 +18,8 @@
     
     chartInstances: {},
     expenseToDelete: null,
-    colorMap: ['#CE0002', '#f59e0b', '#10b981', '#404040', '#ef4444', '#737373', '#f97316', '#64748b'],
+    isShowingMisc: false,
+    colorMap: ['#CE0002', '#f59e0b', '#10b981', '#0ea5e9', '#ef4444', '#737373', '#f97316', '#64748b'],
 
     pageSize: 50,
     renderedCount: 0,
@@ -108,6 +109,10 @@
     parseToISODate: AppUtils.parseToISODate,
 
     showShimmer: function() {
+      ['kpi-total-exp', 'kpi-avg-exp', 'kpi-staff-exp', 'kpi-other-exp'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<div class="h-6 w-16 shimmer rounded mt-1"></div>';
+      });
       let dHtml = '';
       for(let i=0; i<5; i++){ dHtml += `<tr><td colspan="6" class="px-4 py-4"><div class="h-6 w-full shimmer rounded"></div></td></tr>`; }
       const tb = document.getElementById('desktop-expense-body');
@@ -168,11 +173,16 @@
 
     getColor: function(idx) { return this.colorMap[idx % this.colorMap.length]; },
 
-    fetchData: function() {
+    fetchData: function(callback) {
       google.script.run
         .withSuccessHandler((res) => {
            this.onDataLoaded(res);
            this.applyGlobalFilters();
+           if (typeof callback === 'function') callback();
+        })
+        .withFailureHandler((err) => {
+           Toast.error("Error loading expense data: " + (err && err.message ? err.message : 'Unknown error'));
+           if (typeof callback === 'function') callback();
         })
         .api_getExpenses();
     },
@@ -361,6 +371,15 @@
       const avg = grandTotal / periodCount;
       document.getElementById('kpi-avg-exp').innerText = AppUtils.formatCurrency(avg);
 
+      // Staff count and Action Needed come from staff data. Repaint them after an expense reload
+      // so a leftover shimmer cannot stay on those two cards.
+      if (typeof StaffApp !== 'undefined' && StaffApp.isStaffLoaded && typeof StaffApp.calculateKPIs === 'function') {
+        const yearValue = document.getElementById('exp-filter-year')?.value;
+        const snapshotYear = yearValue ? parseInt(yearValue, 10) : new Date().getFullYear();
+        const snapshotMode = document.getElementById('exp-filter-mode')?.value || 'Monthly';
+        StaffApp.calculateKPIs(snapshotYear, snapshotMode);
+      }
+
       if (typeof ExpensesHub !== 'undefined') ExpensesHub.refreshAllRecords();
     },
 
@@ -454,7 +473,7 @@
         xaxis: { categories: categories, axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { fontSize: '11px', colors: '#64748b' } } },
         yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
-        colors: ['#404040', '#f59e0b'],
+        colors: ['#7c3aed', '#f59e0b'],
         grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 24, right: 10, left: 10, bottom: 4 } }
       };
 
@@ -463,21 +482,40 @@
       this.chartInstances.trend = new ApexCharts(document.querySelector("#chart-expense-trend"), trendOpts);
       this.chartInstances.trend.render();
 
-      // 2. Category Breakdown Chart (Consistent Data Labels)
-      const bLabels = Object.keys(catSums);
-      const bSeries = Object.values(catSums);
-      const bColors = bLabels.map((l, i) => l === 'Staff Cost' ? '#404040' : this.getColor(i));
+      const showingMisc = this.isShowingMisc && Object.keys(miscSums).length > 0;
+      const bLabels = showingMisc ? Object.keys(miscSums) : Object.keys(catSums);
+      const bSeries = showingMisc ? Object.values(miscSums) : Object.values(catSums);
+      const palette = ['#3b82f6', '#10b981', '#fbbf24', '#f97316', '#0ea5e9', '#ec4899', '#6366f1', '#94a3b8'];
+      const bColors = bLabels.map((l, i) => l === 'Staff Cost' ? '#7c3aed' : palette[i % palette.length]);
       const totalAmt = bSeries.reduce((a,b)=>a+b, 0);
+      const miscBtn = document.getElementById('btn-exp-misc-toggle');
+      if (miscBtn) {
+        const hasMisc = Object.keys(miscSums).length > 0;
+        miscBtn.classList.toggle('hidden', !hasMisc);
+        if (!hasMisc) this.isShowingMisc = false;
+        miscBtn.innerText = this.isShowingMisc && hasMisc ? 'Back to All' : 'View Misc';
+      }
 
       const breakOpts = {
         series: bSeries,
         labels: bLabels,
         chart: { type: 'donut', height: '100%' },
         colors: bColors.length ? bColors : ['#e2e8f0'],
-        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '14px', fontWeight: 600, formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
-        legend: { position: 'right', fontSize: '11px', offsetY: 20 },
-        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCompactCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 }, dropShadow: { enabled: false } },
-        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } }
+        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: showingMisc ? 'Total Misc' : 'Total', fontSize: '14px', fontWeight: 600, formatter: () => AppUtils.formatCurrency(totalAmt) } } } } },
+        legend: { position: 'bottom', fontSize: '11px' },
+        dataLabels: {
+          enabled: true,
+          formatter: function (val, opts) {
+            const total = opts && opts.w && opts.w.globals && opts.w.globals.seriesTotals
+              ? opts.w.globals.seriesTotals[opts.seriesIndex]
+              : val;
+            return total ? AppUtils.formatCompactCurrency(total) : '';
+          },
+          style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
+          background: { enabled: true, backgroundColor: '#ffffff', foreColor: '#0f172a', borderRadius: 4, padding: 3, opacity: 0.95, borderWidth: 1, borderColor: '#e2e8f0' },
+          dropShadow: { enabled: false }
+        },
+        tooltip: { theme: 'dark', y: { formatter: (val) => AppUtils.formatCurrency(val) } }
       };
 
       document.getElementById("chart-expense-breakdown").innerHTML = "";
@@ -488,6 +526,11 @@
       // Misc chart optional (hidden wrapper by default in unified layout)
       const miscWrapper = document.getElementById("chart-misc-wrapper");
       if (miscWrapper) miscWrapper.classList.add('hidden');
+    },
+
+    toggleMisc: function() {
+      this.isShowingMisc = !this.isShowingMisc;
+      this.renderCharts();
     },
 
     sortTable: function(column) {
@@ -570,8 +613,8 @@
           <td class="px-4 py-3 font-bold text-slate-800 text-xs md:text-sm">${amtStr}${rcptHtml}</td>
           <td class="px-4 py-3 text-slate-500 capitalize text-xs">${creator}</td>
           <td class="px-4 py-3 text-right">
-            <button onclick="ExpensesApp.openModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[17px]">edit</span></button>
-            <button onclick="ExpensesApp.openDeleteModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[17px]">delete</span></button>
+            <button data-perm="expenses:edit" onclick="ExpensesApp.openModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[17px]">edit</span></button>
+            <button data-perm="expenses:delete" onclick="ExpensesApp.openDeleteModalByIndex(${index})" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><span class="material-symbols-rounded text-[17px]">delete</span></button>
           </td>
         </tr>
       `;
@@ -598,8 +641,8 @@
               </div>
             </div>
             <div class="flex items-center gap-1 shrink-0">
-              <button onclick="ExpensesApp.openModalByIndex(${index})" class="text-slate-400 hover:text-brand-primary"><span class="material-symbols-rounded text-[18px]">edit</span></button>
-              <button onclick="ExpensesApp.openDeleteModalByIndex(${index})" class="text-slate-400 hover:text-red-500"><span class="material-symbols-rounded text-[18px]">delete</span></button>
+              <button data-perm="expenses:edit" onclick="ExpensesApp.openModalByIndex(${index})" class="text-slate-400 hover:text-brand-primary"><span class="material-symbols-rounded text-[18px]">edit</span></button>
+              <button data-perm="expenses:delete" onclick="ExpensesApp.openDeleteModalByIndex(${index})" class="text-slate-400 hover:text-red-500"><span class="material-symbols-rounded text-[18px]">delete</span></button>
             </div>
           </div>
           <div class="flex items-center justify-between mt-1 pt-2 border-t border-slate-100">
@@ -645,6 +688,7 @@
       const initialBatch = this.tableData.slice(0, this.pageSize);
       tBody.innerHTML = initialBatch.map((exp, i) => this.buildDesktopRowHtml(exp, i)).join('');
       mContainer.innerHTML = initialBatch.map((exp, i) => this.buildMobileCardHtml(exp, i)).join('');
+      if (typeof AccessControl !== 'undefined') AccessControl.repaint('expenses');
       this.renderedCount = initialBatch.length;
 
       this.initScrollListener();
@@ -684,6 +728,7 @@
           tBody.insertAdjacentHTML('beforeend', dHtml);
           mContainer.insertAdjacentHTML('beforeend', mHtml);
           this.renderedCount += nextBatch.length;
+          if (typeof AccessControl !== 'undefined') AccessControl.repaint('expenses');
         }
         this.isLoadingMore = false;
       }, 160);
@@ -760,6 +805,8 @@
     },
 
     openModal: function(exp = null) {
+      if (exp && exp instanceof Event) exp = null;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('expenses', exp && exp.expenseId ? 'edit' : 'create')) return;
       document.getElementById('exp-modal-title').innerText = exp ? 'Edit Expense' : 'Add Expense';
       document.getElementById('exp-id').value = exp ? exp.expenseId : '';
       
@@ -850,24 +897,29 @@
         imageName: imageName
       };
 
+      this.closeModal();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
           btn.innerHTML = `Save Expense`; btn.disabled = false;
           if(res.success) {
             Toast.success(res.message);
-            this.closeModal();
-            this.showShimmer();
             this.fetchData();
-          } else { Toast.error(res.error); }
+          } else {
+            Toast.error(res.error);
+            this.fetchData();
+          }
         })
         .withFailureHandler((err) => {
           btn.innerHTML = `Save Expense`; btn.disabled = false;
-          Toast.error(err.message || 'Server Error.');
+          Toast.error((err && err.message) || 'Server Error.');
+          this.fetchData();
         })
         .api_saveExpense(payload);
     },
 
     openDeleteModal: function(id, desc) {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('expenses', 'delete')) return;
       this.expenseToDelete = id;
       document.getElementById('delete-exp-desc').innerText = desc || 'this expense';
       document.getElementById('delete-exp-modal').classList.remove('opacity-0', 'pointer-events-none');
@@ -882,16 +934,21 @@
 
     confirmDelete: function() {
       if(!this.expenseToDelete) return;
+      const expenseId = this.expenseToDelete;
+      this.closeDeleteModal();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
-          this.closeDeleteModal();
           if(res.success) {
             Toast.success(res.message);
-            this.showShimmer();
             this.fetchData();
-          } else { Toast.error(res.error); }
+          } else {
+            Toast.error(res.error);
+            this.fetchData();
+          }
         })
-        .api_deleteExpense(this.expenseToDelete);
+        .withFailureHandler(() => { this.fetchData(); })
+        .api_deleteExpense(expenseId);
     }
   };
 
@@ -1131,8 +1188,8 @@
         } else {
           tbody.innerHTML = rows.map(function(r) {
             var typeBadge = r.recordType === 'staff'
-              ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase bg-purple-50 text-purple-700 border-purple-100">Staff</span>'
-              : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase bg-red-50 text-red-700 border-red-100">Expense</span>';
+              ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-purple-50 text-purple-700 border-purple-100">Staff</span>'
+              : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-red-50 text-red-700 border-red-100">Expense</span>';
             var statusBadge = '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ' + r.statusClass + '">' + r.status + '</span>';
             var amt = (typeof AppUtils !== 'undefined') ? AppUtils.formatCurrency(r.amount) : r.amount;
             var dateFmt = (typeof ExpensesApp !== 'undefined' && ExpensesApp.formatDateDDMMMYYYY)
@@ -1140,7 +1197,7 @@
             var actions = '';
             if (r.recordType === 'expense' && r.raw && r.raw.expenseId) {
               var pJson = JSON.stringify(r.raw).replace(/"/g, '&quot;');
-              actions = '<button onclick=\'ExpensesApp.openModal(' + pJson + ')\' class="w-6 h-6 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[14px]">edit</span></button>';
+              actions = '<button data-perm="expenses:edit" onclick=\'ExpensesApp.openModal(' + pJson + ')\' class="w-6 h-6 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[14px]">edit</span></button>';
             } else if (r.recordType === 'staff' && r.staffId && typeof StaffApp !== 'undefined') {
               actions = '<button onclick="ExpensesHub.openStaffFromAll(\'' + String(r.staffId).replace(/'/g, '') + '\')" class="w-6 h-6 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[14px]">visibility</span></button>';
             }
@@ -1172,6 +1229,7 @@
           }).join('');
         }
       }
+      if (typeof AccessControl !== 'undefined') AccessControl.repaint('expenses');
     },
 
     openStaffFromAll: function(staffId) {

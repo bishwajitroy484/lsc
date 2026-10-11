@@ -9,7 +9,7 @@
           <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Manage operating costs and staff payroll in one place</p>
         </div>
       </div>
-      <button type="button" onclick="ExpensesHub.onAddClick()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-brand-hover transition-colors shrink-0">
+      <button type="button" data-perm-any="expenses:create,staff:create" onclick="ExpensesHub.onAddClick()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-brand-hover transition-colors shrink-0">
         <span class="material-symbols-rounded text-[18px]">add</span>
       </button>
     </div>
@@ -27,7 +27,7 @@
         </button>
         <div id="exp-multi-select-menu" class="hidden absolute top-full mt-1 right-0 w-full min-w-[140px] bg-white border border-slate-200 shadow-lg rounded-lg max-h-48 overflow-y-auto z-40 p-2"></div>
       </div>
-      <button type="button" onclick="ExpensesHub.onAddClick()" class="hidden md:flex shrink-0 h-8 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-brand-hover transition-colors">
+      <button type="button" data-perm-any="expenses:create,staff:create" onclick="ExpensesHub.onAddClick()" class="hidden md:flex shrink-0 h-8 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-brand-hover transition-colors">
         <span class="material-symbols-rounded text-[16px]">add</span>
         <span class="font-semibold text-xs">Add Record</span>
       </button>
@@ -50,7 +50,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">account_balance_wallet</span>
           <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Total Outflow</p>
-          <span class="metric-tip" tabindex="0" aria-label="About Total Outflow"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Recorded gym expenses plus paid staff cost for the selected year and months or quarters.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Total Outflow"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.totalOutflow') ?></span></span>
         </div>
         <h2 id="kpi-total-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
       </div>
@@ -59,7 +59,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">calendar_month</span>
           <p id="kpi-avg-title" class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Monthly Avg</p>
-          <span class="metric-tip" tabindex="0" aria-label="About period average"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Total outflow divided by how many months or quarters you selected.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About period average"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.periodAverage') ?></span></span>
         </div>
         <h2 id="kpi-avg-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
       </div>
@@ -68,7 +68,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">badge</span>
           <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Staff Cost</p>
-          <span class="metric-tip" tabindex="0" aria-label="About Staff Cost"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Paid staff salary amounts recognized in the selected periods. Pending or failed salary rows are not counted.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Staff Cost"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.staffCost') ?></span></span>
         </div>
         <h2 id="kpi-staff-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
       </div>
@@ -77,7 +77,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-red-100 text-brand-primary flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">receipt_long</span>
           <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Other Expenses</p>
-          <span class="metric-tip" tabindex="0" aria-label="About Other expenses"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Recorded gym expenses such as rent, power, and supplies in the selected periods. Staff payroll is counted separately.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Other expenses"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.otherExpenses') ?></span></span>
         </div>
         <h2 id="kpi-other-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
       </div>
@@ -86,7 +86,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">group</span>
           <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Staff</p>
-          <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Staff count"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">People whose status is Active. The rest of this card opens the staff list.</span></span>
+          <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Staff count"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.staffCount') ?></span></span>
         </div>
         <h2 id="kpi-total-staff" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">--</h2>
       </div>
@@ -95,7 +95,7 @@
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-orange-100 text-orange-700 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">pending_actions</span>
           <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Action</p>
-          <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Action needed"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Staff with at least one salary cycle still unpaid. The rest of this card opens the staff list.</span></span>
+          <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Action needed"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.actionNeeded') ?></span></span>
         </div>
         <h2 id="kpi-action-needed" class="text-sm sm:text-base md:text-lg font-bold text-amber-700 leading-tight">--</h2>
         <p id="kpi-action-needed-sub" class="text-[10px] sm:text-[11px] font-medium text-slate-500 mt-0.5 leading-tight">--</p>
@@ -103,12 +103,12 @@
     </div>
 
     <!-- Desktop: both charts in one row · Mobile: stacked -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-5">
+    <div class="grid grid-cols-1 md:grid-cols-[65fr_35fr] gap-3 md:gap-4 mb-4 md:mb-5">
       <div class="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col min-w-0">
         <div class="flex items-center justify-between mb-2 gap-2">
           <div class="flex items-center gap-1 min-w-0">
             <h3 class="font-bold text-sm text-slate-800 truncate">Expenses Trend</h3>
-            <span class="metric-tip" tabindex="0" aria-label="About Expenses Trend"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Staff cost and other expenses for each selected month or quarter. Switch the chart between bar, area, and line.</span></span>
+            <span class="metric-tip" tabindex="0" aria-label="About Expenses Trend"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.expensesTrend') ?></span></span>
           </div>
           <select id="chart-type-toggle" onchange="ExpensesApp.renderCharts()" class="shrink-0 appearance-none bg-slate-50 pl-2.5 pr-6 py-1 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
             <option value="bar">Bar Chart</option>
@@ -126,8 +126,9 @@
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-1 min-w-0">
             <h3 class="font-bold text-sm text-slate-800 truncate">Expenses by Category</h3>
-            <span class="metric-tip" tabindex="0" aria-label="About Expenses by Category"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Share of spend by category in the selected periods, with staff cost included as its own slice.</span></span>
+            <span class="metric-tip" tabindex="0" aria-label="About Expenses by Category"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.expensesByCategory') ?></span></span>
           </div>
+          <button type="button" id="btn-exp-misc-toggle" onclick="ExpensesApp.toggleMisc()" class="hidden shrink-0 appearance-none bg-red-50 text-brand-primary px-2 py-1 border border-red-200 rounded-md text-[9px] font-bold hover:bg-red-100 transition-colors whitespace-nowrap">View Misc</button>
         </div>
         <div class="relative w-full flex-1 min-h-[200px] md:min-h-[220px]">
           <div id="chart-expense-breakdown" class="absolute inset-0 flex items-center justify-center">
@@ -183,10 +184,10 @@
         <div id="all-records-table-container" class="hidden md:block overflow-auto no-scrollbar max-h-[420px]">
           <table class="w-full text-left border-collapse min-w-[780px]">
             <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
-              <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider">
+              <tr class="text-[11px] text-slate-500 font-bold">
                 <th class="px-4 py-3">Date</th>
                 <th class="px-4 py-3">Type</th>
-                <th class="px-4 py-3">Name / Category</th>
+                <th class="px-4 py-3">Name / category</th>
                 <th class="px-4 py-3">Description</th>
                 <th class="px-4 py-3">Amount</th>
                 <th class="px-4 py-3">Status</th>
@@ -204,7 +205,7 @@
         <div id="expenses-table-container" class="hidden md:block overflow-auto no-scrollbar max-h-[420px]">
           <table class="w-full text-left border-collapse min-w-[700px]">
             <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
-              <tr class="text-[11px] uppercase text-slate-500 font-bold select-none tracking-wider">
+              <tr class="text-[11px] text-slate-500 font-bold select-none">
                 <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('date')">
                   <div class="flex items-center gap-1">Date <span id="sort-icon-date" class="material-symbols-rounded text-[14px]">arrow_downward</span></div>
                 </th>
@@ -215,7 +216,7 @@
                 <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition-colors" onclick="ExpensesApp.sortTable('amount')">
                   <div class="flex items-center gap-1">Amount <span id="sort-icon-amount" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></div>
                 </th>
-                <th class="px-4 py-3">Added By</th>
+                <th class="px-4 py-3">Added by</th>
                 <th class="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -268,14 +269,14 @@
           <input type="hidden" id="exp-id">
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Date *</label>
+              <label class="block text-xs font-bold text-slate-600 mb-1 tracking-wide">Date *</label>
               <div class="relative">
                 <span class="material-symbols-rounded absolute right-2 top-1.5 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
                 <input type="text" id="exp-date" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">
               </div>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Category *</label>
+              <label class="block text-xs font-bold text-slate-600 mb-1 tracking-wide">Category *</label>
               <div class="relative">
                 <select id="exp-category" required onchange="ExpensesApp.checkMiscCategory()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none appearance-none"></select>
                 <span class="material-symbols-rounded absolute right-2 top-1.5 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
@@ -283,24 +284,24 @@
             </div>
           </div>
           <div id="misc-field-container" class="hidden">
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">What is this for? *</label>
+            <label class="block text-xs font-bold text-slate-600 mb-1 tracking-wide">What is this for? *</label>
             <input type="text" id="exp-what-misc" required placeholder="Specify miscellaneous detail (e.g. Printer Ink)" class="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Amount *</label>
+              <label class="block text-xs font-bold text-slate-600 mb-1 tracking-wide">Amount *</label>
               <div class="relative flex items-center">
                 <span class="absolute left-2.5 font-bold text-slate-500 text-sm">₹</span>
                 <input type="number" id="exp-amount" required class="w-full pl-6 pr-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none">
               </div>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Description</label>
+              <label class="block text-xs font-bold text-slate-600 mb-1 tracking-wide">Description</label>
               <input type="text" id="exp-desc" placeholder="e.g. Gym Rent - Sept" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none">
             </div>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt Image (Optional)</label>
+            <label class="block text-xs font-bold text-slate-600 mb-1 tracking-wide">Receipt Image (Optional)</label>
             <div class="flex items-center gap-3">
               <div id="exp-receipt-preview-container" class="hidden w-10 h-10 rounded-lg border border-slate-200 overflow-hidden shrink-0 shadow-sm bg-slate-50 relative">
                 <img id="exp-receipt-preview" src="" class="w-full h-full object-cover">

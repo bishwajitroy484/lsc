@@ -192,8 +192,8 @@ describe('Mock Data Generator', () => {
 
     test('covers both Kids batches and Adult batches across morning and evening', () => {
       const members = datasets.members;
-      const kidsMembers = members.filter(m => m.batchId.toLowerCase().includes('kid') || m.notes.toLowerCase().includes('kid'));
-      const adultMembers = members.filter(m => m.batchId.toLowerCase().includes('adult') || !m.notes.toLowerCase().includes('kid'));
+      const kidsMembers = members.filter(m => String(m.batchId || '').toLowerCase().includes('kid'));
+      const adultMembers = members.filter(m => String(m.batchId || '').toLowerCase().includes('adult'));
 
       expect(kidsMembers.length).toBeGreaterThanOrEqual(4);
       expect(adultMembers.length).toBeGreaterThanOrEqual(10);

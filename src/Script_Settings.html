@@ -115,13 +115,13 @@
     },
 
     applySettingsAccessGates: function() {
-      const canEdit = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'edit');
-      const canViewUsers = typeof AccessControl !== 'undefined' && (AccessControl.can('settings', 'view') || AccessControl.can('settings', 'edit'));
+      const canViewUsers = typeof AccessControl !== 'undefined' && (AccessControl.can('settings', 'view') || AccessControl.can('settings', 'edit') || AccessControl.can('settings', 'create') || AccessControl.can('settings', 'delete'));
       const isOwner = typeof AccessControl !== 'undefined' && AccessControl.session && AccessControl.session.isOwner;
       const usersTab = document.getElementById('tab-btn-users');
       if (usersTab && !canViewUsers) usersTab.classList.add('hidden');
       const addBtn = document.getElementById('btn-add-user');
-      if (addBtn) addBtn.classList.toggle('hidden', !canEdit);
+      const canCreate = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'create');
+      if (addBtn) addBtn.classList.toggle('perm-denied', !canCreate);
       const publishBtn = document.getElementById('btn-publish-webapp');
       if (publishBtn) publishBtn.classList.toggle('hidden', !isOwner);
       const saveDeployBtn = document.getElementById('btn-save-deployment-id');
@@ -470,23 +470,30 @@
       const list = document.getElementById('setup-status-list');
       if (!list || !setup) return;
       const rows = [
-        ['Sheet', setup.spreadsheetOk],
-        ['Settings', setup.settingsOk],
-        ['Drive', setup.driveOk],
-        ['Mail', setup.mailOk],
-        ['ScriptApp', setup.scriptAppOk],
-        ['Calendar', setup.calendarOk],
-        ['Publish API', setup.deployApiOk],
-        ['Trigger', setup.triggerOk],
-        ['Setup done', setup.setupComplete]
+        ['Sheet', setup.spreadsheetOk ? 'ok' : 'missing'],
+        ['Settings', setup.settingsOk ? 'ok' : 'missing'],
+        ['Drive', setup.driveOk ? 'ok' : 'missing'],
+        ['Mail', setup.mailOk ? 'ok' : 'missing'],
+        ['ScriptApp', setup.scriptAppOk ? 'ok' : 'missing'],
+        ['Calendar', setup.calendarOk ? 'ok' : 'missing'],
+        ['Publish API', setup.deployApiOk ? 'ok' : 'missing'],
+        ['Trigger', setup.triggerState || (setup.triggerOk ? 'ok' : 'missing')],
+        ['Setup done', setup.setupComplete ? 'ok' : 'missing']
       ];
       list.innerHTML = rows.map(function(pair) {
-        const ok = !!pair[1];
+        const state = pair[1];
+        const tone = state === 'ok'
+          ? 'bg-emerald-50/70 border-emerald-100 text-emerald-800'
+          : state === 'off'
+            ? 'bg-slate-50 border-slate-200 text-slate-500'
+            : 'bg-amber-50/50 border-amber-200 text-amber-800';
+        const icon = state === 'ok' ? 'check_circle' : state === 'off' ? 'schedule' : 'error';
+        const title = state === 'ok' ? 'OK' : state === 'off' ? 'Not scheduled' : 'Needed';
         return '<div class="flex items-center justify-between gap-0.5 px-1.5 py-1 md:px-2 md:py-1.5 rounded-md md:rounded-lg border min-w-0 ' +
-          (ok ? 'bg-emerald-50/70 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-200 text-amber-800') +
+          tone +
           '"><span class="font-semibold truncate text-[9px] md:text-[11px]">' + pair[0] + '</span>' +
-          '<span class="material-symbols-rounded text-[13px] md:text-[14px] shrink-0" title="' + (ok ? 'OK' : 'Needed') + '">' +
-          (ok ? 'check_circle' : 'error') + '</span></div>';
+          '<span class="material-symbols-rounded text-[13px] md:text-[14px] shrink-0" title="' + title + '">' +
+          icon + '</span></div>';
       }).join('');
       const hint = document.getElementById('setup-auth-hint');
       if (hint) {
@@ -496,6 +503,10 @@
           hint.textContent = 'Google Calendar permission is missing. Click Authorize — if prompted, allow Calendar, then click Authorize again.';
         } else if (!setup.deployApiOk) {
           hint.textContent = 'Publish API is not ready. Click Authorize (allow script projects/deployments). If it still fails, enable Apps Script API on the script’s Cloud project, then Authorize again.';
+        } else if (setup.triggerState === 'missing') {
+          hint.textContent = 'Weekly report is on, but the trigger is not created yet. Click Authorize again, or save the notification settings.';
+        } else if (setup.triggerState === 'off') {
+          hint.textContent = 'Weekly report is off, so the trigger stays unscheduled. Turn the weekly report on if you want that email.';
         } else {
           hint.textContent = 'Sign in as the deployer Google account, then authorize once (Mail, ScriptApp, Calendar, and Publish API).';
         }
@@ -520,12 +531,21 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[15px]">progress_activity</span><span>…</span>';
       }
+      const releaseAuthButton = function() {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = authBtnHtml;
+        }
+      };
+      const onStall = function() {
+        releaseAuthButton();
+        document.removeEventListener('lsc-action-stalled', onStall);
+      };
+      document.addEventListener('lsc-action-stalled', onStall);
       google.script.run
         .withSuccessHandler((res) => {
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = authBtnHtml;
-          }
+          document.removeEventListener('lsc-action-stalled', onStall);
+          releaseAuthButton();
           if (!res || !res.success) {
             if (res && res.authorizationUrl) {
               this.openAuthorizationUrl(res.authorizationUrl);
@@ -542,10 +562,8 @@
           this.refreshDeployStatus();
         })
         .withFailureHandler((err) => {
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = authBtnHtml;
-          }
+          document.removeEventListener('lsc-action-stalled', onStall);
+          releaseAuthButton();
           const msg = err && err.message ? err.message : 'Authorization failed.';
           this.showToast(msg, true);
         })
@@ -599,6 +617,8 @@
       if (content) content.classList.remove('hidden');
       if (!list) return;
       const canEdit = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'edit');
+      const canDelete = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'delete');
+      const canView = typeof AccessControl !== 'undefined' && (AccessControl.can('settings', 'view') || canEdit);
       if (!this.usersCache.length) {
         list.innerHTML = '';
         if (empty) empty.classList.remove('hidden');
@@ -610,13 +630,16 @@
         const viewMods = this.formatViewModules_(perms);
         const uid = String(u.userId || '').replace(/'/g, '');
         const isDisabled = String(u.status || '').toLowerCase() === 'disabled';
-        const actions = canEdit
+        const actions = (canView || canEdit || canDelete)
           ? ('<div class="flex gap-1 shrink-0">' +
-             (isDisabled ? '' :
-               '<button type="button" title="Email access link" onclick="SettingsApp.sendInvitation(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">forward_to_inbox</span></button>' +
-               '<button type="button" title="Link and QR code" onclick="SettingsApp.openInviteModal(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">qr_code_2</span></button>') +
-             '<button type="button" onclick="SettingsApp.openUserEditor(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">edit</span></button>' +
-             (u.isOwner ? '' : '<button type="button" onclick="SettingsApp.deleteUser(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-red-500 cursor-pointer"><span class="material-symbols-rounded text-[16px]">delete</span></button>') +
+             (canView && !isDisabled ?
+               '<button type="button" title="Link and QR code" onclick="SettingsApp.openInviteModal(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">qr_code_2</span></button>' : '') +
+             (canEdit && !isDisabled ?
+               '<button type="button" title="Email access link" onclick="SettingsApp.sendInvitation(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">forward_to_inbox</span></button>' : '') +
+             (canEdit ?
+               '<button type="button" data-perm="settings:edit" onclick="SettingsApp.openUserEditor(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">edit</span></button>' : '') +
+             (canDelete && !u.isOwner ?
+               '<button type="button" data-perm="settings:delete" onclick="SettingsApp.deleteUser(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-red-500 cursor-pointer"><span class="material-symbols-rounded text-[16px]">delete</span></button>' : '') +
              '</div>')
           : '';
         return '<div class="p-3 border border-slate-200 rounded-xl flex items-start justify-between gap-2">' +
@@ -759,6 +782,8 @@
     },
 
     openUserEditor: function(userId) {
+      const needed = userId ? 'edit' : 'create';
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', needed)) return;
       const existing = userId ? this.usersCache.find(u => String(u.userId) === String(userId)) : null;
       document.getElementById('user-editor-title').textContent = existing ? 'Edit user' : 'Add user';
       document.getElementById('user-edit-id').value = existing ? existing.userId : '';
@@ -791,14 +816,29 @@
       body.innerHTML = this.uiAccessModules.map(mod => {
         const row = mod === 'expenses' ? this.mergeExpenseStaffPerm_(perms) : (perms[mod] || {});
         const label = this.moduleLabels[mod] || mod;
-        const cell = (action) =>
-          '<td class="text-center px-1 py-1.5"><input type="checkbox" data-mod="' + mod + '" data-act="' + action + '" ' +
-          (row[action] ? 'checked' : '') + ' class="rounded border-slate-300 text-brand-primary"></td>';
+        const cell = (action) => {
+          const locked = (mod === 'dashboard' || mod === 'calendar') && action !== 'view';
+          return '<td class="text-center px-1 py-1.5"><input type="checkbox" data-mod="' + mod + '" data-act="' + action + '" ' +
+            (row[action] ? 'checked' : '') + (locked ? ' disabled' : '') +
+            ' onchange="SettingsApp.onPermToggle(this)" class="rounded border-slate-300 text-brand-primary"></td>';
+        };
         return '<tr class="border-t border-slate-100">' +
           '<td class="px-2 py-1.5 font-semibold text-slate-700">' + label + '</td>' +
           cell('view') + cell('create') + cell('edit') + cell('delete') +
           '</tr>';
       }).join('');
+    },
+
+    onPermToggle: function(cb) {
+      if (!cb) return;
+      const mod = cb.getAttribute('data-mod');
+      const act = cb.getAttribute('data-act');
+      const boxes = document.querySelectorAll('#user-perm-matrix input[data-mod="' + mod + '"]');
+      if (act === 'view' && !cb.checked) {
+        boxes.forEach(el => { if (el.getAttribute('data-act') !== 'view') el.checked = false; });
+      } else if (act !== 'view' && cb.checked) {
+        boxes.forEach(el => { if (el.getAttribute('data-act') === 'view') el.checked = true; });
+      }
     },
 
     applyUserPreset: function() {
@@ -858,6 +898,7 @@
     },
 
     deleteUser: function(userId) {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'delete')) return;
       if (!userId || !confirm('Remove this user? Their link will stop working.')) return;
       google.script.run
         .withSuccessHandler((res) => {
@@ -872,11 +913,8 @@
     },
 
     initSectionDefaults: function() {
-      // Keep Identity open; collapse the rest on small screens for faster scanning.
-      const isMobile = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
-      if (!isMobile) return;
-      document.querySelectorAll('#general-content .settings-section').forEach((section, index) => {
-        if (index === 0) return;
+      document.querySelectorAll('#general-content .settings-section').forEach((section) => {
+        if (section.getAttribute('data-section') === 'setup') return;
         const button = section.querySelector('button[aria-expanded]');
         const body = section.querySelector('.settings-section-body');
         const chevron = section.querySelector('.settings-section-chevron');
@@ -1640,6 +1678,7 @@
     },
 
     saveGeneralSettings: function() {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'edit')) return;
        this.syncWeeklyFields();
        const saveBtns = [
          document.getElementById('btn-save-general'),
@@ -1834,18 +1873,18 @@
 
       if (this.schemas.length === 0) {
          if(masterEmpty) masterEmpty.classList.remove('hidden');
-         if(dskList && window.innerWidth >= 1024) dskList.classList.add('hidden');
+         if(dskList && window.innerWidth >= 768) dskList.classList.add('hidden');
          if(mobSelectWrap) mobSelectWrap.classList.add('hidden');
          if(detailEmpty) detailEmpty.classList.add('hidden'); 
          if(detailContent) detailContent.classList.add('hidden');
       } else {
          if(masterEmpty) masterEmpty.classList.add('hidden');
-         if(dskList && window.innerWidth >= 1024) dskList.classList.remove('hidden');
+         if(dskList && window.innerWidth >= 768) dskList.classList.remove('hidden');
          if(mobSelectWrap) mobSelectWrap.classList.remove('hidden');
          
          if (!this.activeSchema) {
             if(detailContent) detailContent.classList.add('hidden');
-            if(window.innerWidth >= 1024) {
+            if(window.innerWidth >= 768) {
                this.selectCategory(this.schemas[0].key);
             } else {
                if(detailEmpty) detailEmpty.classList.remove('hidden');
@@ -1902,14 +1941,14 @@
             : 'bg-white border-transparent hover:bg-slate-50 text-slate-700';
           
           dskHtml += 
-            '<button type="button" onclick="SettingsApp.selectCategory(\'' + s.key + '\')" class="w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left group cursor-pointer ' + activeClass + '">' +
+            '<button type="button" onclick="SettingsApp.selectCategory(\'' + s.key + '\')" class="w-full flex items-center justify-between p-2 rounded-lg border transition-all text-left group cursor-pointer ' + activeClass + '">' +
               '<div class="flex items-center gap-3 min-w-0">' +
                 '<div class="w-8 h-8 rounded-lg ' + (isActive ? 'bg-brand-primary text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200') + ' flex items-center justify-center shrink-0 transition-colors">' +
                   '<span class="material-symbols-rounded text-[18px]">list_alt</span>' +
                 '</div>' +
                 '<div class="min-w-0">' +
                   '<h4 class="text-xs font-bold truncate leading-tight">' + s.name + '</h4>' +
-                  '<span class="text-[10px] font-mono font-semibold uppercase ' + (isActive ? 'text-brand-primary' : 'text-slate-400') + '">' + s.prefix + '</span>' +
+                  '<span class="text-[10px] font-mono font-semibold ' + (isActive ? 'text-brand-primary' : 'text-slate-400') + '">' + s.prefix + '</span>' +
                 '</div>' +
               '</div>' +
               '<div class="flex items-center gap-1.5 shrink-0">' +
@@ -1952,7 +1991,7 @@
             usagesHtml += 
               '<div class="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200 text-slate-600">' +
                 '<span class="material-symbols-rounded text-[12px] text-slate-400">link</span>' +
-                '<span class="text-[9px] font-bold uppercase tracking-wider">' + u.tab + ' &rarr; ' + u.column + '</span>' +
+                '<span class="text-[9px] font-bold tracking-wider">' + u.tab + ' &rarr; ' + u.column + '</span>' +
               '</div>';
          });
       } else {
@@ -1981,7 +2020,7 @@
            headHtml += '<th class="px-4 py-3 whitespace-nowrap">' + col.label + '</th>';
          }
       });
-      headHtml += '<th class="px-4 py-3 text-right">Order & Actions</th>';
+      headHtml += '<th class="px-4 py-3 text-right">Order & actions</th>';
       if(thead) thead.innerHTML = headHtml;
 
       const totalLen = this.activeOptionsList.length;
@@ -2057,7 +2096,7 @@
           '<div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">' +
             '<div class="flex items-start justify-between gap-2">' +
               '<div>' +
-                '<span class="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-primary bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">' + (opt.id || 'ITEM') + '</span>' +
+                '<span class="text-[10px] font-mono font-bold tracking-wider text-brand-primary bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">' + (opt.id || 'ITEM') + '</span>' +
                 '<h4 class="text-sm font-bold text-slate-800 mt-1">' + (opt.name || '--') + '</h4>' +
               '</div>' +
               '<div class="flex items-center gap-1 shrink-0">' +
@@ -2073,7 +2112,7 @@
             (attributesHtml ? '<div class="bg-slate-50/70 rounded-xl p-2.5 space-y-0.5">' + attributesHtml + '</div>' : '') +
 
             '<div class="flex items-center justify-between pt-2 border-t border-slate-100">' +
-              '<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Position #' + (index + 1) + '</span>' +
+              '<span class="text-[10px] font-bold tracking-wider text-slate-400">Position #' + (index + 1) + '</span>' +
               '<div class="flex items-center gap-1.5">' +
                 '<button type="button" onclick="SettingsApp.moveOption(' + index + ', -1)" ' + (index === 0 ? 'disabled' : '') + ' class="h-8 px-2.5 flex items-center gap-1 text-slate-600 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-30 disabled:pointer-events-none rounded-xl text-xs font-semibold transition-colors">' +
                   '<span class="material-symbols-rounded text-[16px]">arrow_upward</span>' +
@@ -2117,6 +2156,7 @@
     },
 
     saveOrder: function() {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'edit')) return;
       if (!this.activeSchema) return;
       const btn = document.getElementById('btn-save-order');
       if(btn) { btn.innerHTML = 'Saving...'; btn.disabled = true; }
@@ -2139,6 +2179,8 @@
 
     openOptionModal: function(optOrId = null) {
       if(!this.activeSchema) return;
+      const isEdit = (typeof optOrId === 'string' && optOrId) || (optOrId && typeof optOrId === 'object' && !(optOrId instanceof Event));
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', isEdit ? 'edit' : 'create')) return;
       let opt = null;
       if (typeof optOrId === 'string' && optOrId) {
         opt = this.activeOptionsList.find(o => o.id === optOrId) || null;
@@ -2175,6 +2217,8 @@
 
     saveOption: function(e) {
       e.preventDefault();
+      const existingId = (document.getElementById('dyn-opt-id') || {}).value;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', existingId ? 'edit' : 'create')) return;
       if (!AppUtils.validateRequiredFields('option-form')) return;
       const btn = document.getElementById('btn-save-opt');
       if(btn) { btn.innerHTML = 'Saving...'; btn.disabled = true; }
@@ -2240,6 +2284,7 @@
     },
 
     confirmDelete: function() {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'delete')) return;
       if(!this.optionToDelete || !this.activeSchema) return;
       const updatedList = this.activeOptionsList.filter(o => o.id !== this.optionToDelete);
       google.script.run
@@ -2259,6 +2304,7 @@
     },
     
     openSchemaModal: function() {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'create')) return;
       this.isEditingSchema = false;
       const form = document.getElementById('schema-form');
       if(form) form.reset();
@@ -2300,6 +2346,7 @@
 
     editSchema: function() {
       if(!this.activeSchema) return;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'edit')) return;
       this.isEditingSchema = true;
       const form = document.getElementById('schema-form');
       if(form) form.reset();
@@ -2426,6 +2473,7 @@
 
     saveSchema: function(e) {
       e.preventDefault();
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', this.isEditingSchema ? 'edit' : 'create')) return;
       if (!AppUtils.validateRequiredFields('schema-form')) return;
       const btn = document.getElementById('btn-save-schema');
       if(btn) { btn.innerHTML = 'Saving...'; btn.disabled = true; }

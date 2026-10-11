@@ -30,7 +30,7 @@
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
         <div class="w-6 h-6 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">group</span></div>
         <p class="text-[11px] sm:text-xs text-slate-500 font-semibold truncate min-w-0">Active Members</p>
-        <span class="metric-tip" tabindex="0" aria-label="About Active Members"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Members whose membership covered the selected months or quarters. Plan chips split that same group into Quarterly, Ad-hoc, Trial, and other plans.</span></span>
+        <span class="metric-tip" tabindex="0" aria-label="About Active Members"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.activeMembers') ?></span></span>
       </div>
       <div class="h-7 flex items-center mb-1 min-w-0"><h2 id="kpi-active" class="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 leading-none truncate">--</h2></div>
       <div id="kpi-active-segregation" class="grid grid-cols-2 gap-1 mt-auto border-t border-slate-100 pt-1.5 sm:flex sm:flex-wrap sm:gap-1 sm:pt-2 min-h-[26px]"></div>
@@ -40,7 +40,7 @@
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
         <div class="w-6 h-6 rounded bg-red-50 text-brand-primary flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance_wallet</span></div>
         <p class="text-[11px] sm:text-xs text-slate-500 font-semibold truncate min-w-0">Total Collected</p>
-        <span class="metric-tip" tabindex="0" aria-label="About Total Collected"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Sum of member payments marked Paid/Completed in the selected year and months/quarters. Uses your Anchor or Split revenue recognition setting.</span></span>
+        <span class="metric-tip" tabindex="0" aria-label="About Total Collected"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.totalCollected') ?></span></span>
       </div>
       <div class="h-7 flex items-center min-w-0"><h2 id="kpi-collected" class="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 leading-none truncate">--</h2></div>
     </div>
@@ -49,7 +49,7 @@
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
         <div class="w-6 h-6 rounded bg-red-100 text-brand-primary flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">account_balance</span></div>
         <p class="text-[11px] sm:text-xs text-red-900/80 font-bold truncate min-w-0">Net-In Hand</p>
-        <span class="metric-tip" tabindex="0" aria-label="About Net-In Hand"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Money already left after costs: recognized collections minus operating expenses. “Remaining” is unpaid renewals still due from today through the rest of the selected year, including later this month, minus estimated future costs.</span></span>
+        <span class="metric-tip" tabindex="0" aria-label="About Net-In Hand"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.netInHand') ?></span></span>
       </div>
       <div class="h-7 flex items-center mb-1 min-w-0"><h2 id="kpi-net" class="text-lg sm:text-xl md:text-2xl font-bold text-red-900 leading-none truncate">--</h2></div>
       <div id="kpi-net-forecast-container" class="mt-auto border-t border-red-200/50 pt-2 min-h-[26px] flex items-center justify-between text-[11px]">
@@ -62,7 +62,7 @@
       <div class="flex items-center gap-1.5 mb-2 min-w-0">
         <div class="w-6 h-6 rounded bg-red-50 text-red-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">error</span></div>
         <p class="text-[11px] sm:text-xs text-slate-500 font-semibold truncate min-w-0">Overdue Amount</p>
-        <span class="metric-tip" tabindex="0" aria-label="About Overdue Amount"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Estimated unpaid dues whose billing month falls in the selected months or quarters.</span></span>
+        <span class="metric-tip" tabindex="0" aria-label="About Overdue Amount"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.overdueAmount') ?></span></span>
       </div>
       <div class="h-7 flex items-center min-w-0"><h2 id="kpi-overdue" class="text-lg sm:text-xl md:text-2xl font-bold text-slate-800 leading-none truncate">--</h2></div>
     </div>
@@ -70,15 +70,15 @@
     <div class="bg-slate-50 p-2.5 sm:p-3.5 rounded-xl shadow-sm border border-slate-200 col-span-2 flex flex-col justify-between min-w-0 overflow-visible">
       <div class="flex items-center justify-between mb-2 gap-2 min-w-0">
         <div class="flex items-center gap-1.5 min-w-0">
-          <h3 class="font-bold text-xs md:text-sm text-slate-800 truncate">Operating Expenses</h3>
-          <span class="metric-tip" tabindex="0" aria-label="About Operating Expenses"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">All running costs for the selected periods: gym/utilities expenses plus paid staff salaries. Total = Utilities + Staff.</span></span>
+          <h3 class="font-bold text-xs md:text-sm text-slate-800 truncate">Expenses</h3>
+          <span class="metric-tip" tabindex="0" aria-label="About Operating Expenses"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.operatingExpenses') ?></span></span>
         </div>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-y-2 mb-2 min-w-0">
         <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
           <div class="w-6 h-6 rounded bg-red-100 text-red-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">domain</span></div>
           <div class="min-w-0">
-            <div class="flex items-center gap-1"><p class="text-[11px] sm:text-xs text-slate-500 font-medium">Utilities</p><span class="metric-tip" tabindex="0" aria-label="About Utilities"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Recorded gym expenses (rent, power, supplies, etc.) recognized in the selected periods. Excludes staff salary payments.</span></span></div>
+            <div class="flex items-center gap-1"><p class="text-[11px] sm:text-xs text-slate-500 font-medium">Utilities</p><span class="metric-tip" tabindex="0" aria-label="About Utilities"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.utilities') ?></span></span></div>
             <div class="h-5 flex items-center"><h4 id="kpi-bus-exp" class="font-bold text-xs md:text-sm text-slate-800 truncate">--</h4></div>
           </div>
         </div>
@@ -86,7 +86,7 @@
         <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
           <div class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[15px]">badge</span></div>
           <div class="min-w-0">
-            <div class="flex items-center gap-1"><p class="text-[11px] sm:text-xs text-slate-500 font-medium">Staff</p><span class="metric-tip" tabindex="0" aria-label="About Staff cost"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Paid staff salary/cost amounts recognized in the selected periods. Pending or failed salary rows are not counted.</span></span></div>
+            <div class="flex items-center gap-1"><p class="text-[11px] sm:text-xs text-slate-500 font-medium">Staff</p><span class="metric-tip" tabindex="0" aria-label="About Staff cost"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.staffCost') ?></span></span></div>
             <div class="h-5 flex items-center"><h4 id="kpi-staff-cost" class="font-bold text-xs md:text-sm text-slate-800 truncate">--</h4></div>
           </div>
         </div>
@@ -98,12 +98,12 @@
   </div>
 
   
-  <div class="px-3 sm:px-4 md:px-5 grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4 min-w-0 items-stretch">
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
+  <div class="px-3 sm:px-4 md:px-5 grid grid-cols-1 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4 mb-4 min-w-0 items-stretch">
+    <div class="lg:col-span-2 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Revenue vs Expenses</h3>
-          <span class="metric-tip" tabindex="0" aria-label="About Revenue vs Expenses"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Compares recognized member collections against total operating expenses for each selected month or quarter.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Revenue vs Expenses"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.revenueVsExpenses') ?></span></span>
         </div>
         <div class="flex items-center gap-1 text-slate-400 shrink-0">
           <button onclick="window.toggleDataLabels('revExp', this)" class="text-brand-primary p-0.5 rounded transition-colors" title="Toggle value labels"><span class="material-symbols-rounded text-[16px]">label</span></button>
@@ -111,15 +111,16 @@
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
+        <div class="dash-chart-shimmer absolute inset-0 z-10 rounded-xl shimmer opacity-70 hidden"></div>
         <div id="chart-rev-exp" class="absolute inset-0"></div>
       </div>
     </div>
 
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
+    <div class="lg:col-span-1 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Members by Batch</h3>
-          <span class="metric-tip" tabindex="0" aria-label="About Members by Batch"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Members covered by the selected months or quarters, grouped by batch. People who were not members in that window are left out.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Members by Batch"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.membersByBatch') ?></span></span>
         </div>
         <div class="flex items-center gap-1 text-slate-400 shrink-0">
           <button onclick="window.toggleDataLabels('batch', this)" class="text-brand-primary p-0.5 rounded transition-colors" title="Toggle value labels"><span class="material-symbols-rounded text-[16px]">label</span></button>
@@ -127,15 +128,16 @@
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
+        <div class="dash-chart-shimmer absolute inset-0 z-10 rounded-xl shimmer opacity-70 hidden"></div>
         <div id="chart-batch" class="absolute inset-0"></div>
       </div>
     </div>
 
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
+    <div class="lg:col-span-2 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1.5 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Net-In-Hand Forecast</h3>
-          <span class="metric-tip" tabindex="0" aria-label="About Net-In-Hand Forecast"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Solid line = cash already recognized (collections − expenses). Green dotted line adds renewals not yet collected from today onward, including later this month, and estimated future costs.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Net-In-Hand Forecast"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.netInHandForecast') ?></span></span>
         </div>
         <div class="flex items-center gap-1 text-slate-400 shrink-0">
           <button onclick="window.toggleDataLabels('pred', this)" class="text-brand-primary p-0.5 rounded transition-colors" title="Toggle value labels"><span class="material-symbols-rounded text-[16px]">label</span></button>
@@ -149,7 +151,7 @@
         </div>
         <span class="text-slate-300">•</span>
         <div class="flex items-center gap-1 min-w-0">
-          <span class="text-slate-400 font-medium truncate">Remaining:</span>
+          <span class="text-slate-400 font-medium truncate">Projected:</span>
           <span id="pred-sum-remaining" class="font-bold text-emerald-600">--</span>
         </div>
         <span class="text-slate-300">•</span>
@@ -159,36 +161,37 @@
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
+        <div class="dash-chart-shimmer absolute inset-0 z-10 rounded-xl shimmer opacity-70 hidden"></div>
         <div id="chart-prediction" class="absolute inset-0"></div>
       </div>
     </div>
 
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
+    <div class="lg:col-span-2 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
-          <h3 class="font-bold text-sm text-slate-800 truncate">Collection Trend</h3>
-          <span class="metric-tip" tabindex="0" aria-label="About Collection Trend"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Period-by-period paid collections vs estimated overdue dues. Helps see whether money coming in is keeping up with unpaid renewals.</span></span>
+          <h3 class="font-bold text-sm text-slate-800 truncate">Cash vs UPI</h3>
+          <span class="metric-tip" tabindex="0" aria-label="About Cash vs UPI"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.cashVsUpi') ?></span></span>
         </div>
         <div class="flex items-center gap-1 text-slate-400 shrink-0">
-          <select id="toggle-trend" onchange="DashboardState.rebuildCharts()" class="appearance-none bg-slate-50 pl-2 pr-6 py-1 border border-slate-200 rounded-md text-[9px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2212%22%20height%3D%2212%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M3%205l3%203%203-3%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
-            <option value="line">Line</option>
-            <option value="area">Area</option>
-            <option value="bar">Bar</option>
+          <select id="toggle-trend-mode" onchange="window.renderCashUpiChart()" title="Amount or percentage" class="appearance-none bg-slate-50 pl-2 pr-6 py-1 border border-slate-200 rounded-md text-[9px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2212%22%20height%3D%2212%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M3%205l3%203%203-3%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+            <option value="amount">Amount</option>
+            <option value="percent">Percentage</option>
           </select>
           <button onclick="window.toggleDataLabels('trend', this)" class="text-brand-primary p-0.5 rounded transition-colors" title="Toggle value labels"><span class="material-symbols-rounded text-[16px]">label</span></button>
-          <button onclick="window.openChartModal('Collection Trend', 'trend')" class="hidden md:flex hover:text-brand-primary p-0.5 rounded"><span class="material-symbols-rounded text-[16px]">open_in_full</span></button>
+          <button onclick="window.openChartModal('Cash vs UPI', 'trend')" class="hidden md:flex hover:text-brand-primary p-0.5 rounded"><span class="material-symbols-rounded text-[16px]">open_in_full</span></button>
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
+        <div class="dash-chart-shimmer absolute inset-0 z-10 rounded-xl shimmer opacity-70 hidden"></div>
         <div id="chart-trend" class="absolute inset-0"></div>
       </div>
     </div>
 
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
+    <div class="lg:col-span-1 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
-          <h3 class="font-bold text-sm text-slate-800 truncate">Expense Breakdown</h3>
-          <span class="metric-tip" tabindex="0" aria-label="About Expense Breakdown"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Share of operating spend by category in the selected periods, including staff cost. Use View Misc to drill into miscellaneous expense details.</span></span>
+          <h3 class="font-bold text-sm text-slate-800 truncate">Expenses</h3>
+          <span class="metric-tip" tabindex="0" aria-label="About Expense Breakdown"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.expenseBreakdown') ?></span></span>
         </div>
         <div class="flex items-center gap-1 text-slate-400 shrink-0">
           <button id="btn-misc-toggle" onclick="DashboardState.toggleMisc()" class="hidden appearance-none bg-red-50 text-brand-primary px-2 py-1 border border-red-200 rounded-md text-[9px] font-bold hover:bg-red-100 transition-colors whitespace-nowrap">View Misc</button>
@@ -197,11 +200,12 @@
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
+        <div class="dash-chart-shimmer absolute inset-0 z-10 rounded-xl shimmer opacity-70 hidden"></div>
         <div id="chart-expense-breakdown" class="absolute inset-0"></div>
       </div>
     </div>
 
-    <div id="dash-birthdays" class="bg-gradient-to-b from-rose-50 via-amber-50/70 to-white rounded-xl shadow-sm border border-rose-100 overflow-hidden flex flex-col h-full min-w-0 min-h-[220px]">
+    <div id="dash-birthdays" class="lg:col-span-2 bg-gradient-to-b from-rose-50 via-amber-50/70 to-white rounded-xl shadow-sm border border-rose-100 overflow-hidden flex flex-col h-full min-w-0 min-h-[220px]">
       <div class="px-3 py-2.5 border-b border-rose-100 bg-white/70 flex items-center justify-between gap-2 shrink-0">
         <h3 class="font-bold text-sm text-slate-800 flex items-center gap-1.5 min-w-0">
           <span class="text-base leading-none shrink-0" aria-hidden="true">🎂</span>
@@ -221,7 +225,7 @@
         <h3 class="font-bold text-xs md:text-sm text-slate-800 flex items-center gap-1.5 min-w-0">
           <span class="material-symbols-rounded text-red-500 text-[16px] shrink-0">error</span>
           <span class="truncate">Overdue</span>
-          <span class="metric-tip" tabindex="0" aria-label="About Overdue table"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Active members whose next renewal date is already past. Amount is the estimated unpaid dues; days show how late they are. Ad-hoc/trial plans are excluded.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Overdue table"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.overdueTable') ?></span></span>
         </h3>
         <div class="relative w-[32%] max-w-[10rem] sm:w-48 shrink-0 min-w-[6.5rem]">
           <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[14px]">search</span>
@@ -231,12 +235,12 @@
       <div id="table-container-overdue" class="max-h-[260px] overflow-auto no-scrollbar relative">
         <table class="w-full text-left border-collapse">
           <thead class="sticky top-0 z-20 shadow-sm">
-            <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider cursor-pointer select-none">
+            <tr class="text-[11px] text-slate-500 font-bold cursor-pointer select-none">
               <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'name')"><div class="flex items-center">Member <span id="sort-overdue-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'plan')"><div class="flex items-center">Plan <span id="sort-overdue-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'amount')"><div class="flex items-center">Amount <span id="sort-overdue-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'date')"><div class="flex items-center">Due Date <span id="sort-overdue-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days Overdue</span><span class="sm:hidden">Days</span> <span id="sort-overdue-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'date')"><div class="flex items-center">Due date <span id="sort-overdue-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days overdue</span><span class="sm:hidden">Days</span> <span id="sort-overdue-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-2 md:px-3 py-2.5 font-bold text-center border-b border-slate-100 w-12 md:w-16"><span class="hidden md:inline">Notify</span><span class="md:hidden">WA</span></th>
             </tr>
           </thead>
@@ -250,7 +254,7 @@
         <h3 class="font-bold text-xs md:text-sm text-slate-800 flex items-center gap-1.5 min-w-0">
           <span class="material-symbols-rounded text-amber-500 text-[16px] shrink-0">calendar_month</span>
           <span class="truncate">Upcoming</span>
-          <span class="metric-tip" tabindex="0" aria-label="About Upcoming table"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble">Active members due to renew within the next 7 days (including today). Amount is the expected renewal value for their plan. Ad-hoc/trial plans are excluded.</span></span>
+          <span class="metric-tip" tabindex="0" aria-label="About Upcoming table"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.upcomingTable') ?></span></span>
         </h3>
         <div class="relative w-[32%] max-w-[10rem] sm:w-48 shrink-0 min-w-[6.5rem]">
           <span class="material-symbols-rounded absolute left-2.5 top-1.5 text-slate-400 text-[14px]">search</span>
@@ -260,12 +264,12 @@
       <div id="table-container-upcoming" class="max-h-[260px] overflow-auto no-scrollbar relative">
         <table class="w-full text-left border-collapse">
           <thead class="sticky top-0 z-20 shadow-sm">
-            <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider cursor-pointer select-none">
+            <tr class="text-[11px] text-slate-500 font-bold cursor-pointer select-none">
               <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'name')"><div class="flex items-center">Member <span id="sort-upcoming-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'plan')"><div class="flex items-center">Plan <span id="sort-upcoming-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'amount')"><div class="flex items-center">Amount <span id="sort-upcoming-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'date')"><div class="flex items-center">Due Date <span id="sort-upcoming-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days Left</span><span class="sm:hidden">Days</span> <span id="sort-upcoming-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'date')"><div class="flex items-center">Due date <span id="sort-upcoming-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days left</span><span class="sm:hidden">Days</span> <span id="sort-upcoming-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-2 md:px-3 py-2.5 font-bold text-center border-b border-slate-100 w-12 md:w-16"><span class="hidden md:inline">Notify</span><span class="md:hidden">WA</span></th>
             </tr>
           </thead>

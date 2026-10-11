@@ -28,12 +28,12 @@
       <div id="staff-table-container" class="hidden md:block overflow-auto no-scrollbar max-h-[460px]">
         <table class="w-full text-left border-collapse min-w-[750px]">
           <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
-            <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider select-none">
+            <tr class="text-[11px] text-slate-500 font-bold select-none">
               <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('name')">Name <span id="sort-icon-name" class="material-symbols-rounded text-[14px]">arrow_downward</span></th>
               <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('role')">Role <span id="sort-icon-role" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
               <th class="px-4 py-3">Phone</th>
-              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('salary')">Salary / Month <span id="sort-icon-salary" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
-              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('date')">Month / Cycle <span id="sort-icon-date" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
+              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('salary')">Salary / month <span id="sort-icon-salary" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
+              <th class="px-4 py-3 cursor-pointer hover:bg-slate-200" onclick="StaffApp.sortTable('date')">Month / cycle <span id="sort-icon-date" class="material-symbols-rounded text-[14px] text-transparent">arrow_downward</span></th>
               <th class="px-4 py-3">Status</th>
               <th class="px-4 py-3 text-right">Actions</th>
             </tr>
@@ -55,8 +55,8 @@
         <h2 class="text-lg font-bold text-slate-800">Staff Details</h2>
       </div>
       <div class="flex items-center gap-1">
-         <button onclick="StaffApp.editCurrentMember()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-red-50 hover:text-brand-primary rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">edit</span></button>
-         <button onclick="StaffApp.deleteCurrentMember()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">delete</span></button>
+         <button data-perm="staff:edit" onclick="StaffApp.editCurrentMember()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-red-50 hover:text-brand-primary rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">edit</span></button>
+         <button data-perm="staff:delete" onclick="StaffApp.deleteCurrentMember()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">delete</span></button>
       </div>
     </header>
 
@@ -108,9 +108,9 @@
           <div class="flex-1 min-h-0 overflow-y-auto no-scrollbar">
             <table class="w-full text-left border-collapse">
               <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-[1]">
-                <tr class="text-[9px] uppercase text-slate-500 font-bold">
-                  <th class="px-4 py-2">Cycle / Date</th>
-                  <th class="px-4 py-2">Amount & Status</th>
+                <tr class="text-[9px] text-slate-500 font-bold">
+                  <th class="px-4 py-2">Cycle / date</th>
+                  <th class="px-4 py-2">Amount & status</th>
                   <th class="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
@@ -136,34 +136,37 @@
           <input type="hidden" id="stf-id">
           
           <div class="grid grid-cols-2 gap-x-3 gap-y-4">
-            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Full Name *</label><input type="text" id="stf-name" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
-            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Role *</label><select id="stf-role" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none appearance-none"></select></div>
+            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Full Name *</label><input type="text" id="stf-name" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
+            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Role *</label><select id="stf-role" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none appearance-none"></select></div>
             
-            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Phone *</label><input type="tel" id="stf-phone" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
-            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Email ID</label><input type="email" id="stf-email" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
+            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Phone *</label><input type="tel" id="stf-phone" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
+            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Email ID</label><input type="email" id="stf-email" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
             
             <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Monthly Salary *</label>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Monthly Salary *</label>
               <div class="relative"><span class="absolute left-2.5 top-1.5 text-slate-500 font-bold text-xs">₹</span><input type="number" id="stf-salary" required class="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none"></div>
             </div>
             <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Reporting To</label>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Reporting To</label>
               <select id="stf-reportingTo" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none appearance-none"></select>
             </div>
             
             <div>
-               <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Date of Joining *</label>
+               <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Date of Joining *</label>
                <div class="relative"><span class="material-symbols-rounded absolute right-2.5 top-1.5 text-[16px] text-slate-400 pointer-events-none">calendar_month</span><input type="text" id="stf-join" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
             </div>
             <div>
-               <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Date of Birth</label>
+               <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Date of Birth</label>
                <div class="relative"><span class="material-symbols-rounded absolute right-2.5 top-1.5 text-[16px] text-slate-400 pointer-events-none">calendar_month</span><input type="text" id="stf-dob" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none"></div>
             </div>
             
-            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Status *</label><select id="stf-status" onchange="StaffApp.onStatusChange()" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none appearance-none"></select></div>
+            <div id="stf-status-field">
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Status *</label>
+              <select id="stf-status" onchange="StaffApp.onStatusChange()" required class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none appearance-none"></select>
+            </div>
             
             <div id="stf-exit-container" class="hidden">
-               <label class="block text-[9px] font-bold text-red-500 mb-1 uppercase tracking-wide">Exit Date *</label>
+               <label class="block text-[9px] font-bold text-red-500 mb-1 tracking-wide">Exit Date *</label>
                <div class="relative"><span class="material-symbols-rounded absolute right-2.5 top-1.5 text-[16px] text-red-400 pointer-events-none">calendar_month</span><input type="text" id="stf-exit-date" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-red-50/30 border border-red-200 rounded-lg text-xs font-bold text-slate-700 focus:border-red-400 outline-none shadow-sm"></div>
             </div>
             
@@ -180,54 +183,66 @@
 
   
   <div id="txn-modal" class="fixed inset-0 bg-slate-900/60 opacity-0 pointer-events-none transition-opacity duration-300 z-[150] flex items-end md:items-center justify-center sm:p-4 lsc-modal-sheet">
-    <div id="txn-modal-content" class="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-[85dvh] md:h-auto md:max-h-[90vh] lsc-modal-sheet-panel">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-        <h2 id="txn-modal-title" class="text-lg font-bold text-slate-800">Record Salary</h2>
-        <button onclick="StaffApp.closeTransactionModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200"><span class="material-symbols-rounded text-lg">close</span></button>
+    <div id="txn-modal-content" class="bg-white w-full max-w-md md:rounded-2xl rounded-t-2xl shadow-2xl transform translate-y-full md:translate-y-10 opacity-0 transition-all duration-300 flex flex-col h-auto max-h-[90dvh] lsc-modal-sheet-panel">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 shrink-0">
+        <div class="min-w-0">
+          <h2 id="txn-modal-title" class="text-base font-bold text-slate-800">Record Salary</h2>
+          <p id="txn-staff-caption" class="text-[11px] text-slate-500 truncate">Salary is saved as paid</p>
+        </div>
+        <button onclick="StaffApp.closeTransactionModal()" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-500 rounded-full hover:bg-slate-200 shrink-0"><span class="material-symbols-rounded text-lg">close</span></button>
       </div>
       
-      <form id="txn-form" novalidate onsubmit="StaffApp.saveTransaction(event)" class="flex-1 flex flex-col overflow-hidden">
-        <div class="p-5 overflow-y-auto flex-1 no-scrollbar space-y-4">
+      <form id="txn-form" novalidate onsubmit="StaffApp.saveTransaction(event)" class="flex flex-col overflow-hidden">
+        <div class="px-5 py-4 overflow-y-auto no-scrollbar space-y-3">
           <input type="hidden" id="txn-id">
-          
-          <div class="grid grid-cols-2 gap-x-3 gap-y-4">
-            <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Amount *</label>
-              <div class="relative"><span class="absolute left-2.5 font-bold text-slate-500 text-sm top-1.5">₹</span><input type="number" id="txn-amount" required class="w-full pl-6 pr-3 py-2 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm"></div>
-            </div>
-            <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Paid Date *</label>
-              <div class="relative"><span class="material-symbols-rounded absolute right-2.5 top-1.5 text-[16px] text-slate-400 pointer-events-none">calendar_month</span><input type="text" id="txn-paidDate" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700"></div>
-            </div>
+          <input type="hidden" id="txn-receiptUrl">
+          <select id="txn-paymentStatus" class="hidden" tabindex="-1" aria-hidden="true"></select>
 
-            <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Credit Type *</label>
-              <select id="txn-creditType" required onchange="StaffApp.onCreditTypeChange()" class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
-            </div>
-            <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Payment Mode *</label>
-              <select id="txn-paymentMode" required class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+          <div id="txn-coverage-container" class="rounded-2xl border border-amber-200 bg-amber-50/80 p-3">
+            <p class="text-[11px] font-bold text-amber-900">Coverage</p>
+            <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-end mt-2">
+              <div>
+                <label for="txn-startDate" class="block text-[10px] font-semibold text-amber-800/80 mb-1">Start</label>
+                <input type="text" id="txn-startDate" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-amber-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-amber-400 outline-none">
+              </div>
+              <span class="material-symbols-rounded text-amber-700 text-[18px] pb-2">arrow_forward</span>
+              <div>
+                <label for="txn-endDate" class="block text-[10px] font-semibold text-amber-800/80 mb-1">End</label>
+                <input type="text" id="txn-endDate" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-amber-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-amber-400 outline-none">
+              </div>
             </div>
           </div>
-          
-          <div id="txn-coverage-container" class="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 mt-2">
-            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Coverage Start *</label><input type="text" id="txn-startDate" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm"></div>
-            <div><label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Coverage End *</label><input type="text" id="txn-endDate" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm"></div>
-          </div>
 
-          <div class="grid grid-cols-2 gap-x-3 gap-y-4 pt-2">
+          <div class="grid grid-cols-2 gap-2.5">
             <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Payment Status *</label>
-              <select id="txn-paymentStatus" required class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
+              <label for="txn-amount" class="block text-[11px] font-bold text-slate-700 mb-1">Amount *</label>
+              <div class="relative">
+                <span class="absolute left-2.5 top-2 font-bold text-slate-500 text-sm">₹</span>
+                <input type="number" id="txn-amount" required class="w-full pl-7 pr-2 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:border-brand-primary outline-none">
+              </div>
             </div>
             <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt URL</label>
-              <div class="relative"><span class="material-symbols-rounded absolute left-2 top-1.5 text-[16px] text-slate-400">link</span><input type="url" id="txn-receiptUrl" placeholder="https://..." class="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700"></div>
+              <label for="txn-paidDate" class="block text-[11px] font-bold text-slate-700 mb-1">Paid on *</label>
+              <div class="relative">
+                <span class="material-symbols-rounded absolute right-2 top-1.5 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
+                <input type="text" id="txn-paidDate" placeholder="DD-MMM-YYYY" required class="date-field w-full pl-2.5 pr-7 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-brand-primary outline-none">
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label for="txn-creditType" class="block text-[11px] font-bold text-slate-700 mb-1">Credit type *</label>
+              <select id="txn-creditType" required onchange="StaffApp.onCreditTypeChange()" class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-brand-primary outline-none appearance-none"></select>
+            </div>
+            <div>
+              <label for="txn-paymentMode" class="block text-[11px] font-bold text-slate-700 mb-1">Payment mode *</label>
+              <select id="txn-paymentMode" required class="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-brand-primary outline-none appearance-none"></select>
             </div>
           </div>
         </div>
-        <div class="p-4 bg-white border-t border-slate-100 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <button type="submit" id="btn-save-txn" class="w-full py-2.5 bg-brand-primary text-white font-bold text-xs rounded-xl shadow-sm hover:bg-brand-hover transition-colors">Save Salary Record</button>
+        <div class="px-5 py-3 bg-white border-t border-slate-100 shrink-0">
+          <button type="submit" id="btn-save-txn" class="w-full py-2.5 bg-brand-primary text-white font-bold text-sm rounded-xl shadow-sm hover:bg-brand-hover transition-colors">Save Record</button>
         </div>
       </form>
     </div>
