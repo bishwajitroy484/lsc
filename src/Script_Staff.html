@@ -241,6 +241,12 @@
       return match ? match.name : id;
     },
 
+    refreshExpenseSummary: function() {
+      if (typeof ExpensesApp === 'undefined' || typeof ExpensesApp.fetchData !== 'function') return;
+      if (typeof ExpensesApp.showShimmer === 'function') ExpensesApp.showShimmer();
+      ExpensesApp.fetchData();
+    },
+
     fetchData: function(callback) {
       google.script.run
         .withSuccessHandler((res) => {
@@ -1442,6 +1448,7 @@
           if(btn) { btn.innerHTML = `Save Record`; btn.disabled = false; }
           if(res.success) {
             Toast.success(res.message);
+            this.refreshExpenseSummary();
             this.fetchData(() => {
               if (!reopenStaffId) return;
               const fresh = this.allData.find(s => String(s.staffId) === String(reopenStaffId));
@@ -1510,6 +1517,7 @@
           .withSuccessHandler((res) => {
             if(res.success) {
               Toast.success(res.message);
+              this.refreshExpenseSummary();
               this.fetchData(() => {
                 if (!reopenStaffId) return;
                 const fresh = this.allData.find(s => String(s.staffId) === String(reopenStaffId));

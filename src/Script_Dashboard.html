@@ -493,15 +493,55 @@
           '</div>';
       } else {
       window.AppChartConfigs.batch = {
-        series: [{ name: 'Members', data: batchValues }],
-        chart: { type: 'bar', height: '100%', toolbar: commonToolbar },
-        plotOptions: { bar: { distributed: true, columnWidth: '50%', borderRadius: 4, dataLabels: { position: 'top' } } },
-        dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '11px', fontWeight: 600, colors: ["#304758"] } },
-        xaxis: { categories: data.charts.batchLabels, axisBorder: { show: false }, labels: { rotate: -45, style: { fontSize: '11px', fontWeight: 600 } } },
-        yaxis: { labels: { style: { fontSize: '11px', colors: '#64748b' } } },
-        colors: ['#3b82f6', '#10b981', '#a855f7', '#fbbf24', '#3b82f6'],
-        legend: { show: false },
-        grid: commonGrid
+        series: batchValues,
+        labels: data.charts.batchLabels || [],
+        chart: { type: 'donut', height: '100%' },
+        colors: ['#3b82f6', '#10b981', '#a855f7', '#fbbf24', '#06b6d4', '#f97316', '#ec4899', '#6366f1'],
+        plotOptions: {
+          pie: {
+            donut: {
+              size: '68%',
+              labels: {
+                show: true,
+                total: {
+                  show: true,
+                  label: 'Members',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  formatter: function(w) {
+                    return String(w.globals.seriesTotals.reduce(function(sum, value) { return sum + value; }, 0));
+                  }
+                }
+              }
+            }
+          }
+        },
+        legend: { position: 'bottom', fontSize: '10px' },
+        dataLabels: {
+          enabled: true,
+          formatter: function(val, opts) {
+            const count = opts && opts.w && opts.w.globals && opts.w.globals.seriesTotals
+              ? opts.w.globals.seriesTotals[opts.seriesIndex]
+              : val;
+            return count ? String(count) : '';
+          },
+          style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
+          background: {
+            enabled: true,
+            backgroundColor: '#ffffff',
+            foreColor: '#0f172a',
+            borderRadius: 4,
+            padding: 3,
+            opacity: 0.95,
+            borderWidth: 1,
+            borderColor: '#e2e8f0'
+          },
+          dropShadow: { enabled: false }
+        },
+        tooltip: {
+          ...commonTooltip,
+          y: { formatter: function(val) { return String(val) + (Number(val) === 1 ? ' member' : ' members'); } }
+        }
       };
       elBatch.innerHTML = ''; 
       window.AppCharts.batch = new ApexCharts(elBatch, window.AppChartConfigs.batch);

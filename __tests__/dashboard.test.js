@@ -421,6 +421,8 @@ describe('Dashboard Module', () => {
     expect(expenseChart).toContain('...dlOptions');
     expect(expenseChart).toContain("String(label) === 'Staff Cost'");
     expect(expenseChart).toContain("'#7c3aed'");
+    const batchChart = script.slice(script.indexOf('// 2. Batch'), script.indexOf('// 3. Net-In-Hand'));
+    expect(batchChart).toContain("type: 'donut'");
     expect(predictionConfig).toContain('plotExpected[anchor] = plotActual[anchor]');
   });
 

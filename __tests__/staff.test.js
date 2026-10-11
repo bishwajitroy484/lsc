@@ -382,11 +382,15 @@ describe('Staff Module - Action Needed & Salary Cycle Calculations', () => {
       const form = viewHtml.slice(formStart, formEnd);
       expect(form.indexOf('id="txn-coverage-container"')).toBeLessThan(form.indexOf('id="txn-amount"'));
       expect(form.indexOf('id="txn-amount"')).toBeLessThan(form.indexOf('id="txn-paidDate"'));
+      expect(form.indexOf('id="txn-paidDate"')).toBeLessThan(form.indexOf('id="txn-creditType"'));
+      expect(form.indexOf('id="txn-creditType"')).toBeLessThan(form.indexOf('id="txn-paymentMode"'));
+      expect((form.match(/grid grid-cols-2 gap-2\.5/g) || []).length).toBe(2);
       expect(form).toContain('id="txn-paymentStatus" class="hidden"');
       expect(form).toContain('type="hidden" id="txn-receiptUrl"');
       expect(form).not.toContain('Receipt URL');
       expect(form).not.toContain('Payment Status');
-      expect(scriptHtml).toContain('paidStatusId: function()');
+      expect(scriptHtml).toContain('refreshExpenseSummary: function()');
+      expect(scriptHtml).toContain('this.refreshExpenseSummary()');
       expect(scriptHtml).toContain("paymentStatus: document.getElementById('txn-paymentStatus')?.value || this.paidStatusId()");
     });
 

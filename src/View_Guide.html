@@ -242,7 +242,7 @@
           <p class="text-[11px] text-slate-500 leading-relaxed">On a tablet or desktop each row is 40% / 20% / 40%. Revenue vs Expenses and Net-In-Hand are wider, Members by Batch is narrower. Cash vs UPI and Upcoming birthdays are wider, Expense Breakdown is narrower.</p>
           <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
             <li><strong>Revenue vs Expenses</strong> — bars of money received and expenses per period.</li>
-            <li><strong>Members by Batch</strong> — active members grouped by batch.</li>
+            <li><strong>Members by Batch</strong> — donut of members in the selected periods, grouped by batch.</li>
             <li><strong>Net-In-Hand Forecast</strong> — area chart; solid = received, green dotted = still expected. The dotted line always continues from the last received point. When money is still expected in that same period, it rises from the received amount by what is still due.</li>
             <li><strong>Cash vs UPI</strong> — one combined bar per period. Amount shows rupees. Percentage shows each mode’s share and redraws only this chart. The label icon shows or hides the values.</li>
             <li><strong>Expense Breakdown</strong> — donut by category, with the same white value labels as the other charts. Staff Cost is violet. View Misc switches the donut to misc details.</li>
@@ -305,7 +305,7 @@
           <li><strong>KPIs</strong> — active headcount, total paid cost for selected periods, and Action Needed count.</li>
           <li><strong>Salary cycles</strong> — from join through today (or exit). First cycle is join→end of that month; later cycles are full calendar months. Expected amount is the <strong>full nominal monthly salary</strong> (not mid-month prorated).</li>
           <li><strong>Action Needed</strong> — a cycle with no matching paid salary row yet.</li>
-          <li><strong>Record salary</strong> — coverage dates sit at the top, then the amount and the paid date. A new record is saved as <strong>Paid</strong>. The form does not ask for payment status or a receipt link.</li>
+          <li><strong>Record salary</strong> — coverage dates sit at the top. Amount and paid date share the next row. Credit type and payment mode share the row under that. A new record is saved as <strong>Paid</strong>. The form does not ask for payment status or a receipt link. Saving or deleting a salary refreshes the expense KPIs and charts on this page.</li>
           <li><strong>Credit types</strong> — Salary, Bonus, Advance, Incentive, Reimbursement. Bonuses/extras are not used to “close” a salary cycle the same way a Salary payment is. Bonus and reimbursement hide the coverage dates.</li>
           <li><strong>Charts</strong> — payroll trend and cost-by-role donut.</li>
         </ul>
