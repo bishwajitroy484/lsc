@@ -372,12 +372,34 @@ test('expense KPIs and charts use the dashboard info tips', () => {
   expect(view).toContain("tooltipCopy_('expenses.totalOutflow')");
   expect(view).not.toContain('Recorded gym expenses plus paid staff cost');
   const tips = fs.readFileSync(path.join(__dirname, '../src/Copy_Tooltips.js'), 'utf8');
-  expect(tips).toContain('Recorded gym expenses plus paid staff cost');
-  expect(view).toContain('grid-cols-2 xl:grid-cols-3');
+    expect(tips).toContain('Gym bills plus staff pay for the selected periods.');
+    expect(view).toContain('grid-cols-2 xl:grid-cols-3');
+    expect(view).toContain('md:grid-cols-[65fr_35fr]');
+    expect(view).toContain('id="btn-exp-misc-toggle"');
+    expect(script).toContain('toggleMisc: function()');
+    expect(script).toContain("colors: ['#7c3aed', '#f59e0b']");
+    expect(script).toContain("l === 'Staff Cost' ? '#7c3aed'");
+    expect(script).toContain('backgroundColor: \'#ffffff\'');
+    expect(script).not.toContain('#404040');
   expect(view).not.toContain('md:grid-cols-4');
   expect(script).toContain('flex-1 xl:flex-none text-center');
   expect(view).toContain('id="exp-list-filters-expenses" class="hidden w-full xl:w-auto min-w-0"');
   expect(view).not.toContain('md:flex md:w-auto md:flex-nowrap');
+});
+
+test('saving an expense does not leave the Staff and Action cards shimmering', () => {
+  const script = fs.readFileSync(path.join(__dirname, '../src/Script_Expenses.html'), 'utf8');
+  const shimmerStart = script.indexOf('showShimmer: function()');
+  const shimmerEnd = script.indexOf('parseAmount:', shimmerStart);
+  const shimmer = script.slice(shimmerStart, shimmerEnd);
+  expect(shimmer).not.toContain('kpi-total-staff');
+  expect(shimmer).not.toContain('kpi-action-needed');
+  expect(shimmer).toContain('kpi-total-exp');
+  const kpiStart = script.indexOf('calculateKPIs: function()');
+  const kpiEnd = script.indexOf('renderCharts: function()', kpiStart);
+  const kpis = script.slice(kpiStart, kpiEnd);
+  expect(kpis).toContain('StaffApp.isStaffLoaded');
+  expect(kpis).toContain('StaffApp.calculateKPIs(snapshotYear, snapshotMode)');
 });
 
 

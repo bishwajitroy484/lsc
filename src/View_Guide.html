@@ -167,7 +167,7 @@
         </div>
         <div class="overflow-x-auto rounded-xl border border-slate-200">
           <table class="w-full text-[11px] text-left min-w-[280px]">
-            <thead class="bg-slate-50 text-slate-500 uppercase tracking-wide text-[9px]">
+            <thead class="bg-slate-50 text-slate-500 text-[9px]">
               <tr><th class="px-3 py-2 font-bold">Status</th><th class="px-3 py-2 font-bold">Meaning</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -215,10 +215,10 @@
             <p class="text-[11px] font-bold text-slate-800 mb-1">Net-In Hand</p>
             <div class="rounded-lg bg-amber-50 border border-amber-100 px-2.5 py-2 text-[11px] text-amber-950 leading-relaxed font-medium mb-1.5">
               Actual = collections already received − expenses<br>
-              Projected = renewals not yet received, including later this month, − estimated future costs<br>
+              Projected = renewals not yet received, including later this month, plus partial balances still owed − estimated future costs<br>
               Total = Actual + Projected
             </div>
-            <p class="text-[11px] text-slate-600 leading-relaxed">The card shows Actual plus a <strong>Projected</strong> badge. The chart summary bar shows Actual / Projected / Total. A renewal due later this month stays on Projected until the payment is received. Quarterly renewals are 90 days from the join or cycle date.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">The card shows Actual plus a <strong>Projected</strong> badge. The chart summary bar shows Actual / Projected / Total. The green dotted line always starts on the last solid point and continues through later months. When a month has both, it rises from what was received by what is still expected. A renewal due later this month stays on Projected until the payment is received. A partial payment’s remaining balance is included in Projected as well. Quarterly renewals are 90 days from the join or cycle date.</p>
           </div>
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">Total Collected</p>
@@ -239,12 +239,13 @@
 
         <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 space-y-2">
           <p class="text-[11px] font-bold text-slate-800">Charts at a glance</p>
+          <p class="text-[11px] text-slate-500 leading-relaxed">On a tablet or desktop each row is 40% / 20% / 40%. Revenue vs Expenses and Net-In-Hand are wider, Members by Batch is narrower. Cash vs UPI and Upcoming birthdays are wider, Expense Breakdown is narrower.</p>
           <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
-            <li><strong>Revenue vs Expenses</strong> — bars of recognized revenue and expenses per period.</li>
+            <li><strong>Revenue vs Expenses</strong> — bars of money received and expenses per period.</li>
             <li><strong>Members by Batch</strong> — active members grouped by batch.</li>
-            <li><strong>Net-In-Hand Forecast</strong> — area chart; solid = actual, dotted = forecast.</li>
-            <li><strong>Cash vs UPI</strong> — one combined bar per period. Yes shows the cash and UPI share as a percent. No shows the rupee amounts. Names come from the payment-mode dropdown.</li>
-            <li><strong>Expense Breakdown</strong> — donut by category (includes staff cost); misc details available.</li>
+            <li><strong>Net-In-Hand Forecast</strong> — area chart; solid = received, green dotted = still expected. The dotted line always continues from the last received point. When money is still expected in that same period, it rises from the received amount by what is still due.</li>
+            <li><strong>Cash vs UPI</strong> — one combined bar per period. Amount shows rupees. Percentage shows each mode’s share and redraws only this chart. The label icon shows or hides the values.</li>
+            <li><strong>Expense Breakdown</strong> — donut by category, with the same white value labels as the other charts. Staff Cost is violet. View Misc switches the donut to misc details.</li>
           </ul>
         </div>
 
@@ -304,7 +305,8 @@
           <li><strong>KPIs</strong> — active headcount, total paid cost for selected periods, and Action Needed count.</li>
           <li><strong>Salary cycles</strong> — from join through today (or exit). First cycle is join→end of that month; later cycles are full calendar months. Expected amount is the <strong>full nominal monthly salary</strong> (not mid-month prorated).</li>
           <li><strong>Action Needed</strong> — a cycle with no matching paid salary row yet.</li>
-          <li><strong>Credit types</strong> — Salary, Bonus, Advance, Incentive, Reimbursement. Bonuses/extras are not used to “close” a salary cycle the same way a Salary payment is.</li>
+          <li><strong>Record salary</strong> — coverage dates sit at the top, then the amount and the paid date. A new record is saved as <strong>Paid</strong>. The form does not ask for payment status or a receipt link.</li>
+          <li><strong>Credit types</strong> — Salary, Bonus, Advance, Incentive, Reimbursement. Bonuses/extras are not used to “close” a salary cycle the same way a Salary payment is. Bonus and reimbursement hide the coverage dates.</li>
           <li><strong>Charts</strong> — payroll trend and cost-by-role donut.</li>
         </ul>
       </div>
@@ -327,7 +329,7 @@
         <p class="text-xs text-slate-600 leading-relaxed pt-3">One page for operating expenses and staff payroll. Shared filters drive KPIs and charts. <strong>Add Record</strong> chooses Staff or Expenses, then opens the usual form.</p>
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>KPIs</strong> — four cards: Total Outflow; Cost Split (Staff Cost + Other Expenses); period average; Staff Snapshot (headcount + Action Needed). Readable on mobile in a 2×2 grid.</li>
-          <li><strong>Charts</strong> — stacked Staff Cost + Other Expenses trend, and expenses-by-category donut (includes Staff Cost).</li>
+          <li><strong>Charts</strong> — on a tablet or desktop the trend uses about 65% of the row and the category donut about 35%. Staff Cost is violet. View Misc switches the donut to misc details, the same way the dashboard expense chart does.</li>
           <li><strong>All Records</strong> — salaries, pending salary cycles, and expenses with type and status.</li>
           <li><strong>Staff</strong> — staff list; open a member for Overview and Salary (Record Salary stays in the drawer).</li>
           <li><strong>Expenses</strong> — operating expense table with edit/delete as before.</li>
@@ -378,7 +380,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">General</p>
-            <p class="text-[11px] text-slate-600 leading-relaxed">Gym identity, Setup &amp; Authorization, Web app version publish, revenue recognition, currency style, Spreadsheet/Drive IDs, notification templates/schedule, and Google Calendar due reminders.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Gym identity, Setup &amp; Authorization, Web app version publish, revenue recognition, currency style, Spreadsheet/Drive IDs, notification templates/schedule, and Google Calendar due reminders. Setup &amp; Authorization starts open; the other sections start collapsed. On a tablet or desktop every section stays in two columns, open or closed, with a quiet tint on the title bar, border, and background. Inside Notifications, the receipt and WhatsApp messages sit in one column and the weekly report sits in the other.</p>
           </div>
           <div class="rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] font-bold text-slate-800 mb-1">Users</p>
@@ -453,11 +455,11 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
           <div class="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
             <p class="text-[11px] font-bold text-pink-900 mb-1">Payment receipt</p>
-            <p class="text-[11px] text-slate-600 leading-relaxed">When a new payment is recorded as Paid/Completed and the member has an email, a receipt can be sent. A partial Pending payment does not send that email. Templates are editable with placeholders like member name, plan, amount, dates. Use <strong>Send test</strong> in Settings to receive a sample in your own inbox.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">When a new payment is recorded as Paid/Completed and the member has an email, a receipt can be sent. A partial Pending payment does not send that email. Templates are editable with placeholders like member name, plan, amount, dates. Use <strong>Test</strong> in Settings to receive a sample in your own inbox.</p>
           </div>
           <div class="rounded-xl border border-pink-100 bg-pink-50/40 p-3">
             <p class="text-[11px] font-bold text-pink-900 mb-1">Weekly report</p>
-            <p class="text-[11px] text-slate-600 leading-relaxed">Scheduled email to the owner (plus CC list) with upcoming and overdue members. Choose day, time, days-ahead window, and which table columns appear. Preview samples or use <strong>Send test</strong> to email a sample report to yourself from Settings.</p>
+            <p class="text-[11px] text-slate-600 leading-relaxed">Scheduled email to the owner (plus CC list) with upcoming and overdue members. Choose day, time, days-ahead window, and which table columns appear. Preview samples or use <strong>Test</strong> to email a sample report to yourself from Settings.</p>
           </div>
         </div>
         <p class="text-[11px] text-slate-500 leading-relaxed">The weekly report and the Calendar screen both use the covering payment’s end date as the next due. A quarterly Google Calendar reminder is placed 2 days before that date.</p>

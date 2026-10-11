@@ -913,11 +913,8 @@
     },
 
     initSectionDefaults: function() {
-      // Keep Identity open; collapse the rest on small screens for faster scanning.
-      const isMobile = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
-      if (!isMobile) return;
-      document.querySelectorAll('#general-content .settings-section').forEach((section, index) => {
-        if (index === 0) return;
+      document.querySelectorAll('#general-content .settings-section').forEach((section) => {
+        if (section.getAttribute('data-section') === 'setup') return;
         const button = section.querySelector('button[aria-expanded]');
         const body = section.querySelector('.settings-section-body');
         const chevron = section.querySelector('.settings-section-chevron');
@@ -1876,18 +1873,18 @@
 
       if (this.schemas.length === 0) {
          if(masterEmpty) masterEmpty.classList.remove('hidden');
-         if(dskList && window.innerWidth >= 1024) dskList.classList.add('hidden');
+         if(dskList && window.innerWidth >= 768) dskList.classList.add('hidden');
          if(mobSelectWrap) mobSelectWrap.classList.add('hidden');
          if(detailEmpty) detailEmpty.classList.add('hidden'); 
          if(detailContent) detailContent.classList.add('hidden');
       } else {
          if(masterEmpty) masterEmpty.classList.add('hidden');
-         if(dskList && window.innerWidth >= 1024) dskList.classList.remove('hidden');
+         if(dskList && window.innerWidth >= 768) dskList.classList.remove('hidden');
          if(mobSelectWrap) mobSelectWrap.classList.remove('hidden');
          
          if (!this.activeSchema) {
             if(detailContent) detailContent.classList.add('hidden');
-            if(window.innerWidth >= 1024) {
+            if(window.innerWidth >= 768) {
                this.selectCategory(this.schemas[0].key);
             } else {
                if(detailEmpty) detailEmpty.classList.remove('hidden');
@@ -1944,7 +1941,7 @@
             : 'bg-white border-transparent hover:bg-slate-50 text-slate-700';
           
           dskHtml += 
-            '<button type="button" onclick="SettingsApp.selectCategory(\'' + s.key + '\')" class="w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left group cursor-pointer ' + activeClass + '">' +
+            '<button type="button" onclick="SettingsApp.selectCategory(\'' + s.key + '\')" class="w-full flex items-center justify-between p-2 rounded-lg border transition-all text-left group cursor-pointer ' + activeClass + '">' +
               '<div class="flex items-center gap-3 min-w-0">' +
                 '<div class="w-8 h-8 rounded-lg ' + (isActive ? 'bg-brand-primary text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200') + ' flex items-center justify-center shrink-0 transition-colors">' +
                   '<span class="material-symbols-rounded text-[18px]">list_alt</span>' +
@@ -2023,7 +2020,7 @@
            headHtml += '<th class="px-4 py-3 whitespace-nowrap">' + col.label + '</th>';
          }
       });
-      headHtml += '<th class="px-4 py-3 text-right">Order & Actions</th>';
+      headHtml += '<th class="px-4 py-3 text-right">Order & actions</th>';
       if(thead) thead.innerHTML = headHtml;
 
       const totalLen = this.activeOptionsList.length;

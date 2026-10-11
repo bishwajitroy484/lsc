@@ -1309,6 +1309,15 @@
         .api_saveStaff(payload);
     },
 
+    paidStatusId: function() {
+      const statusOpts = this.dropdowns.paymentstatus || this.dropdowns.status || [];
+      const paid = statusOpts.find(opt => {
+        const name = String(opt.name || opt.label || '').trim().toLowerCase();
+        return name === 'paid' || name === 'completed';
+      });
+      return paid ? paid.id : '';
+    },
+
     onCreditTypeChange: function() {
        const select = document.getElementById('txn-creditType');
        const name = select.options[select.selectedIndex]?.text.toLowerCase() || '';
@@ -1333,7 +1342,9 @@
       const isEdit = txn && txn.paymentId && !txn.isVirtual;
       if (typeof AccessControl !== 'undefined' && AccessControl.deny('staff', isEdit ? 'edit' : 'create')) return;
 
-      this.safeSetText('txn-modal-title', txn && !txn.isVirtual ? 'Edit Record' : 'Record Salary / Credit');
+      const staffName = this.currentActiveStaff.fullName || 'Staff';
+      this.safeSetText('txn-modal-title', txn && !txn.isVirtual ? 'Edit salary' : 'Record salary');
+      this.safeSetText('txn-staff-caption', staffName + ' · saved as paid');
       this.safeSetValue('txn-id', txn && !txn.isVirtual ? txn.paymentId : '');
       
       const rawAmt = txn ? String(txn.amount).replace(/[^0-9.-]+/g,"") : (this.currentActiveStaff.salary ? String(this.currentActiveStaff.salary).replace(/[^0-9.-]+/g,"") : '');
@@ -1344,8 +1355,8 @@
       const defMode = document.getElementById('txn-paymentMode')?.options[1]?.value || '';
       this.safeSetValue('txn-paymentMode', txn && !txn.isVirtual && txn.paymentMode ? txn.paymentMode : defMode);
       
-      const defStatus = document.getElementById('txn-paymentStatus')?.options[1]?.value || '';
-      this.safeSetValue('txn-paymentStatus', txn && !txn.isVirtual && txn.paymentStatus ? txn.paymentStatus : defStatus);
+      const paidStatus = this.paidStatusId() || document.getElementById('txn-paymentStatus')?.options[1]?.value || '';
+      this.safeSetValue('txn-paymentStatus', txn && !txn.isVirtual && txn.paymentStatus ? txn.paymentStatus : paidStatus);
 
       const creditOpts = Array.from(document.getElementById('txn-creditType').options);
       const salOpt = creditOpts.find(opt => opt.text.toLowerCase().includes('salary'));
@@ -1409,8 +1420,8 @@
         amount: Number(document.getElementById('txn-amount')?.value || 0),
         paidDate: this.formatDateDDMMMYYYY(document.getElementById('txn-paidDate')?.value),
         paymentMode: document.getElementById('txn-paymentMode')?.value,
-        paymentStatus: document.getElementById('txn-paymentStatus')?.value,
-        receiptUrl: document.getElementById('txn-receiptUrl')?.value
+        paymentStatus: document.getElementById('txn-paymentStatus')?.value || this.paidStatusId(),
+        receiptUrl: document.getElementById('txn-receiptUrl')?.value || ''
       };
 
       const startVal = document.getElementById('txn-startDate')?.value;

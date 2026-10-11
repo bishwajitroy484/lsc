@@ -319,7 +319,21 @@
     if (isActive) {
       kpis.forEach(id => { const el = document.getElementById(id); if (el) { el.innerHTML = ''; el.classList.add('shimmer', 'rounded-md', 'w-16', 'h-5'); } });
       if (seg) seg.innerHTML = '<div class="h-4 w-16 shimmer rounded"></div><div class="h-4 w-14 shimmer rounded"></div><div class="h-4 w-12 shimmer rounded"></div>';
-      chartIds.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<div class="absolute inset-0 rounded-xl shimmer opacity-50"></div>'; });
+      Object.keys(window.AppCharts || {}).forEach(key => {
+        const chart = window.AppCharts[key];
+        if (chart && typeof chart.destroy === 'function') {
+          try { chart.destroy(); } catch (e) {}
+        }
+      });
+      window.AppCharts = {};
+      chartIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.position = '';
+        el.style.height = '';
+        el.innerHTML = '';
+      });
+      document.querySelectorAll('.dash-chart-shimmer').forEach(el => el.classList.remove('hidden'));
       tables.forEach(id => {
          const el = document.getElementById(id); 
          if (el) {
@@ -330,6 +344,7 @@
       });
     } else {
       kpis.forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('shimmer', 'rounded-md', 'w-16', 'h-5'); });
+      document.querySelectorAll('.dash-chart-shimmer').forEach(el => el.classList.add('hidden'));
     }
   }
 
@@ -495,13 +510,61 @@
     }
 
     // 3. Net-In-Hand actuals transition into the payment-based forecast.
+    // Where a month has both money received and money still expected, the dotted
+    // line starts on the received point and rises by the expected amount.
     const elPred = document.querySelector("#chart-prediction");
     if(elPred) {
       const prediction = data.charts.prediction || {};
+      const rawActual = prediction.actual || [];
+      const rawExpected = prediction.expected || [];
+      const rawLabels = prediction.categories || data.charts.categories || [];
+      const plotActual = [];
+      const plotExpected = [];
+      const plotLabels = [];
+      const projectedTip = [];
+      rawLabels.forEach((label, i) => {
+        const base = rawActual[i] == null ? null : Number(rawActual[i]);
+        const extra = rawExpected[i] == null ? null : Number(rawExpected[i]);
+        const hasBase = base != null;
+        const hasExtra = extra != null && extra !== 0;
+        plotLabels.push(label);
+        plotActual.push(hasBase ? base : null);
+        if (hasBase && hasExtra) {
+          plotExpected.push(base);
+          projectedTip.push(null);
+          plotLabels.push('');
+          plotActual.push(null);
+          plotExpected.push(Number((base + extra).toFixed(2)));
+          projectedTip.push(extra);
+        } else if (hasBase && extra === 0) {
+          plotExpected.push(base);
+          projectedTip.push(null);
+        } else {
+          plotExpected.push(extra);
+          projectedTip.push(extra);
+        }
+      });
+      // The dotted line always leaves the last actual point, even when that month has nothing still expected.
+      let firstForecast = -1;
+      for (let i = 0; i < plotExpected.length; i++) {
+        if (plotActual[i] == null && plotExpected[i] != null) {
+          firstForecast = i;
+          break;
+        }
+      }
+      if (firstForecast > 0) {
+        let anchor = firstForecast - 1;
+        while (anchor >= 0 && plotActual[anchor] == null) anchor--;
+        if (anchor >= 0 && plotExpected[anchor] == null) {
+          plotExpected[anchor] = plotActual[anchor];
+          projectedTip[anchor] = null;
+        }
+      }
+      const liftIndex = plotLabels.findIndex((label, i) => label === '' && projectedTip[i] != null);
       window.AppChartConfigs.pred = {
         series: [
-          { name: 'Actual', data: prediction.actual || [] },
-          { name: 'Projected', data: prediction.expected || [] }
+          { name: 'Actual', data: plotActual },
+          { name: 'Projected', data: plotExpected }
         ],
         chart: {
           type: 'area',
@@ -510,33 +573,54 @@
           zoom: { enabled: true },
           animations: { enabled: true, speed: 350, dynamicAnimation: { speed: 300 } }
         },
-        stroke: { width: 2, curve: 'smooth', dashArray: [0, 5], connectNulls: true },
-        xaxis: { ...commonXAxis, categories: prediction.categories || data.charts.categories || [] },
+        stroke: { width: 2, curve: 'straight', dashArray: [0, 5], connectNulls: true },
+        xaxis: { ...commonXAxis, categories: plotLabels },
         yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: {
           ...commonTooltip,
           y: {
-            formatter: (val) => AppUtils.formatCurrency(val),
+            formatter: (val, opts) => {
+              if (opts && opts.seriesIndex === 1) {
+                const tip = projectedTip[opts.dataPointIndex];
+                if (tip == null) return '';
+                return AppUtils.formatCurrency(tip);
+              }
+              return AppUtils.formatCurrency(val);
+            },
             title: { formatter: (seriesName) => seriesName }
           }
         },
         colors: ['#3b82f6', '#10b981'],
         markers: {
           size: 4,
-          discrete: prediction.transitionIndex >= 0 ? [{
+          discrete: liftIndex >= 0 ? [{
+            seriesIndex: 1,
+            dataPointIndex: liftIndex,
+            fillColor: '#10b981',
+            strokeColor: '#10b981',
+            size: 5
+          }] : (prediction.transitionIndex >= 0 ? [{
             seriesIndex: 1,
             dataPointIndex: prediction.transitionIndex,
             fillColor: '#3b82f6',
             strokeColor: '#3b82f6',
             size: 5
-          }] : []
+          }] : [])
         },
         legend: { show: false },
         fill: { opacity: [0.12, 0] },
         dataLabels: {
           ...dlOptions,
           offsetY: -10,
-          formatter: (val) => (val ? AppUtils.formatCompactCurrency(val) : '')
+          formatter: (val, opts) => {
+            if (!val) return '';
+            if (opts && opts.seriesIndex === 1) {
+              const tip = projectedTip[opts.dataPointIndex];
+              if (tip == null) return '';
+              return AppUtils.formatCompactCurrency(tip);
+            }
+            return AppUtils.formatCompactCurrency(val);
+          }
         },
         grid: commonGrid
       };
@@ -545,16 +629,27 @@
       window.AppCharts.pred.render();
     }
 
-    // 4. Cash vs UPI
-    const elTrend = document.querySelector("#chart-trend");
-    if(elTrend) {
-      const showPercent = (document.getElementById('toggle-trend-percent')?.value || 'yes') !== 'no';
-      const paymentModes = data.charts.paymentModes || {};
+    // 4. Cash vs UPI. Amount/Percentage redraws only this chart.
+    window.renderCashUpiChart = function() {
+      const chartData = window.DashboardData;
+      const elTrend = document.querySelector("#chart-trend");
+      if (!chartData || !elTrend) return;
+      if (window.AppCharts.trend && typeof window.AppCharts.trend.destroy === 'function') {
+        try { window.AppCharts.trend.destroy(); } catch (e) {}
+      }
+      const showPercent = (document.getElementById('toggle-trend-mode')?.value || 'amount') === 'percent';
+      const labelsOn = !(window.AppChartConfigs.trend && window.AppChartConfigs.trend.dataLabels && window.AppChartConfigs.trend.dataLabels.enabled === false);
+      const paymentModes = chartData.charts.paymentModes || {};
+      const seriesAmount = (opts) => {
+        const series = (opts && opts.w && opts.w.config && opts.w.config.series) || [];
+        const idx = opts ? opts.dataPointIndex : 0;
+        return Number(series[opts && opts.seriesIndex] && series[opts.seriesIndex].data[idx]) || 0;
+      };
       const percentLabel = (val, opts) => {
         const series = (opts && opts.w && opts.w.config && opts.w.config.series) || [];
         const idx = opts ? opts.dataPointIndex : 0;
         const total = series.reduce((sum, item) => sum + (Number(item.data && item.data[idx]) || 0), 0);
-        const raw = Number(series[opts.seriesIndex] && series[opts.seriesIndex].data[idx]) || 0;
+        const raw = seriesAmount(opts);
         if (!total || !raw) return '';
         return Math.round((raw / total) * 100) + '%';
       };
@@ -570,11 +665,12 @@
           height: '100%',
           toolbar: commonToolbar
         },
-        plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 2 } },
+        plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 2, dataLabels: { position: 'center' } } },
         dataLabels: {
-          enabled: showPercent,
-          formatter: percentLabel,
-          style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] }
+          ...dlOptions,
+          enabled: labelsOn,
+          offsetY: 0,
+          formatter: showPercent ? percentLabel : (val) => (val ? AppUtils.formatCompactCurrency(val) : '')
         },
         xaxis: commonXAxis,
         yaxis: {
@@ -586,16 +682,19 @@
         },
         tooltip: {
           ...commonTooltip,
-          y: { formatter: (val) => AppUtils.formatCurrency(val) }
+          y: {
+            formatter: (val, opts) => AppUtils.formatCurrency(seriesAmount(opts) || val)
+          }
         },
         colors: ['#10b981', '#3b82f6'],
         legend: { position: 'bottom', horizontalAlign: 'center', offsetY: 5, fontSize: '11px' },
         grid: commonGrid
       };
-      elTrend.innerHTML = ''; 
+      elTrend.innerHTML = '';
       window.AppCharts.trend = new ApexCharts(elTrend, window.AppChartConfigs.trend);
       window.AppCharts.trend.render();
-    }
+    };
+    window.renderCashUpiChart();
 
     // 5. Expense Breakdown
     const elExp = document.querySelector("#chart-expense-breakdown");
@@ -621,10 +720,24 @@
         series: expSeries,
         labels: expLabels,
         chart: { type: 'donut', height: '100%' },
-        colors: ['#3b82f6', '#10b981', '#fbbf24', '#f97316', '#a855f7', '#06b6d4', '#94a3b8', '#e2e8f0', '#6366f1', '#ec4899'],
         plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: DashboardState.isShowingMisc ? 'Total Misc' : 'Total', fontSize: '14px', fontWeight: 600, formatter: function(w) { const tot = w.globals.seriesTotals.reduce((a,b)=>a+b,0); return AppUtils.formatCurrency(tot); } } } } } },
         legend: { position: 'bottom', fontSize: '10px', offsetY: 0 },
-        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCompactCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 } },
+        colors: expLabels.map(function(label, i) {
+          if (String(label) === 'Staff Cost') return '#7c3aed';
+          const palette = ['#3b82f6', '#10b981', '#fbbf24', '#f97316', '#06b6d4', '#ec4899', '#6366f1', '#94a3b8'];
+          return palette[i % palette.length];
+        }),
+        dataLabels: {
+          ...dlOptions,
+          offsetY: 0,
+          dropShadow: { enabled: false },
+          formatter: function(val, opts) {
+            const total = opts && opts.w && opts.w.globals && opts.w.globals.seriesTotals
+              ? opts.w.globals.seriesTotals[opts.seriesIndex]
+              : val;
+            return total ? AppUtils.formatCompactCurrency(total) : '';
+          }
+        },
         tooltip: commonTooltip
       };
       elExp.innerHTML = ''; 

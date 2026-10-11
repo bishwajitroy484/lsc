@@ -7,30 +7,30 @@
  */
 var LSC_TOOLTIPS = {
   dashboard: {
-    activeMembers: 'Members whose membership covered the selected months or quarters. Plan chips split that same group into Quarterly, Ad-hoc, Trial, and other plans.',
-    totalCollected: 'Sum of member payments marked Paid/Completed in the selected year and months/quarters. Uses your Anchor or Split revenue recognition setting.',
-    netInHand: 'Money already left after costs: collections already received minus operating expenses. “Projected” is renewals not yet received from today through the rest of the selected year, including a due later this month, minus estimated future costs.',
-    overdueAmount: 'Estimated unpaid dues whose billing month falls in the selected months or quarters.',
-    operatingExpenses: 'All running costs for the selected periods: gym/utilities expenses plus paid staff salaries. Total = Utilities + Staff.',
-    utilities: 'Recorded gym expenses (rent, power, supplies, etc.) recognized in the selected periods. Excludes staff salary payments.',
-    staffCost: 'Paid staff salary/cost amounts recognized in the selected periods. Pending or failed salary rows are not counted.',
-    revenueVsExpenses: 'Compares recognized member collections against total operating expenses for each selected month or quarter.',
-    membersByBatch: 'Members covered by the selected months or quarters, grouped by batch. People who were not members in that window are left out.',
-    netInHandForecast: 'Actual is money already received minus expenses. Projected is renewals not yet received, including a payment due later this month, minus estimated future costs. A due on 20 Oct is Projected on 9 Oct, and moves to Actual only after it is received.',
-    cashVsUpi: 'Combined bar of member payments already marked Cash or UPI, using the payment-mode names from your dropdown. Yes shows each mode as a percent of that period. No shows the rupee amounts. A split payment is counted once.',
-    expenseBreakdown: 'Share of operating spend by category in the selected periods, including staff cost. Use View Misc to drill into miscellaneous expense details.',
-    overdueTable: 'Active members whose next renewal date is already past. Amount is the estimated unpaid dues; days show how late they are. Ad-hoc/trial plans are excluded.',
-    upcomingTable: 'Active members due to renew within the next 7 days (including today). Amount is the expected renewal value for their plan. Ad-hoc/trial plans are excluded.'
+    activeMembers: 'Members covered in the months or quarters you picked.',
+    totalCollected: 'Money members already paid in the selected periods.',
+    netInHand: 'Cash left after expenses, plus what is still expected.',
+    overdueAmount: 'Fees still unpaid for the periods you selected.',
+    operatingExpenses: 'Gym costs plus staff pay for the selected periods.',
+    utilities: 'Gym bills such as rent, power, and supplies.',
+    staffCost: 'Staff pay already paid in the selected periods.',
+    revenueVsExpenses: 'Money received compared with expenses each period.',
+    membersByBatch: 'Members in the selected periods, grouped by batch.',
+    netInHandForecast: 'Received money, with still-expected money rising above it.',
+    cashVsUpi: 'Cash and UPI received, as rupees or as a share.',
+    expenseBreakdown: 'How spending splits by category, including staff pay.',
+    overdueTable: 'Members whose renewal date is already past.',
+    upcomingTable: 'Members due to renew within the next seven days.'
   },
   expenses: {
-    totalOutflow: 'Recorded gym expenses plus paid staff cost for the selected year and months or quarters.',
-    periodAverage: 'Total outflow divided by how many months or quarters you selected.',
-    staffCost: 'Paid staff salary amounts recognized in the selected periods. Pending or failed salary rows are not counted.',
-    otherExpenses: 'Recorded gym expenses such as rent, power, and supplies in the selected periods. Staff payroll is counted separately.',
-    staffCount: 'People whose status is Active. The rest of this card opens the staff list.',
-    actionNeeded: 'Staff with at least one salary cycle still unpaid. The rest of this card opens the staff list.',
-    expensesTrend: 'Staff cost and other expenses for each selected month or quarter. Switch the chart between bar, area, and line.',
-    expensesByCategory: 'Share of spend by category in the selected periods, with staff cost included as its own slice.'
+    totalOutflow: 'Gym bills plus staff pay for the selected periods.',
+    periodAverage: 'Total spending divided by the periods you selected.',
+    staffCost: 'Staff pay already paid in the selected periods.',
+    otherExpenses: 'Gym bills such as rent, power, and supplies.',
+    staffCount: 'People currently marked active on the staff list.',
+    actionNeeded: 'Staff who still have an unpaid salary cycle.',
+    expensesTrend: 'Staff pay and other costs for each selected period.',
+    expensesByCategory: 'How spending splits by category, including staff pay.'
   }
 };
 

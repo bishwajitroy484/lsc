@@ -98,8 +98,8 @@
   </div>
 
   
-  <div class="px-3 sm:px-4 md:px-5 grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4 min-w-0 items-stretch">
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
+  <div class="px-3 sm:px-4 md:px-5 grid grid-cols-1 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4 mb-4 min-w-0 items-stretch">
+    <div class="lg:col-span-2 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Revenue vs Expenses</h3>
@@ -111,11 +111,12 @@
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
+        <div class="dash-chart-shimmer absolute inset-0 z-10 rounded-xl shimmer opacity-70 hidden"></div>
         <div id="chart-rev-exp" class="absolute inset-0"></div>
       </div>
     </div>
 
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
+    <div class="lg:col-span-1 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Members by Batch</h3>
@@ -127,11 +128,12 @@
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
+        <div class="dash-chart-shimmer absolute inset-0 z-10 rounded-xl shimmer opacity-70 hidden"></div>
         <div id="chart-batch" class="absolute inset-0"></div>
       </div>
     </div>
 
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
+    <div class="lg:col-span-2 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1.5 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Net-In-Hand Forecast</h3>
@@ -159,30 +161,33 @@
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
+        <div class="dash-chart-shimmer absolute inset-0 z-10 rounded-xl shimmer opacity-70 hidden"></div>
         <div id="chart-prediction" class="absolute inset-0"></div>
       </div>
     </div>
 
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
+    <div class="lg:col-span-2 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Cash vs UPI</h3>
           <span class="metric-tip" tabindex="0" aria-label="About Cash vs UPI"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('dashboard.cashVsUpi') ?></span></span>
         </div>
         <div class="flex items-center gap-1 text-slate-400 shrink-0">
-          <select id="toggle-trend-percent" onchange="DashboardState.rebuildCharts()" title="Show percentages" class="appearance-none bg-slate-50 pl-2 pr-6 py-1 border border-slate-200 rounded-md text-[9px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2212%22%20height%3D%2212%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M3%205l3%203%203-3%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
+          <select id="toggle-trend-mode" onchange="window.renderCashUpiChart()" title="Amount or percentage" class="appearance-none bg-slate-50 pl-2 pr-6 py-1 border border-slate-200 rounded-md text-[9px] font-bold text-slate-700 focus:outline-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2212%22%20height%3D%2212%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M3%205l3%203%203-3%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_4px_center]">
+            <option value="amount">Amount</option>
+            <option value="percent">Percentage</option>
           </select>
+          <button onclick="window.toggleDataLabels('trend', this)" class="text-brand-primary p-0.5 rounded transition-colors" title="Toggle value labels"><span class="material-symbols-rounded text-[16px]">label</span></button>
           <button onclick="window.openChartModal('Cash vs UPI', 'trend')" class="hidden md:flex hover:text-brand-primary p-0.5 rounded"><span class="material-symbols-rounded text-[16px]">open_in_full</span></button>
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
+        <div class="dash-chart-shimmer absolute inset-0 z-10 rounded-xl shimmer opacity-70 hidden"></div>
         <div id="chart-trend" class="absolute inset-0"></div>
       </div>
     </div>
 
-    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
+    <div class="lg:col-span-1 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-w-0 overflow-visible">
       <div class="flex flex-row items-center justify-between mb-2 w-full flex-nowrap gap-1 shrink-0 min-w-0">
         <div class="flex items-center gap-1 min-w-0">
           <h3 class="font-bold text-sm text-slate-800 truncate">Expense Breakdown</h3>
@@ -195,11 +200,12 @@
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
+        <div class="dash-chart-shimmer absolute inset-0 z-10 rounded-xl shimmer opacity-70 hidden"></div>
         <div id="chart-expense-breakdown" class="absolute inset-0"></div>
       </div>
     </div>
 
-    <div id="dash-birthdays" class="bg-gradient-to-b from-rose-50 via-amber-50/70 to-white rounded-xl shadow-sm border border-rose-100 overflow-hidden flex flex-col h-full min-w-0 min-h-[220px]">
+    <div id="dash-birthdays" class="lg:col-span-2 bg-gradient-to-b from-rose-50 via-amber-50/70 to-white rounded-xl shadow-sm border border-rose-100 overflow-hidden flex flex-col h-full min-w-0 min-h-[220px]">
       <div class="px-3 py-2.5 border-b border-rose-100 bg-white/70 flex items-center justify-between gap-2 shrink-0">
         <h3 class="font-bold text-sm text-slate-800 flex items-center gap-1.5 min-w-0">
           <span class="text-base leading-none shrink-0" aria-hidden="true">🎂</span>
@@ -229,12 +235,12 @@
       <div id="table-container-overdue" class="max-h-[260px] overflow-auto no-scrollbar relative">
         <table class="w-full text-left border-collapse">
           <thead class="sticky top-0 z-20 shadow-sm">
-            <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider cursor-pointer select-none">
+            <tr class="text-[11px] text-slate-500 font-bold cursor-pointer select-none">
               <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'name')"><div class="flex items-center">Member <span id="sort-overdue-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'plan')"><div class="flex items-center">Plan <span id="sort-overdue-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'amount')"><div class="flex items-center">Amount <span id="sort-overdue-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'date')"><div class="flex items-center">Due Date <span id="sort-overdue-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days Overdue</span><span class="sm:hidden">Days</span> <span id="sort-overdue-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'date')"><div class="flex items-center">Due date <span id="sort-overdue-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('overdue', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days overdue</span><span class="sm:hidden">Days</span> <span id="sort-overdue-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-2 md:px-3 py-2.5 font-bold text-center border-b border-slate-100 w-12 md:w-16"><span class="hidden md:inline">Notify</span><span class="md:hidden">WA</span></th>
             </tr>
           </thead>
@@ -258,12 +264,12 @@
       <div id="table-container-upcoming" class="max-h-[260px] overflow-auto no-scrollbar relative">
         <table class="w-full text-left border-collapse">
           <thead class="sticky top-0 z-20 shadow-sm">
-            <tr class="text-[11px] uppercase text-slate-500 font-bold tracking-wider cursor-pointer select-none">
+            <tr class="text-[11px] text-slate-500 font-bold cursor-pointer select-none">
               <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'name')"><div class="flex items-center">Member <span id="sort-upcoming-name" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'plan')"><div class="flex items-center">Plan <span id="sort-upcoming-plan" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-3 py-2.5 font-bold hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'amount')"><div class="flex items-center">Amount <span id="sort-upcoming-amount" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'date')"><div class="flex items-center">Due Date <span id="sort-upcoming-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
-              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days Left</span><span class="sm:hidden">Days</span> <span id="sort-upcoming-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold hidden md:table-cell hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'date')"><div class="flex items-center">Due date <span id="sort-upcoming-date" class="text-brand-primary ml-1 font-bold"></span></div></th>
+              <th class="bg-white px-3 py-2.5 font-bold text-right hover:bg-slate-50 transition-colors border-b border-slate-100" onclick="DashboardTables.sort('upcoming', 'days')"><div class="flex items-center justify-end"><span class="hidden sm:inline">Days left</span><span class="sm:hidden">Days</span> <span id="sort-upcoming-days" class="text-brand-primary ml-1 font-bold"></span></div></th>
               <th class="bg-white px-2 md:px-3 py-2.5 font-bold text-center border-b border-slate-100 w-12 md:w-16"><span class="hidden md:inline">Notify</span><span class="md:hidden">WA</span></th>
             </tr>
           </thead>

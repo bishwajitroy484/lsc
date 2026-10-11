@@ -320,6 +320,58 @@ describe('Dashboard Module', () => {
     expect(forecast.expectedCollectionArr.every(amount => amount === 0)).toBe(true);
   });
 
+  test('counts an open partial balance toward the forecast without treating it as received', () => {
+    const dashboardApi = loadDashboardApi();
+    const members = [{
+      memberId: 'MEM-PART',
+      membershipId: 'PLAN-Q',
+      membershipAmount: 3000,
+      joinDate: '2023-11-01',
+      status: 'Active'
+    }];
+    const payments = [{
+      memberId: 'MEM-PART',
+      paymentStatus: 'Pending',
+      amount: 1500,
+      pendingAmount: 1500,
+      expectedAmount: 3000,
+      startDate: '2024-01-01',
+      endDate: '2024-03-31'
+    }];
+    const resolveName = (tab, field, value) => {
+      if (field === 'membershipId') return 'Quarterly';
+      if (field === 'status') return 'Active';
+      return String(value || '');
+    };
+    const dropDowns = { membership: [{ id: 'PLAN-Q', name: 'Quarterly', frequency: 'Quarterly' }] };
+
+    const forecast = dashboardApi.processOperations(
+      members, [], payments, 2024, new Date(2024, 0, 15), resolveName, dropDowns, 'anchor'
+    );
+
+    expect(forecast.pendingArr[0]).toBe(1500);
+
+    const pendingArr = new Array(12).fill(0);
+    pendingArr[0] = 1500;
+    pendingArr[9] = 500;
+    const metrics = dashboardApi.formatTimePeriods(
+      { revArr: [10000, ...new Array(11).fill(0)], expArr: [2000, ...new Array(11).fill(0)], staffArr: new Array(12).fill(0) },
+      { overdueArr: new Array(12).fill(0), expectedCollectionArr: new Array(12).fill(0), pendingArr },
+      'Monthly',
+      ['Jan', 'Oct'],
+      2026,
+      new Date(2026, 9, 10),
+      { operating: 0, staff: 0 },
+      null
+    );
+
+    expect(metrics.actualNet).toBe(8000);
+    expect(metrics.remainingForecastNet).toBe(2000);
+    expect(metrics.projectedNet).toBe(10000);
+    expect(metrics.expectedNetArr[0]).toBeNull();
+    expect(metrics.expectedNetArr[1]).toBe(2000);
+  });
+
   test('uses the trailing twelve recognized months of operating and salary expenses', () => {
     const dashboardApi = loadDashboardApi();
     const averages = dashboardApi.calculateMonthlyExpenseAverages(
@@ -364,6 +416,12 @@ describe('Dashboard Module', () => {
     expect(view).not.toContain('toggle-pred');
     expect(predictionConfig).toContain("type: 'area'");
     expect(predictionConfig).toContain("fill: { opacity: [0.12, 0] }");
+    expect(predictionConfig).toContain('base + extra');
+    const expenseChart = script.slice(script.indexOf('// 5. Expense Breakdown'), script.indexOf('// 6. Staff Cost Trend'));
+    expect(expenseChart).toContain('...dlOptions');
+    expect(expenseChart).toContain("String(label) === 'Staff Cost'");
+    expect(expenseChart).toContain("'#7c3aed'");
+    expect(predictionConfig).toContain('plotExpected[anchor] = plotActual[anchor]');
   });
 
   test('keeps dashboard metric and chart tooltips readable and unclipped', () => {
@@ -375,8 +433,14 @@ describe('Dashboard Module', () => {
     expect(view).toContain("tooltipCopy_('dashboard.activeMembers')");
     expect(view).not.toContain('Plan chips split that same group');
     const tips = fs.readFileSync(path.join(__dirname, '../src/Copy_Tooltips.js'), 'utf8');
-    expect(tips).toContain('Plan chips split that same group');
+    expect(tips).toContain('Members covered in the months or quarters you picked.');
     expect(tips).toContain('function tooltipCopy_');
+    const tipLines = tips.match(/^\s+\w+: '([^']+)'/gm) || [];
+    tipLines.forEach((line) => {
+      const words = line.replace(/^[^']*'|'$/g, '').trim().split(/\s+/).filter(Boolean);
+      expect(words.length).toBeGreaterThan(0);
+      expect(words.length).toBeLessThanOrEqual(12);
+    });
     expect(view).toMatch(/justify-between min-w-0 overflow-visible/);
     expect(view).toMatch(/h-full min-w-0 overflow-visible/);
     expect(styles).toContain('.metric-tip-bubble');
@@ -466,6 +530,9 @@ describe('Dashboard Module', () => {
     expect(script).toContain("toggleShimmer(true)");
     expect(script).toContain('kpi-active-segregation');
     expect(script).toContain('pred-sum-actual');
+    expect(view).toContain('dash-chart-shimmer');
+    expect(script).toContain("document.querySelectorAll('.dash-chart-shimmer')");
+    expect((view.match(/dash-chart-shimmer/g) || []).length).toBe(5);
   });
 
   test('dashboard chips, birthdays, and chart rows stay readable', () => {
@@ -477,12 +544,19 @@ describe('Dashboard Module', () => {
     expect(script).not.toContain('text-slate-600 font-bold uppercase">${label}');
     expect(view).toContain('grid grid-cols-2 gap-1 mt-auto');
     expect(script).not.toContain('truncate max-w-[55px]');
-    expect(view).toContain('id="toggle-trend-percent"');
+    expect(view).toContain('id="toggle-trend-mode"');
+    expect(view).toContain('>Amount<');
+    expect(view).toContain('>Percentage<');
+    expect(view).toContain("toggleDataLabels('trend', this)");
+    expect(view).not.toContain('id="toggle-trend-percent"');
     expect(view).toContain('>Projected:<');
-    expect(view).not.toContain('id="toggle-trend"');
     expect(script).toContain("stackType: showPercent ? '100%' : 'normal'");
+    expect(view).toContain("window.renderCashUpiChart()");
+    expect(script).toContain('window.renderCashUpiChart = function()');
     expect(script).toContain('paymentModes.cashLabel');
-    expect(view).toContain('lg:grid-cols-3');
+    expect(view).toContain('lg:grid-cols-5');
+    expect((view.match(/lg:col-span-2/g) || []).length).toBe(4);
+    expect((view.match(/lg:col-span-1/g) || []).length).toBe(2);
     const rev = view.indexOf('>Revenue vs Expenses<');
     const batch = view.indexOf('>Members by Batch<');
     const net = view.indexOf('>Net-In-Hand Forecast<');

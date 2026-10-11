@@ -374,6 +374,22 @@ describe('Staff Module - Action Needed & Salary Cycle Calculations', () => {
       expect(StaffApp.parseDateRobust('2026-05-20')).toEqual(new Date(Date.UTC(2026, 4, 20)));
     });
 
+    test('record salary leads with coverage and saves as paid without a status or receipt field', () => {
+      const viewHtml = fs.readFileSync(path.join(__dirname, '../src/View_Staff.html'), 'utf8');
+      const scriptHtml = fs.readFileSync(path.join(__dirname, '../src/Script_Staff.html'), 'utf8');
+      const formStart = viewHtml.indexOf('id="txn-form"');
+      const formEnd = viewHtml.indexOf('id="delete-stf-modal"');
+      const form = viewHtml.slice(formStart, formEnd);
+      expect(form.indexOf('id="txn-coverage-container"')).toBeLessThan(form.indexOf('id="txn-amount"'));
+      expect(form.indexOf('id="txn-amount"')).toBeLessThan(form.indexOf('id="txn-paidDate"'));
+      expect(form).toContain('id="txn-paymentStatus" class="hidden"');
+      expect(form).toContain('type="hidden" id="txn-receiptUrl"');
+      expect(form).not.toContain('Receipt URL');
+      expect(form).not.toContain('Payment Status');
+      expect(scriptHtml).toContain('paidStatusId: function()');
+      expect(scriptHtml).toContain("paymentStatus: document.getElementById('txn-paymentStatus')?.value || this.paidStatusId()");
+    });
+
     test('staff and salary forms omit notes fields from the UI', () => {
       const viewHtml = fs.readFileSync(path.join(__dirname, '../src/View_Staff.html'), 'utf8');
       const scriptHtml = fs.readFileSync(path.join(__dirname, '../src/Script_Staff.html'), 'utf8');

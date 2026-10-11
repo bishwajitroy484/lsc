@@ -475,6 +475,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
   let activeSegregation = {};
   let overdueArr = new Array(12).fill(0);
   let expectedCollectionArr = new Array(12).fill(0);
+  let pendingArr = new Array(12).fill(0);
 
   // Pre-map payments by member for high-speed dynamic due date calculation
   const paymentsByMember = {};
@@ -591,6 +592,19 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
 
        const latestPaymentAmount = mPayments.length ? parseAmt(mPayments[0].amount) : 0;
        const expectedPaymentAmount = amt || latestPaymentAmount;
+       if (isActive && !isAdHocOrTrial) {
+         payments.forEach(payment => {
+           if (String(payment.memberId || '') !== String(m.memberId || '')) return;
+           const pendingBalance = paymentPendingBalance_(payment);
+           if (pendingBalance <= 0) return;
+           const anchor = parseSafeDate(payment.startDate || payment.paidDate || payment.date);
+           if (!isNaN(anchor) && anchor.getFullYear() === targetYear) {
+             pendingArr[anchor.getMonth()] += pendingBalance;
+           } else if (targetYear === today.getFullYear()) {
+             pendingArr[today.getMonth()] += pendingBalance;
+           }
+         });
+       }
        if (isActive && !isAdHocOrTrial && expectedPaymentAmount > 0 && actualNextDue && actualNextDue >= today) {
            const firstDueDate = new Date(actualNextDue);
            const targetYearEnd = new Date(targetYear, 11, 31, 23, 59, 59, 999);
@@ -688,7 +702,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
   const batchLabels = Object.keys(batchCounts);
   const batchData = safeNumArray(Object.values(batchCounts));
 
-  return { activeCount, staffCount, batchLabels, batchData, overdueList, upcomingList, birthdayList, snapOverdueAmt, activeSegregation, overdueArr, expectedCollectionArr };
+  return { activeCount, staffCount, batchLabels, batchData, overdueList, upcomingList, birthdayList, snapOverdueAmt, activeSegregation, overdueArr, expectedCollectionArr, pendingArr: safeNumArray(pendingArr) };
 }
 
 function formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today, expenseAverages, actualAnchor) {
@@ -767,11 +781,21 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     (targetYear === today.getFullYear() && monthIdx === currentMIdx)
       ? (operationalData.expectedCollectionArr[monthIdx] || 0)
       : 0;
+  const pendingArr = operationalData.pendingArr || [];
+  const monthPending = (monthIdx) => Number(pendingArr[monthIdx] || 0);
   const slotHasElapsed = (slotIdx) => monthsForSlot(slotIdx).some(m => !isMonthFuture(m));
   const slotHasFuture = (slotIdx) => monthsForSlot(slotIdx).some(m => isMonthFuture(m));
 
   const selectedIndices = filteredLabels.map(label => finalLabels.indexOf(label));
   const selectedForecastStart = selectedIndices.findIndex(slotIdx => slotHasFuture(slotIdx));
+  let pendingStillOwed = 0;
+  selectedIndices.forEach(slotIdx => {
+    monthsForSlot(slotIdx).forEach(monthIdx => {
+      pendingStillOwed += monthPending(monthIdx);
+    });
+  });
+  const currentSlotSelected = targetYear === today.getFullYear() &&
+    selectedIndices.some(slotIdx => monthsForSlot(slotIdx).includes(currentMIdx));
   let predictionLabels = filteredLabels.slice();
   let predictionActual = selectedIndices.map(slotIdx => {
     const elapsedMonths = monthsForSlot(slotIdx).filter(m => !isMonthFuture(m));
@@ -784,9 +808,15 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     const elapsedMonths = months.filter(m => !isMonthFuture(m));
     const unpaidNow = elapsedMonths.reduce((sum, m) => sum + unpaidStillDue(m), 0);
     const futureNet = futureMonths.reduce((sum, m) => sum + monthForecastNet(m), 0);
-    if (!futureMonths.length && !unpaidNow) return null;
-    // Projected is money not yet received. A due later this month stays off Actual.
-    return Number((unpaidNow + futureNet).toFixed(2));
+    const isLastSelected = slotIdx === selectedIndices[selectedIndices.length - 1];
+    const attachPending = pendingStillOwed > 0 && (
+      (currentSlotSelected && months.includes(currentMIdx)) ||
+      (!currentSlotSelected && isLastSelected)
+    );
+    const pendingHere = attachPending ? pendingStillOwed : 0;
+    if (!futureMonths.length && !unpaidNow && !pendingHere) return null;
+    // Projected is money not yet received. A due later this month, and any open partial balance, stay off Actual.
+    return Number((unpaidNow + futureNet + pendingHere).toFixed(2));
   });
   let transitionIndex = selectedIndices.findIndex(slotIdx => slotHasElapsed(slotIdx) && slotHasFuture(slotIdx));
   if (transitionIndex < 0) {
@@ -808,7 +838,7 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
           .toFixed(2));
       predictionLabels.splice(insertionIndex, 0, anchorLabel);
       predictionActual.splice(insertionIndex, 0, anchorValue);
-      predictionExpected.splice(insertionIndex, 0, anchorValue);
+      predictionExpected.splice(insertionIndex, 0, 0);
       transitionIndex = insertionIndex;
     }
   }
@@ -823,6 +853,7 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
         actualNet += monthActualNet(monthIdx);
         remainingForecastNet += unpaidStillDue(monthIdx);
       }
+      remainingForecastNet += monthPending(monthIdx);
     });
   });
 
@@ -939,4 +970,14 @@ function parseAmt(val) { return Number(String(val).replace(/[^0-9.-]+/g, "")) ||
 function isSuccess(statusStr) {
   const status = String(statusStr || '').trim().toLowerCase();
   return status === 'paid' || status === 'completed';
+}
+
+function paymentPendingBalance_(payment) {
+  const explicit = parseAmt(payment && payment.pendingAmount);
+  if (explicit > 0) return explicit;
+  const expected = parseAmt(payment && payment.expectedAmount);
+  const paid = parseAmt(payment && payment.amount);
+  const status = String(payment && payment.paymentStatus || '').trim().toLowerCase();
+  if ((status === 'pending' || status.indexOf('partial') >= 0) && expected > paid) return expected - paid;
+  return 0;
 }

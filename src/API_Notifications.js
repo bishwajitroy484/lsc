@@ -306,7 +306,7 @@ function buildWeeklyTableHtml_(rows, fields, emptyText) {
     '<tr style="background:#f8fafc">';
   columns.forEach(function(col) {
     html +=
-      '<th align="left" style="padding:10px 12px;border:1px solid #e2e8f0;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:0.03em">' +
+      '<th align="left" style="padding:10px 12px;border:1px solid #e2e8f0;color:#475569;font-size:11px">' +
       escapeHtmlEmail_(col.label) +
       '</th>';
   });
