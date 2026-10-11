@@ -119,8 +119,6 @@ function api_getDropdownConfig() {
 
 function api_saveSchema(schemaObj) {
   try {
-    const gate = requirePermission_('settings', 'edit');
-    if (!gate.ok) return gate.response;
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('DROP_DOWN');
     if (!sheet) throw new Error("DROP_DOWN sheet is missing.");
@@ -155,6 +153,19 @@ function api_saveSchema(schemaObj) {
         rowIndexToUpdate = i + 2;
         existingSchema = { startCol: sCol, numCols: nCol };
       }
+    }
+
+    const context = getCurrentUserContext_();
+    if (!context || !context.allowed) {
+      return { success: false, error: (context && context.error) || 'Access denied.', code: 'FORBIDDEN' };
+    }
+    const schemaAction = rowIndexToUpdate < 0 ? 'create' : 'edit';
+    if (!hasPermission_(context, 'settings', schemaAction)) {
+      return {
+        success: false,
+        error: 'You do not have permission to ' + schemaAction + ' on settings.',
+        code: 'FORBIDDEN'
+      };
     }
 
     schemaObj.numCols = schemaObj.columns.length;
@@ -250,8 +261,6 @@ function api_saveSchema(schemaObj) {
 
 function api_saveDropdownOptions(categoryKey, optionsArray) {
   try {
-    const gate = requirePermission_('settings', 'edit');
-    if (!gate.ok) return gate.response;
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('DROP_DOWN');
     if (!sheet) throw new Error("DROP_DOWN sheet is missing.");
@@ -282,6 +291,30 @@ function api_saveDropdownOptions(categoryKey, optionsArray) {
     }
 
     if (!schema || !schema.startCol) throw new Error("Schema mapping not found.");
+
+    const existingValues = sheet.getRange(3, schema.startCol, 198, schema.numCols).getValues();
+    let existingCount = 0;
+    existingValues.forEach(function(row) {
+      if (row && String(row[0] || '').trim()) existingCount++;
+    });
+    const nextCount = Array.isArray(optionsArray) ? optionsArray.length : 0;
+    const needed = [];
+    if (nextCount > existingCount) needed.push('create');
+    if (nextCount < existingCount) needed.push('delete');
+    if (nextCount === existingCount) needed.push('edit');
+    const context = getCurrentUserContext_();
+    if (!context || !context.allowed) {
+      return { success: false, error: (context && context.error) || 'Access denied.', code: 'FORBIDDEN' };
+    }
+    for (let n = 0; n < needed.length; n++) {
+      if (!hasPermission_(context, 'settings', needed[n])) {
+        return {
+          success: false,
+          error: 'You do not have permission to ' + needed[n] + ' on settings.',
+          code: 'FORBIDDEN'
+        };
+      }
+    }
 
     const startLetter = _colToLetter(schema.startCol);
     const endLetter = _colToLetter(schema.startCol + schema.numCols - 1);
@@ -426,5 +459,91 @@ function api_saveGeneralSettings(settingsArray) {
     };
   } catch (error) {
     return { success: false, error: error.toString() };
+  }
+}
+
+var FACTORY_RESET_SHEETS_ = ['MEMBERS', 'PAYMENTS', 'STAFF', 'SALARY', 'EXPENSES'];
+
+function clearFactoryResetCalendarEvents_() {
+  var removed = 0;
+  if (typeof CalendarApp === 'undefined') return { removed: 0, skipped: true };
+  var cal;
+  try {
+    cal = CalendarApp.getDefaultCalendar();
+  } catch (error) {
+    return { removed: 0, skipped: true, error: String(error && error.message ? error.message : error) };
+  }
+
+  var seen = {};
+  try {
+    var members = (typeof DB !== 'undefined' && DB.read) ? (DB.read('MEMBERS') || []) : [];
+    members.forEach(function(member) {
+      var eventId = String(member && member.dueCalendarEventId || '').trim();
+      if (!eventId || seen[eventId]) return;
+      seen[eventId] = true;
+      try {
+        var stored = cal.getEventById(eventId);
+        if (stored) {
+          stored.deleteEvent();
+          removed++;
+        }
+      } catch (error) { /* keep going so one bad event does not stop the reset */ }
+    });
+  } catch (error) { /* member ids are optional; the title sweep still runs */ }
+
+  try {
+    var start = new Date();
+    start.setFullYear(start.getFullYear() - 2);
+    var end = new Date();
+    end.setFullYear(end.getFullYear() + 3);
+    var events = cal.getEvents(start, end) || [];
+    events.forEach(function(event) {
+      var title = '';
+      var description = '';
+      try { title = String(event.getTitle() || ''); } catch (e) { title = ''; }
+      try { description = String(event.getDescription() || ''); } catch (e) { description = ''; }
+      var isLscDue = title.indexOf('Due: ') === 0 && description.indexOf('Created automatically by LSC Gym Management.') >= 0;
+      if (!isLscDue) return;
+      try {
+        event.deleteEvent();
+        removed++;
+      } catch (error) { /* leave the sheet reset to finish */ }
+    });
+  } catch (error) {
+    return { removed: removed, skipped: true, error: String(error && error.message ? error.message : error) };
+  }
+  return { removed: removed, skipped: false };
+}
+
+function api_factoryResetApplicationData() {
+  try {
+    const gate = requirePermission_('settings', 'edit');
+    if (!gate.ok) return gate.response;
+    if (!gate.context || !gate.context.isOwner) {
+      return { success: false, error: 'Only the gym owner can reset application data.', code: 'FORBIDDEN' };
+    }
+    const calendar = clearFactoryResetCalendarEvents_();
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const cleared = [];
+    FACTORY_RESET_SHEETS_.forEach(function(name) {
+      const sheet = ss.getSheetByName(name);
+      if (!sheet) return;
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) sheet.deleteRows(2, lastRow - 1);
+      if (typeof DB !== 'undefined' && DB._invalidateSheet) DB._invalidateSheet(name);
+      cleared.push(name);
+    });
+    var message = 'Members, payments, staff, salary, expenses, and calendar events were cleared.';
+    if (calendar && calendar.skipped) {
+      message += ' Calendar cleanup could not finish. Re-authorize Google services, then run the reset again to remove any remaining due events.';
+    }
+    return {
+      success: true,
+      message: message,
+      cleared: cleared,
+      calendarEventsRemoved: calendar ? calendar.removed : 0
+    };
+  } catch (error) {
+    return { success: false, error: error.message || String(error) };
   }
 }

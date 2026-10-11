@@ -221,7 +221,7 @@ describe('due calendar helpers', () => {
     expect(createdEvents).toHaveLength(1);
     expect(createdEvents[0].start.getFullYear()).toBe(2026);
     expect(createdEvents[0].start.getMonth()).toBe(11);
-    expect(createdEvents[0].start.getDate()).toBe(31);
+    expect(createdEvents[0].start.getDate()).toBe(29);
     expect(memberUpdates.some(u => u.payload.dueCalendarEventId === 'evt-new-1')).toBe(true);
   });
 
@@ -251,7 +251,7 @@ describe('due calendar helpers', () => {
     expect(res.synced).toBe(true);
     expect(createdEvents[0].start.getFullYear()).toBe(2026);
     expect(createdEvents[0].start.getMonth()).toBe(11);
-    expect(createdEvents[0].start.getDate()).toBe(16);
+    expect(createdEvents[0].start.getDate()).toBe(14);
   });
 
   test('sync skips non-quarterly plans', () => {

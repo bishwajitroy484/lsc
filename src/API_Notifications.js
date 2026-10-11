@@ -233,7 +233,9 @@ function startOfDay_(date) {
 function computeMemberDueDate_(member, payments, paymentStatuses) {
   const memberPayments = (payments || [])
     .filter(p => String(p.memberId) === String(member.memberId))
-    .filter(p => isPaidPaymentStatus(p.paymentStatus, paymentStatuses))
+    .filter(p => (typeof paymentCoversMembershipCycle_ === 'function'
+      ? paymentCoversMembershipCycle_(p, paymentStatuses)
+      : isPaidPaymentStatus(p.paymentStatus, paymentStatuses)))
     .sort((a, b) => {
       const aDate = parseSafeDate(a.endDate || a.paidDate || 0);
       const bDate = parseSafeDate(b.endDate || b.paidDate || 0);
@@ -304,7 +306,7 @@ function buildWeeklyTableHtml_(rows, fields, emptyText) {
     '<tr style="background:#f8fafc">';
   columns.forEach(function(col) {
     html +=
-      '<th align="left" style="padding:10px 12px;border:1px solid #e2e8f0;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:0.03em">' +
+      '<th align="left" style="padding:10px 12px;border:1px solid #e2e8f0;color:#475569;font-size:11px">' +
       escapeHtmlEmail_(col.label) +
       '</th>';
   });
@@ -393,7 +395,7 @@ function buildWeeklyReportEmail_(config, report) {
   const inner =
     textToHtmlParagraphs_(introText) +
     '<div style="margin-top:18px;padding:12px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px">' +
-    '<div style="font-size:12px;font-weight:700;color:#A80000;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px">Summary</div>' +
+    '<div style="font-size:12px;font-weight:700;color:#A80000;letter-spacing:0.04em;margin-bottom:4px">Summary</div>' +
     '<div style="font-size:13px;color:#1e3a8a">Upcoming: <strong>' +
     vars.upcomingCount +
     '</strong> · Overdue: <strong>' +
@@ -605,7 +607,7 @@ function api_sendTestNotificationEmail(type, draftConfig) {
       const htmlBody =
         '<div style="font-family:Arial,sans-serif;color:#0f172a;padding:22px">' +
         '<div style="margin:0 0 16px;padding:10px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;color:#92400e;font-size:13px;font-weight:600">This is a test email from LSC Settings. No member was notified on WhatsApp.</div>' +
-        '<p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#64748b">' + label + '</p>' +
+        '<p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:0.04em;color:#64748b">' + label + '</p>' +
         '<pre style="margin:0;white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.5">' + escapeNotificationHtml_(text) + '</pre>' +
         '</div>';
       MailApp.sendEmail({ to: recipient, subject: subject, htmlBody: htmlBody });

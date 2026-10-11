@@ -19,6 +19,13 @@
     chartInstances: {},
     deleteState: { type: null, id: null }, 
     currentActiveStaff: null,
+
+    statusBadgeClass: function(name) {
+      const lower = String(name || '').toLowerCase();
+      if (lower.includes('in-active') || lower.includes('inactive')) return 'bg-red-50 text-red-700 border-red-200';
+      if (lower === 'active') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      return 'bg-slate-50 text-slate-600 border-slate-200';
+    },
     currentStaffPayments: [],
     
     colorMap: ['#CE0002', '#f59e0b', '#10b981', '#404040', '#ef4444', '#737373', '#f97316', '#64748b'],
@@ -234,11 +241,22 @@
       return match ? match.name : id;
     },
 
-    fetchData: function() {
+    refreshExpenseSummary: function() {
+      if (typeof ExpensesApp === 'undefined' || typeof ExpensesApp.fetchData !== 'function') return;
+      if (typeof ExpensesApp.showShimmer === 'function') ExpensesApp.showShimmer();
+      ExpensesApp.fetchData();
+    },
+
+    fetchData: function(callback) {
       google.script.run
         .withSuccessHandler((res) => {
            this.onDataLoaded(res);
            this.applyGlobalFilters();
+           if (typeof callback === 'function') callback();
+        })
+        .withFailureHandler((err) => {
+           Toast.error("Error loading staff data: " + (err && err.message ? err.message : 'Unknown error'));
+           if (typeof callback === 'function') callback();
         })
         .api_getStaff();
     },
@@ -326,7 +344,10 @@
       // Clearly delegate to our separated functions
       this.calculateKPIs(selectedYear, mode);
       this.renderCharts();
-      this.filterTable(); 
+      this.filterTable();
+      if (typeof ExpensesHub !== 'undefined' && ExpensesHub.refreshAllRecords) {
+        ExpensesHub.refreshAllRecords();
+      }
     },
 
     getStaffCycles: function(stf, staffPayments = null) {
@@ -773,7 +794,7 @@
       
       const rName = this.getName('role', stf.role);
       const sName = this.getName('status', stf.status);
-      let sClass = sName === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100';
+      const sClass = this.statusBadgeClass(sName);
       const stfJson = JSON.stringify(stf).replace(/"/g, '&quot;');
 
       const cycleInfo = this.getStaffCycles(stf);
@@ -782,7 +803,7 @@
       
       let monthCycleHtml = '';
       if (hasActionNeeded) {
-        const countBadge = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>${pendingCycles.length} Due</span>`;
+        const countBadge = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 tracking-wide"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>${pendingCycles.length} Due</span>`;
         const pendingMonths = pendingCycles.map(c => c.monthLabel).join(', ');
         monthCycleHtml = `
           <div class="flex items-center gap-1.5 flex-wrap">
@@ -795,7 +816,7 @@
         const statusText = lastPaidMonth ? `Through ${lastPaidMonth}` : 'Up to date';
         monthCycleHtml = `
           <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide"><span class="material-symbols-rounded text-[13px]">check_circle</span>Paid</span>
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 tracking-wide"><span class="material-symbols-rounded text-[13px]">check_circle</span>Paid</span>
             <span class="text-xs text-slate-600 font-medium">${statusText}</span>
           </div>
           <div class="text-[11px] text-slate-500 mt-0.5">Joined ${dateStr}</div>`;
@@ -807,16 +828,16 @@
 
       return `
         <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onclick="StaffApp.openDetails(${stfJson})">
-          <td data-lsc-table="staff" data-col="name" class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${hasActionNeeded ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'} flex items-center justify-center text-[11px] font-bold shrink-0">${initials}</div><div><div class="font-bold text-slate-800 text-xs md:text-sm hover:text-brand-primary transition-colors">${stf.fullName}</div></div></div></td>
-          <td data-lsc-table="staff" data-col="role" class="px-4 py-3 text-slate-700 text-xs font-medium">${rName}</td>
-          <td data-lsc-table="staff" data-col="phone" class="px-4 py-3 text-slate-600 text-xs">${stf.phone}</td>
-          <td data-lsc-table="staff" data-col="salary" class="px-4 py-3 whitespace-nowrap"><span class="font-bold text-slate-800 text-xs md:text-sm">${amtStr}</span> <span class="text-xs text-slate-400 font-normal">/ mo</span></td>
-          <td data-lsc-table="staff" data-col="cycle" class="px-4 py-3">${monthCycleHtml}</td>
-          <td data-lsc-table="staff" data-col="status" class="px-4 py-3"><span class="text-xs font-bold px-2 py-0.5 rounded border ${sClass}">${sName}</span></td>
-          <td data-lsc-table="staff" data-col="actions" class="px-4 py-3 text-right whitespace-nowrap">
+          <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full ${hasActionNeeded ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'} flex items-center justify-center text-[11px] font-bold shrink-0">${initials}</div><div><div class="font-bold text-slate-800 text-xs md:text-sm hover:text-brand-primary transition-colors">${stf.fullName}</div></div></div></td>
+          <td class="px-4 py-3 text-slate-700 text-xs font-medium">${rName}</td>
+          <td class="px-4 py-3 text-slate-600 text-xs">${stf.phone}</td>
+          <td class="px-4 py-3 whitespace-nowrap"><span class="font-bold text-slate-800 text-xs md:text-sm">${amtStr}</span> <span class="text-xs text-slate-400 font-normal">/ mo</span></td>
+          <td class="px-4 py-3">${monthCycleHtml}</td>
+          <td class="px-4 py-3"><span class="text-xs font-bold px-2 py-0.5 rounded border ${sClass}">${sName}</span></td>
+          <td class="px-4 py-3 text-right whitespace-nowrap">
             ${payButtonHtml}
-            <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">edit</span></button>
-            <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">delete</span></button>
+            <button data-perm="staff:edit" onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">edit</span></button>
+            <button data-perm="staff:delete" onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">delete</span></button>
           </td>
         </tr>`;
     },
@@ -829,7 +850,7 @@
       
       const rName = this.getName('role', stf.role);
       const sName = this.getName('status', stf.status);
-      let sClass = sName === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100';
+      const sClass = this.statusBadgeClass(sName);
       const stfJson = JSON.stringify(stf).replace(/"/g, '&quot;');
 
       const cycleInfo = this.getStaffCycles(stf);
@@ -873,8 +894,8 @@
             <span>Joined ${dateStr}</span>
             <div class="flex items-center gap-1.5">
               ${hasActionNeeded ? `<button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${stf.staffId}')" class="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold rounded flex items-center gap-1 hover:bg-amber-100"><span class="material-symbols-rounded text-[13px]">payments</span>Pay</button>` : ''}
-              <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="p-1 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[16px]">edit</span></button>
-              <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="p-1 text-slate-400 hover:text-red-500 rounded"><span class="material-symbols-rounded text-[16px]">delete</span></button>
+              <button data-perm="staff:edit" onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="p-1 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[16px]">edit</span></button>
+              <button data-perm="staff:delete" onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="p-1 text-slate-400 hover:text-red-500 rounded"><span class="material-symbols-rounded text-[16px]">delete</span></button>
             </div>
           </div>
         </div>`;
@@ -918,6 +939,7 @@
       const initialBatch = this.tableData.slice(0, this.pageSize);
       tBody.innerHTML = initialBatch.map((stf, i) => this.buildDesktopRowHtml(stf, i)).join('');
       mContainer.innerHTML = initialBatch.map((stf, i) => this.buildMobileCardHtml(stf, i)).join('');
+      if (typeof AccessControl !== 'undefined') AccessControl.repaint('staff');
       this.renderedCount = initialBatch.length;
 
       this.initScrollListener();
@@ -957,6 +979,7 @@
           tBody.insertAdjacentHTML('beforeend', dHtml);
           mContainer.insertAdjacentHTML('beforeend', mHtml);
           this.renderedCount += nextBatch.length;
+          if (typeof AccessControl !== 'undefined') AccessControl.repaint('staff');
         }
         this.isLoadingMore = false;
       }, 160);
@@ -1020,7 +1043,7 @@
       const sName = this.getName('status', stf.status);
       const rName = this.getName('role', stf.role);
       
-      let sClass = sName === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100';
+      const sClass = this.statusBadgeClass(sName);
       const cleanAmt = this.parseAmount(stf.salary);
       const amtStr = cleanAmt > 0 ? AppUtils.formatCurrency(cleanAmt) : '₹0';
       
@@ -1109,10 +1132,10 @@
                       </td>
                       <td class="px-4 py-3">
                         <div class="font-bold text-slate-800">${rAmtStr}</div>
-                        <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase text-amber-700 bg-amber-50 border-amber-200">ACTION NEEDED</span>
+                        <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border text-amber-700 bg-amber-50 border-amber-200">Action needed</span>
                       </td>
                       <td class="px-4 py-3 text-right whitespace-nowrap">
-                         <button onclick="StaffApp.openTransactionModal(${pJson})" class="px-3 py-1.5 text-amber-700 border border-amber-300 bg-white hover:bg-amber-500 hover:text-white text-[10px] font-bold rounded shadow-sm transition-colors whitespace-nowrap">Pay Now</button>
+                         <button data-perm="staff:create" onclick="StaffApp.openTransactionModal(${pJson})" class="px-3 py-1.5 text-amber-700 border border-amber-300 bg-white hover:bg-amber-500 hover:text-white text-[10px] font-bold rounded shadow-sm transition-colors whitespace-nowrap">Pay Now</button>
                       </td>
                     </tr>
                   `;
@@ -1122,7 +1145,7 @@
                   let statColor = isPaidOrCompleted 
                     ? 'text-emerald-700 bg-emerald-50 border-emerald-200' 
                     : (pStatusName.toLowerCase().includes('pending') ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-red-700 bg-red-50 border-red-200');
-                  let displayBadgeText = isPaidOrCompleted ? 'PAID' : pStatusName.toUpperCase();
+                  let displayBadgeText = isPaidOrCompleted ? 'Paid' : pStatusName;
                   
                   if (isPaidOrCompleted) {
                       totalPaid += safeAmt;
@@ -1145,12 +1168,12 @@
                       </td>
                       <td class="px-4 py-3">
                          <div class="font-bold text-slate-800">${rAmtStr}${rcptHtml}</div>
-                         <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${statColor}">${displayBadgeText}</span>
+                         <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border ${statColor}">${displayBadgeText}</span>
                       </td>
                       <td class="px-4 py-3 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onclick="StaffApp.openTransactionModal(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
-                          <button onclick="StaffApp.openDeleteModal('payment', '${r.paymentId}', '${cycleLabel} Record')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
+                          <button data-perm="staff:edit" onclick="StaffApp.openTransactionModal(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
+                          <button data-perm="staff:delete" onclick="StaffApp.openDeleteModal('payment', '${r.paymentId}', '${cycleLabel} Record')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
                         </div>
                       </td>
                     </tr>
@@ -1161,8 +1184,15 @@
            this.safeSetText('det-stf-total-paid', AppUtils.formatCurrency(totalPaid));
            if(html === '') html = `<tr><td colspan="3" class="text-center py-6 text-xs text-slate-400">No records found.</td></tr>`;
            if(tBody) tBody.innerHTML = html;
+           if (typeof AccessControl !== 'undefined') AccessControl.repaint('staff');
         })
         .api_getStaffTransactions(stf.staffId);
+    },
+
+    activeStatusId: function() {
+      const statuses = this.dropdowns.status || this.dropdowns.staffstatus || this.dropdowns.statuses || [];
+      const active = statuses.find(opt => String(opt.name || opt.label || '').trim().toLowerCase() === 'active');
+      return active ? active.id : '';
     },
 
     onStatusChange: function() {
@@ -1194,6 +1224,7 @@
 
     openModal: function(stf = null) {
       if(stf && stf instanceof Event) stf = null;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('staff', stf ? 'edit' : 'create')) return;
 
       this.safeSetText('stf-modal-title', stf ? 'Edit Staff' : 'Add Staff');
       this.safeSetValue('stf-id', stf ? stf.staffId : '');
@@ -1210,8 +1241,10 @@
       this.setDatePicker('stf-join', stf && stf.joinDate ? stf.joinDate : new Date());
       this.setDatePicker('stf-dob', stf && stf.dob ? stf.dob : '');
       this.setDatePicker('stf-exit-date', stf && stf.exitDate ? stf.exitDate : '');
-      
-      this.safeSetValue('stf-status', stf ? stf.status : '');
+
+      const statusField = document.getElementById('stf-status-field');
+      if (statusField) statusField.classList.toggle('hidden', !stf);
+      this.safeSetValue('stf-status', stf ? stf.status : (this.activeStatusId() || ''));
 
       this.onStatusChange();
 
@@ -1240,6 +1273,7 @@
          btn.disabled = true;
       }
 
+      const isNew = !document.getElementById('stf-id')?.value;
       const payload = {
         staffId: document.getElementById('stf-id')?.value,
         fullName: document.getElementById('stf-name')?.value,
@@ -1250,24 +1284,44 @@
         dob: this.formatDateDDMMMYYYY(document.getElementById('stf-dob')?.value),
         salary: Number(document.getElementById('stf-salary')?.value || 0),
         joinDate: this.formatDateDDMMMYYYY(document.getElementById('stf-join')?.value),
-        exitDate: this.formatDateDDMMMYYYY(document.getElementById('stf-exit-date')?.value),
-        status: document.getElementById('stf-status')?.value
+        exitDate: isNew ? '' : this.formatDateDDMMMYYYY(document.getElementById('stf-exit-date')?.value),
+        status: isNew ? (this.activeStatusId() || document.getElementById('stf-status')?.value) : document.getElementById('stf-status')?.value
       };
 
+      const reopenStaffId = this.currentActiveStaff && this.currentActiveStaff.staffId;
+      this.closeModal();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
           if(btn) { btn.innerHTML = `Save Staff`; btn.disabled = false; }
           if(res.success) {
             Toast.success(res.message);
-            this.closeModal();
-            this.showShimmer();
+            this.fetchData(() => {
+              const freshId = (res.data && res.data.staffId) || payload.staffId || reopenStaffId;
+              if (!reopenStaffId || !freshId) return;
+              const fresh = this.allData.find(s => String(s.staffId) === String(freshId));
+              if (fresh) this.openDetails(fresh);
+            });
+          } else {
+            Toast.error(res.error);
             this.fetchData();
-            if(this.currentActiveStaff && this.currentActiveStaff.staffId === payload.staffId) {
-                this.openDetails(payload);
-            }
-          } else { Toast.error(res.error); }
+          }
+        })
+        .withFailureHandler((err) => {
+          if(btn) { btn.innerHTML = `Save Staff`; btn.disabled = false; }
+          Toast.error((err && err.message) || 'Could not save the staff record.');
+          this.fetchData();
         })
         .api_saveStaff(payload);
+    },
+
+    paidStatusId: function() {
+      const statusOpts = this.dropdowns.paymentstatus || this.dropdowns.status || [];
+      const paid = statusOpts.find(opt => {
+        const name = String(opt.name || opt.label || '').trim().toLowerCase();
+        return name === 'paid' || name === 'completed';
+      });
+      return paid ? paid.id : '';
     },
 
     onCreditTypeChange: function() {
@@ -1291,8 +1345,12 @@
     openTransactionModal: function(txn = null) {
       if(!this.currentActiveStaff) return;
       if(txn && txn instanceof Event) txn = null;
+      const isEdit = txn && txn.paymentId && !txn.isVirtual;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('staff', isEdit ? 'edit' : 'create')) return;
 
-      this.safeSetText('txn-modal-title', txn && !txn.isVirtual ? 'Edit Record' : 'Record Salary / Credit');
+      const staffName = this.currentActiveStaff.fullName || 'Staff';
+      this.safeSetText('txn-modal-title', txn && !txn.isVirtual ? 'Edit salary' : 'Record salary');
+      this.safeSetText('txn-staff-caption', staffName + ' · saved as paid');
       this.safeSetValue('txn-id', txn && !txn.isVirtual ? txn.paymentId : '');
       
       const rawAmt = txn ? String(txn.amount).replace(/[^0-9.-]+/g,"") : (this.currentActiveStaff.salary ? String(this.currentActiveStaff.salary).replace(/[^0-9.-]+/g,"") : '');
@@ -1303,8 +1361,8 @@
       const defMode = document.getElementById('txn-paymentMode')?.options[1]?.value || '';
       this.safeSetValue('txn-paymentMode', txn && !txn.isVirtual && txn.paymentMode ? txn.paymentMode : defMode);
       
-      const defStatus = document.getElementById('txn-paymentStatus')?.options[1]?.value || '';
-      this.safeSetValue('txn-paymentStatus', txn && !txn.isVirtual && txn.paymentStatus ? txn.paymentStatus : defStatus);
+      const paidStatus = this.paidStatusId() || document.getElementById('txn-paymentStatus')?.options[1]?.value || '';
+      this.safeSetValue('txn-paymentStatus', txn && !txn.isVirtual && txn.paymentStatus ? txn.paymentStatus : paidStatus);
 
       const creditOpts = Array.from(document.getElementById('txn-creditType').options);
       const salOpt = creditOpts.find(opt => opt.text.toLowerCase().includes('salary'));
@@ -1368,8 +1426,8 @@
         amount: Number(document.getElementById('txn-amount')?.value || 0),
         paidDate: this.formatDateDDMMMYYYY(document.getElementById('txn-paidDate')?.value),
         paymentMode: document.getElementById('txn-paymentMode')?.value,
-        paymentStatus: document.getElementById('txn-paymentStatus')?.value,
-        receiptUrl: document.getElementById('txn-receiptUrl')?.value
+        paymentStatus: document.getElementById('txn-paymentStatus')?.value || this.paidStatusId(),
+        receiptUrl: document.getElementById('txn-receiptUrl')?.value || ''
       };
 
       const startVal = document.getElementById('txn-startDate')?.value;
@@ -1382,20 +1440,38 @@
          payload.endDate = '';
       }
 
+      const reopenStaffId = this.currentActiveStaff && this.currentActiveStaff.staffId;
+      this.closeTransactionModal();
+      this.showShimmer();
       google.script.run
         .withSuccessHandler((res) => {
           if(btn) { btn.innerHTML = `Save Record`; btn.disabled = false; }
           if(res.success) {
             Toast.success(res.message);
-            this.closeTransactionModal();
+            this.refreshExpenseSummary();
+            this.fetchData(() => {
+              if (!reopenStaffId) return;
+              const fresh = this.allData.find(s => String(s.staffId) === String(reopenStaffId));
+              if (fresh) {
+                this.currentActiveStaff = fresh;
+                this.generatePaymentHistory();
+              }
+            });
+          } else {
+            Toast.error(res.error);
             this.fetchData();
-            this.generatePaymentHistory(); 
-          } else { Toast.error(res.error); }
+          }
+        })
+        .withFailureHandler((err) => {
+          if(btn) { btn.innerHTML = `Save Record`; btn.disabled = false; }
+          Toast.error((err && err.message) || 'Could not save the transaction.');
+          this.fetchData();
         })
         .api_recordStaffTransaction(payload);
     },
 
     openDeleteModal: function(type, id, desc) {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('staff', 'delete')) return;
       this.deleteState = { type: type, id: id };
       this.safeSetText('delete-title', type === 'staff' ? 'Delete Staff?' : 'Delete Record?');
       this.safeSetText('delete-stf-name', desc || 'this item');
@@ -1416,30 +1492,47 @@
 
     confirmDelete: function() {
       if(!this.deleteState.id) return;
-      
-      if(this.deleteState.type === 'staff') {
+
+      const deleteType = this.deleteState.type;
+      const deleteId = this.deleteState.id;
+      const reopenStaffId = this.currentActiveStaff && this.currentActiveStaff.staffId;
+      this.closeDeleteModal();
+      this.showShimmer();
+      if(deleteType === 'staff') {
         google.script.run
           .withSuccessHandler((res) => {
-            this.closeDeleteModal();
             if(res.success) {
               Toast.success(res.message);
-              this.closeDetails(); 
-              this.showShimmer();
+              this.closeDetails();
               this.fetchData();
-            } else { Toast.error(res.error); }
+            } else {
+              Toast.error(res.error);
+              this.fetchData();
+            }
           })
-          .api_deleteStaff(this.deleteState.id);
-      } else if(this.deleteState.type === 'payment') {
+          .withFailureHandler(() => { this.fetchData(); })
+          .api_deleteStaff(deleteId);
+      } else if(deleteType === 'payment') {
         google.script.run
           .withSuccessHandler((res) => {
-            this.closeDeleteModal();
             if(res.success) {
               Toast.success(res.message);
+              this.refreshExpenseSummary();
+              this.fetchData(() => {
+                if (!reopenStaffId) return;
+                const fresh = this.allData.find(s => String(s.staffId) === String(reopenStaffId));
+                if (fresh) {
+                  this.currentActiveStaff = fresh;
+                  this.generatePaymentHistory();
+                }
+              });
+            } else {
+              Toast.error(res.error);
               this.fetchData();
-              this.generatePaymentHistory();
-            } else { Toast.error(res.error); }
+            }
           })
-          .api_deleteStaffTransaction(this.deleteState.id);
+          .withFailureHandler(() => { this.fetchData(); })
+          .api_deleteStaffTransaction(deleteId);
       }
     }
   };

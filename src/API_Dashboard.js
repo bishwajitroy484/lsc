@@ -117,7 +117,8 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
     const chartMetrics = formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today, expenseAverages, actualAnchor);
     const expenseBreakdown = formatExpenseBreakdown(financialData, mode, periods);
     const membership = summarizeMembershipForPeriods_(members, targetYear, mode, periods, resolveName, dropDowns);
-    const periodOverdue = (chartMetrics.filteredOverdue || []).reduce((sum, value) => sum + (Number(value) || 0), 0);
+    const overdueRows = filterDashboardRowsToPeriods_(operationalData.overdueList, mode, periods, targetYear);
+    const periodOverdue = overdueRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
 
     // Dynamic Greeting Name Extraction based on Login Email
     const email = Session.getActiveUser().getEmail() || "User";
@@ -158,7 +159,10 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
             remainingForecastNet: chartMetrics.remainingForecastNet || 0,
             projectedNet: chartMetrics.projectedNet != null ? chartMetrics.projectedNet : ((chartMetrics.membersCollected - chartMetrics.totalOperatingExpenses) || 0)
           },
-          collectionTrend: { collected: chartMetrics.filteredRev, overdue: chartMetrics.filteredOverdue },
+          paymentModes: Object.assign({
+            cash: chartMetrics.filteredCash || [],
+            upi: chartMetrics.filteredUpi || []
+          }, paymentModeChartLabels_(dropDowns)),
           expenseBreakdown: {
             series: expenseBreakdown.series,
             labels: expenseBreakdown.labels,
@@ -168,7 +172,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
           },
           staffTrend: chartMetrics.filteredStaff
         },
-        overdue: filterDashboardRowsToPeriods_(operationalData.overdueList, mode, periods, targetYear),
+        overdue: overdueRows,
         upcoming: filterDashboardRowsToPeriods_(operationalData.upcomingList, mode, periods, targetYear),
         birthdays: operationalData.birthdayList || []
       }
@@ -245,8 +249,62 @@ function createDropdownResolver(dropdownMetaRows, dropDownOptions) {
   };
 }
 
+function paymentHasSplitAmounts_(payment) {
+  if (!payment) return false;
+  const cashRaw = payment.cashAmount;
+  const upiRaw = payment.upiAmount;
+  const cashSet = cashRaw !== undefined && cashRaw !== null && String(cashRaw).trim() !== '';
+  const upiSet = upiRaw !== undefined && upiRaw !== null && String(upiRaw).trim() !== '';
+  return cashSet || upiSet;
+}
+
+function gracefulPaymentModeLabel_(name, fallback) {
+  const text = String(name || '').trim();
+  if (!text) return fallback;
+  if (text.toUpperCase() === 'UPI') return 'UPI';
+  if (text === text.toUpperCase()) return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+  return text;
+}
+
+function paymentModeChartLabels_(dropDowns) {
+  const source = dropDowns || {};
+  const lists = [];
+  ['paymentmode', 'paymentMode', 'PaymentMode', 'payment_mode'].forEach(function(key) {
+    if (Array.isArray(source[key])) lists.push.apply(lists, source[key]);
+  });
+  let cashName = '';
+  let upiName = '';
+  lists.forEach(function(item) {
+    const name = String((item && (item.name || item.label)) || '').trim();
+    const lower = name.toLowerCase();
+    if (!name) return;
+    const isUpi = lower.indexOf('upi') >= 0 || lower.indexOf('gpay') >= 0 || lower.indexOf('phonepe') >= 0 || lower.indexOf('google pay') >= 0;
+    if (!upiName && isUpi) upiName = name;
+    else if (!cashName && lower.indexOf('cash') >= 0) cashName = name;
+  });
+  return {
+    cashLabel: gracefulPaymentModeLabel_(cashName, 'Cash'),
+    upiLabel: gracefulPaymentModeLabel_(upiName, 'UPI')
+  };
+}
+
+function paymentModeParts_(payment, resolveName) {
+  const amount = parseAmt(payment.amount);
+  if (paymentHasSplitAmounts_(payment)) {
+    return { cash: parseAmt(payment.cashAmount), upi: parseAmt(payment.upiAmount) };
+  }
+  const mode = String(resolveName('PAYMENTS', 'paymentMode', payment.paymentMode) || payment.paymentMode || '').toLowerCase();
+  if (mode.indexOf('upi') >= 0 || mode.indexOf('gpay') >= 0 || mode.indexOf('phonepe') >= 0 || mode.indexOf('google pay') >= 0) {
+    return { cash: 0, upi: amount };
+  }
+  if (mode.indexOf('cash') >= 0) return { cash: amount, upi: 0 };
+  return { cash: 0, upi: 0 };
+}
+
 function processFinancials(payments, expenses, salaries, targetYear, resolveName, accrualMode) {
   let revArr = new Array(12).fill(0);
+  let cashArr = new Array(12).fill(0);
+  let upiArr = new Array(12).fill(0);
   let expArr = new Array(12).fill(0);
   let staffArr = new Array(12).fill(0);    
   let catBreakdownByMonth = {};
@@ -267,7 +325,11 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
 
   payments.forEach(p => {
     if (!isSuccess(resolveName('PAYMENTS', 'paymentStatus', p.paymentStatus))) return;
-    distributeAmount(p.startDate, p.endDate, p.paidDate, parseAmt(p.amount), revArr);
+    const amount = parseAmt(p.amount);
+    distributeAmount(p.startDate, p.endDate, p.paidDate, amount, revArr);
+    const parts = paymentModeParts_(p, resolveName);
+    if (parts.cash) distributeAmount(p.startDate, p.endDate, p.paidDate, parts.cash, cashArr);
+    if (parts.upi) distributeAmount(p.startDate, p.endDate, p.paidDate, parts.upi, upiArr);
   });
 
   expenses.forEach(e => {
@@ -301,7 +363,7 @@ function processFinancials(payments, expenses, salaries, targetYear, resolveName
     addBreakdownAmount(catBreakdownByMonth, 'Staff Cost', s.startDate, s.endDate, s.paidDate, amt);
   });
 
-  return { revArr, expArr, staffArr, catBreakdownByMonth, miscBreakdownByMonth };
+  return { revArr, cashArr, upiArr, expArr, staffArr, catBreakdownByMonth, miscBreakdownByMonth };
 }
 
 function formatExpenseBreakdown(financialData, mode, periods) {
@@ -398,6 +460,12 @@ function addCalendarMonths(date, months) {
   return result;
 }
 
+function addDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
 function processOperations(members, staff, payments, targetYear, today, resolveName, dropDowns, accrualMode) {
   let activeCount = 0;
   let staffCount = 0;
@@ -408,14 +476,15 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
   let activeSegregation = {};
   let overdueArr = new Array(12).fill(0);
   let expectedCollectionArr = new Array(12).fill(0);
+  let pendingArr = new Array(12).fill(0);
 
-  // Pre-map payments by member for high-speed dynamic due date calculation
+  // Paid rows and open balances both count. A partial still has a cycle end date.
   const paymentsByMember = {};
   payments.forEach(p => {
-    if (isSuccess(resolveName('PAYMENTS', 'paymentStatus', p.paymentStatus))) {
-      if (!paymentsByMember[p.memberId]) paymentsByMember[p.memberId] = [];
-      paymentsByMember[p.memberId].push(p);
-    }
+    const counts = isSuccess(resolveName('PAYMENTS', 'paymentStatus', p.paymentStatus)) || paymentPendingBalance_(p) > 0;
+    if (!counts) return;
+    if (!paymentsByMember[p.memberId]) paymentsByMember[p.memberId] = [];
+    paymentsByMember[p.memberId].push(p);
   });
 
   staff.forEach(s => {
@@ -482,9 +551,13 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
        const planFrequency = String(planOption && (planOption.frequency || planOption.Frequency) || '').toLowerCase();
        const planDetails = `${planName} ${planFrequency}`;
        let freqMonths = 1;
+       let cycleDays = 0;
        if (planDetails.includes('year') || planDetails.includes('annual')) freqMonths = 12;
        else if (planDetails.includes('half')) freqMonths = 6;
-       else if (planDetails.includes('quarter')) freqMonths = 3;
+       else if (planDetails.includes('quarter')) cycleDays = 90;
+       const advanceCycle = (date, steps) => cycleDays
+         ? addDays(date, cycleDays * steps)
+         : addCalendarMonths(date, freqMonths * steps);
 
        let exitDate = new Date(today.getTime());
        if (!isActive && m.exitDate) {
@@ -493,10 +566,15 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
        }
 
        let totalPaidByMember = mPayments.reduce((sum, p) => sum + parseAmt(p.amount), 0);
+       const pendingExplicit = (payments || []).reduce((sum, payment) => {
+         if (String(payment.memberId || '') !== String(m.memberId || '')) return sum;
+         return sum + paymentPendingBalance_(payment);
+       }, 0);
 
        // 1. Calculate precise NEXT DUE DATE perfectly synced with Members UI
        let actualNextDue = null;
-       const isAdHocOrTrial = planDetails.includes('ad-hoc') || planDetails.includes('adhoc') || planDetails.includes('trial');
+       const compactPlan = planDetails.replace(/[\s_-]+/g, '');
+       const isAdHocOrTrial = compactPlan.includes('adhoc') || compactPlan.includes('trial');
        
        if (mPayments.length > 0) {
            if (!isAdHocOrTrial) {
@@ -510,9 +588,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                } else {
                    let baseD = parseSafeDate(latestP.paidDate || latestP.date || m.joinDate);
                    if (!isNaN(baseD)) {
-                       let d = new Date(baseD);
-                       d.setMonth(d.getMonth() + freqMonths);
-                       actualNextDue = d;
+                       actualNextDue = advanceCycle(new Date(baseD), 1);
                    }
                }
            }
@@ -522,14 +598,27 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
 
        const latestPaymentAmount = mPayments.length ? parseAmt(mPayments[0].amount) : 0;
        const expectedPaymentAmount = amt || latestPaymentAmount;
+       if (isActive && !isAdHocOrTrial) {
+         payments.forEach(payment => {
+           if (String(payment.memberId || '') !== String(m.memberId || '')) return;
+           const pendingBalance = paymentPendingBalance_(payment);
+           if (pendingBalance <= 0) return;
+           const anchor = parseSafeDate(payment.startDate || payment.paidDate || payment.date);
+           if (!isNaN(anchor) && anchor.getFullYear() === targetYear) {
+             pendingArr[anchor.getMonth()] += pendingBalance;
+           } else if (targetYear === today.getFullYear()) {
+             pendingArr[today.getMonth()] += pendingBalance;
+           }
+         });
+       }
        if (isActive && !isAdHocOrTrial && expectedPaymentAmount > 0 && actualNextDue && actualNextDue >= today) {
            const firstDueDate = new Date(actualNextDue);
            const targetYearEnd = new Date(targetYear, 11, 31, 23, 59, 59, 999);
            let billingNumber = 0;
            while (true) {
-               const dueDate = addCalendarMonths(firstDueDate, freqMonths * billingNumber);
+               const dueDate = advanceCycle(firstDueDate, billingNumber);
                if (dueDate > targetYearEnd) break;
-               const coverageEnd = addCalendarMonths(dueDate, freqMonths);
+               const coverageEnd = advanceCycle(dueDate, 1);
                coverageEnd.setDate(coverageEnd.getDate() - 1);
                distributeDailyProration(dueDate, coverageEnd, dueDate, expectedPaymentAmount, accrualMode, (year, month, intervalAmount) => {
                    if (year === targetYear) expectedCollectionArr[month] += intervalAmount;
@@ -538,15 +627,17 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
            }
        }
 
-       // 2. Simulate historical cycles to populate the Bar Chart accurately
+       // Recurring plans walk cycles up to today. Ad hoc and trial are one fee, not a monthly renewal.
+       const receivedByMember = totalPaidByMember;
        let cycleDate = new Date(joinDate);
-       let totalUnpaidForMember = 0; 
+       let totalUnpaidForMember = 0;
+       let firstUnpaidDate = null;
 
-       while (cycleDate <= exitDate) {
+       if (!isAdHocOrTrial && !isNaN(cycleDate.getTime())) {
+         while (cycleDate <= exitDate) {
            const cYear = cycleDate.getFullYear();
            const cMonth = cycleDate.getMonth();
-           let nextCycleDate = new Date(cycleDate);
-           nextCycleDate.setMonth(nextCycleDate.getMonth() + freqMonths);
+           const nextCycleDate = advanceCycle(cycleDate, 1);
 
            let unpaidPortion = 0;
            if (totalPaidByMember >= amt) {
@@ -558,49 +649,50 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                unpaidPortion = amt;
            }
 
-           if (cYear === targetYear) {
-               overdueArr[cMonth] += unpaidPortion;
-           }
-
-           let cycleDueDate = new Date(cycleDate);
-           if (isActive && unpaidPortion > 0 && cycleDueDate < today) {
+           if (unpaidPortion > 0 && cycleDate < today) {
                totalUnpaidForMember += unpaidPortion;
-               if (cYear === targetYear) snapOverdueAmt += unpaidPortion;
+               if (!firstUnpaidDate) firstUnpaidDate = new Date(cycleDate);
+               if (cYear === targetYear) {
+                 overdueArr[cMonth] += unpaidPortion;
+                 snapOverdueAmt += unpaidPortion;
+               }
            }
            cycleDate = nextCycleDate;
+         }
        }
-       
-       // 3. Populate Dashboard Lists using the precise UI synced date
-       if (isActive && actualNextDue && !isAdHocOrTrial) {
-           const diffTime = actualNextDue.getTime() - today.getTime();
-           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-           const formattedDate = actualNextDue.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
-           const pNameLabel = resolveName('MEMBERS', 'membershipId', m.membershipId);
 
-           if (diffDays < 0) {
-               // OVERDUE
-               let displayAmt = totalUnpaidForMember > 0 ? totalUnpaidForMember : amt;
-               overdueList.push({ 
+       const feeGap = isAdHocOrTrial ? Math.max(0, Math.round((amt - receivedByMember) * 100) / 100) : 0;
+       const owed = Math.round(Math.max(pendingExplicit, totalUnpaidForMember, feeGap) * 100) / 100;
+       const pNameLabel = resolveName('MEMBERS', 'membershipId', m.membershipId);
+       const formatDue = (dateObj) => dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+
+       if (owed > 0) {
+           const owedDate = (firstUnpaidDate && firstUnpaidDate < today)
+             ? firstUnpaidDate
+             : ((actualNextDue && !isNaN(actualNextDue.getTime())) ? actualNextDue : (!isNaN(joinDate.getTime()) ? joinDate : new Date(today.getTime())));
+           const diffDays = Math.ceil((today.getTime() - owedDate.getTime()) / (1000 * 60 * 60 * 24));
+           overdueList.push({
+               memberId: m.memberId || '',
+               name: m.fullName || 'Unknown',
+               phone: m.phone || '',
+               plan: pNameLabel,
+               amount: owed,
+               date: formatDue(owedDate),
+               days: Math.max(0, diffDays),
+               status: 'text-red-600 bg-red-50 border-red-100'
+           });
+       } else if (isActive && actualNextDue && !isAdHocOrTrial) {
+           const diffDays = Math.ceil((actualNextDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+           if (diffDays >= 0 && diffDays <= 7) {
+               upcomingList.push({
                    memberId: m.memberId || '',
                    name: m.fullName || 'Unknown',
                    phone: m.phone || '',
-                   plan: pNameLabel, 
-                   amount: displayAmt, 
-                   date: formattedDate, 
-                   days: Math.abs(diffDays), // Convert negative to positive for display
-                   status: 'text-red-600 bg-red-50 border-red-100' 
-               });
-           } else if (diffDays >= 0 && diffDays <= 7) {
-               // UPCOMING (0 to 7 days from today)
-               upcomingList.push({ 
-                   memberId: m.memberId || '',
-                   name: m.fullName || 'Unknown',
-                   phone: m.phone || '',
-                   plan: pNameLabel, 
-                   amount: amt, 
-                   date: formattedDate, 
-                   days: diffDays, 
-                   status: 'text-amber-600 bg-amber-50 border-amber-100' 
+                   plan: pNameLabel,
+                   amount: amt,
+                   date: formatDue(actualNextDue),
+                   days: diffDays,
+                   status: 'text-amber-600 bg-amber-50 border-amber-100'
                });
            }
        }
@@ -620,48 +712,48 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
   const batchLabels = Object.keys(batchCounts);
   const batchData = safeNumArray(Object.values(batchCounts));
 
-  return { activeCount, staffCount, batchLabels, batchData, overdueList, upcomingList, birthdayList, snapOverdueAmt, activeSegregation, overdueArr, expectedCollectionArr };
+  return { activeCount, staffCount, batchLabels, batchData, overdueList, upcomingList, birthdayList, snapOverdueAmt, activeSegregation, overdueArr, expectedCollectionArr, pendingArr: safeNumArray(pendingArr) };
 }
 
 function formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today, expenseAverages, actualAnchor) {
-  const isQuarterly = mode === 'Quarterly';
+  const isQuarterly = String(mode || '').toLowerCase() === 'quarterly';
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const quarterLabels = ['Q1 (JFM)', 'Q2 (AMJ)', 'Q3 (JAS)', 'Q4 (OND)'];
-  
-  let totalSlots = isQuarterly ? 4 : 12;
-  let finalLabels = []; let finalRev = []; let finalExp = []; let finalStaff = []; let finalOverdue = [];
-  let finalExpectedCollections = []; let finalExpectedExpenses = [];
+  // Headlines follow calendar months. Month and Quarter only change how those months are drawn.
+  const monthIndexes = resolveDashboardMonths_(mode, periods);
+  const selected = {};
+  monthIndexes.forEach(monthIdx => { selected[monthIdx] = true; });
 
+  const slots = [];
   if (isQuarterly) {
-    for(let i = 0; i < totalSlots; i++) {
-      finalLabels.push(quarterLabels[i]);
-      finalRev.push((financialData.revArr[i*3]||0) + (financialData.revArr[i*3+1]||0) + (financialData.revArr[i*3+2]||0));
-      finalExp.push((financialData.expArr[i*3]||0) + (financialData.expArr[i*3+1]||0) + (financialData.expArr[i*3+2]||0));
-      finalStaff.push((financialData.staffArr[i*3]||0) + (financialData.staffArr[i*3+1]||0) + (financialData.staffArr[i*3+2]||0));
-      finalOverdue.push((operationalData.overdueArr[i*3]||0) + (operationalData.overdueArr[i*3+1]||0) + (operationalData.overdueArr[i*3+2]||0));
-      finalExpectedCollections.push((operationalData.expectedCollectionArr[i*3]||0) + (operationalData.expectedCollectionArr[i*3+1]||0) + (operationalData.expectedCollectionArr[i*3+2]||0));
-      finalExpectedExpenses.push((expenseAverages.operating + expenseAverages.staff) * 3);
+    for (let q = 0; q < 4; q++) {
+      const months = [q * 3, q * 3 + 1, q * 3 + 2].filter(monthIdx => selected[monthIdx]);
+      if (months.length) slots.push({ label: quarterLabels[q], months: months, slotIdx: q });
     }
   } else {
-    for(let i = 0; i < totalSlots; i++) {
-      finalLabels.push(monthLabels[i]);
-      finalRev.push(financialData.revArr[i]||0);
-      finalExp.push(financialData.expArr[i]||0);
-      finalStaff.push(financialData.staffArr[i]||0);
-      finalOverdue.push(operationalData.overdueArr[i]||0);
-      finalExpectedCollections.push(operationalData.expectedCollectionArr[i]||0);
-      finalExpectedExpenses.push(expenseAverages.operating + expenseAverages.staff);
+    for (let monthIdx = 0; monthIdx < 12; monthIdx++) {
+      if (selected[monthIdx]) slots.push({ label: monthLabels[monthIdx], months: [monthIdx], slotIdx: monthIdx });
     }
   }
 
-  const filteredLabels = []; const filteredRev = []; const filteredExp = []; const filteredStaff = []; const filteredOverdue = [];
-  const activePeriods = (periods && periods.length > 0) ? periods : finalLabels;
-  
-  finalLabels.forEach((lbl, idx) => {
-    if (activePeriods.includes(lbl) || activePeriods.includes(lbl.split(' ')[0])) {
-      filteredLabels.push(lbl); filteredRev.push(finalRev[idx]); filteredExp.push(finalExp[idx]);
-      filteredStaff.push(finalStaff[idx]); filteredOverdue.push(finalOverdue[idx]);
-    }
+  const cashArr = financialData.cashArr || [];
+  const upiArr = financialData.upiArr || [];
+  const sumMonths = (arr, months) => months.reduce((sum, monthIdx) => sum + (Number(arr && arr[monthIdx]) || 0), 0);
+  const filteredLabels = [];
+  const filteredRev = [];
+  const filteredExp = [];
+  const filteredStaff = [];
+  const filteredOverdue = [];
+  const filteredCash = [];
+  const filteredUpi = [];
+  slots.forEach(slot => {
+    filteredLabels.push(slot.label);
+    filteredRev.push(sumMonths(financialData.revArr, slot.months));
+    filteredCash.push(sumMonths(cashArr, slot.months));
+    filteredUpi.push(sumMonths(upiArr, slot.months));
+    filteredExp.push(sumMonths(financialData.expArr, slot.months));
+    filteredStaff.push(sumMonths(financialData.staffArr, slot.months));
+    filteredOverdue.push(sumMonths(operationalData.overdueArr, slot.months));
   });
 
   const membersCollected = filteredRev.reduce((a, b) => a + b, 0);
@@ -671,12 +763,11 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
   const currentMIdx = today.getMonth();
   const currentQIdx = Math.floor(currentMIdx / 3);
   const elapsedBoundaryIdx = isQuarterly ? currentQIdx : currentMIdx;
-  const monthlyExpectedExp = (expenseAverages.operating || 0) + (expenseAverages.staff || 0);
-  const monthsForSlot = (slotIdx) => isQuarterly
+  const monthlyExpectedExp = (Number(expenseAverages && expenseAverages.operating) || 0) + (Number(expenseAverages && expenseAverages.staff) || 0);
+  const boundaryMonths = (slotIdx) => isQuarterly
     ? [slotIdx * 3, slotIdx * 3 + 1, slotIdx * 3 + 2]
     : [slotIdx];
-  // Month-level "future" keeps Remaining consistent between Monthly and Quarterly
-  // (e.g. in Q4, Nov/Dec still count as remaining — not zero because the quarter started).
+  // A month after this one stays in Projected, even when its quarter has already started.
   const isMonthFuture = (monthIdx) => targetYear > today.getFullYear() ||
     (targetYear === today.getFullYear() && monthIdx > currentMIdx);
   const monthActualNet = (monthIdx) =>
@@ -690,81 +781,84 @@ function formatTimePeriods(financialData, operationalData, mode, periods, target
     (targetYear === today.getFullYear() && monthIdx === currentMIdx)
       ? (operationalData.expectedCollectionArr[monthIdx] || 0)
       : 0;
-  const slotHasElapsed = (slotIdx) => monthsForSlot(slotIdx).some(m => !isMonthFuture(m));
-  const slotHasFuture = (slotIdx) => monthsForSlot(slotIdx).some(m => isMonthFuture(m));
-
-  const selectedIndices = filteredLabels.map(label => finalLabels.indexOf(label));
-  const selectedForecastStart = selectedIndices.findIndex(slotIdx => slotHasFuture(slotIdx));
-  let predictionLabels = filteredLabels.slice();
-  let predictionActual = selectedIndices.map(slotIdx => {
-    const elapsedMonths = monthsForSlot(slotIdx).filter(m => !isMonthFuture(m));
-    if (!elapsedMonths.length) return null;
-    return Number(elapsedMonths.reduce((sum, m) => sum + monthActualNet(m), 0).toFixed(2));
-  });
-  let predictionExpected = selectedIndices.map(slotIdx => {
-    const months = monthsForSlot(slotIdx);
-    const futureMonths = months.filter(m => isMonthFuture(m));
-    const elapsedMonths = months.filter(m => !isMonthFuture(m));
-    const unpaidNow = elapsedMonths.reduce((sum, m) => sum + unpaidStillDue(m), 0);
-    if (!futureMonths.length && !unpaidNow) return null;
-    // Elapsed actual + unpaid dues still due this month + forecast for later months
-    const total = elapsedMonths.reduce((sum, m) => sum + monthActualNet(m), 0) +
-      unpaidNow +
-      futureMonths.reduce((sum, m) => sum + monthForecastNet(m), 0);
-    return Number(total.toFixed(2));
-  });
-  let transitionIndex = selectedIndices.findIndex(slotIdx => slotHasElapsed(slotIdx) && slotHasFuture(slotIdx));
-  if (transitionIndex < 0) {
-    transitionIndex = selectedIndices.indexOf(elapsedBoundaryIdx);
+  const pendingArr = operationalData.pendingArr || [];
+  const monthPending = (monthIdx) => Number(pendingArr[monthIdx] || 0);
+  const toPaise = (amount) => Math.round(Number(amount || 0) * 100);
+  const fromPaise = (paise) => paise / 100;
+  const actualPaise = new Array(12).fill(0);
+  const forecastPaise = new Array(12).fill(0);
+  const pendingPaise = new Array(12).fill(0);
+  for (let monthIdx = 0; monthIdx < 12; monthIdx++) {
+    pendingPaise[monthIdx] = toPaise(monthPending(monthIdx));
+    if (isMonthFuture(monthIdx)) forecastPaise[monthIdx] = toPaise(monthForecastNet(monthIdx));
+    else {
+      actualPaise[monthIdx] = toPaise(monthActualNet(monthIdx));
+      forecastPaise[monthIdx] = toPaise(unpaidStillDue(monthIdx));
+    }
   }
 
+  const selectedIndices = slots.map(slot => slot.slotIdx);
+  const selectedForecastStart = slots.findIndex(slot => slot.months.some(isMonthFuture));
+  const pendingStillOwed = monthIndexes.reduce((sum, monthIdx) => sum + pendingPaise[monthIdx], 0);
+  const currentSlot = slots.find(slot => slot.months.indexOf(currentMIdx) >= 0);
+  const attachPendingTo = pendingStillOwed > 0
+    ? ((targetYear === today.getFullYear() && currentSlot) ? currentSlot : slots[slots.length - 1])
+    : null;
+  let predictionLabels = filteredLabels.slice();
+  let predictionActual = slots.map(slot => {
+    const elapsedMonths = slot.months.filter(monthIdx => !isMonthFuture(monthIdx));
+    if (!elapsedMonths.length) return null;
+    return fromPaise(elapsedMonths.reduce((sum, monthIdx) => sum + actualPaise[monthIdx], 0));
+  });
+  let predictionExpected = slots.map(slot => {
+    const futureMonths = slot.months.filter(isMonthFuture);
+    const forecastHere = slot.months.reduce((sum, monthIdx) => sum + forecastPaise[monthIdx], 0);
+    const pendingHere = slot === attachPendingTo ? pendingStillOwed : 0;
+    if (!futureMonths.length && !forecastHere && !pendingHere) return null;
+    // Projected is money not yet received. A due later this month, and any open partial balance, stay off Actual.
+    return fromPaise(forecastHere + pendingHere);
+  });
+  let transitionIndex = slots.findIndex(slot =>
+    slot.months.some(monthIdx => !isMonthFuture(monthIdx)) && slot.months.some(isMonthFuture)
+  );
+  if (transitionIndex < 0) transitionIndex = selectedIndices.indexOf(elapsedBoundaryIdx);
+
   if (selectedForecastStart >= 0) {
-    const needsAnchor = targetYear > today.getFullYear() || !selectedIndices.includes(elapsedBoundaryIdx);
+    const needsAnchor = targetYear > today.getFullYear() || selectedIndices.indexOf(elapsedBoundaryIdx) < 0;
     if (needsAnchor) {
       const insertionIndex = selectedForecastStart;
       const anchorLabel = targetYear > today.getFullYear()
         ? `${monthLabels[currentMIdx]} ${today.getFullYear()}`
-        : finalLabels[elapsedBoundaryIdx];
+        : (isQuarterly ? quarterLabels[elapsedBoundaryIdx] : monthLabels[elapsedBoundaryIdx]);
+      const anchorMonths = targetYear > today.getFullYear()
+        ? []
+        : boundaryMonths(elapsedBoundaryIdx).filter(monthIdx => !isMonthFuture(monthIdx));
       const anchorValue = targetYear > today.getFullYear()
-        ? Number((actualAnchor || 0).toFixed(2))
-        : Number(monthsForSlot(elapsedBoundaryIdx)
-          .filter(m => !isMonthFuture(m))
-          .reduce((sum, m) => sum + monthActualNet(m), 0)
-          .toFixed(2));
+        ? fromPaise(toPaise(actualAnchor || 0))
+        : fromPaise(anchorMonths.reduce((sum, monthIdx) => sum + toPaise(monthActualNet(monthIdx)), 0));
       predictionLabels.splice(insertionIndex, 0, anchorLabel);
       predictionActual.splice(insertionIndex, 0, anchorValue);
-      predictionExpected.splice(insertionIndex, 0, anchorValue);
+      predictionExpected.splice(insertionIndex, 0, 0);
       transitionIndex = insertionIndex;
-    } else if (
-      transitionIndex >= 0 &&
-      predictionExpected[transitionIndex] == null &&
-      predictionActual[transitionIndex] != null
-    ) {
-      // Monthly (and wholly-elapsed slots): stitch expected to actual at the join point
-      predictionExpected[transitionIndex] = predictionActual[transitionIndex];
     }
   }
 
-  // Always roll Actual / Remaining at month granularity inside the selected periods
-  let actualNet = 0;
-  let remainingForecastNet = 0;
-  selectedIndices.forEach(slotIdx => {
-    monthsForSlot(slotIdx).forEach(monthIdx => {
-      if (isMonthFuture(monthIdx)) remainingForecastNet += monthForecastNet(monthIdx);
-      else {
-        actualNet += monthActualNet(monthIdx);
-        remainingForecastNet += unpaidStillDue(monthIdx);
-      }
-    });
+  // Same paise parts for every grouping, so Month and Quarter cannot drift.
+  let actualPaiseTotal = 0;
+  let remainingPaiseTotal = 0;
+  monthIndexes.forEach(monthIdx => {
+    actualPaiseTotal += actualPaise[monthIdx];
+    remainingPaiseTotal += forecastPaise[monthIdx] + pendingPaise[monthIdx];
   });
-
-  actualNet = Number(actualNet.toFixed(2));
-  remainingForecastNet = Number(remainingForecastNet.toFixed(2));
-  const projectedNet = Number((actualNet + remainingForecastNet).toFixed(2));
+  const actualNet = fromPaise(actualPaiseTotal);
+  const remainingForecastNet = fromPaise(remainingPaiseTotal);
+  const projectedNet = fromPaise(actualPaiseTotal + remainingPaiseTotal);
 
   return {
     filteredLabels,
     filteredRev: safeNumArray(filteredRev),
+    filteredCash: safeNumArray(filteredCash),
+    filteredUpi: safeNumArray(filteredUpi),
     filteredExp: safeNumArray(filteredExp),
     filteredStaff: safeNumArray(filteredStaff),
     filteredOverdue: safeNumArray(filteredOverdue),
@@ -787,6 +881,15 @@ function safeNullableNumArray(arr) {
 
 function safeNumArray(arr) { 
   return arr.map(v => (isNaN(v) || v == null) ? 0 : Number(Number(v).toFixed(2))); 
+}
+
+function resolveDashboardMonths_(mode, periods) {
+  const direct = selectedMonthIndexes_(mode, periods);
+  const requested = Array.isArray(periods) ? periods : (periods ? [periods] : []);
+  if (direct.length || !requested.length) return direct;
+  const otherMode = String(mode || '').toLowerCase() === 'quarterly' ? 'Monthly' : 'Quarterly';
+  const fallback = selectedMonthIndexes_(otherMode, periods);
+  return fallback.length ? fallback : direct;
 }
 
 function selectedMonthIndexes_(mode, periods) {
@@ -869,4 +972,14 @@ function parseAmt(val) { return Number(String(val).replace(/[^0-9.-]+/g, "")) ||
 function isSuccess(statusStr) {
   const status = String(statusStr || '').trim().toLowerCase();
   return status === 'paid' || status === 'completed';
+}
+
+function paymentPendingBalance_(payment) {
+  const explicit = parseAmt(payment && payment.pendingAmount);
+  if (explicit > 0) return explicit;
+  const expected = parseAmt(payment && payment.expectedAmount);
+  const paid = parseAmt(payment && payment.amount);
+  const status = String(payment && payment.paymentStatus || '').trim().toLowerCase();
+  if ((status === 'pending' || status.indexOf('partial') >= 0) && expected > paid) return expected - paid;
+  return 0;
 }

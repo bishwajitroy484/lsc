@@ -44,8 +44,7 @@ var USERS_HEADERS_ = [
   'invitedBy',
   'loginToken',
   'createdAt',
-  'updatedAt',
-  'tableColumns'
+  'updatedAt'
 ];
 
 /** Request-scoped caches (Apps Script keeps globals for one execution). */
@@ -54,6 +53,28 @@ var USERS_RECORDS_CACHE_ = null;
 
 /** Request-scoped email for invitee sessions (Execute-as-Me hides Session.getActiveUser email). */
 var REQUEST_AUTH_EMAIL_ = '';
+
+function enforcePermissionRules_(permissions) {
+  const out = clonePermissions_(permissions);
+  ['dashboard', 'calendar'].forEach(function(mod) {
+    out[mod].create = false;
+    out[mod].edit = false;
+    out[mod].delete = false;
+  });
+  ACCESS_MODULES.forEach(function(mod) {
+    if (out[mod].create || out[mod].edit || out[mod].delete) out[mod].view = true;
+  });
+  const hub = {
+    view: !!(out.expenses.view || out.staff.view),
+    create: !!(out.expenses.create || out.staff.create),
+    edit: !!(out.expenses.edit || out.staff.edit),
+    delete: !!(out.expenses.delete || out.staff.delete)
+  };
+  if (hub.create || hub.edit || hub.delete) hub.view = true;
+  out.expenses = { view: hub.view, create: hub.create, edit: hub.edit, delete: hub.delete };
+  out.staff = { view: hub.view, create: hub.create, edit: hub.edit, delete: hub.delete };
+  return out;
+}
 
 function clonePermissions_(source) {
   const out = {};
@@ -311,43 +332,9 @@ function buildSessionPayload_(context) {
     isDeployer: !!(context.email && effectiveEmail && context.email === effectiveEmail),
     setup: setup,
     branding: branding,
-    tableColumns: parseUserTableColumns_(context.email),
     webAppUrl: getWebAppUrl_(),
     modules: ACCESS_MODULES
   };
-}
-
-function parseUserTableColumns_(email) {
-  if (!email) return {};
-  try {
-    const row = findUserByEmail_(email);
-    const raw = row && (row.tableColumns || '');
-    if (!raw) return {};
-    const parsed = typeof raw === 'object' ? raw : JSON.parse(String(raw));
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-  } catch (error) {
-    return {};
-  }
-}
-
-function api_saveMyTableColumns(payload) {
-  try {
-    ensureUsersSheet_();
-    if (typeof DB !== 'undefined' && DB._invalidateSheet) DB._invalidateSheet('USERS');
-    const context = getCurrentUserContext_();
-    if (!context.userId) return { success: false, error: 'Sign in required.' };
-    const src = payload && typeof payload === 'object' ? payload : {};
-    const clean = {};
-    Object.keys(src).forEach(function(table) {
-      if (!Array.isArray(src[table])) return;
-      clean[String(table)] = src[table].map(function(id) { return String(id); }).filter(Boolean).slice(0, 30);
-    });
-    DB.update('USERS', context.userId, { tableColumns: JSON.stringify(clean) });
-    invalidateUsersCache_();
-    return { success: true, data: clean };
-  } catch (error) {
-    return { success: false, error: error.message || String(error) };
-  }
 }
 
 function issueSessionForEmail_(email) {
@@ -589,6 +576,7 @@ function hasPermission_(context, moduleName, action) {
   const act = String(action || '').toLowerCase();
   if (ACCESS_MODULES.indexOf(mod) < 0 || ACCESS_ACTIONS.indexOf(act) < 0) return false;
   const row = context.permissions && context.permissions[mod];
+  if (act !== 'view' && !(row && row.view)) return false;
   return !!(row && row[act]);
 }
 
@@ -688,6 +676,7 @@ function getSetupStatus_(options) {
   let calendarOk = false;
   let deployApiOk = false;
   let triggerOk = false;
+  let weeklyWanted = false;
   let authError = '';
   let authorizationUrl = '';
   let servicesAuthorized = false;
@@ -737,6 +726,19 @@ function getSetupStatus_(options) {
     servicesAuthorized = mailOk && scriptAppOk && calendarOk;
   }
 
+  try {
+    if (typeof getNotificationConfig_ === 'function') {
+      const notify = getNotificationConfig_(settings);
+      weeklyWanted = !!(notify && notify.masterEnabled && notify.weeklyReportEnabled);
+    }
+  } catch (error) {}
+
+  let triggerState = 'off';
+  if (!quick) {
+    if (triggerOk) triggerState = 'ok';
+    else if (weeklyWanted) triggerState = 'missing';
+  }
+
   return {
     spreadsheetOk: spreadsheetOk,
     settingsOk: settingsOk,
@@ -746,6 +748,8 @@ function getSetupStatus_(options) {
     calendarOk: calendarOk,
     deployApiOk: deployApiOk,
     triggerOk: triggerOk,
+    triggerState: triggerState,
+    weeklyReportEnabled: weeklyWanted,
     servicesAuthorized: servicesAuthorized,
     setupComplete: setupComplete,
     authError: authError,
@@ -981,7 +985,7 @@ function buildInvitationEmail_(opts) {
     escapeHtml_(inviter) + ' has granted you access to the <strong>' + escapeHtml_(appName) + '</strong> application. ' +
     'Use the button below to open it.</p>' +
     '<p style="margin:0 0 24px;"><a href="' + escapeHtml_(opts.url) + '" style="display:inline-block;background:#CE0002;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 26px;border-radius:10px;">Open ' + escapeHtml_(appName) + '</a></p>' +
-    '<p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;">Your access</p>' +
+    '<p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:0.6px;color:#64748b;">Your access</p>' +
     accessHtml +
     '<p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#64748b;">This link is personal to you, so please do not forward it. ' +
     'If the button does not work, copy this address into your browser:<br>' +
@@ -1162,9 +1166,18 @@ function api_authorizeServices() {
     }
 
     upsertSettingKey_('SERVICES_AUTHORIZED', 'YES');
+    let triggerNote = '';
+    try {
+      if (typeof syncNotificationTriggers_ === 'function') {
+        const synced = syncNotificationTriggers_(readSettingsMapForAccess_());
+        if (synced && synced.scheduled) triggerNote = ' Weekly report trigger is set.';
+      }
+    } catch (triggerError) {
+      triggerNote = '';
+    }
     return {
       success: true,
-      message: 'Google services authorized successfully (Mail, ScriptApp, Calendar, and web-app publish scopes).',
+      message: 'Google services authorized successfully (Mail, ScriptApp, Calendar, and web-app publish scopes).' + triggerNote,
       data: getSetupStatus_()
     };
   } catch (error) {
@@ -1246,8 +1259,10 @@ function api_listUsers() {
 
 function api_saveUser(userData) {
   try {
-    const gate = requirePermission_('settings', 'edit');
-    if (!gate.ok) return gate.response;
+    const context = getCurrentUserContext_();
+    if (!context.allowed) {
+      return { success: false, error: context.error || 'Access denied.', code: 'FORBIDDEN' };
+    }
 
     const payload = userData || {};
     const email = normalizeEmail_(payload.email);
@@ -1260,14 +1275,25 @@ function api_saveUser(userData) {
     const existing = payload.userId
       ? rows.find(function(r) { return String(r.userId) === String(payload.userId); })
       : findUserByEmail_(email);
+    const needed = existing ? 'edit' : 'create';
+    if (!hasPermission_(context, 'settings', needed)) {
+      return {
+        success: false,
+        error: 'You do not have permission to ' + needed + ' on settings.',
+        code: 'FORBIDDEN'
+      };
+    }
 
     const rolePreset = String(payload.rolePreset || 'Viewer').trim() || 'Viewer';
-    const permissions = payload.permissions
-      ? clonePermissions_(payload.permissions)
-      : getPresetPermissions_(rolePreset);
+    const permissions = enforcePermissionRules_(payload.permissions
+      ? payload.permissions
+      : getPresetPermissions_(rolePreset));
     const status = String(payload.status || (existing ? existing.status : 'Invited')).trim() || 'Invited';
     const name = String(payload.name || email.split('@')[0]).trim();
     const isOwner = payload.isOwner === true || isYes_(payload.isOwner);
+    if (isOwner && !context.isOwner) {
+      return { success: false, error: 'Only an owner can grant owner access.', code: 'FORBIDDEN' };
+    }
 
     let savedUserId = '';
 
@@ -1301,7 +1327,7 @@ function api_saveUser(userData) {
         isOwner: isOwner ? 'YES' : 'NO',
         rolePreset: rolePreset,
         permissions: JSON.stringify(permissions),
-        invitedBy: gate.context.email,
+        invitedBy: context.email,
         loginToken: newInviteToken_()
       };
       DB.create('USERS', record);
@@ -1317,7 +1343,7 @@ function api_saveUser(userData) {
     const canReceiveInvite = status.toLowerCase() !== 'disabled';
     if (payload.sendInvite === true && canReceiveInvite) {
       const saved = findUserById_(savedUserId);
-      const sent = saved ? sendInvitationEmail_(saved, gate.context.email) : { ok: false, error: 'User not found.' };
+      const sent = saved ? sendInvitationEmail_(saved, context.email) : { ok: false, error: 'User not found.' };
       if (sent.ok) {
         message += ' Invitation emailed to ' + email + '.';
       } else {
@@ -1339,7 +1365,7 @@ function api_saveUser(userData) {
 
 function api_deleteUser(userId) {
   try {
-    const gate = requirePermission_('settings', 'edit');
+    const gate = requirePermission_('settings', 'delete');
     if (!gate.ok) return gate.response;
     if (!userId) return { success: false, error: 'User id is required.' };
 

@@ -10,6 +10,7 @@
     overflow-x: hidden;
     max-width: 100%;
   }
+  .perm-denied { display: none !important; }
   /* Keep module pages from expanding the viewport; local overflow-x-auto still scrolls */
   #app-root {
     overflow-x: hidden;
@@ -302,10 +303,6 @@
     opacity: 1;
     visibility: visible;
   }
-  [data-col-hidden="1"] {
-    display: none !important;
-  }
-
   /* Charts must not widen the page */
   .apexcharts-canvas,
   .apexcharts-svg {

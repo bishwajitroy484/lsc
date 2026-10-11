@@ -140,7 +140,7 @@
         html += `
           <tr onclick="window.navigateToMemberDetail(${row.memberId ? `'${row.memberId}'` : 'null'}, ${rowJson})" 
               class="border-b border-slate-50 hover:bg-slate-100/80 transition-colors cursor-pointer group">
-            <td data-lsc-table="${type}" data-col="member" class="px-3 py-2.5">
+            <td class="px-3 py-2.5">
               <div class="flex items-center gap-2.5">
                 <div class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[11px] font-bold shrink-0 shadow-sm group-hover:bg-brand-primary group-hover:text-white transition-colors">${initials}</div>
                 <div>
@@ -149,13 +149,13 @@
                 </div>
               </div>
             </td>
-            <td data-lsc-table="${type}" data-col="plan" class="px-3 py-2.5 text-slate-600 font-medium whitespace-nowrap hidden md:table-cell text-xs">${row.plan}</td>
-            <td data-lsc-table="${type}" data-col="amount" class="px-3 py-2.5 font-bold text-slate-800 whitespace-nowrap text-xs md:text-sm">${AppUtils.formatCurrency(row.amount)}</td>
-            <td data-lsc-table="${type}" data-col="date" class="px-3 py-2.5 text-slate-500 whitespace-nowrap hidden md:table-cell text-xs">${row.date}</td>
-            <td data-lsc-table="${type}" data-col="days" class="px-3 py-2.5 text-right whitespace-nowrap">
+            <td class="px-3 py-2.5 text-slate-600 font-medium whitespace-nowrap hidden md:table-cell text-xs">${row.plan}</td>
+            <td class="px-3 py-2.5 font-bold text-slate-800 whitespace-nowrap text-xs md:text-sm">${AppUtils.formatCurrency(row.amount)}</td>
+            <td class="px-3 py-2.5 text-slate-500 whitespace-nowrap hidden md:table-cell text-xs">${row.date}</td>
+            <td class="px-3 py-2.5 text-right whitespace-nowrap">
               <span class="px-2.5 py-1 rounded text-xs font-bold ${row.status}">${row.days}</span>
             </td>
-            <td data-lsc-table="${type}" data-col="notify" class="px-2 md:px-3 py-2.5 text-center whitespace-nowrap" onclick="event.stopPropagation()">
+            <td class="px-2 md:px-3 py-2.5 text-center whitespace-nowrap" onclick="event.stopPropagation()">
               ${waBtn}
             </td>
           </tr>
@@ -213,10 +213,42 @@
       this.fetchData();
     },
 
+    monthIndexesFromPeriods: function(mode, periods) {
+      const selected = Array.isArray(periods) ? periods : [];
+      const indexes = [];
+      if (mode === 'Quarterly') {
+        this.quarters.forEach((label, quarterIdx) => {
+          if (selected.indexOf(label) >= 0 || selected.indexOf(label.split(' ')[0]) >= 0) {
+            indexes.push(quarterIdx * 3, quarterIdx * 3 + 1, quarterIdx * 3 + 2);
+          }
+        });
+      } else {
+        this.months.forEach((label, monthIdx) => {
+          if (selected.indexOf(label) >= 0) indexes.push(monthIdx);
+        });
+      }
+      return indexes;
+    },
+
+    periodsFromMonthIndexes: function(mode, indexes) {
+      const covered = {};
+      (indexes || []).forEach(monthIdx => { covered[monthIdx] = true; });
+      if (mode === 'Quarterly') {
+        return this.quarters.filter((label, quarterIdx) =>
+          covered[quarterIdx * 3] || covered[quarterIdx * 3 + 1] || covered[quarterIdx * 3 + 2]
+        );
+      }
+      return this.months.filter((label, monthIdx) => covered[monthIdx]);
+    },
+
     handleModeSwitch: function() {
-      const mode = document.getElementById('filter-mode').value;
-      this.selectedPeriods = mode === 'Monthly' ? [...this.months] : [...this.quarters];
-      this.isAllSelected = true;
+      const newMode = document.getElementById('filter-mode').value;
+      const oldMode = newMode === 'Quarterly' ? 'Monthly' : 'Quarterly';
+      const covered = this.monthIndexesFromPeriods(oldMode, this.selectedPeriods);
+      const next = this.periodsFromMonthIndexes(newMode, covered);
+      const valid = newMode === 'Monthly' ? this.months : this.quarters;
+      this.selectedPeriods = next.length ? next : valid.slice();
+      this.isAllSelected = this.selectedPeriods.length === valid.length;
       this.onFilterChange();
     },
 
@@ -293,10 +325,15 @@
 
     fetchData: function() {
       toggleShimmer(true);
+      const requestId = (this.fetchSerial || 0) + 1;
+      this.fetchSerial = requestId;
       const year = document.getElementById('filter-year')?.value || new Date().getFullYear().toString();
       const mode = document.getElementById('filter-mode')?.value || 'Monthly';
       const periods = this.selectedPeriods.length > 0 ? this.selectedPeriods : this.getValidOptions();
-      google.script.run.withSuccessHandler(renderDashboard).api_getDashboardMetrics(year, mode, periods);
+      google.script.run.withSuccessHandler(function(res) {
+        if (requestId !== DashboardState.fetchSerial) return;
+        renderDashboard(res);
+      }).api_getDashboardMetrics(year, mode, periods);
     },
 
     populateYears: function() {
@@ -319,7 +356,21 @@
     if (isActive) {
       kpis.forEach(id => { const el = document.getElementById(id); if (el) { el.innerHTML = ''; el.classList.add('shimmer', 'rounded-md', 'w-16', 'h-5'); } });
       if (seg) seg.innerHTML = '<div class="h-4 w-16 shimmer rounded"></div><div class="h-4 w-14 shimmer rounded"></div><div class="h-4 w-12 shimmer rounded"></div>';
-      chartIds.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<div class="absolute inset-0 rounded-xl shimmer opacity-50"></div>'; });
+      Object.keys(window.AppCharts || {}).forEach(key => {
+        const chart = window.AppCharts[key];
+        if (chart && typeof chart.destroy === 'function') {
+          try { chart.destroy(); } catch (e) {}
+        }
+      });
+      window.AppCharts = {};
+      chartIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.position = '';
+        el.style.height = '';
+        el.innerHTML = '';
+      });
+      document.querySelectorAll('.dash-chart-shimmer').forEach(el => el.classList.remove('hidden'));
       tables.forEach(id => {
          const el = document.getElementById(id); 
          if (el) {
@@ -330,6 +381,7 @@
       });
     } else {
       kpis.forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('shimmer', 'rounded-md', 'w-16', 'h-5'); });
+      document.querySelectorAll('.dash-chart-shimmer').forEach(el => el.classList.add('hidden'));
     }
   }
 
@@ -374,7 +426,7 @@
       safeSetText('kpi-net-forecast', formatCurrency(remainingNet));
       const forecastEl = document.getElementById('kpi-net-forecast');
       if (forecastEl) {
-        forecastEl.title = `Actual: ${formatCurrency(data.kpis.netInHand)} | Remaining Forecast: ${remainingNet >= 0 ? '+' : ''}${formatCurrency(remainingNet)}`;
+        forecastEl.title = `Actual: ${formatCurrency(data.kpis.netInHand)} | Projected: ${remainingNet >= 0 ? '+' : ''}${formatCurrency(remainingNet)}`;
       }
 
       const projNet = data.kpis.projectedNet != null ? data.kpis.projectedNet : data.kpis.netInHand;
@@ -391,11 +443,13 @@
          if (segContainer) {
             let segHtml = '';
             Object.entries(data.kpis.activeSegregation).forEach(([planName, count]) => {
-               if (count > 0) { 
+               if (count > 0) {
+                  const rawLabel = String(planName || '').trim().toLowerCase();
+                  const label = rawLabel ? rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1) : '';
                   segHtml += `
-                    <div class="bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 flex items-center gap-1 max-w-full">
-                      <span class="text-[11px] leading-tight text-slate-600 font-bold uppercase">${planName}</span>
-                      <span class="text-[10px] leading-none font-bold text-slate-800 shrink-0">${count}</span>
+                    <div class="bg-slate-50 border border-slate-100 rounded px-1 py-px sm:px-1.5 sm:py-0.5 flex items-center gap-0.5 sm:gap-1 min-w-0 w-fit max-w-full justify-self-start">
+                      <span class="text-[9px] sm:text-[11px] leading-none sm:leading-tight text-slate-600 font-bold">${label}</span>
+                      <span class="text-[9px] sm:text-[10px] leading-none font-bold text-slate-800 shrink-0">${count}</span>
                     </div>`;
                }
             });
@@ -476,15 +530,55 @@
           '</div>';
       } else {
       window.AppChartConfigs.batch = {
-        series: [{ name: 'Members', data: batchValues }],
-        chart: { type: 'bar', height: '100%', toolbar: commonToolbar },
-        plotOptions: { bar: { distributed: true, columnWidth: '50%', borderRadius: 4, dataLabels: { position: 'top' } } },
-        dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '11px', fontWeight: 600, colors: ["#304758"] } },
-        xaxis: { categories: data.charts.batchLabels, axisBorder: { show: false }, labels: { rotate: -45, style: { fontSize: '11px', fontWeight: 600 } } },
-        yaxis: { labels: { style: { fontSize: '11px', colors: '#64748b' } } },
-        colors: ['#3b82f6', '#10b981', '#a855f7', '#fbbf24', '#3b82f6'],
-        legend: { show: false },
-        grid: commonGrid
+        series: batchValues,
+        labels: data.charts.batchLabels || [],
+        chart: { type: 'donut', height: '100%' },
+        colors: ['#3b82f6', '#10b981', '#a855f7', '#fbbf24', '#06b6d4', '#f97316', '#ec4899', '#6366f1'],
+        plotOptions: {
+          pie: {
+            donut: {
+              size: '68%',
+              labels: {
+                show: true,
+                total: {
+                  show: true,
+                  label: 'Members',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  formatter: function(w) {
+                    return String(w.globals.seriesTotals.reduce(function(sum, value) { return sum + value; }, 0));
+                  }
+                }
+              }
+            }
+          }
+        },
+        legend: { position: 'bottom', fontSize: '10px' },
+        dataLabels: {
+          enabled: true,
+          formatter: function(val, opts) {
+            const count = opts && opts.w && opts.w.globals && opts.w.globals.seriesTotals
+              ? opts.w.globals.seriesTotals[opts.seriesIndex]
+              : val;
+            return count ? String(count) : '';
+          },
+          style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
+          background: {
+            enabled: true,
+            backgroundColor: '#ffffff',
+            foreColor: '#0f172a',
+            borderRadius: 4,
+            padding: 3,
+            opacity: 0.95,
+            borderWidth: 1,
+            borderColor: '#e2e8f0'
+          },
+          dropShadow: { enabled: false }
+        },
+        tooltip: {
+          ...commonTooltip,
+          y: { formatter: function(val) { return String(val) + (Number(val) === 1 ? ' member' : ' members'); } }
+        }
       };
       elBatch.innerHTML = ''; 
       window.AppCharts.batch = new ApexCharts(elBatch, window.AppChartConfigs.batch);
@@ -493,13 +587,87 @@
     }
 
     // 3. Net-In-Hand actuals transition into the payment-based forecast.
+    // A month with both received and still-expected money rises from the received point.
+    // A quarter keeps its four labels, then names the months still ahead (Nov–Dec) and
+    // draws that forecast at its own amount, so a negative value sits below zero.
+    const quarterForecastLabel = (label) => {
+      const key = String(label || '').split(' ')[0];
+      const groups = { Q1: [0, 1, 2], Q2: [3, 4, 5], Q3: [6, 7, 8], Q4: [9, 10, 11] };
+      const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const months = groups[key];
+      if (!months) return '';
+      const selectedYear = parseInt(document.getElementById('filter-year')?.value, 10);
+      const now = new Date();
+      const future = months.filter((monthIdx) => {
+        if (selectedYear > now.getFullYear()) return true;
+        if (selectedYear < now.getFullYear()) return false;
+        return monthIdx > now.getMonth();
+      });
+      if (future.length === 1) return names[future[0]];
+      if (future.length > 1) return names[future[0]] + '–' + names[future[future.length - 1]];
+      return 'Forecast';
+    };
     const elPred = document.querySelector("#chart-prediction");
     if(elPred) {
       const prediction = data.charts.prediction || {};
+      const rawActual = prediction.actual || [];
+      const rawExpected = prediction.expected || [];
+      const rawLabels = prediction.categories || data.charts.categories || [];
+      const plotActual = [];
+      const plotExpected = [];
+      const plotLabels = [];
+      const projectedTip = [];
+      rawLabels.forEach((label, i) => {
+        const base = rawActual[i] == null ? null : Number(rawActual[i]);
+        const extra = rawExpected[i] == null ? null : Number(rawExpected[i]);
+        const hasBase = base != null;
+        const hasExtra = extra != null && extra !== 0;
+        const quarterLeft = hasBase && hasExtra ? quarterForecastLabel(label) : '';
+        plotLabels.push(label);
+        plotActual.push(hasBase ? base : null);
+        if (quarterLeft) {
+          plotExpected.push(base);
+          projectedTip.push(null);
+          plotLabels.push(quarterLeft);
+          plotActual.push(null);
+          plotExpected.push(Number(extra.toFixed(2)));
+          projectedTip.push(extra);
+        } else if (hasBase && hasExtra) {
+          plotExpected.push(base);
+          projectedTip.push(null);
+          plotLabels.push('');
+          plotActual.push(null);
+          plotExpected.push(Number((base + extra).toFixed(2)));
+          projectedTip.push(extra);
+        } else if (hasBase && extra === 0) {
+          plotExpected.push(base);
+          projectedTip.push(null);
+        } else {
+          plotExpected.push(extra);
+          projectedTip.push(extra);
+        }
+      });
+      // The dotted line always leaves the last actual point, even when that month has nothing still expected.
+      let firstForecast = -1;
+      for (let i = 0; i < plotExpected.length; i++) {
+        if (plotActual[i] == null && plotExpected[i] != null) {
+          firstForecast = i;
+          break;
+        }
+      }
+      if (firstForecast > 0) {
+        let anchor = firstForecast - 1;
+        while (anchor >= 0 && plotActual[anchor] == null) anchor--;
+        if (anchor >= 0 && plotExpected[anchor] == null) {
+          plotExpected[anchor] = plotActual[anchor];
+          projectedTip[anchor] = null;
+        }
+      }
+      const liftIndex = plotLabels.findIndex((label, i) => label === '' && projectedTip[i] != null);
       window.AppChartConfigs.pred = {
         series: [
-          { name: 'Actual', data: prediction.actual || [] },
-          { name: 'Predicted', data: prediction.expected || [] }
+          { name: 'Actual', data: plotActual },
+          { name: 'Projected', data: plotExpected }
         ],
         chart: {
           type: 'area',
@@ -508,35 +676,54 @@
           zoom: { enabled: true },
           animations: { enabled: true, speed: 350, dynamicAnimation: { speed: 300 } }
         },
-        stroke: { width: 2, curve: 'smooth', dashArray: [0, 5], connectNulls: true },
-        xaxis: { ...commonXAxis, categories: prediction.categories || data.charts.categories || [] },
+        stroke: { width: 2, curve: 'straight', dashArray: [0, 5], connectNulls: true },
+        xaxis: { ...commonXAxis, categories: plotLabels },
         yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
         tooltip: {
           ...commonTooltip,
           y: {
-            formatter: (val) => AppUtils.formatCurrency(val),
+            formatter: (val, opts) => {
+              if (opts && opts.seriesIndex === 1) {
+                const tip = projectedTip[opts.dataPointIndex];
+                if (tip == null) return '';
+                return AppUtils.formatCurrency(tip);
+              }
+              return AppUtils.formatCurrency(val);
+            },
             title: { formatter: (seriesName) => seriesName }
           }
         },
         colors: ['#3b82f6', '#10b981'],
         markers: {
           size: 4,
-          discrete: prediction.transitionIndex >= 0 ? [{
+          discrete: liftIndex >= 0 ? [{
+            seriesIndex: 1,
+            dataPointIndex: liftIndex,
+            fillColor: '#10b981',
+            strokeColor: '#10b981',
+            size: 5
+          }] : (prediction.transitionIndex >= 0 ? [{
             seriesIndex: 1,
             dataPointIndex: prediction.transitionIndex,
             fillColor: '#3b82f6',
             strokeColor: '#3b82f6',
             size: 5
-          }] : []
+          }] : [])
         },
         legend: { show: false },
         fill: { opacity: [0.12, 0] },
         dataLabels: {
           ...dlOptions,
           offsetY: -10,
-          formatter: (val, opts) => opts.seriesIndex === 1 && opts.dataPointIndex === prediction.transitionIndex
-            ? ''
-            : (val ? AppUtils.formatCompactCurrency(val) : '')
+          formatter: (val, opts) => {
+            if (!val) return '';
+            if (opts && opts.seriesIndex === 1) {
+              const tip = projectedTip[opts.dataPointIndex];
+              if (tip == null) return '';
+              return AppUtils.formatCompactCurrency(tip);
+            }
+            return AppUtils.formatCompactCurrency(val);
+          }
         },
         grid: commonGrid
       };
@@ -545,30 +732,72 @@
       window.AppCharts.pred.render();
     }
 
-    // 4. Collection Trend (connectNulls: true added)
-    const elTrend = document.querySelector("#chart-trend");
-    if(elTrend) {
-      const trendType = document.getElementById('toggle-trend')?.value || 'line';
+    // 4. Cash vs UPI. Amount/Percentage redraws only this chart.
+    window.renderCashUpiChart = function() {
+      const chartData = window.DashboardData;
+      const elTrend = document.querySelector("#chart-trend");
+      if (!chartData || !elTrend) return;
+      if (window.AppCharts.trend && typeof window.AppCharts.trend.destroy === 'function') {
+        try { window.AppCharts.trend.destroy(); } catch (e) {}
+      }
+      const showPercent = (document.getElementById('toggle-trend-mode')?.value || 'amount') === 'percent';
+      const labelsOn = !(window.AppChartConfigs.trend && window.AppChartConfigs.trend.dataLabels && window.AppChartConfigs.trend.dataLabels.enabled === false);
+      const paymentModes = chartData.charts.paymentModes || {};
+      const seriesAmount = (opts) => {
+        const series = (opts && opts.w && opts.w.config && opts.w.config.series) || [];
+        const idx = opts ? opts.dataPointIndex : 0;
+        return Number(series[opts && opts.seriesIndex] && series[opts.seriesIndex].data[idx]) || 0;
+      };
+      const percentLabel = (val, opts) => {
+        const series = (opts && opts.w && opts.w.config && opts.w.config.series) || [];
+        const idx = opts ? opts.dataPointIndex : 0;
+        const total = series.reduce((sum, item) => sum + (Number(item.data && item.data[idx]) || 0), 0);
+        const raw = seriesAmount(opts);
+        if (!total || !raw) return '';
+        return Math.round((raw / total) * 100) + '%';
+      };
       window.AppChartConfigs.trend = {
         series: [
-          { name: 'Collected', data: data.charts.collectionTrend.collected },
-          { name: 'Overdue', data: data.charts.collectionTrend.overdue }
+          { name: paymentModes.cashLabel || 'Cash', data: paymentModes.cash || [] },
+          { name: paymentModes.upiLabel || 'UPI', data: paymentModes.upi || [] }
         ],
-        chart: { type: trendType, height: '100%', toolbar: commonToolbar, zoom: { enabled: true } },
-        dataLabels: { ...dlOptions, offsetY: -10 },
-        stroke: { curve: 'smooth', width: trendType === 'bar' ? 0 : 2, connectNulls: true },
-        markers: { size: trendType === 'bar' ? 0 : 4 },
+        chart: {
+          type: 'bar',
+          stacked: true,
+          stackType: showPercent ? '100%' : 'normal',
+          height: '100%',
+          toolbar: commonToolbar
+        },
+        plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 2, dataLabels: { position: 'center' } } },
+        dataLabels: {
+          ...dlOptions,
+          enabled: labelsOn,
+          offsetY: 0,
+          formatter: showPercent ? percentLabel : (val) => (val ? AppUtils.formatCompactCurrency(val) : '')
+        },
         xaxis: commonXAxis,
-        yaxis: { labels: { formatter: (val) => AppUtils.formatCurrency(val), style: { fontSize: '11px', colors: '#64748b' } } },
-        tooltip: commonTooltip,
-        colors: ['#10b981', '#ef4444'],
+        yaxis: {
+          max: showPercent ? 100 : undefined,
+          labels: {
+            formatter: (val) => showPercent ? (Math.round(val) + '%') : AppUtils.formatCurrency(val),
+            style: { fontSize: '11px', colors: '#64748b' }
+          }
+        },
+        tooltip: {
+          ...commonTooltip,
+          y: {
+            formatter: (val, opts) => AppUtils.formatCurrency(seriesAmount(opts) || val)
+          }
+        },
+        colors: ['#10b981', '#3b82f6'],
         legend: { position: 'bottom', horizontalAlign: 'center', offsetY: 5, fontSize: '11px' },
         grid: commonGrid
       };
-      elTrend.innerHTML = ''; 
+      elTrend.innerHTML = '';
       window.AppCharts.trend = new ApexCharts(elTrend, window.AppChartConfigs.trend);
       window.AppCharts.trend.render();
-    }
+    };
+    window.renderCashUpiChart();
 
     // 5. Expense Breakdown
     const elExp = document.querySelector("#chart-expense-breakdown");
@@ -594,10 +823,24 @@
         series: expSeries,
         labels: expLabels,
         chart: { type: 'donut', height: '100%' },
-        colors: ['#3b82f6', '#10b981', '#fbbf24', '#f97316', '#a855f7', '#06b6d4', '#94a3b8', '#e2e8f0', '#6366f1', '#ec4899'],
         plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: DashboardState.isShowingMisc ? 'Total Misc' : 'Total', fontSize: '14px', fontWeight: 600, formatter: function(w) { const tot = w.globals.seriesTotals.reduce((a,b)=>a+b,0); return AppUtils.formatCurrency(tot); } } } } } },
         legend: { position: 'bottom', fontSize: '10px', offsetY: 0 },
-        dataLabels: { enabled: true, formatter: function (val, opts) { return AppUtils.formatCompactCurrency(opts.w.globals.seriesTotals[opts.seriesIndex]); }, style: { fontSize: '11px', fontWeight: 600 } },
+        colors: expLabels.map(function(label, i) {
+          if (String(label) === 'Staff Cost') return '#7c3aed';
+          const palette = ['#3b82f6', '#10b981', '#fbbf24', '#f97316', '#06b6d4', '#ec4899', '#6366f1', '#94a3b8'];
+          return palette[i % palette.length];
+        }),
+        dataLabels: {
+          ...dlOptions,
+          offsetY: 0,
+          dropShadow: { enabled: false },
+          formatter: function(val, opts) {
+            const total = opts && opts.w && opts.w.globals && opts.w.globals.seriesTotals
+              ? opts.w.globals.seriesTotals[opts.seriesIndex]
+              : val;
+            return total ? AppUtils.formatCompactCurrency(total) : '';
+          }
+        },
         tooltip: commonTooltip
       };
       elExp.innerHTML = ''; 
@@ -670,8 +913,8 @@
         const when = isToday ? 'Today' : (days === 1 ? 'Tomorrow' : ('in ' + days + ' days'));
         const isStaff = row.kind === 'staff';
         const badge = isStaff
-          ? '<span class="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-100 shrink-0">Staff</span>'
-          : '<span class="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border bg-pink-50 text-pink-700 border-pink-100 shrink-0">Member</span>';
+          ? '<span class="text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-100 shrink-0">Staff</span>'
+          : '<span class="text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded border bg-pink-50 text-pink-700 border-pink-100 shrink-0">Member</span>';
         const id = String(isStaff ? (row.staffId || '') : (row.memberId || '')).replace(/'/g, '');
         const name = String(row.name || '').replace(/'/g, '');
         const rowClass = isToday
@@ -689,7 +932,7 @@
           '<span class="block text-[10px] font-semibold ' + whenClass + '">' + when + '</span></span>' +
           badge + '</button>';
       }).join('');
-      return '<div><p class="text-[10px] font-bold uppercase tracking-wider px-1 mb-1 ' + monthTone + '">' + month + '</p><div class="space-y-0.5">' + items + '</div></div>';
+      return '<div><p class="text-[10px] font-bold tracking-wider px-1 mb-1 ' + monthTone + '">' + month + '</p><div class="space-y-0.5">' + items + '</div></div>';
     }).join('');
   };
 
