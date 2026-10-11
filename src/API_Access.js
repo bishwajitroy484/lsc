@@ -54,6 +54,28 @@ var USERS_RECORDS_CACHE_ = null;
 /** Request-scoped email for invitee sessions (Execute-as-Me hides Session.getActiveUser email). */
 var REQUEST_AUTH_EMAIL_ = '';
 
+function enforcePermissionRules_(permissions) {
+  const out = clonePermissions_(permissions);
+  ['dashboard', 'calendar'].forEach(function(mod) {
+    out[mod].create = false;
+    out[mod].edit = false;
+    out[mod].delete = false;
+  });
+  ACCESS_MODULES.forEach(function(mod) {
+    if (out[mod].create || out[mod].edit || out[mod].delete) out[mod].view = true;
+  });
+  const hub = {
+    view: !!(out.expenses.view || out.staff.view),
+    create: !!(out.expenses.create || out.staff.create),
+    edit: !!(out.expenses.edit || out.staff.edit),
+    delete: !!(out.expenses.delete || out.staff.delete)
+  };
+  if (hub.create || hub.edit || hub.delete) hub.view = true;
+  out.expenses = { view: hub.view, create: hub.create, edit: hub.edit, delete: hub.delete };
+  out.staff = { view: hub.view, create: hub.create, edit: hub.edit, delete: hub.delete };
+  return out;
+}
+
 function clonePermissions_(source) {
   const out = {};
   ACCESS_MODULES.forEach(function(mod) {
@@ -554,6 +576,7 @@ function hasPermission_(context, moduleName, action) {
   const act = String(action || '').toLowerCase();
   if (ACCESS_MODULES.indexOf(mod) < 0 || ACCESS_ACTIONS.indexOf(act) < 0) return false;
   const row = context.permissions && context.permissions[mod];
+  if (act !== 'view' && !(row && row.view)) return false;
   return !!(row && row[act]);
 }
 
@@ -1236,8 +1259,10 @@ function api_listUsers() {
 
 function api_saveUser(userData) {
   try {
-    const gate = requirePermission_('settings', 'edit');
-    if (!gate.ok) return gate.response;
+    const context = getCurrentUserContext_();
+    if (!context.allowed) {
+      return { success: false, error: context.error || 'Access denied.', code: 'FORBIDDEN' };
+    }
 
     const payload = userData || {};
     const email = normalizeEmail_(payload.email);
@@ -1250,14 +1275,25 @@ function api_saveUser(userData) {
     const existing = payload.userId
       ? rows.find(function(r) { return String(r.userId) === String(payload.userId); })
       : findUserByEmail_(email);
+    const needed = existing ? 'edit' : 'create';
+    if (!hasPermission_(context, 'settings', needed)) {
+      return {
+        success: false,
+        error: 'You do not have permission to ' + needed + ' on settings.',
+        code: 'FORBIDDEN'
+      };
+    }
 
     const rolePreset = String(payload.rolePreset || 'Viewer').trim() || 'Viewer';
-    const permissions = payload.permissions
-      ? clonePermissions_(payload.permissions)
-      : getPresetPermissions_(rolePreset);
+    const permissions = enforcePermissionRules_(payload.permissions
+      ? payload.permissions
+      : getPresetPermissions_(rolePreset));
     const status = String(payload.status || (existing ? existing.status : 'Invited')).trim() || 'Invited';
     const name = String(payload.name || email.split('@')[0]).trim();
     const isOwner = payload.isOwner === true || isYes_(payload.isOwner);
+    if (isOwner && !context.isOwner) {
+      return { success: false, error: 'Only an owner can grant owner access.', code: 'FORBIDDEN' };
+    }
 
     let savedUserId = '';
 
@@ -1291,7 +1327,7 @@ function api_saveUser(userData) {
         isOwner: isOwner ? 'YES' : 'NO',
         rolePreset: rolePreset,
         permissions: JSON.stringify(permissions),
-        invitedBy: gate.context.email,
+        invitedBy: context.email,
         loginToken: newInviteToken_()
       };
       DB.create('USERS', record);
@@ -1307,7 +1343,7 @@ function api_saveUser(userData) {
     const canReceiveInvite = status.toLowerCase() !== 'disabled';
     if (payload.sendInvite === true && canReceiveInvite) {
       const saved = findUserById_(savedUserId);
-      const sent = saved ? sendInvitationEmail_(saved, gate.context.email) : { ok: false, error: 'User not found.' };
+      const sent = saved ? sendInvitationEmail_(saved, context.email) : { ok: false, error: 'User not found.' };
       if (sent.ok) {
         message += ' Invitation emailed to ' + email + '.';
       } else {
@@ -1329,7 +1365,7 @@ function api_saveUser(userData) {
 
 function api_deleteUser(userId) {
   try {
-    const gate = requirePermission_('settings', 'edit');
+    const gate = requirePermission_('settings', 'delete');
     if (!gate.ok) return gate.response;
     if (!userId) return { success: false, error: 'User id is required.' };
 

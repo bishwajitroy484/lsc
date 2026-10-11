@@ -519,7 +519,7 @@
           </td>
           <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} uppercase tracking-wider">${sName}</span></td>
           <td class="px-4 py-3 text-right">
-            <button onclick="event.stopPropagation(); MembersApp.openModal(${memberJson})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded-full transition-colors">
+            <button data-perm="members:edit" onclick="event.stopPropagation(); MembersApp.openModal(${memberJson})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded-full transition-colors">
                <span class="material-symbols-rounded text-[18px]">edit</span>
             </button>
           </td>
@@ -601,6 +601,7 @@
       const initialBatch = this.filteredData.slice(0, this.pageSize);
       tBody.innerHTML = initialBatch.map(m => this.buildDesktopRowHtml(m)).join('');
       mContainer.innerHTML = initialBatch.map(m => this.buildMobileCardHtml(m)).join('');
+      if (typeof AccessControl !== 'undefined') AccessControl.repaint('members');
       this.renderedCount = initialBatch.length;
 
       this.initScrollListener();
@@ -640,6 +641,7 @@
           tBody.insertAdjacentHTML('beforeend', dHtml);
           mContainer.insertAdjacentHTML('beforeend', mHtml);
           this.renderedCount += nextBatch.length;
+          if (typeof AccessControl !== 'undefined') AccessControl.repaint('members');
         }
         this.isLoadingMore = false;
       }, 160);
@@ -985,7 +987,7 @@
               `WhatsAppNotify.open('${waType}', ${waRowJson}, event)`
             );
             
-            const payNowBtn = `<button onclick="MembersApp.openRecordPayment(${pJson})" class="h-8 px-2.5 text-brand-primary border border-red-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm inline-flex items-center justify-center transition-colors shrink-0">Pay Now</button>`;
+            const payNowBtn = `<button data-perm="members:create" onclick="MembersApp.openRecordPayment(${pJson})" class="h-8 px-2.5 text-brand-primary border border-red-200 bg-white hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded shadow-sm inline-flex items-center justify-center transition-colors shrink-0">Pay Now</button>`;
             phtml += `
               <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 group transition-colors ${rowClass}">
                 <td class="px-4 py-3">
@@ -1066,8 +1068,8 @@
               );
             }
 
-            const editBtn = `<button onclick="MembersApp.openRecordPayment(${pJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[16px]">edit</span></button>`;
-            const deleteBtn = `<button onclick="MembersApp.openDeleteModal('payment', '${p.paymentId}', '${this.formatDateDDMMMYYYY(p.paidDate)} Payment')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[16px]">delete</span></button>`;
+            const editBtn = `<button data-perm="members:edit" onclick="MembersApp.openRecordPayment(${pJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[16px]">edit</span></button>`;
+            const deleteBtn = `<button data-perm="members:delete" onclick="MembersApp.openDeleteModal('payment', '${p.paymentId}', '${this.formatDateDDMMMYYYY(p.paidDate)} Payment')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center shrink-0"><span class="material-symbols-rounded text-[16px]">delete</span></button>`;
             phtml += `
               <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50 group transition-colors">
                 <td class="px-4 py-3">
@@ -1109,6 +1111,7 @@
       });
       tBody.innerHTML = phtml;
       if (cardList) cardList.innerHTML = cardsHtml;
+      if (typeof AccessControl !== 'undefined') AccessControl.repaint('members');
     },
 
     renderChart: function() {
@@ -1325,6 +1328,8 @@
     },
 
     openModal: function(member = null) {
+      if (member && member instanceof Event) member = null;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('members', member ? 'edit' : 'create')) return;
       document.getElementById('modal-title').innerText = member ? 'Edit Member' : 'Add New Member';
       document.getElementById('mem-id').value = member ? member.memberId : '';
       
@@ -1639,6 +1644,8 @@
     },
 
     openRecordPayment: function(payment = null) {
+      const isEdit = payment && payment.paymentId && !payment.isVirtual;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('members', isEdit ? 'edit' : 'create')) return;
       const m = this.currentActiveMember;
       if(!m) return;
       const fee = Number(String(m.membershipAmount || 0).replace(/[^0-9.-]+/g, '')) || 0;
@@ -1786,6 +1793,7 @@
     },
     
     openDeleteModal: function(type, id, name) {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('members', 'delete')) return;
       this.deleteState = { type: type, id: id };
       document.getElementById('delete-title').innerText = type === 'member' ? 'Delete Member?' : 'Delete Payment?';
       document.getElementById('delete-target-name').innerText = name;

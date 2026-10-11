@@ -130,6 +130,42 @@ describe('Access control foundation', () => {
       expect(expensesOnly).toEqual([{ page: 'Expenses & Staff', level: 'View, edit' }]);
     });
 
+    test('permission rules force view, lock dashboard and calendar writes, and keep expenses and staff together', () => {
+      const dash = ctx.enforcePermissionRules_({
+        dashboard: { view: true, create: true, edit: true, delete: true }
+      });
+      expect(dash.dashboard).toEqual({ view: true, create: false, edit: false, delete: false });
+
+      const cal = ctx.enforcePermissionRules_({
+        calendar: { view: true, create: true, edit: false, delete: false }
+      });
+      expect(cal.calendar.create).toBe(false);
+
+      const members = ctx.enforcePermissionRules_({
+        members: { view: false, create: true, edit: false, delete: false }
+      });
+      expect(members.members.view).toBe(true);
+      expect(members.members.create).toBe(true);
+
+      const hub = ctx.enforcePermissionRules_({
+        expenses: { view: false, create: false, edit: false, delete: true },
+        staff: { view: false, create: false, edit: false, delete: false }
+      });
+      expect(hub.expenses).toEqual({ view: true, create: false, edit: false, delete: true });
+      expect(hub.staff).toEqual(hub.expenses);
+    });
+
+    test('saving and deleting a user use create, edit, and delete separately', () => {
+      const saveStart = accessSrc.indexOf('function api_saveUser');
+      const saveEnd = accessSrc.indexOf('function api_deleteUser');
+      const saveBody = accessSrc.slice(saveStart, saveEnd);
+      expect(saveBody).toContain("const needed = existing ? 'edit' : 'create'");
+      expect(saveBody).toContain("hasPermission_(context, 'settings', needed)");
+      expect(saveBody).toContain('enforcePermissionRules_');
+      const deleteBody = accessSrc.slice(saveEnd, accessSrc.indexOf('function api_', saveEnd + 10));
+      expect(deleteBody).toContain("requirePermission_('settings', 'delete')");
+    });
+
     test('email greets the user, links to the app, and never mentions Sheet/Drive/Script', () => {
       const mail = ctx.buildInvitationEmail_({
         appName: 'Acme Gym',

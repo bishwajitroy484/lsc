@@ -119,8 +119,6 @@ function api_getDropdownConfig() {
 
 function api_saveSchema(schemaObj) {
   try {
-    const gate = requirePermission_('settings', 'edit');
-    if (!gate.ok) return gate.response;
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('DROP_DOWN');
     if (!sheet) throw new Error("DROP_DOWN sheet is missing.");
@@ -155,6 +153,19 @@ function api_saveSchema(schemaObj) {
         rowIndexToUpdate = i + 2;
         existingSchema = { startCol: sCol, numCols: nCol };
       }
+    }
+
+    const context = getCurrentUserContext_();
+    if (!context || !context.allowed) {
+      return { success: false, error: (context && context.error) || 'Access denied.', code: 'FORBIDDEN' };
+    }
+    const schemaAction = rowIndexToUpdate < 0 ? 'create' : 'edit';
+    if (!hasPermission_(context, 'settings', schemaAction)) {
+      return {
+        success: false,
+        error: 'You do not have permission to ' + schemaAction + ' on settings.',
+        code: 'FORBIDDEN'
+      };
     }
 
     schemaObj.numCols = schemaObj.columns.length;
@@ -250,8 +261,6 @@ function api_saveSchema(schemaObj) {
 
 function api_saveDropdownOptions(categoryKey, optionsArray) {
   try {
-    const gate = requirePermission_('settings', 'edit');
-    if (!gate.ok) return gate.response;
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName('DROP_DOWN');
     if (!sheet) throw new Error("DROP_DOWN sheet is missing.");
@@ -282,6 +291,30 @@ function api_saveDropdownOptions(categoryKey, optionsArray) {
     }
 
     if (!schema || !schema.startCol) throw new Error("Schema mapping not found.");
+
+    const existingValues = sheet.getRange(3, schema.startCol, 198, schema.numCols).getValues();
+    let existingCount = 0;
+    existingValues.forEach(function(row) {
+      if (row && String(row[0] || '').trim()) existingCount++;
+    });
+    const nextCount = Array.isArray(optionsArray) ? optionsArray.length : 0;
+    const needed = [];
+    if (nextCount > existingCount) needed.push('create');
+    if (nextCount < existingCount) needed.push('delete');
+    if (nextCount === existingCount) needed.push('edit');
+    const context = getCurrentUserContext_();
+    if (!context || !context.allowed) {
+      return { success: false, error: (context && context.error) || 'Access denied.', code: 'FORBIDDEN' };
+    }
+    for (let n = 0; n < needed.length; n++) {
+      if (!hasPermission_(context, 'settings', needed[n])) {
+        return {
+          success: false,
+          error: 'You do not have permission to ' + needed[n] + ' on settings.',
+          code: 'FORBIDDEN'
+        };
+      }
+    }
 
     const startLetter = _colToLetter(schema.startCol);
     const endLetter = _colToLetter(schema.startCol + schema.numCols - 1);

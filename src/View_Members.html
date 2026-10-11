@@ -14,10 +14,10 @@
       </div>
       
       <div class="flex items-center gap-2 shrink-0">
-        <button onclick="MembersApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-brand-hover transition-colors shrink-0">
+        <button data-perm="members:create" onclick="MembersApp.openModal()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-brand-hover transition-colors shrink-0">
           <span class="material-symbols-rounded text-[18px]">add</span>
         </button>
-        <button onclick="MembersApp.openModal()" class="hidden md:flex shrink-0 h-9 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-brand-hover transition-colors">
+        <button data-perm="members:create" onclick="MembersApp.openModal()" class="hidden md:flex shrink-0 h-9 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-brand-hover transition-colors">
           <span class="material-symbols-rounded text-[18px]">add</span><span class="font-semibold text-sm">Add Member</span>
         </button>
       </div>
@@ -80,10 +80,10 @@
         </button>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="MembersApp.editCurrentMember()" class="w-8 h-8 flex items-center justify-center border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors" title="Edit Member">
+        <button data-perm="members:edit" onclick="MembersApp.editCurrentMember()" class="w-8 h-8 flex items-center justify-center border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors" title="Edit Member">
           <span class="material-symbols-rounded text-[16px]">edit</span>
         </button>
-        <button onclick="MembersApp.deleteCurrentMember()" class="w-8 h-8 flex items-center justify-center border border-slate-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors" title="Delete Member">
+        <button data-perm="members:delete" onclick="MembersApp.deleteCurrentMember()" class="w-8 h-8 flex items-center justify-center border border-slate-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors" title="Delete Member">
           <span class="material-symbols-rounded text-[16px]">delete</span>
         </button>
       </div>
@@ -112,7 +112,7 @@
               </div>
             </div>
             
-            <button onclick="MembersApp.openRecordPayment()" class="h-9 px-4 bg-brand-primary text-white text-xs font-bold rounded-lg shadow-md shadow-red-500/20 hover:bg-brand-hover transition-all active:scale-95 shrink-0 flex items-center gap-1">
+            <button data-perm="members:create" onclick="MembersApp.openRecordPayment()" class="h-9 px-4 bg-brand-primary text-white text-xs font-bold rounded-lg shadow-md shadow-red-500/20 hover:bg-brand-hover transition-all active:scale-95 shrink-0 flex items-center gap-1">
               <span class="material-symbols-rounded text-[16px] hidden sm:block">payments</span> Pay
             </button>
           </div>

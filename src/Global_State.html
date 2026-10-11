@@ -630,7 +630,15 @@
       if (!s || !s.allowed) return false;
       if (s.isOwner) return true;
       const row = s.permissions && s.permissions[moduleName];
-      return !!(row && row[action]);
+      if (!row || !row[action]) return false;
+      if (action !== 'view' && !row.view) return false;
+      return true;
+    },
+
+    deny: function(moduleName, action) {
+      if (this.can(moduleName, action)) return false;
+      if (typeof Toast !== 'undefined') Toast.error('You can only view this. That action is turned off.');
+      return true;
     },
 
     firstAllowedRoute: function() {
@@ -662,29 +670,33 @@
 
     applyActionGates: function(root, moduleName) {
       if (!root || !moduleName) return;
+      const paint = (el, allowed) => el.classList.toggle('perm-denied', !allowed);
       root.querySelectorAll('[data-perm]').forEach(el => {
         const spec = String(el.getAttribute('data-perm') || '');
         const parts = spec.split(':');
         const mod = parts[0] || moduleName;
         const action = parts[1] || 'edit';
-        if (this.can(mod, action)) el.classList.remove('hidden');
-        else el.classList.add('hidden');
+        paint(el, this.can(mod, action));
       });
-      if (!this.can(moduleName, 'create')) {
-        root.querySelectorAll(
-          'button[onclick*="openModal("], button[onclick*="openModal()"], button[onclick*="MembersApp.openModal"], button[onclick*="StaffApp.openModal"], button[onclick*="ExpensesApp.openModal"], [data-action="create"]'
-        ).forEach(el => el.classList.add('hidden'));
+      root.querySelectorAll('[data-perm-any]').forEach(el => {
+        const specs = String(el.getAttribute('data-perm-any') || '').split(',');
+        const allowed = specs.some(spec => {
+          const parts = spec.split(':');
+          return parts[0] && this.can(parts[0], parts[1] || 'view');
+        });
+        paint(el, allowed);
+      });
+    },
+
+    repaint: function(moduleName) {
+      const root = document.getElementById('app-root');
+      if (!root) return;
+      if (moduleName === 'expenses' || moduleName === 'staff') {
+        this.applyActionGates(root, 'expenses');
+        this.applyActionGates(root, 'staff');
+        return;
       }
-      if (!this.can(moduleName, 'edit')) {
-        root.querySelectorAll(
-          'button[onclick*="editCurrent"], button[onclick*="openTransactionModal"], button[onclick*="openPayment"], [data-action="edit"]'
-        ).forEach(el => el.classList.add('hidden'));
-      }
-      if (!this.can(moduleName, 'delete')) {
-        root.querySelectorAll(
-          'button[onclick*="deleteCurrent"], button[onclick*="confirmDelete"], button[onclick*="openDelete"], [data-action="delete"]'
-        ).forEach(el => el.classList.add('hidden'));
-      }
+      this.applyActionGates(root, moduleName || 'dashboard');
     },
 
     showDenied: function(message, email, opts) {

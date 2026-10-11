@@ -830,8 +830,8 @@
           <td class="px-4 py-3"><span class="text-xs font-bold px-2 py-0.5 rounded border ${sClass}">${sName}</span></td>
           <td class="px-4 py-3 text-right whitespace-nowrap">
             ${payButtonHtml}
-            <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">edit</span></button>
-            <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">delete</span></button>
+            <button data-perm="staff:edit" onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="w-7 h-7 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">edit</span></button>
+            <button data-perm="staff:delete" onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="w-7 h-7 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded inline-flex items-center justify-center"><span class="material-symbols-rounded text-[17px]">delete</span></button>
           </td>
         </tr>`;
     },
@@ -888,8 +888,8 @@
             <span>Joined ${dateStr}</span>
             <div class="flex items-center gap-1.5">
               ${hasActionNeeded ? `<button onclick="event.stopPropagation(); StaffApp.openStaffSalary('${stf.staffId}')" class="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold rounded flex items-center gap-1 hover:bg-amber-100"><span class="material-symbols-rounded text-[13px]">payments</span>Pay</button>` : ''}
-              <button onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="p-1 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[16px]">edit</span></button>
-              <button onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="p-1 text-slate-400 hover:text-red-500 rounded"><span class="material-symbols-rounded text-[16px]">delete</span></button>
+              <button data-perm="staff:edit" onclick="event.stopPropagation(); StaffApp.openModal(${stfJson})" class="p-1 text-slate-400 hover:text-brand-primary rounded"><span class="material-symbols-rounded text-[16px]">edit</span></button>
+              <button data-perm="staff:delete" onclick="event.stopPropagation(); StaffApp.openDeleteModal('staff', '${stf.staffId}', '${stf.fullName}')" class="p-1 text-slate-400 hover:text-red-500 rounded"><span class="material-symbols-rounded text-[16px]">delete</span></button>
             </div>
           </div>
         </div>`;
@@ -933,6 +933,7 @@
       const initialBatch = this.tableData.slice(0, this.pageSize);
       tBody.innerHTML = initialBatch.map((stf, i) => this.buildDesktopRowHtml(stf, i)).join('');
       mContainer.innerHTML = initialBatch.map((stf, i) => this.buildMobileCardHtml(stf, i)).join('');
+      if (typeof AccessControl !== 'undefined') AccessControl.repaint('staff');
       this.renderedCount = initialBatch.length;
 
       this.initScrollListener();
@@ -972,6 +973,7 @@
           tBody.insertAdjacentHTML('beforeend', dHtml);
           mContainer.insertAdjacentHTML('beforeend', mHtml);
           this.renderedCount += nextBatch.length;
+          if (typeof AccessControl !== 'undefined') AccessControl.repaint('staff');
         }
         this.isLoadingMore = false;
       }, 160);
@@ -1127,7 +1129,7 @@
                         <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase text-amber-700 bg-amber-50 border-amber-200">ACTION NEEDED</span>
                       </td>
                       <td class="px-4 py-3 text-right whitespace-nowrap">
-                         <button onclick="StaffApp.openTransactionModal(${pJson})" class="px-3 py-1.5 text-amber-700 border border-amber-300 bg-white hover:bg-amber-500 hover:text-white text-[10px] font-bold rounded shadow-sm transition-colors whitespace-nowrap">Pay Now</button>
+                         <button data-perm="staff:create" onclick="StaffApp.openTransactionModal(${pJson})" class="px-3 py-1.5 text-amber-700 border border-amber-300 bg-white hover:bg-amber-500 hover:text-white text-[10px] font-bold rounded shadow-sm transition-colors whitespace-nowrap">Pay Now</button>
                       </td>
                     </tr>
                   `;
@@ -1164,8 +1166,8 @@
                       </td>
                       <td class="px-4 py-3 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onclick="StaffApp.openTransactionModal(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
-                          <button onclick="StaffApp.openDeleteModal('payment', '${r.paymentId}', '${cycleLabel} Record')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
+                          <button data-perm="staff:edit" onclick="StaffApp.openTransactionModal(${pJson})" class="w-6 h-6 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">edit</span></button>
+                          <button data-perm="staff:delete" onclick="StaffApp.openDeleteModal('payment', '${r.paymentId}', '${cycleLabel} Record')" class="w-6 h-6 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"><span class="material-symbols-rounded text-[14px]">delete</span></button>
                         </div>
                       </td>
                     </tr>
@@ -1176,6 +1178,7 @@
            this.safeSetText('det-stf-total-paid', AppUtils.formatCurrency(totalPaid));
            if(html === '') html = `<tr><td colspan="3" class="text-center py-6 text-xs text-slate-400">No records found.</td></tr>`;
            if(tBody) tBody.innerHTML = html;
+           if (typeof AccessControl !== 'undefined') AccessControl.repaint('staff');
         })
         .api_getStaffTransactions(stf.staffId);
     },
@@ -1215,6 +1218,7 @@
 
     openModal: function(stf = null) {
       if(stf && stf instanceof Event) stf = null;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('staff', stf ? 'edit' : 'create')) return;
 
       this.safeSetText('stf-modal-title', stf ? 'Edit Staff' : 'Add Staff');
       this.safeSetValue('stf-id', stf ? stf.staffId : '');
@@ -1326,6 +1330,8 @@
     openTransactionModal: function(txn = null) {
       if(!this.currentActiveStaff) return;
       if(txn && txn instanceof Event) txn = null;
+      const isEdit = txn && txn.paymentId && !txn.isVirtual;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('staff', isEdit ? 'edit' : 'create')) return;
 
       this.safeSetText('txn-modal-title', txn && !txn.isVirtual ? 'Edit Record' : 'Record Salary / Credit');
       this.safeSetValue('txn-id', txn && !txn.isVirtual ? txn.paymentId : '');
@@ -1447,6 +1453,7 @@
     },
 
     openDeleteModal: function(type, id, desc) {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('staff', 'delete')) return;
       this.deleteState = { type: type, id: id };
       this.safeSetText('delete-title', type === 'staff' ? 'Delete Staff?' : 'Delete Record?');
       this.safeSetText('delete-stf-name', desc || 'this item');

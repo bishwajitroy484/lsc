@@ -55,8 +55,8 @@
         <h2 class="text-lg font-bold text-slate-800">Staff Details</h2>
       </div>
       <div class="flex items-center gap-1">
-         <button onclick="StaffApp.editCurrentMember()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-red-50 hover:text-brand-primary rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">edit</span></button>
-         <button onclick="StaffApp.deleteCurrentMember()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">delete</span></button>
+         <button data-perm="staff:edit" onclick="StaffApp.editCurrentMember()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-red-50 hover:text-brand-primary rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">edit</span></button>
+         <button data-perm="staff:delete" onclick="StaffApp.deleteCurrentMember()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"><span class="material-symbols-rounded text-[18px]">delete</span></button>
       </div>
     </header>
 

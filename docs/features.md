@@ -123,7 +123,7 @@ The web app is published with `Anyone` access and executes as the deployer. Data
 - **Users & Access:** Settings tab to add people, apply Admin / Manager / Viewer presets, and edit the per-page permission matrix. The matrix shows a single **Expenses & Staff** row for the merged Expenses hub (saving keeps `expenses` and `staff` keys aligned for API checks). Saving a new user can email them a professional message saying they have been given access, with a button to open the app and the list of pages they can use. Nothing about the underlying Sheet, Drive, or script is shared or mentioned.
 - **How invitees sign in:** No password or one-time code. Each user has a **personal link** (`?t=…`). Opening it signs them in, and the device remembers them. Disabling or deleting a user stops the link; **New link** replaces it.
 - **Link / QR:** Each user in the Users tab has a mail icon (send or resend the email) and a QR icon (personal link, QR code, copy, share, new link). Do not share the Apps Script editor or `/dev` URL.
-- **Enforcement:** Navigation and write actions hide when denied; every server API also checks permissions.
+- **Enforcement:** View only opens the page and hides add, edit, and delete. Create, Edit, and Delete each do only that action, and ticking one of them also requires View. Dashboard and Calendar are view-only. On Settings, create adds a user or dropdown option, edit saves changes, and delete removes a user or option. Factory reset stays owner-only. The server checks every action.
 
 ### Client handover checklist
 

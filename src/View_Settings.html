@@ -19,7 +19,7 @@
       </div>
 
       <!-- Quick Save Button for Mobile Header (General Tab) -->
-      <button type="button" id="btn-save-general-header" onclick="SettingsApp.saveGeneralSettings()" class="sm:hidden h-8 px-3 bg-brand-primary hover:bg-brand-hover active:scale-95 text-white rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer shrink-0">
+      <button type="button" id="btn-save-general-header" data-perm="settings:edit" onclick="SettingsApp.saveGeneralSettings()" class="sm:hidden h-8 px-3 bg-brand-primary hover:bg-brand-hover active:scale-95 text-white rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer shrink-0">
         <span class="material-symbols-rounded text-[16px]">save</span>
         <span>Save</span>
       </button>
@@ -692,7 +692,7 @@
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span class="text-xs text-slate-500 font-medium">Settings ready to save</span>
         </div>
-        <button type="button" onclick="SettingsApp.saveGeneralSettings()" id="btn-save-general" class="px-6 py-2.5 bg-brand-primary hover:bg-brand-hover active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-red-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
+        <button type="button" onclick="SettingsApp.saveGeneralSettings()" id="btn-save-general" data-perm="settings:edit" class="px-6 py-2.5 bg-brand-primary hover:bg-brand-hover active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-red-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
           <span class="material-symbols-rounded text-[18px]">save</span>
           <span>Save All Settings</span>
         </button>
@@ -743,7 +743,7 @@
                 <h3 class="text-sm font-bold text-slate-800">Users &amp; Access</h3>
                 <p class="text-[11px] text-slate-500 mt-0.5">Choose who can open the app and which pages they can see or change.</p>
               </div>
-              <button type="button" id="btn-add-user" onclick="SettingsApp.openUserEditor()" class="h-9 px-3 bg-brand-primary hover:bg-brand-hover text-white rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer shrink-0">
+              <button type="button" id="btn-add-user" data-perm="settings:create" onclick="SettingsApp.openUserEditor()" class="h-9 px-3 bg-brand-primary hover:bg-brand-hover text-white rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer shrink-0">
                 <span class="material-symbols-rounded text-[16px]">person_add</span><span>Add</span>
               </button>
             </div>
@@ -1009,7 +1009,7 @@
             </div>
             <div class="flex items-center gap-2">
               <button type="button" onclick="SettingsApp.discardOrder()" class="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer">Discard</button>
-              <button type="button" onclick="SettingsApp.saveOrder()" id="btn-save-order" class="px-4 py-1.5 bg-brand-primary text-white rounded-xl text-xs font-bold shadow-xs hover:bg-brand-hover transition-all cursor-pointer">Save Order</button>
+              <button type="button" onclick="SettingsApp.saveOrder()" id="btn-save-order" data-perm="settings:edit" class="px-4 py-1.5 bg-brand-primary text-white rounded-xl text-xs font-bold shadow-xs hover:bg-brand-hover transition-all cursor-pointer">Save Order</button>
             </div>
           </div>
 
@@ -1161,7 +1161,7 @@
       
       <div class="flex gap-2.5">
         <button type="button" onclick="SettingsApp.closeDeleteModal()" class="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors cursor-pointer">Cancel</button>
-        <button type="button" onclick="SettingsApp.confirmDelete()" class="flex-1 px-4 py-2.5 bg-red-500 text-white font-bold text-xs rounded-xl hover:bg-red-600 shadow-xs active:scale-98 transition-all cursor-pointer">Delete</button>
+        <button type="button" onclick="SettingsApp.confirmDelete()" data-perm="settings:delete" class="flex-1 px-4 py-2.5 bg-red-500 text-white font-bold text-xs rounded-xl hover:bg-red-600 shadow-xs active:scale-98 transition-all cursor-pointer">Delete</button>
       </div>
     </div>
   </div>

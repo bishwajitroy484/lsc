@@ -9,7 +9,7 @@
           <p class="text-[10px] md:text-xs text-slate-500 hidden md:block mt-0.5">Manage operating costs and staff payroll in one place</p>
         </div>
       </div>
-      <button type="button" onclick="ExpensesHub.onAddClick()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-brand-hover transition-colors shrink-0">
+      <button type="button" data-perm-any="expenses:create,staff:create" onclick="ExpensesHub.onAddClick()" class="md:hidden w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-brand-hover transition-colors shrink-0">
         <span class="material-symbols-rounded text-[18px]">add</span>
       </button>
     </div>
@@ -27,7 +27,7 @@
         </button>
         <div id="exp-multi-select-menu" class="hidden absolute top-full mt-1 right-0 w-full min-w-[140px] bg-white border border-slate-200 shadow-lg rounded-lg max-h-48 overflow-y-auto z-40 p-2"></div>
       </div>
-      <button type="button" onclick="ExpensesHub.onAddClick()" class="hidden md:flex shrink-0 h-8 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-brand-hover transition-colors">
+      <button type="button" data-perm-any="expenses:create,staff:create" onclick="ExpensesHub.onAddClick()" class="hidden md:flex shrink-0 h-8 px-4 bg-brand-primary text-white rounded-lg items-center justify-center gap-2 shadow-sm hover:bg-brand-hover transition-colors">
         <span class="material-symbols-rounded text-[16px]">add</span>
         <span class="font-semibold text-xs">Add Record</span>
       </button>

@@ -115,13 +115,13 @@
     },
 
     applySettingsAccessGates: function() {
-      const canEdit = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'edit');
-      const canViewUsers = typeof AccessControl !== 'undefined' && (AccessControl.can('settings', 'view') || AccessControl.can('settings', 'edit'));
+      const canViewUsers = typeof AccessControl !== 'undefined' && (AccessControl.can('settings', 'view') || AccessControl.can('settings', 'edit') || AccessControl.can('settings', 'create') || AccessControl.can('settings', 'delete'));
       const isOwner = typeof AccessControl !== 'undefined' && AccessControl.session && AccessControl.session.isOwner;
       const usersTab = document.getElementById('tab-btn-users');
       if (usersTab && !canViewUsers) usersTab.classList.add('hidden');
       const addBtn = document.getElementById('btn-add-user');
-      if (addBtn) addBtn.classList.toggle('hidden', !canEdit);
+      const canCreate = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'create');
+      if (addBtn) addBtn.classList.toggle('perm-denied', !canCreate);
       const publishBtn = document.getElementById('btn-publish-webapp');
       if (publishBtn) publishBtn.classList.toggle('hidden', !isOwner);
       const saveDeployBtn = document.getElementById('btn-save-deployment-id');
@@ -617,6 +617,8 @@
       if (content) content.classList.remove('hidden');
       if (!list) return;
       const canEdit = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'edit');
+      const canDelete = typeof AccessControl !== 'undefined' && AccessControl.can('settings', 'delete');
+      const canView = typeof AccessControl !== 'undefined' && (AccessControl.can('settings', 'view') || canEdit);
       if (!this.usersCache.length) {
         list.innerHTML = '';
         if (empty) empty.classList.remove('hidden');
@@ -628,13 +630,16 @@
         const viewMods = this.formatViewModules_(perms);
         const uid = String(u.userId || '').replace(/'/g, '');
         const isDisabled = String(u.status || '').toLowerCase() === 'disabled';
-        const actions = canEdit
+        const actions = (canView || canEdit || canDelete)
           ? ('<div class="flex gap-1 shrink-0">' +
-             (isDisabled ? '' :
-               '<button type="button" title="Email access link" onclick="SettingsApp.sendInvitation(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">forward_to_inbox</span></button>' +
-               '<button type="button" title="Link and QR code" onclick="SettingsApp.openInviteModal(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">qr_code_2</span></button>') +
-             '<button type="button" onclick="SettingsApp.openUserEditor(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">edit</span></button>' +
-             (u.isOwner ? '' : '<button type="button" onclick="SettingsApp.deleteUser(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-red-500 cursor-pointer"><span class="material-symbols-rounded text-[16px]">delete</span></button>') +
+             (canView && !isDisabled ?
+               '<button type="button" title="Link and QR code" onclick="SettingsApp.openInviteModal(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">qr_code_2</span></button>' : '') +
+             (canEdit && !isDisabled ?
+               '<button type="button" title="Email access link" onclick="SettingsApp.sendInvitation(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">forward_to_inbox</span></button>' : '') +
+             (canEdit ?
+               '<button type="button" data-perm="settings:edit" onclick="SettingsApp.openUserEditor(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-brand-primary cursor-pointer"><span class="material-symbols-rounded text-[16px]">edit</span></button>' : '') +
+             (canDelete && !u.isOwner ?
+               '<button type="button" data-perm="settings:delete" onclick="SettingsApp.deleteUser(\'' + uid + '\')" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:text-red-500 cursor-pointer"><span class="material-symbols-rounded text-[16px]">delete</span></button>' : '') +
              '</div>')
           : '';
         return '<div class="p-3 border border-slate-200 rounded-xl flex items-start justify-between gap-2">' +
@@ -777,6 +782,8 @@
     },
 
     openUserEditor: function(userId) {
+      const needed = userId ? 'edit' : 'create';
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', needed)) return;
       const existing = userId ? this.usersCache.find(u => String(u.userId) === String(userId)) : null;
       document.getElementById('user-editor-title').textContent = existing ? 'Edit user' : 'Add user';
       document.getElementById('user-edit-id').value = existing ? existing.userId : '';
@@ -809,14 +816,29 @@
       body.innerHTML = this.uiAccessModules.map(mod => {
         const row = mod === 'expenses' ? this.mergeExpenseStaffPerm_(perms) : (perms[mod] || {});
         const label = this.moduleLabels[mod] || mod;
-        const cell = (action) =>
-          '<td class="text-center px-1 py-1.5"><input type="checkbox" data-mod="' + mod + '" data-act="' + action + '" ' +
-          (row[action] ? 'checked' : '') + ' class="rounded border-slate-300 text-brand-primary"></td>';
+        const cell = (action) => {
+          const locked = (mod === 'dashboard' || mod === 'calendar') && action !== 'view';
+          return '<td class="text-center px-1 py-1.5"><input type="checkbox" data-mod="' + mod + '" data-act="' + action + '" ' +
+            (row[action] ? 'checked' : '') + (locked ? ' disabled' : '') +
+            ' onchange="SettingsApp.onPermToggle(this)" class="rounded border-slate-300 text-brand-primary"></td>';
+        };
         return '<tr class="border-t border-slate-100">' +
           '<td class="px-2 py-1.5 font-semibold text-slate-700">' + label + '</td>' +
           cell('view') + cell('create') + cell('edit') + cell('delete') +
           '</tr>';
       }).join('');
+    },
+
+    onPermToggle: function(cb) {
+      if (!cb) return;
+      const mod = cb.getAttribute('data-mod');
+      const act = cb.getAttribute('data-act');
+      const boxes = document.querySelectorAll('#user-perm-matrix input[data-mod="' + mod + '"]');
+      if (act === 'view' && !cb.checked) {
+        boxes.forEach(el => { if (el.getAttribute('data-act') !== 'view') el.checked = false; });
+      } else if (act !== 'view' && cb.checked) {
+        boxes.forEach(el => { if (el.getAttribute('data-act') === 'view') el.checked = true; });
+      }
     },
 
     applyUserPreset: function() {
@@ -876,6 +898,7 @@
     },
 
     deleteUser: function(userId) {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'delete')) return;
       if (!userId || !confirm('Remove this user? Their link will stop working.')) return;
       google.script.run
         .withSuccessHandler((res) => {
@@ -1658,6 +1681,7 @@
     },
 
     saveGeneralSettings: function() {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'edit')) return;
        this.syncWeeklyFields();
        const saveBtns = [
          document.getElementById('btn-save-general'),
@@ -2135,6 +2159,7 @@
     },
 
     saveOrder: function() {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'edit')) return;
       if (!this.activeSchema) return;
       const btn = document.getElementById('btn-save-order');
       if(btn) { btn.innerHTML = 'Saving...'; btn.disabled = true; }
@@ -2157,6 +2182,8 @@
 
     openOptionModal: function(optOrId = null) {
       if(!this.activeSchema) return;
+      const isEdit = (typeof optOrId === 'string' && optOrId) || (optOrId && typeof optOrId === 'object' && !(optOrId instanceof Event));
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', isEdit ? 'edit' : 'create')) return;
       let opt = null;
       if (typeof optOrId === 'string' && optOrId) {
         opt = this.activeOptionsList.find(o => o.id === optOrId) || null;
@@ -2193,6 +2220,8 @@
 
     saveOption: function(e) {
       e.preventDefault();
+      const existingId = (document.getElementById('dyn-opt-id') || {}).value;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', existingId ? 'edit' : 'create')) return;
       if (!AppUtils.validateRequiredFields('option-form')) return;
       const btn = document.getElementById('btn-save-opt');
       if(btn) { btn.innerHTML = 'Saving...'; btn.disabled = true; }
@@ -2258,6 +2287,7 @@
     },
 
     confirmDelete: function() {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'delete')) return;
       if(!this.optionToDelete || !this.activeSchema) return;
       const updatedList = this.activeOptionsList.filter(o => o.id !== this.optionToDelete);
       google.script.run
@@ -2277,6 +2307,7 @@
     },
     
     openSchemaModal: function() {
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'create')) return;
       this.isEditingSchema = false;
       const form = document.getElementById('schema-form');
       if(form) form.reset();
@@ -2318,6 +2349,7 @@
 
     editSchema: function() {
       if(!this.activeSchema) return;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', 'edit')) return;
       this.isEditingSchema = true;
       const form = document.getElementById('schema-form');
       if(form) form.reset();
@@ -2444,6 +2476,7 @@
 
     saveSchema: function(e) {
       e.preventDefault();
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('settings', this.isEditingSchema ? 'edit' : 'create')) return;
       if (!AppUtils.validateRequiredFields('schema-form')) return;
       const btn = document.getElementById('btn-save-schema');
       if(btn) { btn.innerHTML = 'Saving...'; btn.disabled = true; }
