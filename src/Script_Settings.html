@@ -1948,7 +1948,7 @@
                 '</div>' +
                 '<div class="min-w-0">' +
                   '<h4 class="text-xs font-bold truncate leading-tight">' + s.name + '</h4>' +
-                  '<span class="text-[10px] font-mono font-semibold uppercase ' + (isActive ? 'text-brand-primary' : 'text-slate-400') + '">' + s.prefix + '</span>' +
+                  '<span class="text-[10px] font-mono font-semibold ' + (isActive ? 'text-brand-primary' : 'text-slate-400') + '">' + s.prefix + '</span>' +
                 '</div>' +
               '</div>' +
               '<div class="flex items-center gap-1.5 shrink-0">' +
@@ -1991,7 +1991,7 @@
             usagesHtml += 
               '<div class="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200 text-slate-600">' +
                 '<span class="material-symbols-rounded text-[12px] text-slate-400">link</span>' +
-                '<span class="text-[9px] font-bold uppercase tracking-wider">' + u.tab + ' &rarr; ' + u.column + '</span>' +
+                '<span class="text-[9px] font-bold tracking-wider">' + u.tab + ' &rarr; ' + u.column + '</span>' +
               '</div>';
          });
       } else {
@@ -2096,7 +2096,7 @@
           '<div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">' +
             '<div class="flex items-start justify-between gap-2">' +
               '<div>' +
-                '<span class="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-primary bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">' + (opt.id || 'ITEM') + '</span>' +
+                '<span class="text-[10px] font-mono font-bold tracking-wider text-brand-primary bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">' + (opt.id || 'ITEM') + '</span>' +
                 '<h4 class="text-sm font-bold text-slate-800 mt-1">' + (opt.name || '--') + '</h4>' +
               '</div>' +
               '<div class="flex items-center gap-1 shrink-0">' +
@@ -2112,7 +2112,7 @@
             (attributesHtml ? '<div class="bg-slate-50/70 rounded-xl p-2.5 space-y-0.5">' + attributesHtml + '</div>' : '') +
 
             '<div class="flex items-center justify-between pt-2 border-t border-slate-100">' +
-              '<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Position #' + (index + 1) + '</span>' +
+              '<span class="text-[10px] font-bold tracking-wider text-slate-400">Position #' + (index + 1) + '</span>' +
               '<div class="flex items-center gap-1.5">' +
                 '<button type="button" onclick="SettingsApp.moveOption(' + index + ', -1)" ' + (index === 0 ? 'disabled' : '') + ' class="h-8 px-2.5 flex items-center gap-1 text-slate-600 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-30 disabled:pointer-events-none rounded-xl text-xs font-semibold transition-colors">' +
                   '<span class="material-symbols-rounded text-[16px]">arrow_upward</span>' +

@@ -213,10 +213,42 @@
       this.fetchData();
     },
 
+    monthIndexesFromPeriods: function(mode, periods) {
+      const selected = Array.isArray(periods) ? periods : [];
+      const indexes = [];
+      if (mode === 'Quarterly') {
+        this.quarters.forEach((label, quarterIdx) => {
+          if (selected.indexOf(label) >= 0 || selected.indexOf(label.split(' ')[0]) >= 0) {
+            indexes.push(quarterIdx * 3, quarterIdx * 3 + 1, quarterIdx * 3 + 2);
+          }
+        });
+      } else {
+        this.months.forEach((label, monthIdx) => {
+          if (selected.indexOf(label) >= 0) indexes.push(monthIdx);
+        });
+      }
+      return indexes;
+    },
+
+    periodsFromMonthIndexes: function(mode, indexes) {
+      const covered = {};
+      (indexes || []).forEach(monthIdx => { covered[monthIdx] = true; });
+      if (mode === 'Quarterly') {
+        return this.quarters.filter((label, quarterIdx) =>
+          covered[quarterIdx * 3] || covered[quarterIdx * 3 + 1] || covered[quarterIdx * 3 + 2]
+        );
+      }
+      return this.months.filter((label, monthIdx) => covered[monthIdx]);
+    },
+
     handleModeSwitch: function() {
-      const mode = document.getElementById('filter-mode').value;
-      this.selectedPeriods = mode === 'Monthly' ? [...this.months] : [...this.quarters];
-      this.isAllSelected = true;
+      const newMode = document.getElementById('filter-mode').value;
+      const oldMode = newMode === 'Quarterly' ? 'Monthly' : 'Quarterly';
+      const covered = this.monthIndexesFromPeriods(oldMode, this.selectedPeriods);
+      const next = this.periodsFromMonthIndexes(newMode, covered);
+      const valid = newMode === 'Monthly' ? this.months : this.quarters;
+      this.selectedPeriods = next.length ? next : valid.slice();
+      this.isAllSelected = this.selectedPeriods.length === valid.length;
       this.onFilterChange();
     },
 
@@ -293,10 +325,15 @@
 
     fetchData: function() {
       toggleShimmer(true);
+      const requestId = (this.fetchSerial || 0) + 1;
+      this.fetchSerial = requestId;
       const year = document.getElementById('filter-year')?.value || new Date().getFullYear().toString();
       const mode = document.getElementById('filter-mode')?.value || 'Monthly';
       const periods = this.selectedPeriods.length > 0 ? this.selectedPeriods : this.getValidOptions();
-      google.script.run.withSuccessHandler(renderDashboard).api_getDashboardMetrics(year, mode, periods);
+      google.script.run.withSuccessHandler(function(res) {
+        if (requestId !== DashboardState.fetchSerial) return;
+        renderDashboard(res);
+      }).api_getDashboardMetrics(year, mode, periods);
     },
 
     populateYears: function() {
@@ -550,8 +587,26 @@
     }
 
     // 3. Net-In-Hand actuals transition into the payment-based forecast.
-    // Where a month has both money received and money still expected, the dotted
-    // line starts on the received point and rises by the expected amount.
+    // A month with both received and still-expected money rises from the received point.
+    // A quarter keeps its four labels, then names the months still ahead (Nov–Dec) and
+    // draws that forecast at its own amount, so a negative value sits below zero.
+    const quarterForecastLabel = (label) => {
+      const key = String(label || '').split(' ')[0];
+      const groups = { Q1: [0, 1, 2], Q2: [3, 4, 5], Q3: [6, 7, 8], Q4: [9, 10, 11] };
+      const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const months = groups[key];
+      if (!months) return '';
+      const selectedYear = parseInt(document.getElementById('filter-year')?.value, 10);
+      const now = new Date();
+      const future = months.filter((monthIdx) => {
+        if (selectedYear > now.getFullYear()) return true;
+        if (selectedYear < now.getFullYear()) return false;
+        return monthIdx > now.getMonth();
+      });
+      if (future.length === 1) return names[future[0]];
+      if (future.length > 1) return names[future[0]] + '–' + names[future[future.length - 1]];
+      return 'Forecast';
+    };
     const elPred = document.querySelector("#chart-prediction");
     if(elPred) {
       const prediction = data.charts.prediction || {};
@@ -567,9 +622,17 @@
         const extra = rawExpected[i] == null ? null : Number(rawExpected[i]);
         const hasBase = base != null;
         const hasExtra = extra != null && extra !== 0;
+        const quarterLeft = hasBase && hasExtra ? quarterForecastLabel(label) : '';
         plotLabels.push(label);
         plotActual.push(hasBase ? base : null);
-        if (hasBase && hasExtra) {
+        if (quarterLeft) {
+          plotExpected.push(base);
+          projectedTip.push(null);
+          plotLabels.push(quarterLeft);
+          plotActual.push(null);
+          plotExpected.push(Number(extra.toFixed(2)));
+          projectedTip.push(extra);
+        } else if (hasBase && hasExtra) {
           plotExpected.push(base);
           projectedTip.push(null);
           plotLabels.push('');
@@ -850,8 +913,8 @@
         const when = isToday ? 'Today' : (days === 1 ? 'Tomorrow' : ('in ' + days + ' days'));
         const isStaff = row.kind === 'staff';
         const badge = isStaff
-          ? '<span class="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-100 shrink-0">Staff</span>'
-          : '<span class="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border bg-pink-50 text-pink-700 border-pink-100 shrink-0">Member</span>';
+          ? '<span class="text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-100 shrink-0">Staff</span>'
+          : '<span class="text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded border bg-pink-50 text-pink-700 border-pink-100 shrink-0">Member</span>';
         const id = String(isStaff ? (row.staffId || '') : (row.memberId || '')).replace(/'/g, '');
         const name = String(row.name || '').replace(/'/g, '');
         const rowClass = isToday
@@ -869,7 +932,7 @@
           '<span class="block text-[10px] font-semibold ' + whenClass + '">' + when + '</span></span>' +
           badge + '</button>';
       }).join('');
-      return '<div><p class="text-[10px] font-bold uppercase tracking-wider px-1 mb-1 ' + monthTone + '">' + month + '</p><div class="space-y-0.5">' + items + '</div></div>';
+      return '<div><p class="text-[10px] font-bold tracking-wider px-1 mb-1 ' + monthTone + '">' + month + '</p><div class="space-y-0.5">' + items + '</div></div>';
     }).join('');
   };
 

@@ -1188,8 +1188,8 @@
         } else {
           tbody.innerHTML = rows.map(function(r) {
             var typeBadge = r.recordType === 'staff'
-              ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase bg-purple-50 text-purple-700 border-purple-100">Staff</span>'
-              : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase bg-red-50 text-red-700 border-red-100">Expense</span>';
+              ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-purple-50 text-purple-700 border-purple-100">Staff</span>'
+              : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-red-50 text-red-700 border-red-100">Expense</span>';
             var statusBadge = '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ' + r.statusClass + '">' + r.status + '</span>';
             var amt = (typeof AppUtils !== 'undefined') ? AppUtils.formatCurrency(r.amount) : r.amount;
             var dateFmt = (typeof ExpensesApp !== 'undefined' && ExpensesApp.formatDateDDMMMYYYY)

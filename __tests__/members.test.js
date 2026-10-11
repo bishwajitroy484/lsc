@@ -791,6 +791,12 @@ describe('Members Module', () => {
       MembersApp.onPlanOrBatchChange();
       expect(document.getElementById('mem-exit-date').required).toBe(true);
 
+      MembersApp.dropdowns.membership.push({ id: 'PLAN-ADHOC-SPACE', name: 'Ad hoc', frequency: 'Ad hoc' });
+      document.getElementById('mem-plan').value = 'PLAN-ADHOC-SPACE';
+      MembersApp.onPlanOrBatchChange();
+      expect(document.getElementById('mem-exit-container').classList.remove).toHaveBeenCalledWith('hidden');
+      expect(document.getElementById('mem-exit-date').required).toBe(true);
+
       document.getElementById('mem-plan').value = 'PLAN-TRIAL';
       document.getElementById('mem-join').value = '01-Oct-2026';
       document.getElementById('mem-exit-date').value = '04-Oct-2026';
@@ -806,5 +812,82 @@ describe('Members Module', () => {
       expect(document.getElementById('mem-amount').value).toBe('25000');
       MembersApp.dropdowns = originalDropdowns;
     });
+
+    it('shows Trial and Ad hoc as In-Active with Account Closed, and paints an exit date', () => {
+      const originalDropdowns = MembersApp.dropdowns;
+      MembersApp.dropdowns = {
+        membership: [
+          { id: 'PLAN-TRIAL', name: 'Trial', frequency: 'Trial' },
+          { id: 'PLAN-ADHOC', name: 'Ad hoc', frequency: 'Ad hoc' },
+          { id: 'PLAN-QUARTERLY', name: 'Quarterly', frequency: 'Quarterly' }
+        ],
+        status: [
+          { id: 'STATUS-ACTIVE', name: 'Active' },
+          { id: 'STATUS-INACTIVE', name: 'In-Active' }
+        ]
+      };
+
+      const trialHtml = MembersApp.buildDesktopRowHtml({
+        memberId: 'LSC-MEM-3',
+        fullName: 'Dhriti Roy',
+        membershipId: 'PLAN-TRIAL',
+        status: 'STATUS-INACTIVE',
+        dueDate: 'N/A',
+        joinDate: '01-Oct-2026'
+      });
+      const adhocHtml = MembersApp.buildDesktopRowHtml({
+        memberId: 'LSC-MEM-7',
+        fullName: 'Reena Roy',
+        membershipId: 'PLAN-ADHOC',
+        status: 'STATUS-ACTIVE',
+        dueDate: 'N/A',
+        joinDate: '20-Jul-2026'
+      });
+      expect(trialHtml).toContain('In-Active');
+      expect(trialHtml).toContain('Account Closed');
+      expect(adhocHtml).toContain('In-Active');
+      expect(adhocHtml).toContain('Account Closed');
+      expect(adhocHtml).not.toContain('No Due Date');
+
+      const quarterlyHtml = MembersApp.buildDesktopRowHtml({
+        memberId: 'LSC-MEM-1',
+        fullName: 'Bishwajit Roy',
+        membershipId: 'PLAN-QUARTERLY',
+        status: 'STATUS-ACTIVE',
+        dueDate: '2026-12-27',
+        joinDate: '01-Jan-2026'
+      });
+      expect(quarterlyHtml).toContain('Active');
+      expect(quarterlyHtml).not.toContain('Account Closed');
+
+      MembersApp.paintExitDate({ exitDate: '2026-10-08' });
+      expect(document.getElementById('det-exit').innerText).toBe('08-Oct-2026');
+      expect(document.getElementById('det-exit-wrap').classList.remove).toHaveBeenCalledWith('hidden');
+
+      MembersApp.paintExitDate({ exitDate: '' });
+      expect(document.getElementById('det-exit-wrap').classList.add).toHaveBeenCalledWith('hidden');
+
+      MembersApp.dropdowns = originalDropdowns;
+    });
+  });
+
+  test('record payment leads with coverage and shimmers the detail before the refresh', () => {
+    const viewHtml = fs.readFileSync(path.join(__dirname, '../src/View_Members.html'), 'utf8');
+    const scriptHtml = fs.readFileSync(path.join(__dirname, '../src/Script_Members.html'), 'utf8');
+    const formStart = viewHtml.indexOf('id="payment-form"');
+    const formEnd = viewHtml.indexOf('id="delete-modal"');
+    const form = viewHtml.slice(formStart, formEnd);
+    expect(form.indexOf('id="pay-coverage-container"')).toBeLessThan(form.indexOf('id="pay-header-due"'));
+    expect(form.indexOf('id="pay-start"')).toBeLessThan(form.indexOf('id="pay-end"'));
+    expect(form.indexOf('id="pay-end"')).toBeLessThan(form.indexOf('id="pay-date"'));
+    expect(form.indexOf('id="pay-date"')).toBeLessThan(form.indexOf('id="pay-cash"'));
+    const saveStart = scriptHtml.indexOf('submitPayment: async function');
+    const saveEnd = scriptHtml.indexOf('closeRecordPayment: function');
+    const save = scriptHtml.slice(saveStart, saveEnd);
+    expect(save.indexOf('this.showDetailShimmer()')).toBeLessThan(save.indexOf('.api_recordPayment(payload)'));
+    expect(save.indexOf('this.showShimmer()')).toBeLessThan(save.indexOf('.api_recordPayment(payload)'));
+    const deleteStart = scriptHtml.indexOf("deleteType === 'payment'");
+    const deleteSlice = scriptHtml.slice(deleteStart, deleteStart + 700);
+    expect(deleteSlice.indexOf('this.showDetailShimmer()')).toBeLessThan(deleteSlice.indexOf('.api_deletePayment(deleteId)'));
   });
 });

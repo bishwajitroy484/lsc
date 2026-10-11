@@ -107,7 +107,7 @@
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <span id="det-status" class="text-[10px] font-bold px-2 py-0.5 rounded border">--</span>
                   
-                  <span id="det-due-days" class="text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider">--</span>
+                  <span id="det-due-days" class="text-[10px] font-bold px-2 py-0.5 rounded border tracking-wider">--</span>
                 </div>
               </div>
             </div>
@@ -142,6 +142,10 @@
             <div>
               <p class="text-[11px] sm:text-xs text-slate-500 font-semibold mb-0.5">DOB</p>
               <p id="det-dob" class="font-bold text-slate-800 text-xs md:text-sm">--</p>
+            </div>
+            <div id="det-exit-wrap" class="hidden">
+              <p class="text-[11px] sm:text-xs text-slate-500 font-semibold mb-0.5">Exit Date</p>
+              <p id="det-exit" class="font-bold text-slate-800 text-xs md:text-sm">--</p>
             </div>
           </div>
         </div>
@@ -228,7 +232,7 @@
           </div>
           <div>
             <h2 id="modal-title" class="text-base font-bold text-slate-800 leading-tight">Add Member</h2>
-            <p class="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Profile and membership</p>
+            <p class="text-[10px] font-medium text-slate-500 tracking-wide">Profile and membership</p>
           </div>
         </div>
         <button onclick="MembersApp.closeModal()" class="w-8 h-8 flex items-center justify-center bg-white text-slate-500 rounded-full hover:bg-slate-200 shadow-sm border border-slate-100 transition-colors">
@@ -246,13 +250,13 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="bg-red-50/30 p-3 rounded-xl border border-red-100/50">
               <h4
-                class="text-[11px] font-bold text-brand-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                class="text-[11px] font-bold text-brand-primary tracking-wider mb-3 flex items-center gap-1.5">
                 <span class="material-symbols-rounded text-[14px]">badge</span> Personal Information
               </h4>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Profile Image</label>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Profile Image</label>
                   <div class="flex items-center gap-2">
                     <div id="mem-profile-preview-container" class="hidden w-8 h-8 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-sm bg-slate-50">
                        <img id="mem-profile-preview" src="" class="w-full h-full object-cover">
@@ -265,28 +269,28 @@
                   </div>
                 </div>
                 <div>
-                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Full Name *</label>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Full Name *</label>
                   <div class="relative">
                     <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">person</span>
                     <input type="text" id="mem-name" required class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
                   </div>
                 </div>
                 <div>
-                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Date of Birth</label>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Date of Birth</label>
                   <div class="relative">
                     <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
                     <input type="text" id="mem-dob" placeholder="DD-MMM-YYYY" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm text-slate-700">
                   </div>
                 </div>
                 <div>
-                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Phone Number *</label>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Phone Number *</label>
                   <div class="relative">
                     <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">call</span>
                     <input type="tel" id="mem-phone" required pattern="[0-9]{10}" maxlength="10" inputmode="numeric" title="Enter exactly 10 digits." class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
                   </div>
                 </div>
                 <div>
-                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Gender</label>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Gender</label>
                   <div class="relative">
                     <select id="mem-gender" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm appearance-none">
                       <option value="Male">Male</option>
@@ -296,7 +300,7 @@
                   </div>
                 </div>
                 <div>
-                  <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Email</label>
+                  <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Email</label>
                   <div class="relative">
                     <span class="material-symbols-rounded absolute left-2.5 top-2 text-[16px] text-slate-400">mail</span>
                     <input type="email" id="mem-email" class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm">
@@ -307,14 +311,14 @@
 
             <div class="bg-emerald-50/30 p-3 rounded-xl border border-emerald-100/50">
               <h4
-                class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                class="text-xs font-bold text-emerald-600 tracking-wider mb-3 flex items-center gap-1.5">
                 <span class="material-symbols-rounded text-[14px]">card_membership</span> Membership Details
               </h4>
 
               <div class="flex flex-col gap-3">
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Plan</label>
+                    <label class="block text-xs font-bold text-slate-600 mb-1 tracking-wide">Plan</label>
                     <div class="relative">
                       <select id="mem-plan" required onchange="MembersApp.onPlanOrBatchChange()" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
                       <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
@@ -322,8 +326,8 @@
                   </div>
                   <div>
                     <div class="flex items-center justify-between mb-1">
-                      <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Batch</label>
-                      <span id="batch-type-badge" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded border tracking-wide uppercase"></span>
+                      <label class="block text-xs font-bold text-slate-600 tracking-wide">Batch</label>
+                      <span id="batch-type-badge" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded border tracking-wide"></span>
                     </div>
                     <div class="relative">
                       <select id="mem-batch" required onchange="MembersApp.onPlanOrBatchChange()" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
@@ -334,28 +338,28 @@
 
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Date of Joining</label>
+                    <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Date of Joining</label>
                     <div class="relative">
                       <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-slate-400 pointer-events-none">calendar_month</span>
                       <input type="text" id="mem-join" placeholder="DD-MMM-YYYY" onchange="MembersApp.onPlanOrBatchChange()" class="date-field w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:border-brand-primary outline-none shadow-sm text-slate-700">
                     </div>
                   </div>
                   <div id="mem-status-field">
-                    <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Account Status</label>
+                    <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Account Status</label>
                     <div class="relative">
                       <select id="mem-status" onchange="MembersApp.onStatusChange()" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-brand-primary outline-none shadow-sm appearance-none"></select>
                       <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
                     </div>
                   </div>
                   <div id="mem-exit-container" class="hidden">
-                    <label class="block text-[9px] font-bold text-red-500 mb-1 uppercase tracking-wide">Exit Date *</label>
+                    <label class="block text-[9px] font-bold text-red-500 mb-1 tracking-wide">Exit Date *</label>
                     <div class="relative">
                       <span class="material-symbols-rounded absolute right-2.5 top-2 text-[16px] text-red-400 pointer-events-none">calendar_month</span>
                       <input type="text" id="mem-exit-date" placeholder="DD-MMM-YYYY" onchange="MembersApp.onPlanOrBatchChange()" class="date-field w-full px-2.5 py-2 bg-red-50/30 border border-red-200 rounded-lg text-xs font-bold text-slate-700 focus:border-red-400 outline-none shadow-sm">
                     </div>
                   </div>
                   <div>
-                    <label class="block text-[9px] font-bold text-brand-primary mb-1 uppercase tracking-wide">Calculated Fee (₹) *</label>
+                    <label class="block text-[9px] font-bold text-brand-primary mb-1 tracking-wide">Calculated Fee (₹) *</label>
                     <div class="relative flex items-center">
                       <span class="absolute left-2.5 font-bold text-slate-500 text-[14px]">₹</span>
                       <input type="number" id="mem-amount" required class="w-full pl-7 pr-3 py-2 bg-white border border-brand-primary/30 rounded-lg text-sm font-bold text-slate-800 focus:border-brand-primary outline-none shadow-sm ring-1 ring-brand-primary/30 transition-all">
@@ -364,19 +368,19 @@
                 </div>
 
                 <div id="upfront-payment-container" class="border-t border-emerald-100 pt-3">
-                  <h4 class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <h4 class="text-[11px] font-bold text-emerald-700 tracking-wider mb-2 flex items-center gap-1.5">
                     <span class="material-symbols-rounded text-[14px]">payments</span> Initial Payment
                   </h4>
                   <div id="mem-pay-fields" class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Cash</label>
+                      <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Cash</label>
                       <div class="relative flex items-center">
                         <span class="absolute left-2.5 font-bold text-slate-500 text-xs">₹</span>
                         <input type="number" id="mem-pay-cash" min="0" step="0.01" value="0" class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
                       </div>
                     </div>
                     <div>
-                      <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">UPI</label>
+                      <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">UPI</label>
                       <div class="relative flex items-center">
                         <span class="absolute left-2.5 font-bold text-slate-500 text-xs">₹</span>
                         <input type="number" id="mem-pay-upi" min="0" step="0.01" value="0" class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
@@ -424,37 +428,44 @@
         <div class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3">
           <input type="hidden" id="pay-expected" value="0">
 
+          <div id="pay-coverage-container" class="rounded-2xl border border-amber-200 bg-amber-50/80 p-3">
+            <p class="text-[11px] font-bold text-amber-900">Coverage</p>
+            <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-end mt-2">
+              <div>
+                <label for="pay-start" class="block text-[10px] font-semibold text-amber-800/80 mb-1">Start *</label>
+                <input type="text" id="pay-start" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-white border border-amber-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-amber-400 outline-none">
+              </div>
+              <span class="material-symbols-rounded text-amber-700 text-[18px] pb-2">arrow_forward</span>
+              <div>
+                <label for="pay-end" class="block text-[10px] font-semibold text-amber-800/80 mb-1">End *</label>
+                <input type="text" id="pay-end" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-white border border-amber-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-amber-400 outline-none">
+              </div>
+            </div>
+          </div>
+
           <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 flex justify-between items-center">
-            <span class="text-[10px] font-bold text-slate-500 uppercase">Expected Next Due</span>
+            <span class="text-[10px] font-bold text-slate-500">Expected Next Due</span>
             <span id="pay-header-due" class="text-xs font-bold text-slate-800">--</span>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Start Date *</label>
-              <input type="text" id="pay-start" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
-            </div>
-            <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">End Date *</label>
-              <input type="text" id="pay-end" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
-            </div>
-            <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Paid Date *</label>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Paid Date *</label>
               <input type="text" id="pay-date" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
             </div>
             <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Cycle Fee</label>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Cycle Fee</label>
               <input type="text" id="pay-expected-label" readonly class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none">
             </div>
             <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Cash *</label>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Cash *</label>
               <div class="relative flex items-center">
                 <span class="absolute left-2.5 font-bold text-slate-500 text-sm">₹</span>
                 <input type="number" id="pay-cash" min="0" step="0.01" value="0" inputmode="decimal" oninput="MembersApp.syncPaymentAmount()" class="w-full pl-6 pr-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
               </div>
             </div>
             <div>
-              <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">UPI *</label>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">UPI *</label>
               <div class="relative flex items-center">
                 <span class="absolute left-2.5 font-bold text-slate-500 text-sm">₹</span>
                 <input type="number" id="pay-upi" min="0" step="0.01" value="0" inputmode="decimal" oninput="MembersApp.syncPaymentAmount()" class="w-full pl-6 pr-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none shadow-sm">
@@ -464,7 +475,7 @@
 
           <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <div>
-              <p class="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Amount Paid</p>
+              <p class="text-[9px] font-bold text-slate-500 tracking-wide">Amount Paid</p>
               <input type="number" id="pay-amount" readonly class="w-28 bg-transparent text-sm font-bold text-slate-800 outline-none">
             </div>
             <p id="pay-pending" class="text-[11px] font-bold text-emerald-700 text-right">Fully paid</p>
@@ -472,7 +483,7 @@
           <p class="text-[10px] text-slate-500 font-medium -mt-1">Amount paid is cash plus UPI. Less than the cycle fee stays as a pending partial payment.</p>
 
           <div>
-            <label class="block text-[9px] font-bold text-slate-600 mb-1 uppercase tracking-wide">Receipt Image</label>
+            <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Receipt Image</label>
             <div class="flex items-center gap-2">
               <div id="pay-receipt-preview-container" class="hidden w-10 h-10 rounded-lg border border-slate-200 overflow-hidden shrink-0 bg-slate-50">
                 <img id="pay-receipt-preview" src="" alt="" class="w-full h-full object-cover">

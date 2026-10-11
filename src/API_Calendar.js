@@ -60,7 +60,8 @@ function api_getCalendarData(month, year) {
       const freq = String((planMeta && planMeta.frequency) || '').toUpperCase();
       const name = String(planName || (planMeta && planMeta.name) || '').toUpperCase();
       const blob = freq + ' ' + name;
-      return blob.indexOf('AD-HOC') >= 0 || blob.indexOf('ADHOC') >= 0 || blob.indexOf('TRIAL') >= 0;
+      const compact = blob.replace(/[\s_-]+/g, '');
+      return compact.indexOf('ADHOC') >= 0 || compact.indexOf('TRIAL') >= 0;
     };
 
     const paymentsByMember = {};

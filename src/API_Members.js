@@ -186,8 +186,8 @@ function api_getMembers() {
       const freq = planMatch && planMatch.frequency ? planMatch.frequency.toUpperCase() : '';
       const pName = planMatch && planMatch.name ? planMatch.name.toUpperCase() : '';
 
-      const isAdHocOrTrial = freq.includes('AD-HOC') || freq.includes('ADHOC') || freq.includes('TRIAL') ||
-        pName.includes('AD-HOC') || pName.includes('ADHOC') || pName.includes('TRIAL');
+      const compactPlan = `${freq} ${pName}`.replace(/[\s_-]+/g, '');
+      const isAdHocOrTrial = compactPlan.includes('ADHOC') || compactPlan.includes('TRIAL');
 
       let nextDue = '';
 
@@ -222,6 +222,19 @@ function api_getMembers() {
       }
 
       m.dueDate = nextDue || m.dueDate || '';
+      const fee = Number(String(m.membershipAmount || 0).replace(/[^0-9.-]+/g, '')) || 0;
+      const received = (paymentsByMember[m.memberId] || []).reduce((sum, payment) => {
+        return sum + (Number(String(payment.amount || 0).replace(/[^0-9.-]+/g, '')) || 0);
+      }, 0);
+      const paymentGap = (paymentsByMember[m.memberId] || []).reduce((sum, payment) => {
+        const explicit = Number(String(payment.pendingAmount || 0).replace(/[^0-9.-]+/g, '')) || 0;
+        if (explicit > 0) return sum;
+        const expected = Number(String(payment.expectedAmount || 0).replace(/[^0-9.-]+/g, '')) || 0;
+        const paid = Number(String(payment.amount || 0).replace(/[^0-9.-]+/g, '')) || 0;
+        return sum + (expected > paid ? expected - paid : 0);
+      }, 0);
+      const openFee = isAdHocOrTrial ? Math.max(0, fee - received) : 0;
+      m.balanceDue = Math.round(Math.max(m.pendingAmount + paymentGap, openFee) * 100) / 100;
       return m;
     });
 

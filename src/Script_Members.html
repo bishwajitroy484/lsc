@@ -15,9 +15,57 @@
 
     statusBadgeClass: function(name) {
       const lower = String(name || '').toLowerCase();
-      if (lower.includes('in-active') || lower.includes('inactive')) return 'bg-red-50 text-red-700 border-red-200';
+      if (lower.includes('overdue') || lower.includes('in-active') || lower.includes('inactive')) return 'bg-red-50 text-red-700 border-red-200';
       if (lower === 'active') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       return 'bg-slate-50 text-slate-600 border-slate-200';
+    },
+
+    isStoredInactive: function(statusValue) {
+      const label = String(this.getName('status', statusValue) || statusValue || '').toLowerCase();
+      return label.includes('inactive') || label.includes('in-active') || label.includes('exit');
+    },
+
+    membershipRowState: function(member) {
+      const owed = Number(member && (member.balanceDue || member.pendingAmount)) || 0;
+      if (owed > 0) {
+        const dueStr = member.dueDate && member.dueDate !== 'N/A' ? member.dueDate : '--';
+        return {
+          statusName: 'Overdue',
+          statusClass: this.statusBadgeClass('overdue'),
+          dueStr: dueStr,
+          dueInfo: { text: 'Pending ' + AppUtils.formatCurrency(owed), class: 'bg-red-50 text-red-600 border-red-200' }
+        };
+      }
+      const closed = this.isStoredInactive(member && member.status) || this.isNonRecurringPlan(member && member.membershipId);
+      if (closed) {
+        return {
+          statusName: 'In-Active',
+          statusClass: this.statusBadgeClass('in-active'),
+          dueStr: '--',
+          dueInfo: { text: 'Account Closed', class: 'bg-slate-100 text-slate-500 border-slate-200' }
+        };
+      }
+      return {
+        statusName: this.getName('status', member.status),
+        statusClass: this.statusBadgeClass(this.getName('status', member.status)),
+        dueStr: member.dueDate ? member.dueDate : 'N/A',
+        dueInfo: this.getDueInfo(member.dueDate)
+      };
+    },
+
+    paintExitDate: function(member) {
+      const wrap = document.getElementById('det-exit-wrap');
+      const el = document.getElementById('det-exit');
+      if (!wrap || !el) return;
+      const raw = member && member.exitDate ? String(member.exitDate).trim() : '';
+      if (!raw) {
+        wrap.classList.add('hidden');
+        el.innerText = '--';
+        return;
+      }
+      const formatted = AppUtils.formatDateDDMMMYYYY(raw, false, false);
+      el.innerText = formatted || raw;
+      wrap.classList.remove('hidden');
     },
     currentMemberPayments: [], 
     effectiveDueDate: null, 
@@ -164,6 +212,45 @@
       document.getElementById('desktop-table-body').innerHTML = dHtml;
     },
 
+    showDetailShimmer: function() {
+      if (this.chartInstance) {
+        try { this.chartInstance.destroy(); } catch (e) {}
+        this.chartInstance = null;
+      }
+      this.currentMemberPayments = [];
+      const dueDate = document.getElementById('det-due-date');
+      if (dueDate) dueDate.innerHTML = '<div class="h-3 w-20 shimmer rounded inline-block"></div>';
+      const status = document.getElementById('det-status');
+      if (status) {
+        status.className = '';
+        status.innerHTML = '<div class="h-4 w-12 shimmer rounded inline-block"></div>';
+      }
+      const dueDays = document.getElementById('det-due-days');
+      if (dueDays) {
+        dueDays.className = '';
+        dueDays.innerHTML = '<div class="h-4 w-20 shimmer rounded inline-block"></div>';
+      }
+      const historyShimmer = '<div class="h-14 w-full shimmer"></div><div class="h-14 w-full shimmer"></div><div class="h-14 w-full shimmer"></div>';
+      const historyCards = document.getElementById('det-history-cards');
+      if (historyCards) historyCards.innerHTML = historyShimmer;
+      const historyBody = document.getElementById('det-history-body');
+      if (historyBody) {
+        historyBody.innerHTML = `
+          <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded mb-2"></div></td></tr>
+          <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded mb-2"></div></td></tr>
+          <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded"></div></td></tr>
+        `;
+      }
+      const chart = document.getElementById('member-revenue-chart');
+      if (chart) chart.innerHTML = '<div class="w-full h-full shimmer rounded-lg opacity-50"></div>';
+      ['det-ltv-all', 'det-ltv-year'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<div class="h-4 w-12 shimmer rounded mt-1"></div>';
+      });
+      const count = document.getElementById('det-ltv-count');
+      if (count) count.innerHTML = '<div class="h-4 w-6 shimmer rounded mt-1"></div>';
+    },
+
     getDueInfo: function(dueDateStr) {
       if (!dueDateStr || dueDateStr === 'N/A') {
         return { text: 'No Due Date', class: 'bg-slate-50 text-slate-500 border-slate-200', days: 999 };
@@ -202,11 +289,11 @@
 
     cycleEndFromStart: function(start, planName) {
       const end = new Date(start);
-      const name = String(planName || '').toUpperCase();
-      if (name.indexOf('QUARTER') >= 0) end.setDate(end.getDate() + 90);
-      else if (name.indexOf('YEAR') >= 0) end.setFullYear(end.getFullYear() + 1);
-      else if (name.indexOf('TRIAL') >= 0) end.setDate(end.getDate() + 7);
-      else if (name.indexOf('ADHOC') >= 0 || name.indexOf('AD-HOC') >= 0) end.setDate(end.getDate() + 1);
+      const compact = String(planName || '').toUpperCase().replace(/[\s_-]+/g, '');
+      if (compact.indexOf('QUARTER') >= 0) end.setDate(end.getDate() + 90);
+      else if (compact.indexOf('YEAR') >= 0) end.setFullYear(end.getFullYear() + 1);
+      else if (compact.indexOf('TRIAL') >= 0) end.setDate(end.getDate() + 7);
+      else if (compact.indexOf('ADHOC') >= 0) end.setDate(end.getDate() + 1);
       else end.setMonth(end.getMonth() + 1);
       return end;
     },
@@ -460,10 +547,9 @@
     },
 
     buildDesktopRowHtml: function(member) {
-      const sName = this.getName('status', member.status);
-      const sLower = String(sName).toLowerCase();
-      
-      const sClass = this.statusBadgeClass(sLower);
+      const rowState = this.membershipRowState(member);
+      const sName = rowState.statusName;
+      const sClass = rowState.statusClass;
 
       const planName = this.getName('membership', member.membershipId);
       const batchName = this.getName('batch', member.batchId);
@@ -485,13 +571,8 @@
       const genderStr = member.gender || 'N/A';
       const phoneStr = member.phone || 'No Phone';
       const joinStr = member.joinDate ? member.joinDate : '--';
-      
-      let dueStr = member.dueDate ? member.dueDate : 'N/A';
-      let dueInfo = this.getDueInfo(member.dueDate);
-      if (sLower.includes('inactive') || sLower.includes('in-active') || sLower.includes('exit')) {
-        dueStr = '--';
-        dueInfo = { text: 'Account Closed', class: 'bg-slate-100 text-slate-500 border-slate-200' };
-      }
+      const dueStr = rowState.dueStr;
+      const dueInfo = rowState.dueInfo;
 
       const memberJson = JSON.stringify(member).replace(/"/g, '&quot;');
 
@@ -510,14 +591,14 @@
           </td>
           <td class="px-4 py-3">
              <div class="text-xs md:text-sm text-slate-800 font-bold">${planName}</div>
-             <div class="text-[11px] text-slate-500 font-medium mt-0.5">${batchName} <span class="font-bold uppercase tracking-wider ${groupBadgeColor}">(${groupName})</span></div>
+             <div class="text-[11px] text-slate-500 font-medium mt-0.5">${batchName} <span class="font-bold tracking-wider ${groupBadgeColor}">(${groupName})</span></div>
           </td>
           <td class="px-4 py-3">
              <div class="text-[11px] text-slate-500 font-medium mb-0.5">Joined: <span class="font-bold text-slate-700">${joinStr}</span></div>
              <div class="text-[11px] text-slate-500 font-medium mb-1">Due: <span class="font-bold text-slate-700">${dueStr}</span></div>
-             <div><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${Number(member.pendingAmount) > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : dueInfo.class} uppercase tracking-wider">${Number(member.pendingAmount) > 0 ? ('Partial · Pending ' + AppUtils.formatCurrency(member.pendingAmount)) : dueInfo.text}</span></div>
+             <div><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${dueInfo.class} tracking-wider">${dueInfo.text}</span></div>
           </td>
-          <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} uppercase tracking-wider">${sName}</span></td>
+          <td class="px-4 py-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} tracking-wider">${sName}</span></td>
           <td class="px-4 py-3 text-right">
             <button data-perm="members:edit" onclick="event.stopPropagation(); MembersApp.openModal(${memberJson})" class="w-8 h-8 text-slate-400 hover:text-brand-primary hover:bg-red-50 rounded-full transition-colors">
                <span class="material-symbols-rounded text-[18px]">edit</span>
@@ -527,10 +608,10 @@
     },
 
     buildMobileCardHtml: function(member) {
-      const sName = this.getName('status', member.status);
-      const sLower = String(sName).toLowerCase();
-      
-      const sClass = this.statusBadgeClass(sLower);
+      const rowState = this.membershipRowState(member);
+      const sName = rowState.statusName;
+      const sClass = rowState.statusClass;
+      const dueInfo = rowState.dueInfo;
 
       const planName = this.getName('membership', member.membershipId);
       const batchName = this.getName('batch', member.batchId);
@@ -550,11 +631,6 @@
 
       const phoneStr = member.phone || 'No Phone';
       const joinStr = member.joinDate ? member.joinDate : '--';
-      
-      let dueInfo = this.getDueInfo(member.dueDate);
-      if (sLower.includes('inactive') || sLower.includes('in-active') || sLower.includes('exit')) {
-        dueInfo = { text: 'Account Closed', class: 'bg-slate-100 text-slate-500 border-slate-200' };
-      }
 
       const memberJson = JSON.stringify(member).replace(/"/g, '&quot;');
 
@@ -570,12 +646,12 @@
                  <p class="text-[11px] font-medium text-slate-400">📞 ${phoneStr} • ${member.memberId || '--'}</p>
               </div>
             </div>
-            <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass} uppercase">${sName}</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${sClass}">${sName}</span>
           </div>
           
           <div class="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
             <div><span class="text-slate-400">Plan:</span> <span class="font-bold text-slate-700">${planName}</span></div>
-            <div class="text-right"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${Number(member.pendingAmount) > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : dueInfo.class} uppercase tracking-wider">${Number(member.pendingAmount) > 0 ? ('Pending ' + AppUtils.formatCurrency(member.pendingAmount)) : dueInfo.text}</span></div>
+            <div class="text-right"><span class="text-[10px] font-bold px-2 py-0.5 rounded border ${dueInfo.class} tracking-wider">${dueInfo.text}</span></div>
             <div class="col-span-2 flex justify-between items-center">
                <div><span class="text-slate-400">Batch:</span> <span class="font-bold text-slate-700">${batchName} <span class="${groupBadgeColor}">(${groupName})</span></span></div>
                <div><span class="text-slate-400">Joined:</span> <span class="font-bold text-slate-700">${joinStr}</span></div>
@@ -691,33 +767,14 @@
       document.getElementById('det-phone').innerText = member.phone || '--';
       document.getElementById('det-join').innerText = member.joinDate || '--';
       document.getElementById('det-dob').innerText = member.dob || '--';
+      this.paintExitDate(member);
       
       const rawAmt = member.membershipAmount ? member.membershipAmount.toString().replace(/[^0-9.-]+/g,"") : '';
       document.getElementById('det-plan').innerText = this.getName('membership', member.membershipId);
       document.getElementById('det-batch').innerText = this.getName('batch', member.batchId);
       document.getElementById('det-amount').innerText = rawAmt ? AppUtils.formatCurrency(rawAmt) : '--';
 
-      document.getElementById('det-due-date').innerHTML = '<div class="h-3 w-20 shimmer rounded inline-block"></div>';
-      
-      document.getElementById('det-status').className = '';
-      document.getElementById('det-status').innerHTML = '<div class="h-4 w-12 shimmer rounded inline-block"></div>';
-      
-      document.getElementById('det-due-days').className = '';
-      document.getElementById('det-due-days').innerHTML = '<div class="h-4 w-20 shimmer rounded inline-block"></div>';
-
-      this.currentMemberPayments = [];
-      const historyShimmer = '<div class="h-14 w-full shimmer"></div><div class="h-14 w-full shimmer"></div><div class="h-14 w-full shimmer"></div>';
-      const historyCards = document.getElementById('det-history-cards');
-      if (historyCards) historyCards.innerHTML = historyShimmer;
-      document.getElementById('det-history-body').innerHTML = `
-        <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded mb-2"></div></td></tr>
-        <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded mb-2"></div></td></tr>
-        <tr><td colspan="4" class="px-4 py-4"><div class="h-5 w-full shimmer rounded"></div></td></tr>
-      `;
-      document.getElementById('member-revenue-chart').innerHTML = '<div class="w-full h-full shimmer rounded-lg opacity-50"></div>';
-      document.getElementById('det-ltv-all').innerHTML = '<div class="h-4 w-12 shimmer rounded mt-1"></div>';
-      document.getElementById('det-ltv-year').innerHTML = '<div class="h-4 w-12 shimmer rounded mt-1"></div>';
-      document.getElementById('det-ltv-count').innerHTML = '<div class="h-4 w-6 shimmer rounded mt-1"></div>';
+      this.showDetailShimmer();
       
       google.script.run
         .withSuccessHandler((res) => {
@@ -746,14 +803,14 @@
       setTimeout(() => { document.getElementById('view-details').classList.remove('translate-x-full'); }, 50);
     },
 
-    isNonRecurringPlan: function(membershipId) {
+    isNonRecurringPlan: function(planMatchOrId) {
       const plans = this.dropdowns.membership || [];
-      const planMatch = plans.find(p => String(p.id) === String(membershipId));
-      if (!planMatch) return false;
-      const planName = String(planMatch.name || planMatch.label || '').toUpperCase();
-      const frequency = String(planMatch.frequency || '').toUpperCase();
-      const blob = frequency + ' ' + planName;
-      return blob.indexOf('TRIAL') >= 0 || blob.indexOf('ADHOC') >= 0 || blob.indexOf('AD-HOC') >= 0;
+      const planMatch = planMatchOrId && typeof planMatchOrId === 'object'
+        ? planMatchOrId
+        : plans.find(p => String(p.id) === String(planMatchOrId));
+      const blob = `${planMatch && (planMatch.name || planMatch.label) || ''} ${planMatch && planMatch.frequency || ''}`;
+      const compact = blob.toLowerCase().replace(/[\s_-]+/g, '');
+      return compact.includes('trial') || compact.includes('adhoc');
     },
 
     calculateEffectiveCoverage: function(m) {
@@ -790,35 +847,23 @@
 
     updateDetailHeader: function(member) {
         const isNonRecurring = this.isNonRecurringPlan(member.membershipId);
-        const validPaymentsCount = this.currentMemberPayments.filter(p => {
-            return this.isPaidPayment(p);
-        }).length;
 
         let dueStr = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'N/A';
         let dueInfo = this.getDueInfo(dueStr);
         
         let mainStatusName = this.getName('status', member.status);
-        const statLower = String(mainStatusName).toLowerCase();
         const today = new Date();
         today.setHours(0,0,0,0);
+        const owed = Number(member.balanceDue || member.pendingAmount) || 0;
+        const closedAccount = !owed && (this.isStoredInactive(member.status) || isNonRecurring);
         
-        if (statLower.includes('inactive') || statLower.includes('in-active') || statLower.includes('exit')) {
+        if (owed > 0) {
+             mainStatusName = 'Overdue';
+             dueInfo = { text: 'Pending ' + AppUtils.formatCurrency(owed), class: 'bg-red-50 text-red-600 border-red-200' };
+        } else if (closedAccount) {
              mainStatusName = 'In-Active';
              dueStr = '--';
              dueInfo = { text: 'Account Closed', class: 'bg-slate-100 text-slate-500 border-slate-200' };
-        } else if (isNonRecurring) {
-             // Match list behavior: never show a renewal countdown for Trial / Ad-hoc
-             dueStr = 'N/A';
-             dueInfo = this.getDueInfo('N/A');
-             if (validPaymentsCount > 0 && member.exitDate) {
-               const exit = new Date(this.parseToISODate(member.exitDate));
-               exit.setHours(0,0,0,0);
-               if (!isNaN(exit) && exit < today) {
-                 mainStatusName = 'Expired';
-                 dueStr = '--';
-                 dueInfo = { text: 'Plan Expired', class: 'bg-slate-100 text-slate-500 border-slate-200' };
-               }
-             }
         } else {
             if (this.effectiveDueDate && this.effectiveDueDate >= today) {
                 mainStatusName = 'Active';
@@ -831,7 +876,7 @@
 
         const dueBadge = document.getElementById('det-due-days');
         dueBadge.innerText = dueInfo.text;
-        dueBadge.className = `text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${dueInfo.class}`;
+        dueBadge.className = `text-[8px] font-bold px-1.5 py-0.5 rounded border tracking-wider ${dueInfo.class}`;
 
         let sClass = 'bg-emerald-50 text-emerald-600 border-emerald-100';
         if (mainStatusName.toLowerCase() === 'due soon') sClass = 'bg-amber-50 text-amber-600 border-amber-100';
@@ -841,15 +886,16 @@
         const openPartial = (this.currentMemberPayments || []).reduce((sum, payment) => {
           return sum + (this.isPartialPayment(payment) ? Number(String(payment.pendingAmount || 0).replace(/[^0-9.-]+/g, '')) : 0);
         }, 0);
-        if (openPartial > 0 && !statLower.includes('inactive') && !statLower.includes('in-active')) {
+        if (openPartial > 0 && !closedAccount) {
           mainStatusName = 'Partial';
           sClass = 'bg-amber-50 text-amber-700 border-amber-200';
           dueBadge.innerText = 'Pending ' + AppUtils.formatCurrency(openPartial);
-          dueBadge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200';
+          dueBadge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border tracking-wider bg-amber-50 text-amber-700 border-amber-200';
         }
 
         document.getElementById('det-status').innerText = mainStatusName;
-        document.getElementById('det-status').className = `text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${sClass}`;
+        document.getElementById('det-status').className = `text-[8px] font-bold px-1.5 py-0.5 rounded border tracking-wider ${sClass}`;
+        this.paintExitDate(member);
     },
 
     closeDetails: function() {
@@ -866,6 +912,7 @@
         document.getElementById('det-batch').innerText = '--';
         document.getElementById('det-amount').innerText = '--';
         document.getElementById('det-due-date').innerText = '--';
+        this.paintExitDate(null);
         
         this.currentActiveMember = null;
         this.effectiveDueDate = null;
@@ -895,7 +942,7 @@
               return this.isPaidPayment(p);
           }).length;
 
-          const isNonRecurring = planName.includes('TRIAL') || planName.includes('ADHOC') || planName.includes('AD-HOC');
+          const isNonRecurring = this.isNonRecurringPlan(planMatch);
           const maxCycles = isNonRecurring ? (validPaymentsCount > 0 ? 0 : 1) : 36;
           
           let iterCount = 1;
@@ -967,6 +1014,7 @@
             const isUpcoming = p.paymentStatus === 'UPCOMING';
             const rowClass = isUpcoming ? 'bg-amber-50/20 border-l-[3px] border-l-amber-400' : 'bg-red-50/30 border-l-[3px] border-l-red-500';
             const labelColor = isUpcoming ? 'text-amber-600' : 'text-red-500';
+            const statusLabel = isUpcoming ? 'Upcoming' : 'Overdue';
             const badgeClass = isUpcoming ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-red-600 bg-red-50 border-red-200';
             const waType = isUpcoming ? 'upcoming' : 'overdue';
             const dueDateObj = new Date(p.virtualStartDate);
@@ -996,7 +1044,7 @@
                   <div class="text-[9px] text-slate-500 mt-0.5">${vStartFmt} to ${vEndFmt}</div>
                 </td>
                 <td class="px-4 py-3"><div class="font-bold text-slate-800">${AppUtils.formatCurrency(pAmt)}</div><div class="text-[9px] text-slate-500">${this.paymentSplitLabel(p)}</div></td>
-                <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${badgeClass}">${p.paymentStatus}</span></td>
+                <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border ${badgeClass}">${statusLabel}</span></td>
                 <td class="px-4 py-3 text-right">
                   <div class="inline-flex items-center justify-end gap-1.5">
                     ${waBtn}
@@ -1013,7 +1061,7 @@
                     <div class="text-[10px] ${labelColor} font-bold mt-0.5">${p.cycleLabel}</div>
                     <div class="text-[10px] text-slate-500 mt-0.5 break-words">${vStartFmt} to ${vEndFmt}</div>
                   </div>
-                  <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 max-w-[46%] text-right whitespace-normal leading-tight ${badgeClass}">${p.paymentStatus}</span>
+                  <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border shrink-0 max-w-[46%] text-right whitespace-normal leading-tight ${badgeClass}">${statusLabel}</span>
                 </div>
                 <div class="mt-2 flex items-end justify-between gap-2">
                   <div class="min-w-0">
@@ -1077,7 +1125,7 @@
                   ${coverageHtml}
                 </td>
                 <td class="px-4 py-3"><div class="font-bold text-slate-800">${AppUtils.formatCurrency(pAmt)}${rcptHtml}</div><div class="text-[9px] text-slate-500">${modeName}</div></td>
-                <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase ${statColor}">${pStatusName}</span></td>
+                <td class="px-4 py-3"><span class="text-[8px] font-bold px-1.5 py-0.5 rounded border ${statColor}">${pStatusName}</span></td>
                 <td class="px-4 py-3 text-right">
                   <div class="flex items-center justify-end gap-1">
                     ${waBtn}
@@ -1096,7 +1144,7 @@
                     <div class="font-bold text-xs text-slate-800">${this.formatDateDDMMMYYYY(p.paidDate)}</div>
                     <div class="text-[10px] text-slate-500 mt-0.5 break-words">${coverageHtml.replace('text-[9px]', 'text-[10px]')}</div>
                   </div>
-                  <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 max-w-[46%] text-right whitespace-normal leading-tight ${statColor}">${pStatusName}</span>
+                  <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border shrink-0 max-w-[46%] text-right whitespace-normal leading-tight ${statColor}">${pStatusName}</span>
                 </div>
                 <div class="mt-2 flex items-end justify-between gap-2">
                   <div class="min-w-0">
@@ -1303,9 +1351,14 @@
       return (status.indexOf('pending') >= 0 || status.indexOf('partial') >= 0) && paid > 0 && expected > paid;
     },
 
-    isNonRecurringPlan: function(planMatch) {
-      const planName = planMatch ? `${planMatch.name || ''} ${planMatch.frequency || ''}`.toLowerCase() : '';
-      return planName.includes('trial') || planName.includes('adhoc') || planName.includes('ad-hoc');
+    isNonRecurringPlan: function(planMatchOrId) {
+      const plans = this.dropdowns.membership || [];
+      const planMatch = planMatchOrId && typeof planMatchOrId === 'object'
+        ? planMatchOrId
+        : plans.find(p => String(p.id) === String(planMatchOrId));
+      const blob = `${planMatch && (planMatch.name || planMatch.label) || ''} ${planMatch && planMatch.frequency || ''}`;
+      const compact = blob.toLowerCase().replace(/[\s_-]+/g, '');
+      return compact.includes('trial') || compact.includes('adhoc');
     },
 
     onStatusChange: function() {
@@ -1536,9 +1589,9 @@
           badge.innerText = groupName;
           badge.classList.remove('hidden');
           if (groupName.toLowerCase().includes('kid')) {
-              badge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-200 uppercase tracking-wider';
+              badge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-200 tracking-wider';
           } else {
-              badge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border bg-red-50 text-brand-primary border-red-200 uppercase tracking-wider';
+              badge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border bg-red-50 text-brand-primary border-red-200 tracking-wider';
           }
       } else {
           badge.classList.add('hidden');
@@ -1760,27 +1813,25 @@
       };
 
       const reopenMemberId = this.currentActiveMember && this.currentActiveMember.memberId;
+      const reopenDetails = () => {
+        if (!reopenMemberId) return;
+        const freshMember = this.allData.find(m => String(m.memberId) === String(reopenMemberId));
+        if (freshMember) this.openDetails(freshMember);
+      };
       this.closeRecordPayment();
       this.showShimmer();
+      this.showDetailShimmer();
       google.script.run
         .withSuccessHandler((res) => {
           btn.innerHTML = 'Save Payment'; btn.disabled = false;
-          if(res.success) {
-            Toast.success(res.message);
-            this.fetchData(() => {
-                if (!reopenMemberId) return;
-                const freshMember = this.allData.find(m => String(m.memberId) === String(reopenMemberId));
-                if(freshMember) this.openDetails(freshMember);
-            });
-          } else {
-            Toast.error(res.error);
-            this.fetchData();
-          }
+          if(res.success) Toast.success(res.message);
+          else Toast.error(res.error);
+          this.fetchData(reopenDetails);
         })
         .withFailureHandler((err) => {
           btn.innerHTML = 'Save Payment'; btn.disabled = false;
           Toast.error((err && err.message) || 'Could not save the payment.');
-          this.fetchData();
+          this.fetchData(reopenDetails);
         })
         .api_recordPayment(payload);
     },
@@ -1832,21 +1883,19 @@
           .api_deleteMember(deleteId);
       } 
       else if (deleteType === 'payment') {
+        this.showDetailShimmer();
+        const reopenDetails = () => {
+          if (!reopenMemberId) return;
+          const freshMember = this.allData.find(m => String(m.memberId) === String(reopenMemberId));
+          if (freshMember) this.openDetails(freshMember);
+        };
         google.script.run
           .withSuccessHandler((res) => {
-            if(res.success) {
-              Toast.success(res.message);
-              this.fetchData(() => {
-                  if (!reopenMemberId) return;
-                  const freshMember = this.allData.find(m => String(m.memberId) === String(reopenMemberId));
-                  if (freshMember) this.openDetails(freshMember);
-              });
-            } else {
-              Toast.error(res.error);
-              this.fetchData();
-            }
+            if(res.success) Toast.success(res.message);
+            else Toast.error(res.error);
+            this.fetchData(reopenDetails);
           })
-          .withFailureHandler(() => { this.fetchData(); })
+          .withFailureHandler(() => { this.fetchData(reopenDetails); })
           .api_deletePayment(deleteId);
       }
     }

@@ -43,7 +43,8 @@ function isQuarterlyPlan_(planMeta) {
   const freq = String(planMeta.frequency || '').toUpperCase();
   const name = String(planMeta.name || planMeta.label || '').toUpperCase();
   const blob = freq + ' ' + name;
-  if (blob.indexOf('AD-HOC') >= 0 || blob.indexOf('ADHOC') >= 0 || blob.indexOf('TRIAL') >= 0) {
+  const compact = blob.replace(/[\s_-]+/g, '');
+  if (compact.indexOf('ADHOC') >= 0 || compact.indexOf('TRIAL') >= 0) {
     return false;
   }
   return blob.indexOf('QUARTER') >= 0;

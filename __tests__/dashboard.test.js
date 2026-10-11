@@ -19,6 +19,7 @@ function loadDashboardApi(accrualMode = 'anchor', additionalExpenses = [], extra
         api_getDashboardMetrics,
         calculateMonthlyExpenseAverages,
         processOperations,
+        processFinancials,
         formatTimePeriods
       };
     `
@@ -320,6 +321,43 @@ describe('Dashboard Module', () => {
     expect(forecast.expectedCollectionArr.every(amount => amount === 0)).toBe(true);
   });
 
+  test('lists the member behind an open balance and does not turn a paid ad hoc fee into monthly overdue', () => {
+    const dashboardApi = loadDashboardApi();
+    const today = new Date(2026, 9, 11);
+    const members = [
+      { memberId: 'MEM-SHORT', fullName: 'Short Pay', membershipId: 'PLAN-Q', membershipAmount: 30000, joinDate: '2026-07-14', status: 'Active', phone: '9999999999' },
+      { memberId: 'MEM-ADHOC', fullName: 'Reena Roy', membershipId: 'PLAN-ADHOC', membershipAmount: 2400, joinDate: '2026-07-20', status: 'Active' },
+      { memberId: 'MEM-PAID-ADHOC', fullName: 'Paid Adhoc', membershipId: 'PLAN-ADHOC', membershipAmount: 2400, joinDate: '2026-07-20', status: 'Active' }
+    ];
+    const payments = [
+      { memberId: 'MEM-SHORT', paymentStatus: 'Paid', amount: 27600, expectedAmount: 30000, endDate: '2026-10-12', paidDate: '2026-07-14' },
+      { memberId: 'MEM-PAID-ADHOC', paymentStatus: 'Paid', amount: 2400, endDate: '2026-07-21', paidDate: '2026-07-20' }
+    ];
+    const resolveName = (tab, field, value) => {
+      if (field === 'membershipId' && value === 'PLAN-Q') return 'Quarterly';
+      if (field === 'membershipId') return 'Ad hoc';
+      if (field === 'paymentStatus') return String(value || '');
+      if (field === 'status') return 'Active';
+      return String(value || '');
+    };
+    const dropDowns = {
+      membership: [
+        { id: 'PLAN-Q', name: 'Quarterly', frequency: 'Quarterly' },
+        { id: 'PLAN-ADHOC', name: 'Ad hoc', frequency: 'Ad hoc' }
+      ]
+    };
+    const result = dashboardApi.processOperations(members, [], payments, 2026, today, resolveName, dropDowns, 'anchor');
+    const names = result.overdueList.map(row => row.name);
+    expect(names).toContain('Short Pay');
+    expect(names).toContain('Reena Roy');
+    expect(names).not.toContain('Paid Adhoc');
+    const shortRow = result.overdueList.find(row => row.memberId === 'MEM-SHORT');
+    const adhocRow = result.overdueList.find(row => row.memberId === 'MEM-ADHOC');
+    expect(shortRow.amount).toBe(2400);
+    expect(adhocRow.amount).toBe(2400);
+    expect(result.overdueList.filter(row => row.memberId === 'MEM-ADHOC')).toHaveLength(1);
+  });
+
   test('counts an open partial balance toward the forecast without treating it as received', () => {
     const dashboardApi = loadDashboardApi();
     const members = [{
@@ -350,6 +388,9 @@ describe('Dashboard Module', () => {
     );
 
     expect(forecast.pendingArr[0]).toBe(1500);
+    expect(forecast.overdueList).toHaveLength(1);
+    expect(forecast.overdueList[0].memberId).toBe('MEM-PART');
+    expect(forecast.overdueList[0].amount).toBe(1500);
 
     const pendingArr = new Array(12).fill(0);
     pendingArr[0] = 1500;
@@ -417,6 +458,8 @@ describe('Dashboard Module', () => {
     expect(predictionConfig).toContain("type: 'area'");
     expect(predictionConfig).toContain("fill: { opacity: [0.12, 0] }");
     expect(predictionConfig).toContain('base + extra');
+    expect(predictionConfig).toContain('quarterForecastLabel');
+    expect(predictionConfig).toContain('plotExpected.push(Number(extra.toFixed(2)))');
     const expenseChart = script.slice(script.indexOf('// 5. Expense Breakdown'), script.indexOf('// 6. Staff Cost Trend'));
     expect(expenseChart).toContain('...dlOptions');
     expect(expenseChart).toContain("String(label) === 'Staff Cost'");
@@ -530,6 +573,10 @@ describe('Dashboard Module', () => {
     expect(script).toContain('const scrollTop = menu.scrollTop');
     expect(script).toContain('menu.scrollTop = scrollTop');
     expect(script).toContain("toggleShimmer(true)");
+    expect(script).toContain('monthIndexesFromPeriods');
+    expect(script).toContain('periodsFromMonthIndexes');
+    expect(script).toContain('fetchSerial');
+    expect(script).not.toContain("this.selectedPeriods = mode === 'Monthly' ? [...this.months] : [...this.quarters]");
     expect(script).toContain('kpi-active-segregation');
     expect(script).toContain('pred-sum-actual');
     expect(view).toContain('dash-chart-shimmer');
@@ -848,6 +895,66 @@ describe('Dashboard Module', () => {
     expect(metrics.expectedNetArr[0]).toBe(30000);
     expect(metrics.actualNet).toBe(10000);
     expect(metrics.remainingForecastNet).toBe(30000);
+  });
+
+  test('keeps Actual and Projected identical for Month and Quarter under Anchor and Split', () => {
+    const today = new Date(2026, 9, 11);
+    const members = [
+      { memberId: 'MEM-M', fullName: 'Monthly Member', membershipId: 'PLAN-M', membershipAmount: 3000, joinDate: '2026-01-05', status: 'Active' },
+      { memberId: 'MEM-Q', fullName: 'Quarterly Member', membershipId: 'PLAN-Q', membershipAmount: 9000, joinDate: '2026-08-01', status: 'Active' }
+    ];
+    const payments = [
+      { memberId: 'MEM-M', paymentStatus: 'Paid', amount: 3000, startDate: '2026-09-05', endDate: '2026-10-04', paidDate: '2026-09-05' },
+      { memberId: 'MEM-Q', paymentStatus: 'Paid', amount: 9000, startDate: '2026-08-01', endDate: '2026-10-29', paidDate: '2026-08-01' },
+      { memberId: 'MEM-M', paymentStatus: 'Pending', amount: 1000, pendingAmount: 2000, expectedAmount: 3000, startDate: '2026-10-05', endDate: '2026-11-04', paidDate: '2026-10-05' }
+    ];
+    const expenses = [{ categoryId: 'CAT-1', amount: 1500, date: '2026-10-02' }];
+    const salaries = [{ staffId: 'STF-1', paymentStatus: 'Paid', amount: 8000, startDate: '2026-09-01', endDate: '2026-09-30', paidDate: '2026-09-30' }];
+    const staff = [{ staffId: 'STF-1', fullName: 'Coach', status: 'Active', salary: 8000 }];
+    const resolveName = (tab, field, value) => {
+      if (field === 'membershipId' && value === 'PLAN-Q') return 'Quarterly';
+      if (field === 'membershipId') return 'Monthly';
+      if (field === 'status' || field === 'paymentStatus') return String(value || '');
+      return String(value || '');
+    };
+    const dropDowns = {
+      membership: [
+        { id: 'PLAN-M', name: 'Monthly', frequency: 'Monthly' },
+        { id: 'PLAN-Q', name: 'Quarterly', frequency: 'Quarterly' }
+      ]
+    };
+    const sumSeries = (arr) => (arr || []).reduce((sum, value) => sum + (value == null ? 0 : Number(value)), 0);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const quarters = ['Q1 (JFM)', 'Q2 (AMJ)', 'Q3 (JAS)', 'Q4 (OND)'];
+
+    ['anchor', 'split'].forEach(mode => {
+      const dashboardApi = loadDashboardApi(mode);
+      const financial = dashboardApi.processFinancials(payments, expenses, salaries, 2026, resolveName, mode);
+      const operations = dashboardApi.processOperations(members, staff, payments, 2026, today, resolveName, dropDowns, mode);
+      const averages = dashboardApi.calculateMonthlyExpenseAverages(expenses, salaries, resolveName, mode, today, staff);
+      const view = (grouping, periods) => dashboardApi.formatTimePeriods(
+        financial, operations, grouping, periods, 2026, today, averages, null
+      );
+      const monthly = view('Monthly', months);
+      const quarterly = view('Quarterly', quarters);
+      const quarterOnly = view('Quarterly', ['Q4 (OND)']);
+      const quarterMonths = view('Monthly', ['Oct', 'Nov', 'Dec']);
+      const staleMonthsAsQuarters = view('Quarterly', months);
+
+      expect(quarterly.actualNet).toBe(monthly.actualNet);
+      expect(quarterly.remainingForecastNet).toBe(monthly.remainingForecastNet);
+      expect(quarterly.projectedNet).toBe(monthly.projectedNet);
+      expect(quarterOnly.actualNet).toBe(quarterMonths.actualNet);
+      expect(quarterOnly.remainingForecastNet).toBe(quarterMonths.remainingForecastNet);
+      expect(quarterOnly.projectedNet).toBe(quarterMonths.projectedNet);
+      expect(staleMonthsAsQuarters.actualNet).toBe(monthly.actualNet);
+      expect(staleMonthsAsQuarters.remainingForecastNet).toBe(monthly.remainingForecastNet);
+      expect(sumSeries(monthly.actualNetArr)).toBe(monthly.actualNet);
+      expect(sumSeries(monthly.expectedNetArr)).toBe(monthly.remainingForecastNet);
+      expect(sumSeries(quarterly.actualNetArr)).toBe(quarterly.actualNet);
+      expect(sumSeries(quarterly.expectedNetArr)).toBe(quarterly.remainingForecastNet);
+      expect(monthly.projectedNet).toBe(Number((monthly.actualNet + monthly.remainingForecastNet).toFixed(2)));
+    });
   });
 
   test('kpis.netInHand matches charts.prediction.actualNet for elapsed periods', () => {

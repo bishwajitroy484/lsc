@@ -985,7 +985,7 @@ function buildInvitationEmail_(opts) {
     escapeHtml_(inviter) + ' has granted you access to the <strong>' + escapeHtml_(appName) + '</strong> application. ' +
     'Use the button below to open it.</p>' +
     '<p style="margin:0 0 24px;"><a href="' + escapeHtml_(opts.url) + '" style="display:inline-block;background:#CE0002;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 26px;border-radius:10px;">Open ' + escapeHtml_(appName) + '</a></p>' +
-    '<p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#64748b;">Your access</p>' +
+    '<p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:0.6px;color:#64748b;">Your access</p>' +
     accessHtml +
     '<p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#64748b;">This link is personal to you, so please do not forward it. ' +
     'If the button does not work, copy this address into your browser:<br>' +
