@@ -383,7 +383,7 @@
       if (typeof ExpensesHub !== 'undefined') ExpensesHub.refreshAllRecords();
     },
 
-    renderCharts: function() {
+    renderCharts: function(breakdownOnly) {
       const mode = document.getElementById('exp-filter-mode').value;
       const isMonthly = mode === 'Monthly';
       const chartType = document.getElementById('chart-type-toggle').value; // Read dynamic chart type
@@ -477,10 +477,12 @@
         grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 24, right: 10, left: 10, bottom: 4 } }
       };
 
-      document.getElementById("chart-expense-trend").innerHTML = "";
-      if(this.chartInstances.trend) this.chartInstances.trend.destroy();
-      this.chartInstances.trend = new ApexCharts(document.querySelector("#chart-expense-trend"), trendOpts);
-      this.chartInstances.trend.render();
+      if (!breakdownOnly) {
+        document.getElementById("chart-expense-trend").innerHTML = "";
+        if(this.chartInstances.trend) this.chartInstances.trend.destroy();
+        this.chartInstances.trend = new ApexCharts(document.querySelector("#chart-expense-trend"), trendOpts);
+        this.chartInstances.trend.render();
+      }
 
       const showingMisc = this.isShowingMisc && Object.keys(miscSums).length > 0;
       const bLabels = showingMisc ? Object.keys(miscSums) : Object.keys(catSums);
@@ -530,7 +532,7 @@
 
     toggleMisc: function() {
       this.isShowingMisc = !this.isShowingMisc;
-      this.renderCharts();
+      this.renderCharts(true);
     },
 
     sortTable: function(column) {

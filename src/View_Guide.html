@@ -242,10 +242,10 @@
           <p class="text-[11px] text-slate-500 leading-relaxed">On a tablet or desktop each row is 40% / 20% / 40%. Revenue vs Expenses and Net-In-Hand are wider, Members by Batch is narrower. Cash vs UPI and Upcoming birthdays are wider, Expense Breakdown is narrower.</p>
           <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
             <li><strong>Revenue vs Expenses</strong> — bars of money received and expenses per period.</li>
-            <li><strong>Members by Batch</strong> — donut of members in the selected periods, grouped by batch.</li>
-            <li><strong>Net-In-Hand Forecast</strong> — area chart; solid = received, green dotted = still expected. The dotted line always continues from the last received point. When a month still has money due, the line rises from what was received by that amount. In Quarterly view, the months still ahead are labeled on their own, such as Nov–Dec, and a negative forecast is drawn below zero.</li>
+            <li><strong>Members by Batch</strong> — donut of members in the selected periods, grouped by batch. The legend uses the batch time with (A) for Adult and (K) for Kid.</li>
+            <li><strong>Net-In-Hand Forecast</strong> — Period shows each month or quarter after expenses. The dotted line continues from the last received point, and a month that still has money due rises by that amount. Quarterly view labels the months still ahead, such as Nov–Dec. Over time adds those amounts into a running total: solid for money already in hand, dotted for the forecast. Switching that control redraws only this chart.</li>
             <li><strong>Cash vs UPI</strong> — one combined bar per period. Amount shows rupees. Percentage shows each mode’s share and redraws only this chart. The label icon shows or hides the values.</li>
-            <li><strong>Expense Breakdown</strong> — donut by category, with the same white value labels as the other charts. Staff Cost is violet. View Misc switches the donut to misc details.</li>
+            <li><strong>Expense Breakdown</strong> — donut by category, with the same white value labels as the other charts. Staff Cost is violet. View Misc switches the donut to misc details and leaves the other charts as they are.</li>
           </ul>
         </div>
 
@@ -329,7 +329,7 @@
         <p class="text-xs text-slate-600 leading-relaxed pt-3">One page for operating expenses and staff payroll. Shared filters drive KPIs and charts. <strong>Add Record</strong> chooses Staff or Expenses, then opens the usual form.</p>
         <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
           <li><strong>KPIs</strong> — four cards: Total Outflow; Cost Split (Staff Cost + Other Expenses); period average; Staff Snapshot (headcount + Action Needed). Readable on mobile in a 2×2 grid.</li>
-          <li><strong>Charts</strong> — on a tablet or desktop the trend uses about 65% of the row and the category donut about 35%. Staff Cost is violet. View Misc switches the donut to misc details, the same way the dashboard expense chart does.</li>
+          <li><strong>Charts</strong> — on a tablet or desktop the trend uses about 65% of the row and the category donut about 35%. Staff Cost is violet. View Misc switches only the donut to misc details and leaves the trend chart as it is.</li>
           <li><strong>All Records</strong> — salaries, pending salary cycles, and expenses with type and status.</li>
           <li><strong>Staff</strong> — staff list; open a member for Overview and Salary (Record Salary stays in the drawer).</li>
           <li><strong>Expenses</strong> — operating expense table with edit/delete as before.</li>
