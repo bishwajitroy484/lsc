@@ -455,7 +455,19 @@ describe('Dashboard Module', () => {
     const predictionConfig = script.slice(script.indexOf('// 3. Net-In-Hand'), script.indexOf('// 4. Cash vs UPI'));
 
     expect(view).not.toContain('toggle-pred');
+    expect(view).toContain('id="pred-growth-mode"');
+    expect(view).toContain('Over time');
     expect(predictionConfig).toContain("type: 'area'");
+    expect(predictionConfig).toContain('pred-growth-mode');
+    expect(predictionConfig).toContain('forecastFrom');
+    expect(script).toContain('window.renderPredictionChart');
+    expect(script).toContain('window.renderExpenseBreakdownChart');
+    const miscToggle = script.slice(script.indexOf('toggleMisc: function'), script.indexOf('rebuildCharts: function'));
+    expect(miscToggle).toContain('renderExpenseBreakdownChart');
+    expect(miscToggle).not.toContain('this.rebuildCharts()');
+    const batchChart = script.slice(script.indexOf('// 2. Batch'), script.indexOf('// 3. Net-In-Hand'));
+    expect(batchChart).toContain("'(A)'");
+    expect(batchChart).toContain("'(K)'");
     expect(predictionConfig).toContain("fill: { opacity: [0.12, 0] }");
     expect(predictionConfig).toContain('base + extra');
     expect(predictionConfig).toContain('quarterForecastLabel');
@@ -464,7 +476,6 @@ describe('Dashboard Module', () => {
     expect(expenseChart).toContain('...dlOptions');
     expect(expenseChart).toContain("String(label) === 'Staff Cost'");
     expect(expenseChart).toContain("'#7c3aed'");
-    const batchChart = script.slice(script.indexOf('// 2. Batch'), script.indexOf('// 3. Net-In-Hand'));
     expect(batchChart).toContain("type: 'donut'");
     expect(predictionConfig).toContain('plotExpected[anchor] = plotActual[anchor]');
   });

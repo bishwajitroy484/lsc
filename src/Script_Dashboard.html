@@ -256,7 +256,7 @@
       this.isShowingMisc = !this.isShowingMisc;
       const btn = document.getElementById('btn-misc-toggle');
       if (btn) btn.innerText = this.isShowingMisc ? 'Back to All' : 'View Misc';
-      this.rebuildCharts();
+      if (window.renderExpenseBreakdownChart) window.renderExpenseBreakdownChart();
     },
 
     rebuildCharts: function() {
@@ -553,7 +553,17 @@
             }
           }
         },
-        legend: { position: 'bottom', fontSize: '10px' },
+        legend: {
+          position: 'bottom',
+          fontSize: '9px',
+          markers: { width: 7, height: 7, radius: 7 },
+          itemMargin: { horizontal: 4, vertical: 0 },
+          formatter: function(seriesName) {
+            return String(seriesName || '')
+              .replace(/\(\s*Adults?\s*\)/ig, '(A)')
+              .replace(/\(\s*Kids?\s*\)/ig, '(K)');
+          }
+        },
         dataLabels: {
           enabled: true,
           formatter: function(val, opts) {
@@ -607,17 +617,55 @@
       if (future.length > 1) return names[future[0]] + '–' + names[future[future.length - 1]];
       return 'Forecast';
     };
+    window.renderPredictionChart = function() {
+    const chartData = window.DashboardData || data;
     const elPred = document.querySelector("#chart-prediction");
     if(elPred) {
-      const prediction = data.charts.prediction || {};
+      if (window.AppCharts.pred && typeof window.AppCharts.pred.destroy === 'function') {
+        try { window.AppCharts.pred.destroy(); } catch (e) {}
+      }
+      const overTime = (document.getElementById('pred-growth-mode')?.value || 'period') === 'growth';
+      const prediction = chartData.charts.prediction || {};
       const rawActual = prediction.actual || [];
       const rawExpected = prediction.expected || [];
-      const rawLabels = prediction.categories || data.charts.categories || [];
+      const rawLabels = prediction.categories || chartData.charts.categories || [];
       const plotActual = [];
       const plotExpected = [];
       const plotLabels = [];
       const projectedTip = [];
-      rawLabels.forEach((label, i) => {
+      if (overTime) {
+        let carried = 0;
+        let forecastFrom = null;
+        rawLabels.forEach((label, i) => {
+          const base = rawActual[i] == null ? null : Number(rawActual[i]);
+          const extra = rawExpected[i] == null ? null : Number(rawExpected[i]);
+          const hasExtra = extra != null && extra !== 0;
+          plotLabels.push(label);
+          if (base != null) {
+            carried += base;
+            const at = Number(carried.toFixed(2));
+            plotActual.push(at);
+            plotExpected.push(null);
+            projectedTip.push(null);
+            forecastFrom = hasExtra ? Number((carried + extra).toFixed(2)) : at;
+          } else {
+            plotActual.push(null);
+            const step = extra == null ? 0 : extra;
+            forecastFrom = Number(((forecastFrom == null ? carried : forecastFrom) + step).toFixed(2));
+            plotExpected.push(forecastFrom);
+            projectedTip.push(forecastFrom);
+          }
+        });
+        let lastActual = -1;
+        for (let i = plotActual.length - 1; i >= 0; i--) {
+          if (plotActual[i] != null) { lastActual = i; break; }
+        }
+        const laterForecast = lastActual >= 0 && plotExpected.slice(lastActual + 1).some(function(value) { return value != null; });
+        if (lastActual >= 0 && !laterForecast && forecastFrom != null && forecastFrom !== plotActual[lastActual]) {
+          plotExpected[lastActual] = forecastFrom;
+          projectedTip[lastActual] = forecastFrom;
+        }
+      } else rawLabels.forEach((label, i) => {
         const base = rawActual[i] == null ? null : Number(rawActual[i]);
         const extra = rawExpected[i] == null ? null : Number(rawExpected[i]);
         const hasBase = base != null;
@@ -731,6 +779,8 @@
       window.AppCharts.pred = new ApexCharts(elPred, window.AppChartConfigs.pred);
       window.AppCharts.pred.render();
     }
+    };
+    window.renderPredictionChart();
 
     // 4. Cash vs UPI. Amount/Percentage redraws only this chart.
     window.renderCashUpiChart = function() {
@@ -799,9 +849,14 @@
     };
     window.renderCashUpiChart();
 
-    // 5. Expense Breakdown
+    // 5. Expense Breakdown. View Misc redraws only this donut.
+    window.renderExpenseBreakdownChart = function() {
+    const chartData = window.DashboardData || data;
     const elExp = document.querySelector("#chart-expense-breakdown");
     if (elExp) {
+      if (window.AppCharts.exp && typeof window.AppCharts.exp.destroy === 'function') {
+        try { window.AppCharts.exp.destroy(); } catch (e) {}
+      }
       const hasMisc = data.charts.expenseBreakdown.miscSeries && data.charts.expenseBreakdown.miscSeries.length > 0;
       const btnMisc = document.getElementById('btn-misc-toggle');
       if(btnMisc) {
@@ -848,6 +903,8 @@
       window.AppCharts.exp.render();
       }
     }
+    };
+    window.renderExpenseBreakdownChart();
 
     // 6. Staff Cost Trend
     const elStaff = document.querySelector("#chart-staff-trend");
