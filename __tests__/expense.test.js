@@ -373,7 +373,7 @@ test('expense KPIs and charts use the dashboard info tips', () => {
   expect(view).not.toContain('Recorded gym expenses plus paid staff cost');
   const tips = fs.readFileSync(path.join(__dirname, '../src/Copy_Tooltips.js'), 'utf8');
     expect(tips).toContain('Gym bills plus staff pay for the selected periods.');
-    expect(view).toContain('grid-cols-2 xl:grid-cols-3');
+    expect(view).toContain('grid-cols-2 lg:grid-cols-6');
     expect(view).toContain('md:grid-cols-[65fr_35fr]');
     expect(view).toContain('id="btn-exp-misc-toggle"');
     expect(script).toContain('toggleMisc: function()');
