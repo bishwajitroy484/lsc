@@ -467,7 +467,9 @@ describe('Dashboard Module', () => {
     expect(miscToggle).not.toContain('this.rebuildCharts()');
     const batchChart = script.slice(script.indexOf('// 2. Batch'), script.indexOf('// 3. Net-In-Hand'));
     expect(batchChart).toContain("type: 'bar'");
-    expect(batchChart).toContain('legend: { show: false }');
+    expect(batchChart).toContain('distributed: true');
+    expect(batchChart).toContain('#f59e0b');
+    expect(batchChart).toContain("customLegendItems: ['Kids']");
     expect(batchChart).not.toContain("'(A)'");
     expect(batchChart).not.toContain("'(K)'");
     expect(predictionConfig).toContain("fill: { opacity: [0.12, 0] }");
@@ -566,6 +568,7 @@ describe('Dashboard Module', () => {
     expect(q1.charts.batchLabels).not.toContain('Morning');
     expect(q2.charts.batchLabels).toContain('Morning');
     expect(q2.charts.batchData[q2.charts.batchLabels.indexOf('Morning')]).toBe(1);
+    expect(q2.charts.batchKinds[q2.charts.batchLabels.indexOf('Morning')]).toBe('adult');
 
     expect(q1.kpis.netInHand).toBe(Number((q1.kpis.membersCollected - q1.kpis.totalOperatingExpenses).toFixed(2)));
     expect(q2.kpis.netInHand).toBe(0);

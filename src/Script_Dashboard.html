@@ -522,13 +522,24 @@
     if(elBatch) {
       const rawLabels = data.charts.batchLabels || [];
       const rawValues = data.charts.batchData || [];
-      const batchTotals = {};
+      const rawKinds = data.charts.batchKinds || [];
+      const batchBuckets = {};
+      const batchOrder = [];
       rawLabels.forEach(function(label, index) {
         const time = String(label || 'Unknown').replace(/\s*\([^)]*\)\s*$/g, '').trim() || 'Unknown';
-        batchTotals[time] = (batchTotals[time] || 0) + Number(rawValues[index] || 0);
+        const kind = String(rawKinds[index] || '').toLowerCase() === 'kid' ? 'kid' : 'adult';
+        const key = time + '\u0000' + kind;
+        if (!batchBuckets[key]) {
+          batchBuckets[key] = { time: time, kind: kind, value: 0 };
+          batchOrder.push(key);
+        }
+        batchBuckets[key].value += Number(rawValues[index] || 0);
       });
-      const batchLabels = Object.keys(batchTotals);
-      const batchValues = batchLabels.map(function(label) { return batchTotals[label]; });
+      const batchLabels = batchOrder.map(function(key) { return batchBuckets[key].time; });
+      const batchValues = batchOrder.map(function(key) { return batchBuckets[key].value; });
+      const batchKinds = batchOrder.map(function(key) { return batchBuckets[key].kind; });
+      const batchColors = batchKinds.map(function(kind) { return kind === 'kid' ? '#f59e0b' : '#3b82f6'; });
+      const hasKids = batchKinds.indexOf('kid') >= 0;
       const hasBatch = batchValues.some(function(value) { return Number(value) > 0; });
       if (!hasBatch) {
         elBatch.innerHTML = '<div class="h-full flex flex-col items-center justify-center text-center px-3 py-2">' +
@@ -540,15 +551,24 @@
       window.AppChartConfigs.batch = {
         series: [{ name: 'Members', data: batchValues }],
         chart: { type: 'bar', height: '100%', toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
-        plotOptions: { bar: { borderRadius: 4, columnWidth: '55%', dataLabels: { position: 'top' } } },
-        colors: ['#3b82f6'],
+        plotOptions: { bar: { distributed: true, borderRadius: 4, columnWidth: '55%', dataLabels: { position: 'top' } } },
+        colors: batchColors,
         dataLabels: {
           enabled: true,
           formatter: function(val) { return val ? String(val) : ''; },
           offsetY: -16,
           style: { fontSize: '11px', fontWeight: 700, colors: ['#0f172a'] }
         },
-        legend: { show: false },
+        legend: hasKids ? {
+          show: true,
+          position: 'top',
+          horizontalAlign: 'left',
+          fontSize: '10px',
+          markers: { width: 8, height: 8, radius: 2, fillColors: ['#f59e0b'] },
+          customLegendItems: ['Kids'],
+          onItemClick: { toggleDataSeries: false },
+          onItemHover: { highlightDataSeries: false }
+        } : { show: false },
         xaxis: {
           categories: batchLabels,
           labels: { style: { fontSize: '10px', fontWeight: 600, colors: '#475569' }, trim: true }
@@ -557,7 +577,13 @@
         grid: commonGrid,
         tooltip: {
           ...commonTooltip,
-          y: { formatter: function(val) { return String(val) + (Number(val) === 1 ? ' member' : ' members'); } }
+          y: {
+            formatter: function(val, opts) {
+              const kind = batchKinds[opts && opts.dataPointIndex];
+              const count = String(val) + (Number(val) === 1 ? ' member' : ' members');
+              return kind === 'kid' ? 'Kids batch · ' + count : count;
+            }
+          }
         }
       };
       elBatch.innerHTML = ''; 
