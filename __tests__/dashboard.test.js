@@ -466,8 +466,10 @@ describe('Dashboard Module', () => {
     expect(miscToggle).toContain('renderExpenseBreakdownChart');
     expect(miscToggle).not.toContain('this.rebuildCharts()');
     const batchChart = script.slice(script.indexOf('// 2. Batch'), script.indexOf('// 3. Net-In-Hand'));
-    expect(batchChart).toContain("'(A)'");
-    expect(batchChart).toContain("'(K)'");
+    expect(batchChart).toContain("type: 'bar'");
+    expect(batchChart).toContain('legend: { show: false }');
+    expect(batchChart).not.toContain("'(A)'");
+    expect(batchChart).not.toContain("'(K)'");
     expect(predictionConfig).toContain("fill: { opacity: [0.12, 0] }");
     expect(predictionConfig).toContain('base + extra');
     expect(predictionConfig).toContain('quarterForecastLabel');
@@ -476,7 +478,7 @@ describe('Dashboard Module', () => {
     expect(expenseChart).toContain('...dlOptions');
     expect(expenseChart).toContain("String(label) === 'Staff Cost'");
     expect(expenseChart).toContain("'#7c3aed'");
-    expect(batchChart).toContain("type: 'donut'");
+    expect(batchChart).toContain('replace(/\\s*\\([^)]*\\)\\s*$/g');
     expect(predictionConfig).toContain('plotExpected[anchor] = plotActual[anchor]');
   });
 
@@ -621,7 +623,7 @@ describe('Dashboard Module', () => {
     const batch = view.indexOf('>Members by Batch<');
     const net = view.indexOf('>Net-In-Hand Forecast<');
     const trend = view.indexOf('>Cash vs UPI<');
-    const expense = view.indexOf('>Expense Breakdown<');
+    const expense = view.indexOf('id="chart-expense-breakdown"');
     const birthdays = view.indexOf('Upcoming birthdays');
     expect(rev).toBeGreaterThan(-1);
     expect(rev).toBeLessThan(batch);
