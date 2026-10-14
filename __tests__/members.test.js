@@ -892,6 +892,9 @@ describe('Members Module', () => {
     expect(form.indexOf('id="pay-end"')).toBeLessThan(form.indexOf('id="pay-date"'));
     expect(form.indexOf('id="pay-date"')).toBeLessThan(form.indexOf('id="pay-lines"'));
     expect(form).not.toContain('id="pay-cash"');
+    const insight = scriptHtml.slice(scriptHtml.indexOf('renderChart: function'), scriptHtml.indexOf('this._lastChartWidth'));
+    expect(insight).toContain('stacked: false');
+    expect(insight).not.toContain('stacked: true');
     const saveStart = scriptHtml.indexOf('submitPayment: async function');
     const saveEnd = scriptHtml.indexOf('closeRecordPayment: function');
     const save = scriptHtml.slice(saveStart, saveEnd);

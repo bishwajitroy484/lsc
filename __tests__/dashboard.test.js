@@ -615,7 +615,9 @@ describe('Dashboard Module', () => {
     expect(view).toContain("toggleDataLabels('trend', this)");
     expect(view).not.toContain('id="toggle-trend-percent"');
     expect(view).toContain('>Projected:<');
-    expect(script).toContain("stackType: showPercent ? '100%' : 'normal'");
+    const cashChart = script.slice(script.indexOf('// 4. Cash vs UPI'), script.indexOf('// 5. Expense Breakdown'));
+    expect(cashChart).toContain('stacked: false');
+    expect(cashChart).not.toContain('stacked: true');
     expect(view).toContain("window.renderCashUpiChart()");
     expect(script).toContain('window.renderCashUpiChart = function()');
     expect(script).toContain('paymentModes.cashLabel');
