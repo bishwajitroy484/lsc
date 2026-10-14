@@ -637,6 +637,8 @@ describe('Dashboard Module', () => {
     expect(trend).toBeLessThan(expense);
     expect(expense).toBeLessThan(birthdays);
     expect(view).toContain('id="dash-birthdays-list" class="flex-1 overflow-y-auto');
+    expect(script).toContain('rows.length > 4');
+    expect(script).toContain('box.style.maxHeight');
     expect(script).toContain('No birthdays coming up');
     expect(script).toContain('🎂 🎉 🥳');
     expect(script).toContain("days === 0");

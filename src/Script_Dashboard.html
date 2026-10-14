@@ -940,6 +940,8 @@
     rows.sort(function(a, b) { return Number(a.days) - Number(b.days); });
     if (countEl) countEl.textContent = String(rows.length);
     if (!rows.length) {
+      box.style.maxHeight = '';
+      box.classList.add('no-scrollbar');
       box.innerHTML = '<div class="h-full min-h-[140px] flex flex-col items-center justify-center text-center px-3 py-4">' +
         '<div class="text-[28px] leading-none tracking-wide" aria-hidden="true">🎂 🎉 🥳</div>' +
         '<p class="text-xs font-bold text-slate-800 mt-2">No birthdays coming up</p>' +
@@ -988,6 +990,15 @@
       }).join('');
       return '<div><p class="text-[10px] font-bold tracking-wider px-1 mb-1 ' + monthTone + '">' + month + '</p><div class="space-y-0.5">' + items + '</div></div>';
     }).join('');
+    box.style.maxHeight = '';
+    box.classList.toggle('no-scrollbar', rows.length <= 4);
+    if (rows.length > 4) {
+      const fourth = box.querySelectorAll('button')[3];
+      const boxTop = box.getBoundingClientRect().top;
+      const rowBottom = fourth ? fourth.getBoundingClientRect().bottom : 0;
+      const fitted = rowBottom > boxTop ? Math.ceil(rowBottom - boxTop + 8) : 224;
+      box.style.maxHeight = fitted + 'px';
+    }
   };
 
   window.openDashboardBirthday = function(kind, id, name) {
