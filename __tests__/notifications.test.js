@@ -90,7 +90,8 @@ describe('notification report helpers', () => {
       'Quarterly'
     );
     expect(mail.subject).toContain('Payment confirmation');
-    expect(mail.htmlBody).toContain('Bishwajit Roy');
+    expect(mail.htmlBody).toContain('Bishwajit');
+    expect(mail.htmlBody).not.toContain('Bishwajit Roy');
     expect(mail.htmlBody).toContain('Quarterly');
     expect(mail.htmlBody).toContain('Lakeside');
   });
@@ -134,7 +135,8 @@ describe('notification report helpers', () => {
     expect(res.data.to).toBe('admin@gym.com');
     const payload = api._mailApp.sendEmail.mock.calls[0][0];
     expect(payload.subject).toContain('[TEST] Overdue WhatsApp');
-    expect(payload.htmlBody).toContain('Supreet Kaur');
+    expect(payload.htmlBody).toContain('Supreet');
+    expect(payload.htmlBody).not.toContain('Supreet Kaur');
     expect(payload.htmlBody).toContain('10-Oct-2026');
     expect(payload.htmlBody).toContain('This is a test email');
   });

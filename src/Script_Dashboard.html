@@ -789,37 +789,38 @@
       const showPercent = (document.getElementById('toggle-trend-mode')?.value || 'amount') === 'percent';
       const labelsOn = !(window.AppChartConfigs.trend && window.AppChartConfigs.trend.dataLabels && window.AppChartConfigs.trend.dataLabels.enabled === false);
       const paymentModes = chartData.charts.paymentModes || {};
-      const seriesAmount = (opts) => {
-        const series = (opts && opts.w && opts.w.config && opts.w.config.series) || [];
-        const idx = opts ? opts.dataPointIndex : 0;
-        return Number(series[opts && opts.seriesIndex] && series[opts.seriesIndex].data[idx]) || 0;
-      };
-      const percentLabel = (val, opts) => {
-        const series = (opts && opts.w && opts.w.config && opts.w.config.series) || [];
-        const idx = opts ? opts.dataPointIndex : 0;
-        const total = series.reduce((sum, item) => sum + (Number(item.data && item.data[idx]) || 0), 0);
-        const raw = seriesAmount(opts);
-        if (!total || !raw) return '';
-        return Math.round((raw / total) * 100) + '%';
+      const cashRaw = (paymentModes.cash || []).map((value) => Number(value) || 0);
+      const upiRaw = (paymentModes.upi || []).map((value) => Number(value) || 0);
+      const shareOf = (values) => values.map((value, index) => {
+        const total = (cashRaw[index] || 0) + (upiRaw[index] || 0);
+        if (!total || !value) return 0;
+        return Math.round((value / total) * 1000) / 10;
+      });
+      const rawAt = (opts) => {
+        const seriesIndex = opts ? opts.seriesIndex : 0;
+        const point = opts ? opts.dataPointIndex : 0;
+        const source = seriesIndex === 0 ? cashRaw : upiRaw;
+        return Number(source[point]) || 0;
       };
       window.AppChartConfigs.trend = {
         series: [
-          { name: paymentModes.cashLabel || 'Cash', data: paymentModes.cash || [] },
-          { name: paymentModes.upiLabel || 'UPI', data: paymentModes.upi || [] }
+          { name: paymentModes.cashLabel || 'Cash', data: showPercent ? shareOf(cashRaw) : cashRaw },
+          { name: paymentModes.upiLabel || 'UPI', data: showPercent ? shareOf(upiRaw) : upiRaw }
         ],
         chart: {
           type: 'bar',
-          stacked: true,
-          stackType: showPercent ? '100%' : 'normal',
+          stacked: false,
           height: '100%',
           toolbar: commonToolbar
         },
-        plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 2, dataLabels: { position: 'center' } } },
+        plotOptions: { bar: { horizontal: false, columnWidth: '62%', borderRadius: 2, dataLabels: { position: 'top' } } },
         dataLabels: {
           ...dlOptions,
           enabled: labelsOn,
-          offsetY: 0,
-          formatter: showPercent ? percentLabel : (val) => (val ? AppUtils.formatCompactCurrency(val) : '')
+          offsetY: -16,
+          formatter: showPercent
+            ? (val) => (val ? Math.round(val) + '%' : '')
+            : (val) => (val ? AppUtils.formatCompactCurrency(val) : '')
         },
         xaxis: commonXAxis,
         yaxis: {
@@ -832,7 +833,7 @@
         tooltip: {
           ...commonTooltip,
           y: {
-            formatter: (val, opts) => AppUtils.formatCurrency(seriesAmount(opts) || val)
+            formatter: (val, opts) => AppUtils.formatCurrency(rawAt(opts) || val)
           }
         },
         colors: ['#10b981', '#3b82f6'],
@@ -939,6 +940,8 @@
     rows.sort(function(a, b) { return Number(a.days) - Number(b.days); });
     if (countEl) countEl.textContent = String(rows.length);
     if (!rows.length) {
+      box.style.maxHeight = '';
+      box.classList.add('no-scrollbar');
       box.innerHTML = '<div class="h-full min-h-[140px] flex flex-col items-center justify-center text-center px-3 py-4">' +
         '<div class="text-[28px] leading-none tracking-wide" aria-hidden="true">🎂 🎉 🥳</div>' +
         '<p class="text-xs font-bold text-slate-800 mt-2">No birthdays coming up</p>' +
@@ -987,6 +990,15 @@
       }).join('');
       return '<div><p class="text-[10px] font-bold tracking-wider px-1 mb-1 ' + monthTone + '">' + month + '</p><div class="space-y-0.5">' + items + '</div></div>';
     }).join('');
+    box.style.maxHeight = '';
+    box.classList.toggle('no-scrollbar', rows.length <= 4);
+    if (rows.length > 4) {
+      const fourth = box.querySelectorAll('button')[3];
+      const boxTop = box.getBoundingClientRect().top;
+      const rowBottom = fourth ? fourth.getBoundingClientRect().bottom : 0;
+      const fitted = rowBottom > boxTop ? Math.ceil(rowBottom - boxTop + 8) : 224;
+      box.style.maxHeight = fitted + 'px';
+    }
   };
 
   window.openDashboardBirthday = function(kind, id, name) {

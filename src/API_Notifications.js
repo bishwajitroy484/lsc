@@ -108,6 +108,12 @@ function getNotificationConfig_(settingsMap) {
   };
 }
 
+function firstNameFromFull_(value, fallback) {
+  const text = String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
+  if (!text) return fallback == null ? '' : String(fallback);
+  return text.split(' ')[0];
+}
+
 function applyTemplate_(template, vars) {
   return String(template || '').replace(/\{\{(\w+)\}\}/g, function(match, key) {
     return vars[key] !== undefined && vars[key] !== null ? String(vars[key]) : '';
@@ -174,7 +180,7 @@ function resolveDropdownName_(options, id) {
 function buildPaymentReceiptEmail_(member, payment, config, planName) {
   const vars = {
     gymName: config.gymName,
-    memberName: String(member.fullName || 'Member').trim(),
+    memberName: firstNameFromFull_(member.fullName, 'Member'),
     plan: planName || 'membership',
     amount: formatMoneyForEmail_(payment.amount),
     paidDate: formatDateForEmail_(payment.paidDate || payment.date),
@@ -316,6 +322,7 @@ function buildWeeklyTableHtml_(rows, fields, emptyText) {
     html += '<tr>';
     columns.forEach(function(col) {
       let value = row[col.key] !== undefined && row[col.key] !== '' ? row[col.key] : '--';
+      if (col.key === 'fullName') value = firstNameFromFull_(value, '--');
       if (col.key === 'daysUntil' && Number.isFinite(Number(value))) {
         const n = Number(value);
         value = n < 0 ? Math.abs(n) + ' overdue' : n === 0 ? 'Today' : 'In ' + n + 'd';
@@ -382,7 +389,7 @@ function buildWeeklyReportEmail_(config, report) {
   const rangeLabel = formatDateForEmail_(report.today) + ' → ' + formatDateForEmail_(report.horizon);
   const vars = {
     gymName: config.gymName,
-    ownerName: config.ownerName || 'there',
+    ownerName: firstNameFromFull_(config.ownerName, 'there'),
     rangeLabel: rangeLabel,
     reportDays: report.reportDays || config.reportDays || 7,
     upcomingCount: report.upcoming.length,
@@ -557,7 +564,7 @@ function escapeNotificationHtml_(value) {
 function fillWhatsAppSample_(template, kind, gymName) {
   const gym = gymName || 'LSC';
   const sample = {
-    name: 'Supreet Kaur',
+    name: 'Supreet',
     amount: '₹30,000',
     duedate: '10-Oct-2026',
     due: '10-Oct-2026',

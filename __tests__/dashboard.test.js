@@ -615,7 +615,9 @@ describe('Dashboard Module', () => {
     expect(view).toContain("toggleDataLabels('trend', this)");
     expect(view).not.toContain('id="toggle-trend-percent"');
     expect(view).toContain('>Projected:<');
-    expect(script).toContain("stackType: showPercent ? '100%' : 'normal'");
+    const cashChart = script.slice(script.indexOf('// 4. Cash vs UPI'), script.indexOf('// 5. Expense Breakdown'));
+    expect(cashChart).toContain('stacked: false');
+    expect(cashChart).not.toContain('stacked: true');
     expect(view).toContain("window.renderCashUpiChart()");
     expect(script).toContain('window.renderCashUpiChart = function()');
     expect(script).toContain('paymentModes.cashLabel');
@@ -635,6 +637,8 @@ describe('Dashboard Module', () => {
     expect(trend).toBeLessThan(expense);
     expect(expense).toBeLessThan(birthdays);
     expect(view).toContain('id="dash-birthdays-list" class="flex-1 overflow-y-auto');
+    expect(script).toContain('rows.length > 4');
+    expect(script).toContain('box.style.maxHeight');
     expect(script).toContain('No birthdays coming up');
     expect(script).toContain('🎂 🎉 🥳');
     expect(script).toContain("days === 0");
