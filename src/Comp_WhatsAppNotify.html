@@ -28,6 +28,12 @@
       return Math.round((b - a) / 86400000);
     },
 
+    firstName: function(fullName, fallback) {
+      const text = String(fullName || '').trim().replace(/\s+/g, ' ');
+      if (!text) return fallback || 'Member';
+      return text.split(' ')[0];
+    },
+
     applyTemplate: function(template, ctx) {
       return String(template || '').replace(/\{\{\s*([a-zA-Z]+)\s*\}\}/g, function(_, raw) {
         const key = String(raw || '').toLowerCase();
@@ -47,7 +53,7 @@
 
     buildTemplate: function(type, row) {
       const gym = this.getGymName();
-      const name = row.name || 'Member';
+      const name = this.firstName(row.name, 'Member');
       const amount = (typeof AppUtils !== 'undefined' && AppUtils.formatCurrency)
         ? AppUtils.formatCurrency(row.amount)
         : ('₹' + String(row.amount || 0));

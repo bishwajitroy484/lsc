@@ -150,6 +150,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
           expenses: chartMetrics.filteredExp,
           batchLabels: membership.batchLabels,
           batchData: membership.batchData,
+          batchKinds: membership.batchKinds,
           prediction: {
             categories: chartMetrics.predictionLabels,
             actual: chartMetrics.actualNetArr,
@@ -945,15 +946,29 @@ function summarizeMembershipForPeriods_(members, targetYear, mode, periods, reso
       return String(option.id).trim() === String(member.batchId || '').trim();
     });
     const timeName = match ? (match.name || match.label) : resolveName('MEMBERS', 'batchId', member.batchId);
+    const groupName = String((match && (match.group || match.Group || match.groups)) || '').toLowerCase();
     const batchLabel = String(timeName || 'Unknown').replace(/\s*\([^)]*\)\s*$/g, '').trim() || 'Unknown';
-    batchCounts[batchLabel] = (batchCounts[batchLabel] || 0) + 1;
+    const batchKind = (groupName.indexOf('kid') >= 0 || groupName.indexOf('child') >= 0) ? 'kid' : 'adult';
+    const batchKey = batchLabel + '\u0000' + batchKind;
+    batchCounts[batchKey] = (batchCounts[batchKey] || 0) + 1;
+  });
+
+  const batchLabels = [];
+  const batchData = [];
+  const batchKinds = [];
+  Object.keys(batchCounts).forEach(function(batchKey) {
+    const parts = batchKey.split('\u0000');
+    batchLabels.push(parts[0]);
+    batchKinds.push(parts[1] || 'adult');
+    batchData.push(batchCounts[batchKey]);
   });
 
   return {
     activeCount: activeCount,
     activeSegregation: activeSegregation,
-    batchLabels: Object.keys(batchCounts),
-    batchData: safeNumArray(Object.values(batchCounts))
+    batchLabels: batchLabels,
+    batchData: safeNumArray(batchData),
+    batchKinds: batchKinds
   };
 }
 

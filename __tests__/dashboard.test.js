@@ -467,7 +467,9 @@ describe('Dashboard Module', () => {
     expect(miscToggle).not.toContain('this.rebuildCharts()');
     const batchChart = script.slice(script.indexOf('// 2. Batch'), script.indexOf('// 3. Net-In-Hand'));
     expect(batchChart).toContain("type: 'bar'");
-    expect(batchChart).toContain('legend: { show: false }');
+    expect(batchChart).toContain('distributed: true');
+    expect(batchChart).toContain('#f59e0b');
+    expect(batchChart).toContain("customLegendItems: ['Kids']");
     expect(batchChart).not.toContain("'(A)'");
     expect(batchChart).not.toContain("'(K)'");
     expect(predictionConfig).toContain("fill: { opacity: [0.12, 0] }");
@@ -566,6 +568,7 @@ describe('Dashboard Module', () => {
     expect(q1.charts.batchLabels).not.toContain('Morning');
     expect(q2.charts.batchLabels).toContain('Morning');
     expect(q2.charts.batchData[q2.charts.batchLabels.indexOf('Morning')]).toBe(1);
+    expect(q2.charts.batchKinds[q2.charts.batchLabels.indexOf('Morning')]).toBe('adult');
 
     expect(q1.kpis.netInHand).toBe(Number((q1.kpis.membersCollected - q1.kpis.totalOperatingExpenses).toFixed(2)));
     expect(q2.kpis.netInHand).toBe(0);
@@ -612,7 +615,9 @@ describe('Dashboard Module', () => {
     expect(view).toContain("toggleDataLabels('trend', this)");
     expect(view).not.toContain('id="toggle-trend-percent"');
     expect(view).toContain('>Projected:<');
-    expect(script).toContain("stackType: showPercent ? '100%' : 'normal'");
+    const cashChart = script.slice(script.indexOf('// 4. Cash vs UPI'), script.indexOf('// 5. Expense Breakdown'));
+    expect(cashChart).toContain('stacked: false');
+    expect(cashChart).not.toContain('stacked: true');
     expect(view).toContain("window.renderCashUpiChart()");
     expect(script).toContain('window.renderCashUpiChart = function()');
     expect(script).toContain('paymentModes.cashLabel');
@@ -632,6 +637,8 @@ describe('Dashboard Module', () => {
     expect(trend).toBeLessThan(expense);
     expect(expense).toBeLessThan(birthdays);
     expect(view).toContain('id="dash-birthdays-list" class="flex-1 overflow-y-auto');
+    expect(script).toContain('rows.length > 4');
+    expect(script).toContain('box.style.maxHeight');
     expect(script).toContain('No birthdays coming up');
     expect(script).toContain('🎂 🎉 🥳');
     expect(script).toContain("days === 0");

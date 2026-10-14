@@ -1301,36 +1301,40 @@
       document.getElementById('det-ltv-year').innerText = AppUtils.formatCurrency(yearMetrics.totalEarned);
       document.getElementById('det-ltv-count').innerText = yearPayments.length;
 
-      const percentLabel = (val, opts) => {
-        const series = (opts && opts.w && opts.w.config && opts.w.config.series) || [];
-        const idx = opts ? opts.dataPointIndex : 0;
-        const total = series.reduce((sum, item) => sum + (Number(item.data && item.data[idx]) || 0), 0);
-        const raw = Number(series[opts.seriesIndex] && series[opts.seriesIndex].data[idx]) || 0;
-        if (!total || !raw) return '';
-        return Math.round((raw / total) * 100) + '%';
-      };
+      const percentShare = (values, other) => values.map((value, index) => {
+        const total = (Number(value) || 0) + (Number(other[index]) || 0);
+        if (!total || !value) return 0;
+        return Math.round((Number(value) / total) * 1000) / 10;
+      });
+      const cashSeries = cashData.map(v => Number(Number(v || 0).toFixed(2)));
+      const upiSeries = upiData.map(v => Number(Number(v || 0).toFixed(2)));
       const rotateMonths = narrow && viewMode !== 'quarterly';
       const options = {
         series: [
-          { name: 'Cash', data: cashData.map(v => Number(Number(v || 0).toFixed(2))) },
-          { name: 'UPI', data: upiData.map(v => Number(Number(v || 0).toFixed(2))) }
+          { name: 'Cash', data: showPercent ? percentShare(cashSeries, upiSeries) : cashSeries },
+          { name: 'UPI', data: showPercent ? percentShare(upiSeries, cashSeries) : upiSeries }
         ],
         chart: {
           type: 'bar',
           width: '100%',
           height: '100%',
           toolbar: { show: false },
-          stacked: true,
-          stackType: showPercent ? '100%' : 'normal',
+          stacked: false,
           parentHeightOffset: 0,
           redrawOnParentResize: true
         },
-        plotOptions: { bar: { borderRadius: 2, columnWidth: narrow ? '62%' : '55%', dataLabels: { position: 'center' } } },
+        plotOptions: { bar: { borderRadius: 2, columnWidth: narrow ? '70%' : '62%', dataLabels: { position: 'top' } } },
         dataLabels: narrow
           ? { enabled: false }
-          : (showPercent
-            ? { enabled: true, formatter: percentLabel, style: { fontSize: '10px', fontWeight: 600, colors: ['#0f172a'] } }
-            : { ...dlOptions, offsetY: 0 }),
+          : {
+              enabled: true,
+              offsetY: -16,
+              formatter: showPercent
+                ? (val) => (val ? Math.round(val) + '%' : '')
+                : (val) => (val ? AppUtils.formatCompactCurrency(val) : ''),
+              style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
+              background: dlOptions.background
+            },
         xaxis: { 
             categories: categories,
             labels: {
@@ -1351,10 +1355,18 @@
             style: { fontSize: narrow ? '9px' : '11px', colors: '#64748b' }
           }
         },
-        tooltip: { y: { formatter: (val) => AppUtils.formatCurrency(val) } },
+        tooltip: {
+          y: {
+            formatter: (val, opts) => {
+              const source = opts && opts.seriesIndex === 1 ? upiSeries : cashSeries;
+              const raw = source[opts ? opts.dataPointIndex : 0];
+              return AppUtils.formatCurrency(raw || val);
+            }
+          }
+        },
         colors: ['#10b981', '#3b82f6'],
         legend: { position: 'top', horizontalAlign: narrow ? 'left' : 'right', fontSize: narrow ? '10px' : '11px', markers: { radius: 10 } },
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: narrow ? 4 : 16, right: 8, bottom: rotateMonths ? 8 : 4, left: 4 } }
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: narrow ? 8 : 22, right: 8, bottom: rotateMonths ? 8 : 4, left: 4 } }
       };
 
       const container = document.querySelector("#member-revenue-chart");

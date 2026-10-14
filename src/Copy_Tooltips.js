@@ -15,7 +15,7 @@ var LSC_TOOLTIPS = {
     utilities: 'Gym bills such as rent, power, and supplies.',
     staffCost: 'Staff pay already paid in the selected periods.',
     revenueVsExpenses: 'Money received compared with expenses each period.',
-    membersByBatch: 'Members counted by batch time only.',
+    membersByBatch: 'Amber bars are kids batches. Labels are times.',
     netInHandForecast: 'Period shows each month. Over time shows the running total.',
     cashVsUpi: 'Cash and UPI received, as rupees or as a share.',
     expenseBreakdown: 'How spending splits by category, including staff pay.',
