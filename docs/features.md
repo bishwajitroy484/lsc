@@ -112,7 +112,7 @@ On a tablet or desktop, the two chart rows use a 40% / 20% / 40% split. Revenue 
 
 ## WhatsApp notify (Dashboard and Members)
 
-The Dashboard Overdue and Upcoming member tables, and the Members payment-history rows, include a compact Notify/WA action with a WhatsApp icon. Tapping it opens a mobile-friendly preview sheet with a prefilled message that can be edited, copied, or opened in WhatsApp via a `wa.me` link with the member’s phone number. Message types cover overdue and upcoming renewal reminders, plus a payment-received thank-you on paid history rows (email receipt still sends automatically when enabled in Settings). Members without a phone number show a disabled action. No WhatsApp Business API is used; sending still happens in the WhatsApp app after the user confirms.
+The Dashboard Overdue and Upcoming member tables, the Calendar renewal drawer, and the Members payment-history rows include a compact Notify/WA action with a WhatsApp icon. Tapping it opens a mobile-friendly preview sheet with a prefilled message that can be edited, copied, or opened in WhatsApp via a `wa.me` link with the member’s phone number. The greeting uses the first name from the saved full name, so Bishwajit Roy is addressed as Bishwajit. Message types cover overdue and upcoming renewal reminders, plus a payment-received thank-you on paid history rows. The payment receipt email uses that same first name. The weekly renewal report greets the owner by first name and lists members by first name. Members without a phone number show a disabled action. No WhatsApp Business API is used; sending still happens in the WhatsApp app after the user confirms.
 
 ## Sign-in, authorization, and multi-user access
 
