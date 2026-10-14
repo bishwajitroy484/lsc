@@ -44,12 +44,12 @@
 
   <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 no-scrollbar pb-24 relative">
 
-    <!-- Two KPIs per row on phone and tablet. Three per row only on a wide desktop. -->
-    <div class="grid grid-cols-2 xl:grid-cols-3 gap-2.5 md:gap-3 mb-3 md:mb-4">
+    <!-- Two KPIs per row on a phone. All six on one row from desktop width up. -->
+    <div class="grid grid-cols-2 lg:grid-cols-6 gap-2.5 lg:gap-2 mb-3 md:mb-4">
       <div class="bg-emerald-50/50 p-2.5 md:p-3 rounded-xl border border-emerald-100 flex flex-col justify-center min-w-0">
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">account_balance_wallet</span>
-          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Total Outflow</p>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight truncate min-w-0">Total Outflow</p>
           <span class="metric-tip" tabindex="0" aria-label="About Total Outflow"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.totalOutflow') ?></span></span>
         </div>
         <h2 id="kpi-total-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
@@ -58,7 +58,7 @@
       <div class="bg-amber-50/50 p-2.5 md:p-3 rounded-xl border border-amber-100 flex flex-col justify-center min-w-0">
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-amber-100 text-amber-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">calendar_month</span>
-          <p id="kpi-avg-title" class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Monthly Avg</p>
+          <p id="kpi-avg-title" class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight truncate min-w-0">Monthly Avg</p>
           <span class="metric-tip" tabindex="0" aria-label="About period average"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.periodAverage') ?></span></span>
         </div>
         <h2 id="kpi-avg-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
@@ -67,7 +67,7 @@
       <div class="bg-white p-2.5 md:p-3 rounded-xl border border-slate-200 flex flex-col justify-center min-w-0">
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">badge</span>
-          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Staff Cost</p>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight truncate min-w-0">Staff Cost</p>
           <span class="metric-tip" tabindex="0" aria-label="About Staff Cost"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.staffCost') ?></span></span>
         </div>
         <h2 id="kpi-staff-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
@@ -76,7 +76,7 @@
       <div class="bg-white p-2.5 md:p-3 rounded-xl border border-slate-200 flex flex-col justify-center min-w-0">
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-red-100 text-brand-primary flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">receipt_long</span>
-          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Other Expenses</p>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight truncate min-w-0">Other Expenses</p>
           <span class="metric-tip" tabindex="0" aria-label="About Other expenses"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.otherExpenses') ?></span></span>
         </div>
         <h2 id="kpi-other-exp" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">₹0</h2>
@@ -85,7 +85,7 @@
       <div onclick="ExpensesHub.switchListTab('staff'); StaffApp.scrollToActionNeeded && StaffApp.scrollToActionNeeded();" class="bg-cyan-50/40 p-2.5 md:p-3 rounded-xl border border-cyan-100 flex flex-col justify-center min-w-0 cursor-pointer hover:border-cyan-200 hover:shadow-sm transition-all" title="Open Staff list">
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-cyan-100 text-cyan-600 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">group</span>
-          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Staff</p>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight truncate min-w-0">Staff</p>
           <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Staff count"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.staffCount') ?></span></span>
         </div>
         <h2 id="kpi-total-staff" class="text-sm sm:text-base md:text-lg font-bold text-slate-800">--</h2>
@@ -94,7 +94,7 @@
       <div onclick="ExpensesHub.switchListTab('staff'); StaffApp.scrollToActionNeeded && StaffApp.scrollToActionNeeded();" class="bg-cyan-50/40 p-2.5 md:p-3 rounded-xl border border-cyan-100 flex flex-col justify-center min-w-0 cursor-pointer hover:border-cyan-200 hover:shadow-sm transition-all" title="Open Staff list">
         <div class="flex items-center gap-1.5 mb-1 min-w-0">
           <span class="w-5 h-5 md:w-6 md:h-6 rounded bg-orange-100 text-orange-700 flex items-center justify-center material-symbols-rounded text-[12px] md:text-[14px] shrink-0">pending_actions</span>
-          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight">Action</p>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-semibold leading-tight truncate min-w-0">Action</p>
           <span class="metric-tip" tabindex="0" onclick="event.stopPropagation()" aria-label="About Action needed"><span class="material-symbols-rounded metric-tip-icon">info</span><span class="metric-tip-bubble"><?!= tooltipCopy_('expenses.actionNeeded') ?></span></span>
         </div>
         <h2 id="kpi-action-needed" class="text-sm sm:text-base md:text-lg font-bold text-amber-700 leading-tight">--</h2>
