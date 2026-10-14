@@ -520,7 +520,15 @@
     // 2. Batch
     const elBatch = document.querySelector("#chart-batch");
     if(elBatch) {
-      const batchValues = data.charts.batchData || [];
+      const rawLabels = data.charts.batchLabels || [];
+      const rawValues = data.charts.batchData || [];
+      const batchTotals = {};
+      rawLabels.forEach(function(label, index) {
+        const time = String(label || 'Unknown').replace(/\s*\([^)]*\)\s*$/g, '').trim() || 'Unknown';
+        batchTotals[time] = (batchTotals[time] || 0) + Number(rawValues[index] || 0);
+      });
+      const batchLabels = Object.keys(batchTotals);
+      const batchValues = batchLabels.map(function(label) { return batchTotals[label]; });
       const hasBatch = batchValues.some(function(value) { return Number(value) > 0; });
       if (!hasBatch) {
         elBatch.innerHTML = '<div class="h-full flex flex-col items-center justify-center text-center px-3 py-2">' +
@@ -530,61 +538,23 @@
           '</div>';
       } else {
       window.AppChartConfigs.batch = {
-        series: batchValues,
-        labels: data.charts.batchLabels || [],
-        chart: { type: 'donut', height: '100%' },
-        colors: ['#3b82f6', '#10b981', '#a855f7', '#fbbf24', '#06b6d4', '#f97316', '#ec4899', '#6366f1'],
-        plotOptions: {
-          pie: {
-            donut: {
-              size: '68%',
-              labels: {
-                show: true,
-                total: {
-                  show: true,
-                  label: 'Members',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  formatter: function(w) {
-                    return String(w.globals.seriesTotals.reduce(function(sum, value) { return sum + value; }, 0));
-                  }
-                }
-              }
-            }
-          }
-        },
-        legend: {
-          position: 'bottom',
-          fontSize: '9px',
-          markers: { width: 7, height: 7, radius: 7 },
-          itemMargin: { horizontal: 4, vertical: 0 },
-          formatter: function(seriesName) {
-            return String(seriesName || '')
-              .replace(/\(\s*Adults?\s*\)/ig, '(A)')
-              .replace(/\(\s*Kids?\s*\)/ig, '(K)');
-          }
-        },
+        series: [{ name: 'Members', data: batchValues }],
+        chart: { type: 'bar', height: '100%', toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+        plotOptions: { bar: { borderRadius: 4, columnWidth: '55%', dataLabels: { position: 'top' } } },
+        colors: ['#3b82f6'],
         dataLabels: {
           enabled: true,
-          formatter: function(val, opts) {
-            const count = opts && opts.w && opts.w.globals && opts.w.globals.seriesTotals
-              ? opts.w.globals.seriesTotals[opts.seriesIndex]
-              : val;
-            return count ? String(count) : '';
-          },
-          style: { fontSize: '11px', fontWeight: 600, colors: ['#0f172a'] },
-          background: {
-            enabled: true,
-            backgroundColor: '#ffffff',
-            foreColor: '#0f172a',
-            borderRadius: 4,
-            padding: 3,
-            opacity: 0.95,
-            borderWidth: 1,
-            borderColor: '#e2e8f0'
-          },
-          dropShadow: { enabled: false }
+          formatter: function(val) { return val ? String(val) : ''; },
+          offsetY: -16,
+          style: { fontSize: '11px', fontWeight: 700, colors: ['#0f172a'] }
         },
+        legend: { show: false },
+        xaxis: {
+          categories: batchLabels,
+          labels: { style: { fontSize: '10px', fontWeight: 600, colors: '#475569' }, trim: true }
+        },
+        yaxis: { labels: { style: { fontSize: '10px', colors: '#64748b' } } },
+        grid: commonGrid,
         tooltip: {
           ...commonTooltip,
           y: { formatter: function(val) { return String(val) + (Number(val) === 1 ? ' member' : ' members'); } }

@@ -747,10 +747,20 @@ describe('Members Module', () => {
       expect(batchFilter.value).toBe('BATCH-1');
       expect(planFilter.innerHTML).toContain('All Memberships');
       expect(planFilter.value).toBe('PLAN-1');
-      expect(document.getElementById('mem-pay-cash')).toBeTruthy();
-      expect(document.getElementById('mem-pay-upi')).toBeTruthy();
+      const viewHtml = fs.readFileSync(path.join(__dirname, '../src/View_Members.html'), 'utf8');
+      const script = fs.readFileSync(path.join(__dirname, '../src/Script_Members.html'), 'utf8');
+      expect(viewHtml).toContain('id="mem-pay-lines"');
+      expect(viewHtml).not.toContain('id="mem-pay-cash"');
+      expect(script).toContain('readPaymentLines');
+      expect(script).toContain('linesFromStoredSplit');
       expect(MembersApp.paidStatusId()).toBe('PAY-PAID');
       expect(MembersApp.activeStatusId()).toBe('STATUS-ACTIVE');
+      expect(MembersApp.linesFromStoredSplit({ cashAmount: 400, upiAmount: 0 }, 400)).toEqual([{ mode: 'cash', amount: 400 }]);
+      expect(MembersApp.linesFromStoredSplit({ cashAmount: 0, upiAmount: 900 }, 900)).toEqual([{ mode: 'upi', amount: 900 }]);
+      expect(MembersApp.linesFromStoredSplit({ cashAmount: 250, upiAmount: 750 }, 1000)).toEqual([
+        { mode: 'cash', amount: 250 },
+        { mode: 'upi', amount: 750 }
+      ]);
       MembersApp.dropdowns = originalDropdowns;
     });
 
@@ -880,7 +890,8 @@ describe('Members Module', () => {
     expect(form.indexOf('id="pay-coverage-container"')).toBeLessThan(form.indexOf('id="pay-header-due"'));
     expect(form.indexOf('id="pay-start"')).toBeLessThan(form.indexOf('id="pay-end"'));
     expect(form.indexOf('id="pay-end"')).toBeLessThan(form.indexOf('id="pay-date"'));
-    expect(form.indexOf('id="pay-date"')).toBeLessThan(form.indexOf('id="pay-cash"'));
+    expect(form.indexOf('id="pay-date"')).toBeLessThan(form.indexOf('id="pay-lines"'));
+    expect(form).not.toContain('id="pay-cash"');
     const saveStart = scriptHtml.indexOf('submitPayment: async function');
     const saveEnd = scriptHtml.indexOf('closeRecordPayment: function');
     const save = scriptHtml.slice(saveStart, saveEnd);

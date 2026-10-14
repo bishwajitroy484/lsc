@@ -496,8 +496,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
     const batchOptions = dropDowns['batch'] || dropDowns['Batch_Options'] || [];
     const match = batchOptions.find(b => String(b.id).trim() === String(batchId).trim());
     const timeName = match ? (match.name || match.label) : resolveName('MEMBERS', 'batchId', batchId);
-    const groupName = match ? (match.group || match.Group) : '';
-    return groupName ? `${timeName} (${groupName})` : timeName;
+    return String(timeName || 'Unknown').replace(/\s*\([^)]*\)\s*$/g, '').trim() || 'Unknown';
   };
 
   const birthdayList = [];
@@ -946,8 +945,7 @@ function summarizeMembershipForPeriods_(members, targetYear, mode, periods, reso
       return String(option.id).trim() === String(member.batchId || '').trim();
     });
     const timeName = match ? (match.name || match.label) : resolveName('MEMBERS', 'batchId', member.batchId);
-    const groupName = match ? (match.group || match.Group || '') : '';
-    const batchLabel = groupName ? (timeName + ' (' + groupName + ')') : (timeName || 'Unknown');
+    const batchLabel = String(timeName || 'Unknown').replace(/\s*\([^)]*\)\s*$/g, '').trim() || 'Unknown';
     batchCounts[batchLabel] = (batchCounts[batchLabel] || 0) + 1;
   });
 
