@@ -361,29 +361,100 @@
       return modeLabel;
     },
 
-    fillPaymentSplitFields: function(cashId, upiId, payment, amount) {
-      const cashEl = document.getElementById(cashId);
-      const upiEl = document.getElementById(upiId);
-      if (!cashEl || !upiEl) return;
+    linesFromStoredSplit: function(payment, amount) {
+      let cash = 0;
+      let upi = 0;
       const cashSet = payment && payment.cashAmount !== undefined && payment.cashAmount !== null && String(payment.cashAmount).trim() !== '';
       const upiSet = payment && payment.upiAmount !== undefined && payment.upiAmount !== null && String(payment.upiAmount).trim() !== '';
       if (cashSet || upiSet) {
-        cashEl.value = Number(payment.cashAmount) || 0;
-        upiEl.value = Number(payment.upiAmount) || 0;
-        return;
+        cash = Number(payment.cashAmount) || 0;
+        upi = Number(payment.upiAmount) || 0;
+      } else if (payment) {
+        const modeName = String(this.getName('paymentmode', payment.paymentMode) || payment.paymentMode || '').toLowerCase();
+        const total = Number(amount) || 0;
+        if (modeName.indexOf('upi') >= 0 || modeName.indexOf('gpay') >= 0 || modeName.indexOf('phonepe') >= 0) upi = total;
+        else if (modeName.indexOf('cash') >= 0) cash = total;
       }
-      const modeName = payment ? String(this.getName('paymentmode', payment.paymentMode) || payment.paymentMode || '').toLowerCase() : '';
-      const total = Number(amount) || 0;
-      if (modeName.indexOf('upi') >= 0 || modeName.indexOf('gpay') >= 0 || modeName.indexOf('phonepe') >= 0) {
-        cashEl.value = 0;
-        upiEl.value = total;
-      } else if (modeName.indexOf('cash') >= 0 || !payment) {
-        cashEl.value = total;
-        upiEl.value = 0;
-      } else {
-        cashEl.value = 0;
-        upiEl.value = 0;
+      const lines = [];
+      if (cash > 0) lines.push({ mode: 'cash', amount: cash });
+      if (upi > 0) lines.push({ mode: 'upi', amount: upi });
+      return lines.length ? lines : [{ mode: 'cash', amount: '' }];
+    },
+
+    renderPaymentLines: function(containerId, lines, onInput) {
+      const box = document.getElementById(containerId);
+      if (!box) return;
+      const rows = (lines && lines.length) ? lines : [{ mode: 'cash', amount: '' }];
+      const inputHandler = onInput || '';
+      box.innerHTML = rows.map((line, index) => {
+        const mode = String(line.mode || 'cash').toLowerCase() === 'upi' ? 'upi' : 'cash';
+        const amount = line.amount === 0 || line.amount ? line.amount : '';
+        return `
+          <div data-pay-line class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 items-end">
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1">Mode</label>
+              <select data-pay-mode onchange="${inputHandler}" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-brand-primary outline-none">
+                <option value="cash" ${mode === 'cash' ? 'selected' : ''}>Cash</option>
+                <option value="upi" ${mode === 'upi' ? 'selected' : ''}>UPI</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1">Amount</label>
+              <div class="relative">
+                <span class="absolute left-2.5 top-1.5 font-bold text-slate-500 text-xs">₹</span>
+                <input data-pay-amount type="number" min="0" step="0.01" inputmode="decimal" value="${amount}" oninput="${inputHandler}" class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-brand-primary outline-none">
+              </div>
+            </div>
+            <button type="button" onclick="MembersApp.removePaymentLine('${containerId}', ${index})" class="h-8 w-8 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 ${rows.length < 2 ? 'invisible pointer-events-none' : ''}" aria-label="Remove line">
+              <span class="material-symbols-rounded text-[16px]">close</span>
+            </button>
+          </div>`;
+      }).join('') + `<button type="button" onclick="MembersApp.addPaymentLine('${containerId}')" class="text-[11px] font-bold text-brand-primary hover:underline">Add another</button>`;
+    },
+
+    collectPaymentLines: function(containerId) {
+      const box = document.getElementById(containerId);
+      if (!box || typeof box.querySelectorAll !== 'function') return [{ mode: 'cash', amount: '' }];
+      const rows = Array.from(box.querySelectorAll('[data-pay-line]'));
+      if (!rows.length) return [{ mode: 'cash', amount: '' }];
+      return rows.map((row) => ({
+        mode: row.querySelector('[data-pay-mode]') ? row.querySelector('[data-pay-mode]').value : 'cash',
+        amount: row.querySelector('[data-pay-amount]') ? row.querySelector('[data-pay-amount]').value : ''
+      }));
+    },
+
+    addPaymentLine: function(containerId) {
+      const lines = this.collectPaymentLines(containerId);
+      const hasCash = lines.some((line) => String(line.mode) !== 'upi');
+      lines.push({ mode: hasCash ? 'upi' : 'cash', amount: '' });
+      this.renderPaymentLines(containerId, lines, containerId === 'pay-lines' ? 'MembersApp.syncPaymentAmount()' : '');
+      if (containerId === 'pay-lines') this.syncPaymentAmount();
+    },
+
+    removePaymentLine: function(containerId, index) {
+      const lines = this.collectPaymentLines(containerId);
+      lines.splice(index, 1);
+      this.renderPaymentLines(containerId, lines.length ? lines : [{ mode: 'cash', amount: '' }], containerId === 'pay-lines' ? 'MembersApp.syncPaymentAmount()' : '');
+      if (containerId === 'pay-lines') this.syncPaymentAmount();
+    },
+
+    readPaymentLines: function(containerId) {
+      const lines = this.collectPaymentLines(containerId);
+      let cash = 0;
+      let upi = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const amount = this.parseMoneyInput(lines[i].amount);
+        if (amount === null) {
+          Toast.error('Each amount must be a number, 0 or more.');
+          return null;
+        }
+        if (amount <= 0) continue;
+        if (String(lines[i].mode).toLowerCase() === 'upi') upi += amount;
+        else cash += amount;
       }
+      cash = Math.round(cash * 100) / 100;
+      upi = Math.round(upi * 100) / 100;
+      return this.paymentSplitFromFields(String(cash), String(upi));
     },
 
     onDropdownsLoaded: function(response) {
@@ -1424,10 +1495,7 @@
       if (payContainer) {
           payContainer.classList.toggle('hidden', Boolean(member));
       }
-      const cashField = document.getElementById('mem-pay-cash');
-      const upiField = document.getElementById('mem-pay-upi');
-      if (cashField) cashField.value = 0;
-      if (upiField) upiField.value = 0;
+      this.renderPaymentLines('mem-pay-lines', [{ mode: 'cash', amount: '' }], '');
 
       this.filterBatchesByAge(member && member.dob ? member.dob : '');
       if (member && member.batchId) {
@@ -1497,9 +1565,13 @@
         membershipAmount: Number(document.getElementById('mem-amount').value)
       };
       
-      const cashNow = Number(document.getElementById('mem-pay-cash') && document.getElementById('mem-pay-cash').value) || 0;
-      const upiNow = Number(document.getElementById('mem-pay-upi') && document.getElementById('mem-pay-upi').value) || 0;
-      if (isNew && (cashNow > 0 || upiNow > 0)) {
+      const initialSplit = isNew ? this.readPaymentLines('mem-pay-lines') : null;
+      if (isNew && !initialSplit) {
+          btn.innerHTML = 'Save Member';
+          btn.disabled = false;
+          return;
+      }
+      if (isNew && initialSplit.amount > 0) {
           const plans = this.dropdowns.membership || [];
           const planMatch = plans.find(p => p.id === planVal);
           const planName = planMatch ? `${planMatch.name || ''} ${planMatch.frequency || ''}`.toUpperCase() : '';
@@ -1512,15 +1584,6 @@
               calcEnd = this.cycleEndFromStart(calcEnd, planName);
           }
 
-          const initialSplit = this.paymentSplitFromFields(
-            document.getElementById('mem-pay-cash').value,
-            document.getElementById('mem-pay-upi').value
-          );
-          if (!initialSplit) {
-            btn.innerHTML = 'Save Member';
-            btn.disabled = false;
-            return;
-          }
           const expectedFee = Number(payload.membershipAmount) || 0;
           const pendingFee = Math.max(0, Math.round((expectedFee - initialSplit.amount) * 100) / 100);
           payload.initialPayment = {
@@ -1669,12 +1732,22 @@
     },
 
     syncPaymentAmount: function() {
-      const cash = this.parseMoneyInput(document.getElementById('pay-cash')?.value);
-      const upi = this.parseMoneyInput(document.getElementById('pay-upi')?.value);
+      const lines = this.collectPaymentLines('pay-lines');
+      let cash = 0;
+      let upi = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const amount = this.parseMoneyInput(lines[i].amount);
+        if (amount === null) {
+          cash = null;
+          break;
+        }
+        if (String(lines[i].mode).toLowerCase() === 'upi') upi += amount;
+        else cash += amount;
+      }
       const amountEl = document.getElementById('pay-amount');
       const pendingEl = document.getElementById('pay-pending');
       const expected = Number(document.getElementById('pay-expected')?.value) || 0;
-      if (cash === null || upi === null) {
+      if (cash === null) {
         if (amountEl) amountEl.value = '';
         if (pendingEl) {
           pendingEl.textContent = 'Enter numbers only';
@@ -1707,7 +1780,7 @@
           document.getElementById('pay-modal-title').innerText = payment.paymentStatus === 'UPCOMING' ? 'Record Payment' : 'Record Payment';
           document.getElementById('pay-id').value = '';
           const rawAmt = Number(String(payment.amount || fee).replace(/[^0-9.-]+/g, '')) || fee;
-          this.fillPaymentSplitFields('pay-cash', 'pay-upi', null, 0);
+          this.renderPaymentLines('pay-lines', [{ mode: 'cash', amount: '' }], 'MembersApp.syncPaymentAmount()');
           this.setExpectedFee(rawAmt);
           this.setReceiptPreview('');
           this.setDatePicker('pay-date', new Date());
@@ -1721,7 +1794,7 @@
             ? Number(String(payment.expectedAmount).replace(/[^0-9.-]+/g, ''))
             : fee;
           const recorded = payment ? Number(String(payment.amount || 0).replace(/[^0-9.-]+/g, '')) : 0;
-          this.fillPaymentSplitFields('pay-cash', 'pay-upi', payment, recorded);
+          this.renderPaymentLines('pay-lines', this.linesFromStoredSplit(payment, recorded), 'MembersApp.syncPaymentAmount()');
           this.setExpectedFee(expected || fee);
           this.setReceiptPreview(payment && payment.receiptUrl ? payment.receiptUrl : '');
 
@@ -1760,10 +1833,7 @@
       btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[16px] mr-2">progress_activity</span> Processing...';
       btn.disabled = true;
 
-      const split = this.paymentSplitFromFields(
-        document.getElementById('pay-cash').value,
-        document.getElementById('pay-upi').value
-      );
+      const split = this.readPaymentLines('pay-lines');
       if (!split || split.amount <= 0) {
         if (split && split.amount <= 0) Toast.error('Enter a cash or UPI amount.');
         btn.innerHTML = 'Save Payment';
