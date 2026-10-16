@@ -5,7 +5,7 @@
  */
 
 var DEFAULT_NOTIFY_RECEIPT_SUBJECT = '{{gymName}} — Payment confirmation';
-var DEFAULT_NOTIFY_RECEIPT_BODY =
+var LEGACY_NOTIFY_RECEIPT_BODY =
   'Hi {{memberName}},\n\n' +
   'Thank you for your payment at {{gymName}}. Your membership has been updated successfully.\n\n' +
   'Plan: {{plan}}\n' +
@@ -16,6 +16,13 @@ var DEFAULT_NOTIFY_RECEIPT_BODY =
   'If you have any questions, please reply to this email or contact the front desk.\n\n' +
   'Warm regards,\n' +
   '{{gymName}} Team';
+var DEFAULT_NOTIFY_RECEIPT_BODY =
+  'Dear {{memberName}},\n\n' +
+  'Thank you for your renewal. Please note your Membership details.\n' +
+  'Renewed on: {{paidDate}}\n' +
+  'validity: {{endDate}}\n\n' +
+  'Please save this message. I will do too.\n' +
+  'Thank you.';
 
 var DEFAULT_NOTIFY_WEEKLY_SUBJECT = '{{gymName}} — Weekly renewal report ({{rangeLabel}})';
 var DEFAULT_NOTIFY_WEEKLY_INTRO =
@@ -101,7 +108,7 @@ function getNotificationConfig_(settingsMap) {
     weeklyCc: normalizeEmailList_(settings.NOTIFY_WEEKLY_CC),
     gymName: String(settings.GYM_NAME || 'LSC').trim() || 'LSC',
     receiptSubject: String(settings.NOTIFY_RECEIPT_SUBJECT || DEFAULT_NOTIFY_RECEIPT_SUBJECT),
-    receiptBody: String(settings.NOTIFY_RECEIPT_BODY || DEFAULT_NOTIFY_RECEIPT_BODY),
+    receiptBody: useCurrentTemplate_(settings.NOTIFY_RECEIPT_BODY, LEGACY_NOTIFY_RECEIPT_BODY, DEFAULT_NOTIFY_RECEIPT_BODY),
     weeklySubject: String(settings.NOTIFY_WEEKLY_SUBJECT || DEFAULT_NOTIFY_WEEKLY_SUBJECT),
     weeklyIntro: String(settings.NOTIFY_WEEKLY_INTRO || DEFAULT_NOTIFY_WEEKLY_INTRO),
     weeklyFields: parseWeeklyFields_(settings.NOTIFY_WEEKLY_FIELDS)
@@ -114,9 +121,23 @@ function firstNameFromFull_(value, fallback) {
   return text.split(' ')[0];
 }
 
+function useCurrentTemplate_(stored, legacy, current) {
+  const normalize = function(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ');
+  };
+  const text = String(stored || '').trim();
+  if (!text || normalize(text) === normalize(legacy)) return current;
+  return text;
+}
+
 function applyTemplate_(template, vars) {
-  return String(template || '').replace(/\{\{(\w+)\}\}/g, function(match, key) {
-    return vars[key] !== undefined && vars[key] !== null ? String(vars[key]) : '';
+  const lookup = {};
+  Object.keys(vars || {}).forEach(function(key) {
+    lookup[String(key).toLowerCase()] = vars[key];
+  });
+  return String(template || '').replace(/\{\{\s*(\w+)\s*\}\}/g, function(match, key) {
+    const value = lookup[String(key).toLowerCase()];
+    return value !== undefined && value !== null ? String(value) : '';
   });
 }
 
@@ -178,9 +199,11 @@ function resolveDropdownName_(options, id) {
 }
 
 function buildPaymentReceiptEmail_(member, payment, config, planName) {
+  const firstName = firstNameFromFull_(member.fullName, 'Member');
   const vars = {
     gymName: config.gymName,
-    memberName: firstNameFromFull_(member.fullName, 'Member'),
+    memberName: firstName,
+    name: firstName,
     plan: planName || 'membership',
     amount: formatMoneyForEmail_(payment.amount),
     paidDate: formatDateForEmail_(payment.paidDate || payment.date),
@@ -575,15 +598,16 @@ function fillWhatsAppSample_(template, kind, gymName) {
   };
   return String(template || '').replace(/\{\{\s*([a-zA-Z]+)\s*\}\}/g, function(_, raw) {
     const key = String(raw || '').toLowerCase();
+    if (key === 'name' || key === 'membername') return sample.name;
     return sample[key] != null ? sample[key] : '';
   });
 }
 
 function defaultWhatsAppBody_(kind) {
   if (kind === 'waoverdue') {
-    return 'Hi {{name}},\n\nThis is a friendly reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} was due on {{dueDate}} and is now overdue by {{days}} day(s).\n\nPlease complete the payment at your earliest convenience. Thank you!';
+    return 'Dear {{memberName}},\n\nYour renewal was due on {{dueDate}} and is {{days}} day(s) overdue.\n\nThank you!';
   }
-  return 'Hi {{name}},\n\nA quick reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} is due on {{dueDate}} ({{days}} day(s) left).\n\nPlease arrange payment before the due date. Thank you!';
+  return 'Dear {{memberName}},\n\nA quick reminder for your upcoming renewal due on {{dueDate}}. {{days}} day(s) left.\n\nThank you!';
 }
 
 function api_sendTestNotificationEmail(type, draftConfig) {
