@@ -90,10 +90,11 @@ describe('notification report helpers', () => {
       'Quarterly'
     );
     expect(mail.subject).toContain('Payment confirmation');
-    expect(mail.htmlBody).toContain('Bishwajit');
+    expect(mail.htmlBody).toContain('Dear Bishwajit');
+    expect(mail.htmlBody).toContain('Renewed on:');
+    expect(mail.htmlBody).toContain('1-Oct-2026');
+    expect(mail.htmlBody).toContain('31-Dec-2026');
     expect(mail.htmlBody).not.toContain('Bishwajit Roy');
-    expect(mail.htmlBody).toContain('Quarterly');
-    expect(mail.htmlBody).toContain('Lakeside');
   });
 
   test('api_sendTestNotificationEmail sends sample receipt to signed-in admin', () => {
