@@ -1178,6 +1178,8 @@
                 plan: planLabel,
                 amount: Number(pAmt) || 0,
                 date: this.formatDateDDMMMYYYY(p.paidDate),
+                paidDate: this.formatDateDDMMMYYYY(p.paidDate),
+                endDate: p.endDate ? this.formatDateDDMMMYYYY(p.endDate) : '',
                 period: periodText
               };
               const waRowJson = JSON.stringify(waRow).replace(/"/g, '&quot;');

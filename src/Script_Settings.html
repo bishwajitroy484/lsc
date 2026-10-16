@@ -37,16 +37,12 @@
       receipt: {
         subject: '{{gymName}} — Payment confirmation',
         body:
-          'Hi {{memberName}},\n\n' +
-          'Thank you for your payment at {{gymName}}. Your membership has been updated successfully.\n\n' +
-          'Plan: {{plan}}\n' +
-          'Amount paid: {{amount}}\n' +
-          'Payment date: {{paidDate}}\n' +
-          'Coverage period: {{startDate}} to {{endDate}}\n' +
-          'Member ID: {{memberId}}\n\n' +
-          'If you have any questions, please reply to this email or contact the front desk.\n\n' +
-          'Warm regards,\n' +
-          '{{gymName}} Team'
+          'Dear {{memberName}},\n\n' +
+          'Thank you for your renewal. Please note your Membership details.\n' +
+          'Renewed on: {{paidDate}}\n' +
+          'validity: {{endDate}}\n\n' +
+          'Please save this message. I will do too.\n' +
+          'Thank you.'
       },
       weekly: {
         subject: '{{gymName}} — Weekly renewal report ({{rangeLabel}})',
@@ -60,21 +56,31 @@
       waOverdue: {
         subject: '',
         body:
-          'Hi {{name}},\n\n' +
-          'This is a friendly reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} was due on {{dueDate}} and is now overdue by {{days}} day(s).\n\n' +
-          'Please complete the payment at your earliest convenience. Thank you!'
+          'Dear {{memberName}},\n\n' +
+          'Your renewal was due on {{dueDate}} and is {{days}} day(s) overdue.\n\n' +
+          'Thank you!'
       },
       waUpcoming: {
         subject: '',
         body:
-          'Hi {{name}},\n\n' +
-          'A quick reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} is due on {{dueDate}} ({{days}} day(s) left).\n\n' +
-          'Please arrange payment before the due date. Thank you!'
+          'Dear {{memberName}},\n\n' +
+          'A quick reminder for your upcoming renewal due on {{dueDate}}. {{days}} day(s) left.\n\n' +
+          'Thank you!'
       }
     },
 
     safeSetText: AppUtils.safeSetText,
     safeSetValue: AppUtils.safeSetValue,
+
+    isPreviousTemplate: function(value, kind) {
+      const previous = {
+        receipt: 'Hi {{memberName}}, Thank you for your payment at {{gymName}}. Your membership has been updated successfully. Plan: {{plan}} Amount paid: {{amount}} Payment date: {{paidDate}} Coverage period: {{startDate}} to {{endDate}} Member ID: {{memberId}} If you have any questions, please reply to this email or contact the front desk. Warm regards, {{gymName}} Team',
+        waOverdue: 'Hi {{name}}, This is a friendly reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} was due on {{dueDate}} and is now overdue by {{days}} day(s). Please complete the payment at your earliest convenience. Thank you!',
+        waUpcoming: 'Hi {{name}}, A quick reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} is due on {{dueDate}} ({{days}} day(s) left). Please arrange payment before the due date. Thank you!'
+      };
+      const normalize = function(text) { return String(text || '').trim().replace(/\s+/g, ' '); };
+      return normalize(value) === normalize(previous[kind]);
+    },
 
     showToast: function(msg, isError = false) {
       if (typeof Toast !== 'undefined') {
@@ -1079,15 +1085,21 @@
        const receiptSubject = document.getElementById('gen-NOTIFY_RECEIPT_SUBJECT');
        const receiptBody = document.getElementById('gen-NOTIFY_RECEIPT_BODY');
        if (receiptSubject && !String(receiptSubject.value || '').trim()) receiptSubject.value = this.defaultTemplates.receipt.subject;
-       if (receiptBody && !String(receiptBody.value || '').trim()) receiptBody.value = this.defaultTemplates.receipt.body;
+       if (receiptBody && (!String(receiptBody.value || '').trim() || this.isPreviousTemplate(receiptBody.value, 'receipt'))) {
+         receiptBody.value = this.defaultTemplates.receipt.body;
+       }
        const weeklySubject = document.getElementById('gen-NOTIFY_WEEKLY_SUBJECT');
        const weeklyIntro = document.getElementById('gen-NOTIFY_WEEKLY_INTRO');
        if (weeklySubject && !String(weeklySubject.value || '').trim()) weeklySubject.value = this.defaultTemplates.weekly.subject;
        if (weeklyIntro && !String(weeklyIntro.value || '').trim()) weeklyIntro.value = this.defaultTemplates.weekly.body;
        const waOverdue = document.getElementById('gen-NOTIFY_WA_OVERDUE');
        const waUpcoming = document.getElementById('gen-NOTIFY_WA_UPCOMING');
-       if (waOverdue && !String(waOverdue.value || '').trim()) waOverdue.value = this.defaultTemplates.waOverdue.body;
-       if (waUpcoming && !String(waUpcoming.value || '').trim()) waUpcoming.value = this.defaultTemplates.waUpcoming.body;
+       if (waOverdue && (!String(waOverdue.value || '').trim() || this.isPreviousTemplate(waOverdue.value, 'waOverdue'))) {
+         waOverdue.value = this.defaultTemplates.waOverdue.body;
+       }
+       if (waUpcoming && (!String(waUpcoming.value || '').trim() || this.isPreviousTemplate(waUpcoming.value, 'waUpcoming'))) {
+         waUpcoming.value = this.defaultTemplates.waUpcoming.body;
+       }
 
        this.applyWeeklyFieldsToUI();
        this.syncWeeklyFields();
@@ -1446,14 +1458,14 @@
       } else if (this.editingMessageType === 'waOverdue') {
         if (titleEl) titleEl.textContent = 'Overdue WhatsApp message';
         if (hintEl) hintEl.textContent = 'This message opens in WhatsApp when Notify is tapped on an overdue member.';
-        if (placeholdersEl) placeholdersEl.textContent = 'Placeholders: {{name}}, {{amount}}, {{dueDate}}, {{days}}, {{plan}}, {{gymName}}';
+        if (placeholdersEl) placeholdersEl.textContent = 'Placeholders: {{memberName}}, {{dueDate}}, {{days}}, {{plan}}, {{amount}}, {{gymName}}';
         const b = document.getElementById('gen-NOTIFY_WA_OVERDUE');
         if (subjectEl) subjectEl.value = '';
         if (bodyEl) bodyEl.value = (b && b.value) || this.defaultTemplates.waOverdue.body;
       } else {
         if (titleEl) titleEl.textContent = 'Upcoming WhatsApp message';
         if (hintEl) hintEl.textContent = 'This message opens in WhatsApp when Notify is tapped on an upcoming renewal.';
-        if (placeholdersEl) placeholdersEl.textContent = 'Placeholders: {{name}}, {{amount}}, {{dueDate}}, {{days}}, {{plan}}, {{gymName}}';
+        if (placeholdersEl) placeholdersEl.textContent = 'Placeholders: {{memberName}}, {{dueDate}}, {{days}}, {{plan}}, {{amount}}, {{gymName}}';
         const b = document.getElementById('gen-NOTIFY_WA_UPCOMING');
         if (subjectEl) subjectEl.value = '';
         if (bodyEl) bodyEl.value = (b && b.value) || this.defaultTemplates.waUpcoming.body;
@@ -1555,6 +1567,7 @@
       };
       const text = String(template).replace(/\{\{\s*([a-zA-Z]+)\s*\}\}/g, function(_, raw) {
         const key = String(raw || '').toLowerCase();
+        if (key === 'name' || key === 'membername') return sample.name;
         if (key === 'gym' || key === 'gymname') return sample.gym;
         if (key === 'duedate' || key === 'due') return sample.dueDate;
         return sample[key] != null ? String(sample[key]) : '';
