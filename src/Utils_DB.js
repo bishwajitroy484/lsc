@@ -446,6 +446,7 @@ if (typeof module !== 'undefined' && module.exports) {
     _colToLetter,
     parseSafeDate,
     distributeDailyProration,
+    ensurePauseStatusOption_,
     SPREADSHEET_ID,
     DB
   };
@@ -542,6 +543,8 @@ function api_getGlobalDropdowns() {
       });
     }
 
+    ensurePauseStatusOption_(schemaMetaMap, globalOptions);
+
     return {
       success: true,
       data: {
@@ -555,6 +558,55 @@ function api_getGlobalDropdowns() {
   }
 }
 
+function findStatusSchema_(schemaMetaMap) {
+  const keys = Object.keys(schemaMetaMap || {});
+  for (let i = 0; i < keys.length; i++) {
+    const schema = schemaMetaMap[keys[i]];
+    if (!schema) continue;
+    const key = String(schema.key || '').trim().toLowerCase();
+    const name = String(schema.name || '').trim().toLowerCase();
+    if (key === 'status' || name === 'status' || name === 'account status' || name === 'member status') return schema;
+  }
+  return null;
+}
+
+function ensurePauseStatusOption_(schemaMetaMap, globalOptions) {
+  try {
+    if (typeof Sheets === 'undefined' || !Sheets.Spreadsheets || !Sheets.Spreadsheets.Values || typeof SPREADSHEET_ID === 'undefined' || typeof _colToLetter !== 'function') return;
+    const schema = findStatusSchema_(schemaMetaMap);
+    if (!schema || !schema.startCol || !schema.numCols) return;
+    const list = globalOptions[schema.key] || [];
+    const exists = list.some(function(opt) {
+      return String(opt.name || opt.label || '').toLowerCase().indexOf('paus') >= 0;
+    });
+    if (exists) return;
+    const prefix = String(schema.prefix || 'STA').replace(/[^A-Za-z0-9]/g, '').toUpperCase() || 'STA';
+    let id = prefix + '-PAUSE';
+    if (list.some(function(opt) { return String(opt.id) === id; })) id = prefix + '-PAUSE-' + (list.length + 1);
+    const columns = schema.columns && schema.columns.length ? schema.columns : [{ key: 'id' }, { key: 'name' }];
+    const option = {};
+    columns.forEach(function(col) {
+      if (col.key === 'id') option.id = id;
+      else if (col.key === 'name' || col.key === 'label') option[col.key] = 'Pause';
+      else option[col.key] = '';
+    });
+    if (!option.id) option.id = id;
+    if (!option.name && !option.label) option.name = 'Pause';
+    const row = columns.map(function(col) { return option[col.key] != null ? option[col.key] : ''; });
+    const startLetter = _colToLetter(schema.startCol);
+    const rowIndex = 3 + list.length;
+    Sheets.Spreadsheets.Values.update(
+      { values: [row] },
+      SPREADSHEET_ID,
+      "'DROP_DOWN'!" + startLetter + rowIndex,
+      { valueInputOption: 'USER_ENTERED' }
+    );
+    list.push(option);
+    globalOptions[schema.key] = list;
+  } catch (error) {
+    // Leave the existing status list unchanged when the sheet cannot be updated.
+  }
+}
 
 /**
  * Generates a prefixed unique ID.

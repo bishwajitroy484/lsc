@@ -101,7 +101,19 @@ function releaseExpiredMemberPauses_(members, asOfDate) {
     end.setHours(0, 0, 0, 0);
     if (end >= today) return;
     member.holdStatus = '';
-    DB.update('MEMBERS', member.memberId, { holdStatus: '' });
+    const payload = { holdStatus: '' };
+    const statuses = memberStatusOptions_();
+    const activeId = statusOptionId_(statuses, function(item) {
+      return isActiveStatusLabel_(item.name || item.label || item.id);
+    });
+    const currentIsPause = String(member.status || '').toLowerCase().indexOf('paus') >= 0 || statuses.some(function(item) {
+      return String(item.id || item.value || '') === String(member.status) && String(item.name || item.label || '').toLowerCase().indexOf('paus') >= 0;
+    });
+    if (activeId && currentIsPause) {
+      member.status = activeId;
+      payload.status = activeId;
+    }
+    DB.update('MEMBERS', member.memberId, payload);
     if (typeof syncMemberDueCalendarEvent_ === 'function') syncMemberDueCalendarEvent_(member.memberId);
   });
 }
@@ -390,6 +402,22 @@ function isAdHocCoveragePayment_(payment) {
   return String(payment && payment.coverageKind || '').toLowerCase().replace(/[\s_-]+/g, '').indexOf('adhoc') >= 0;
 }
 
+function memberStatusOptions_() {
+  try {
+    if (typeof api_getGlobalDropdowns !== 'function') return [];
+    const data = api_getGlobalDropdowns();
+    const options = data && data.success && data.data && data.data.options;
+    return (options && (options.status || options.Status)) || [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function statusOptionId_(statuses, matcher) {
+  const hit = (statuses || []).find(matcher);
+  return hit ? String(hit.id || hit.value || '') : '';
+}
+
 function clearMemberHold_(memberId) {
   if (!memberId) return;
   const headers = ensureMemberHoldHeaders_();
@@ -399,6 +427,15 @@ function clearMemberHold_(memberId) {
   });
   if (!existing || String(existing.holdStatus || '').toLowerCase().indexOf('paus') < 0) return;
   const payload = { holdStatus: '', holdStart: '', holdDays: '', holdEnd: '' };
+  const statuses = memberStatusOptions_();
+  const activeId = statusOptionId_(statuses, function(item) {
+    return isActiveStatusLabel_(item.name || item.label || item.id);
+  });
+  const currentName = String(existing.status || '').toLowerCase();
+  const currentIsPause = currentName.indexOf('paus') >= 0 || statuses.some(function(item) {
+    return String(item.id || item.value || '') === String(existing.status) && String(item.name || item.label || '').toLowerCase().indexOf('paus') >= 0;
+  });
+  if (activeId && currentIsPause) payload.status = activeId;
   if (headers && headers.length) DB.update('MEMBERS', memberId, payload, headers);
   else DB.update('MEMBERS', memberId, payload);
 }
@@ -433,7 +470,11 @@ function applyAccountPause_(memberData, existing) {
   memberData.holdStart = formatHoldDate_(startDate);
   memberData.holdDays = String(days);
   memberData.holdEnd = formatHoldDate_(endDate);
-  if (String(memberData.status || '') === '__PAUSE__') {
+  const pauseId = statusOptionId_(memberStatusOptions_(), function(item) {
+    return String(item.name || item.label || '').toLowerCase().indexOf('paus') >= 0;
+  });
+  if (pauseId) memberData.status = pauseId;
+  else if (String(memberData.status || '') === '__PAUSE__') {
     if (existing && existing.status) memberData.status = existing.status;
     else delete memberData.status;
   }

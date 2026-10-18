@@ -545,7 +545,9 @@
       const plans = this.dropdowns.membership || [];
       const batches = this.dropdowns.batch || [];
       const statuses = this.dropdowns.status || [];
-      const payStatuses = this.dropdowns.paymentstatus || this.dropdowns.status || [];
+      const payStatuses = (this.dropdowns.paymentstatus || this.dropdowns.status || []).filter(function(opt) {
+        return String(opt.name || opt.label || '').toLowerCase().indexOf('paus') < 0;
+      });
       
       this.populateSelect('mem-plan', plans);
       this.populateSelect('mem-batch', batches, 'groups');
@@ -569,7 +571,7 @@
       if (Array.isArray(statuses)) {
         statuses.forEach(opt => {
           const name = opt.name || opt.id;
-          if (name && name.toLowerCase() !== 'active') {
+          if (name && name.toLowerCase() !== 'active' && name.toLowerCase().indexOf('paus') < 0) {
             html += `<option value="${opt.id}">${name}</option>`;
           }
         });
@@ -1552,6 +1554,12 @@
       }
     },
 
+    pauseStatusId: function() {
+      const statuses = this.dropdowns.status || [];
+      const match = statuses.find(opt => String(opt.name || opt.label || '').toLowerCase().indexOf('paus') >= 0);
+      return match ? match.id : '';
+    },
+
     activeStatusId: function() {
       const statuses = this.dropdowns.status || [];
       const active = statuses.find(opt => String(opt.name || opt.label || opt.id || '').trim().toLowerCase() === 'active');
@@ -1672,9 +1680,9 @@
       if (statusField) statusField.classList.toggle('hidden', !member);
       this.ensurePauseStatusChoice();
       const statusEl = document.getElementById('mem-status');
-      if (member && this.isMemberPaused(member)) {
-        const pauseOpt = Array.from(statusEl.options || []).find(opt => String(opt.value) === '__PAUSE__' || /paus/i.test(String(opt.textContent || opt.innerText || '')));
-        statusEl.value = pauseOpt ? pauseOpt.value : '__PAUSE__';
+      if (member && (this.isMemberPaused(member) || this.isPauseStatusChoice(member.status))) {
+        const pauseOpt = Array.from(statusEl.options || []).find(opt => String(opt.value) === '__PAUSE__' || /paus/i.test(String(opt.textContent || opt.innerText || opt.value || '')));
+        statusEl.value = (pauseOpt && pauseOpt.value) || this.pauseStatusId() || '__PAUSE__';
       } else {
         statusEl.value = member ? member.status : (this.activeStatusId() || statusEl.options[1]?.value || '');
       }
@@ -1764,7 +1772,7 @@
         gender: document.getElementById('mem-gender').value,
         email: document.getElementById('mem-email').value,
         status: pausing
-          ? (this.activeStatusId() || (this.currentActiveMember && this.currentActiveMember.status) || '')
+          ? (this.pauseStatusId() || statusId)
           : (isNew ? (this.activeStatusId() || statusId) : statusId),
         accountPause: pausing,
         pauseDays: pausing ? pauseDays : 0,
