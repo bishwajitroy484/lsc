@@ -71,7 +71,7 @@ Record Payment and Edit Payment use one compact form. Coverage start and end sit
 - An optional receipt image is uploaded to Drive, the same way as a member photo. Payment history links that image.
 - On a new member, leave both amounts at 0 to skip the first payment. On Record or Edit, at least one amount must be greater than 0.
 - Payment mode is stored as the dropdown key: Cash, UPI, or Split. History shows the mode name plus the cash and UPI amounts.
-- A partial payment still covers that cycle, so the next due date moves to the cycle end. The member list, member detail, and payment history show **Partial** and the pending amount. Adding the rest on that same payment clears the balance.
+- A partial payment still covers that cycle, so the next due date moves to the cycle end. The member list, member detail, and payment history show **Partial** and the pending amount. The top Pay button and that history row collect the remaining balance on the same start and end. The next cycle is offered only after that balance is fully paid. Adding the rest on that same payment clears the balance.
 - A new member is always **Active**. Member status is edited later, not on create. Trial and Ad hoc (including Ad-hoc) require an exit date. The add form keeps initial payment open under membership. Personal details sit in three rows: image and name, date of birth and phone, then gender and email.
 
 ## Notes fields

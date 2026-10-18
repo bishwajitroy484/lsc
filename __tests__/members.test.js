@@ -893,6 +893,62 @@ describe('Members Module', () => {
 
       MembersApp.dropdowns = originalDropdowns;
     });
+
+    it('uses the same cycle for the top Pay button and the first unpaid row', () => {
+      const originalDropdowns = MembersApp.dropdowns;
+      MembersApp.dropdowns = {
+        membership: [{ id: 'PLAN-Q', name: 'Quarterly', frequency: 'Quarterly' }],
+        paymentstatus: [{ id: 'PAID', name: 'Paid' }, { id: 'PEND', name: 'Pending' }],
+        status: [{ id: 'STATUS-ACTIVE', name: 'Active' }]
+      };
+      MembersApp.currentActiveMember = {
+        memberId: 'M1',
+        fullName: 'Supreet Kaur',
+        membershipId: 'PLAN-Q',
+        membershipAmount: 30000,
+        status: 'STATUS-ACTIVE',
+        joinDate: '2026-01-15'
+      };
+      MembersApp.currentMemberPayments = [{
+        paymentId: 'P1',
+        paymentStatus: 'PAID',
+        amount: 30000,
+        startDate: '2026-01-15',
+        endDate: '2026-04-15',
+        paidDate: '2026-01-15'
+      }];
+      MembersApp.effectiveDueDate = new Date(2026, 3, 15);
+      const cycles = MembersApp.virtualPaymentCycles();
+      expect(cycles[0].cycleLabel).toBe('Missed Cycle 1');
+      expect(MembersApp.payableTarget().virtualStartDate).toBe(cycles[0].virtualStartDate);
+      expect(MembersApp.payableTarget().virtualEndDate).toBe(cycles[0].virtualEndDate);
+
+      MembersApp.openRecordPayment();
+      expect(document.getElementById('pay-modal-title').innerText).toBe('Record Payment');
+      expect(document.getElementById('pay-cycle-label').textContent).toBe('Missed Cycle 1');
+      expect(MembersApp.formatDateDDMMMYYYY(document.getElementById('pay-start').value)).toBe(cycles[0].virtualStartDate);
+      expect(MembersApp.formatDateDDMMMYYYY(document.getElementById('pay-end').value)).toBe(cycles[0].virtualEndDate);
+      expect(document.getElementById('pay-start').readOnly).toBe(true);
+
+      MembersApp.currentMemberPayments.push({
+        paymentId: 'P2',
+        paymentStatus: 'PEND',
+        amount: 15000,
+        pendingAmount: 15000,
+        expectedAmount: 30000,
+        startDate: '2026-04-15',
+        endDate: '2026-07-14',
+        paidDate: '2026-04-15'
+      });
+      expect(MembersApp.virtualPaymentCycles()).toHaveLength(0);
+      MembersApp.openRecordPayment();
+      expect(document.getElementById('pay-modal-title').innerText).toBe('Pay balance');
+      expect(document.getElementById('pay-id').value).toBe('P2');
+      expect(document.getElementById('pay-cycle-label').textContent).toBe('Balance due');
+      expect(MembersApp.formatDateDDMMMYYYY(document.getElementById('pay-start').value)).toBe(MembersApp.formatDateDDMMMYYYY('2026-04-15'));
+      expect(MembersApp.formatDateDDMMMYYYY(document.getElementById('pay-end').value)).toBe(MembersApp.formatDateDDMMMYYYY('2026-07-14'));
+      MembersApp.dropdowns = originalDropdowns;
+    });
   });
 
   test('record payment leads with coverage and shimmers the detail before the refresh', () => {
@@ -904,6 +960,8 @@ describe('Members Module', () => {
     expect(form.indexOf('id="pay-coverage-container"')).toBeLessThan(form.indexOf('id="pay-header-due"'));
     expect(form.indexOf('id="pay-start"')).toBeLessThan(form.indexOf('id="pay-end"'));
     expect(form.indexOf('id="pay-end"')).toBeLessThan(form.indexOf('id="pay-date"'));
+    expect(form).toContain('id="pay-cycle-label"');
+    expect(form).toContain('id="pay-custom-dates"');
     expect(form.indexOf('id="pay-date"')).toBeLessThan(form.indexOf('id="pay-lines"'));
     expect(form).not.toContain('id="pay-cash"');
     const insight = scriptHtml.slice(scriptHtml.indexOf('renderChart: function'), scriptHtml.indexOf('this._lastChartWidth'));

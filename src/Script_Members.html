@@ -1026,70 +1026,126 @@
       }, 300);
     },
 
+    dateFromParts: function(value) {
+      if (value instanceof Date && !isNaN(value.getTime())) {
+        return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+      }
+      const iso = this.parseToISODate(value);
+      const match = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!match) return null;
+      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    },
+
+    openPartialPayment: function() {
+      const partials = (this.currentMemberPayments || []).filter(p => this.isPartialPayment(p));
+      partials.sort((a, b) => {
+        const aDate = this.dateFromParts(a.endDate || a.paidDate) || new Date(0);
+        const bDate = this.dateFromParts(b.endDate || b.paidDate) || new Date(0);
+        return aDate - bDate;
+      });
+      return partials[0] || null;
+    },
+
+    virtualPaymentCycles: function() {
+      const m = this.currentActiveMember;
+      if (!m || this.openPartialPayment()) return [];
+      let currentDue = this.effectiveDueDate ? this.dateFromParts(this.effectiveDueDate) : null;
+      if (!currentDue || isNaN(currentDue.getTime())) return [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const plans = this.dropdowns.membership || [];
+      const planMatch = plans.find(p => String(p.id) === String(m.membershipId));
+      const planName = String(`${planMatch && planMatch.name ? planMatch.name : ''} ${planMatch && planMatch.frequency ? planMatch.frequency : ''}`);
+      const paidCount = (this.currentMemberPayments || []).filter(p => this.isPaidPayment(p)).length;
+      const isNonRecurring = this.isNonRecurringPlan(planMatch || m.membershipId);
+      const statusName = this.getName('status', m.status).toLowerCase();
+      const isActive = !statusName.includes('inactive') && !statusName.includes('in-active') && !statusName.includes('exit');
+      const maxCycles = isNonRecurring ? (paidCount > 0 ? 0 : 1) : 36;
+      const cycles = [];
+      let iterCount = 1;
+      while (currentDue < today && iterCount <= maxCycles) {
+        const vStart = new Date(currentDue);
+        const vEnd = this.cycleEndFromStart(vStart, planName);
+        cycles.push({
+          isVirtual: true,
+          cycleLabel: isNonRecurring ? 'Expired / Unpaid' : ('Missed Cycle ' + iterCount),
+          paidDate: this.formatDateDDMMMYYYY(vStart),
+          amount: m.membershipAmount || 0,
+          paymentMode: 'Unpaid',
+          paymentStatus: 'OVERDUE',
+          virtualStartDate: this.formatDateDDMMMYYYY(vStart),
+          virtualEndDate: this.formatDateDDMMMYYYY(vEnd)
+        });
+        currentDue = this.dateFromParts(this.nextCycleStart(vEnd, planName)) || this.nextCycleStart(vEnd, planName);
+        iterCount++;
+      }
+      if (isActive && !isNonRecurring && iterCount <= maxCycles && currentDue >= today) {
+        const vStart = new Date(currentDue);
+        const vEnd = this.cycleEndFromStart(vStart, planName);
+        cycles.push({
+          isVirtual: true,
+          cycleLabel: 'Upcoming Cycle',
+          paidDate: this.formatDateDDMMMYYYY(vStart),
+          amount: m.membershipAmount || 0,
+          paymentMode: 'Pending',
+          paymentStatus: 'UPCOMING',
+          virtualStartDate: this.formatDateDDMMMYYYY(vStart),
+          virtualEndDate: this.formatDateDDMMMYYYY(vEnd)
+        });
+      }
+      return cycles;
+    },
+
+    payableTarget: function() {
+      return this.openPartialPayment() || this.virtualPaymentCycles()[0] || null;
+    },
+
+    applyCoverageLock: function(locked, label) {
+      this._payCycleLabel = label || '';
+      const custom = document.getElementById('pay-custom-dates');
+      const wrap = document.getElementById('pay-custom-wrap');
+      const note = document.getElementById('pay-cycle-label');
+      if (custom) custom.checked = false;
+      if (wrap) wrap.classList.toggle('hidden', !locked);
+      if (note) {
+        note.textContent = label || '';
+        note.classList.toggle('hidden', !label);
+      }
+      ['pay-start', 'pay-end'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.readOnly = !!locked;
+        if (el._flatpickr) {
+          el._flatpickr.set('clickOpens', !locked);
+          el._flatpickr.set('allowInput', !locked);
+        }
+      });
+    },
+
+    toggleCustomCoverage: function() {
+      const custom = document.getElementById('pay-custom-dates');
+      const on = !!(custom && custom.checked);
+      const note = document.getElementById('pay-cycle-label');
+      if (note) {
+        note.textContent = on ? 'Custom period' : (this._payCycleLabel || '');
+        note.classList.toggle('hidden', !(note.textContent));
+      }
+      ['pay-start', 'pay-end'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.readOnly = !on;
+        if (el._flatpickr) {
+          el._flatpickr.set('clickOpens', on);
+          el._flatpickr.set('allowInput', on);
+        }
+      });
+    },
+
     renderPaymentHistory: function() {
       const tBody = document.getElementById('det-history-body');
       const cardList = document.getElementById('det-history-cards');
-      
-      let virtualRecords = [];
       const m = this.currentActiveMember;
-      let currentDue = this.effectiveDueDate ? new Date(this.effectiveDueDate) : null;
-      let today = new Date();
-      today.setHours(0,0,0,0);
-      
-      const mainStatusName = this.getName('status', m.status).toLowerCase();
-      const isActive = !mainStatusName.includes('inactive') && !mainStatusName.includes('in-active') && !mainStatusName.includes('exit');
-
-      if (currentDue && !isNaN(currentDue)) {
-          const plans = this.dropdowns.membership || [];
-          const planMatch = plans.find(p => p.id === m.membershipId);
-          const planName = String(`${planMatch && planMatch.name ? planMatch.name : ''} ${planMatch && planMatch.frequency ? planMatch.frequency : ''}`).toUpperCase();
-          
-          const validPaymentsCount = this.currentMemberPayments.filter(p => {
-              return this.isPaidPayment(p);
-          }).length;
-
-          const isNonRecurring = this.isNonRecurringPlan(planMatch);
-          const maxCycles = isNonRecurring ? (validPaymentsCount > 0 ? 0 : 1) : 36;
-          
-          let iterCount = 1;
-          
-          while (currentDue < today && iterCount <= maxCycles) {
-              let vStart = new Date(currentDue);
-              let vEnd = this.cycleEndFromStart(vStart, planName);
-              
-              const cycleText = isNonRecurring ? 'Expired / Unpaid' : `Missed Cycle ${iterCount}`;
-
-              virtualRecords.push({
-                  isVirtual: true,
-                  cycleLabel: cycleText,
-                  paidDate: this.formatDateDDMMMYYYY(vStart), 
-                  amount: m.membershipAmount || 0,
-                  paymentMode: 'Unpaid',
-                  paymentStatus: 'OVERDUE',
-                  virtualStartDate: vStart.toISOString(), 
-                  virtualEndDate: vEnd.toISOString()
-              });
-              
-              currentDue = this.nextCycleStart(vEnd, planName);
-              iterCount++;
-          }
-          
-          if (isActive && !isNonRecurring && iterCount <= maxCycles && currentDue >= today) {
-              let vStart = new Date(currentDue);
-              let vEnd = this.cycleEndFromStart(vStart, planName); 
-              
-              virtualRecords.push({
-                  isVirtual: true,
-                  cycleLabel: 'Upcoming Cycle',
-                  paidDate: this.formatDateDDMMMYYYY(vStart), 
-                  amount: m.membershipAmount || 0,
-                  paymentMode: 'Pending',
-                  paymentStatus: 'UPCOMING',
-                  virtualStartDate: vStart.toISOString(), 
-                  virtualEndDate: vEnd.toISOString()
-              });
-          }
-      }
+      const virtualRecords = this.virtualPaymentCycles();
 
       let combinedHistory = [...this.currentMemberPayments, ...virtualRecords];
       combinedHistory.sort((a,b) => new Date(this.parseToISODate(b.paidDate)) - new Date(this.parseToISODate(a.paidDate)));
@@ -1123,7 +1179,7 @@
             const statusLabel = isUpcoming ? 'Upcoming' : 'Overdue';
             const badgeClass = isUpcoming ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-red-600 bg-red-50 border-red-200';
             const waType = isUpcoming ? 'upcoming' : 'overdue';
-            const dueDateObj = new Date(p.virtualStartDate);
+            const dueDateObj = this.dateFromParts(p.virtualStartDate) || new Date(p.virtualStartDate);
             const daysDiff = WhatsAppNotify.daysBetween(dueDateObj, todayForWa);
             const waRow = {
               name: memberName,
@@ -1823,25 +1879,31 @@
     },
 
     openRecordPayment: function(payment = null) {
+      if (!payment) payment = this.payableTarget();
       const isEdit = payment && payment.paymentId && !payment.isVirtual;
       if (typeof AccessControl !== 'undefined' && AccessControl.deny('members', isEdit ? 'edit' : 'create')) return;
       const m = this.currentActiveMember;
       if(!m) return;
       const fee = Number(String(m.membershipAmount || 0).replace(/[^0-9.-]+/g, '')) || 0;
+      const isPartial = payment && this.isPartialPayment(payment);
+      const cycleLabel = payment && payment.isVirtual
+        ? (payment.cycleLabel || '')
+        : (isPartial ? 'Balance due' : '');
 
       if (payment && payment.isVirtual) {
-          document.getElementById('pay-modal-title').innerText = payment.paymentStatus === 'UPCOMING' ? 'Record Payment' : 'Record Payment';
+          document.getElementById('pay-modal-title').innerText = 'Record Payment';
           document.getElementById('pay-id').value = '';
           const rawAmt = Number(String(payment.amount || fee).replace(/[^0-9.-]+/g, '')) || fee;
           this.renderPaymentLines('pay-lines', [{ mode: 'cash', amount: '' }], 'MembersApp.syncPaymentAmount()');
           this.setExpectedFee(rawAmt);
           this.setReceiptPreview('');
           this.setDatePicker('pay-date', new Date());
-          this.setDatePicker('pay-start', new Date(payment.virtualStartDate));
-          this.setDatePicker('pay-end', new Date(payment.virtualEndDate));
+          this.setDatePicker('pay-start', this.dateFromParts(payment.virtualStartDate) || payment.virtualStartDate);
+          this.setDatePicker('pay-end', this.dateFromParts(payment.virtualEndDate) || payment.virtualEndDate);
           document.getElementById('pay-header-due').innerText = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'Auto-calculated after payment';
+          this.applyCoverageLock(true, cycleLabel);
       } else {
-          document.getElementById('pay-modal-title').innerText = payment ? 'Edit Payment' : 'Record Payment';
+          document.getElementById('pay-modal-title').innerText = isPartial ? 'Pay balance' : (payment ? 'Edit Payment' : 'Record Payment');
           document.getElementById('pay-id').value = payment ? payment.paymentId : '';
           const expected = payment && payment.expectedAmount
             ? Number(String(payment.expectedAmount).replace(/[^0-9.-]+/g, ''))
@@ -1853,18 +1915,18 @@
 
           const plans = this.dropdowns.membership || [];
           const planMatch = plans.find(p => p.id === m.membershipId);
-          const planName = planMatch ? `${planMatch.name || ''} ${planMatch.frequency || ''}`.toUpperCase() : '';
+          const planName = planMatch ? `${planMatch.name || ''} ${planMatch.frequency || ''}` : '';
           let calcStartObj, calcEndObj;
           if (payment) {
-              calcStartObj = payment.startDate ? new Date(payment.startDate) : new Date();
-              calcEndObj = payment.endDate ? new Date(payment.endDate) : new Date();
+              calcStartObj = this.dateFromParts(payment.startDate) || new Date();
+              calcEndObj = this.dateFromParts(payment.endDate) || new Date();
           } else {
               const payments = this.currentMemberPayments || [];
-              const sortedPayments = [...payments].sort((a, b) => new Date(b.endDate || b.paidDate) - new Date(a.endDate || a.paidDate));
+              const sortedPayments = [...payments].sort((a, b) => new Date(this.parseToISODate(b.endDate || b.paidDate)) - new Date(this.parseToISODate(a.endDate || a.paidDate)));
               if (sortedPayments.length > 0 && sortedPayments[0].endDate) {
-                  calcStartObj = this.nextCycleStart(new Date(sortedPayments[0].endDate), planName);
+                  calcStartObj = this.nextCycleStart(this.dateFromParts(sortedPayments[0].endDate), planName);
               } else {
-                  calcStartObj = m.joinDate ? new Date(m.joinDate) : new Date();
+                  calcStartObj = m.joinDate ? (this.dateFromParts(m.joinDate) || new Date()) : new Date();
               }
               calcEndObj = this.cycleEndFromStart(calcStartObj, planName);
           }
@@ -1872,6 +1934,7 @@
           this.setDatePicker('pay-start', calcStartObj);
           this.setDatePicker('pay-end', calcEndObj);
           document.getElementById('pay-header-due').innerText = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'Auto-calculated after payment';
+          this.applyCoverageLock(!!isPartial, isPartial ? 'Balance due' : '');
       }
 
       document.getElementById('payment-modal').classList.remove('opacity-0', 'pointer-events-none');
