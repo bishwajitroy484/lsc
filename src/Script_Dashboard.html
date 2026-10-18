@@ -535,8 +535,8 @@
       window.AppCharts.revExp = new ApexCharts(elRevExp, window.AppChartConfigs.revExp);
       window.AppCharts.revExp.render();
       const sumSeries = (values) => (values || []).reduce((sum, value) => sum + (Number(value) || 0), 0);
-      safeSetText('revexp-sum-revenue', formatCurrency(sumSeries(data.charts.revenue)));
-      safeSetText('revexp-sum-expenses', formatCurrency(sumSeries(data.charts.expenses)));
+      safeSetText('revexp-sum-revenue', AppUtils.formatCurrency(sumSeries(data.charts.revenue)));
+      safeSetText('revexp-sum-expenses', AppUtils.formatCurrency(sumSeries(data.charts.expenses)));
     }
 
     // 2. Batch
