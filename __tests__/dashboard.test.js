@@ -361,6 +361,23 @@ describe('Dashboard Module', () => {
     expect(result.overdueList.filter(row => row.memberId === 'MEM-ADHOC')).toHaveLength(1);
   });
 
+  test('keeps a partial balance on the dashboard overdue table when coverage ends next year', () => {
+    const dashboardApi = loadDashboardApi('anchor', [], [
+      { memberId: 'MEM-NEXT', fullName: 'Supreet Kaur', membershipId: 'PLAN-2', membershipAmount: 10000, joinDate: '2026-07-15', status: 'Active', phone: '111' }
+    ], [
+      { memberId: 'MEM-NEXT', paymentStatus: 'Pending', amount: 5000, pendingAmount: 5000, expectedAmount: 10000, startDate: '2026-07-15', endDate: '2027-01-11', paidDate: '2026-07-15' }
+    ]);
+    const currentMonth = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][new Date().getMonth()];
+    const shown = dashboardApi.api_getDashboardMetrics(String(new Date().getFullYear()), 'Monthly', [currentMonth]);
+    const hidden = dashboardApi.api_getDashboardMetrics(String(new Date().getFullYear()), 'Monthly', ['Jan']);
+    const row = (shown.data.overdue || []).find(item => item.memberId === 'MEM-NEXT');
+    expect(row).toBeTruthy();
+    expect(row.amount).toBe(5000);
+    if (currentMonth !== 'Jan') {
+      expect((hidden.data.overdue || []).some(item => item.memberId === 'MEM-NEXT')).toBe(false);
+    }
+  });
+
   test('counts an open partial balance toward the forecast without treating it as received', () => {
     const dashboardApi = loadDashboardApi();
     const members = [{

@@ -117,7 +117,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
     const chartMetrics = formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today, expenseAverages, actualAnchor);
     const expenseBreakdown = formatExpenseBreakdown(financialData, mode, periods);
     const membership = summarizeMembershipForPeriods_(members, targetYear, mode, periods, resolveName, dropDowns);
-    const overdueRows = filterDashboardRowsToPeriods_(operationalData.overdueList, mode, periods, targetYear);
+    const overdueRows = filterDashboardRowsToPeriods_(operationalData.overdueList, mode, periods, targetYear, today);
     const periodOverdue = overdueRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
 
     // Dynamic Greeting Name Extraction based on Login Email
@@ -174,7 +174,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
           staffTrend: chartMetrics.filteredStaff
         },
         overdue: overdueRows,
-        upcoming: filterDashboardRowsToPeriods_(operationalData.upcomingList, mode, periods, targetYear),
+        upcoming: filterDashboardRowsToPeriods_(operationalData.upcomingList, mode, periods, targetYear, today),
         birthdays: operationalData.birthdayList || []
       }
     };
@@ -662,7 +662,10 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
        }
 
        const feeGap = isAdHocOrTrial ? Math.max(0, Math.round((amt - receivedByMember) * 100) / 100) : 0;
-       const owed = Math.round(Math.max(pendingExplicit, totalUnpaidForMember, feeGap) * 100) / 100;
+       const coverageStillOpen = actualNextDue && !isNaN(actualNextDue.getTime()) && actualNextDue >= today;
+       const owed = (coverageStillOpen && pendingExplicit > 0)
+         ? Math.round(pendingExplicit * 100) / 100
+         : Math.round(Math.max(pendingExplicit, totalUnpaidForMember, feeGap) * 100) / 100;
        const pNameLabel = resolveName('MEMBERS', 'membershipId', m.membershipId);
        const formatDue = (dateObj) => dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
 
@@ -979,12 +982,18 @@ function summarizeMembershipForPeriods_(members, targetYear, mode, periods, reso
   };
 }
 
-function filterDashboardRowsToPeriods_(rows, mode, periods, targetYear) {
+function filterDashboardRowsToPeriods_(rows, mode, periods, targetYear, today) {
   const monthIndexes = selectedMonthIndexes_(mode, periods);
+  const now = today ? new Date(today) : new Date();
+  now.setHours(0, 0, 0, 0);
+  const currentMonthSelected = now.getFullYear() === Number(targetYear) && monthIndexes.indexOf(now.getMonth()) >= 0;
   return (rows || []).filter(function(row) {
     const due = parseSafeDate(row && (row.date || row.dueDate));
     if (isNaN(due.getTime())) return false;
-    return due.getFullYear() === Number(targetYear) && monthIndexes.indexOf(due.getMonth()) >= 0;
+    if (due.getFullYear() === Number(targetYear) && monthIndexes.indexOf(due.getMonth()) >= 0) return true;
+    // A balance whose coverage end is still ahead of this year stays on the overdue table
+    // for the current month, matching the member list.
+    return currentMonthSelected && due.getTime() > now.getTime();
   });
 }
 
