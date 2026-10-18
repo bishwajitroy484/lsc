@@ -298,7 +298,7 @@ function ensurePaymentSplitHeaders_() {
     }
     const meta = DB._getSheetMeta('PAYMENTS');
     const headers = (meta.headers || []).slice();
-    const missing = ['cashAmount', 'upiAmount', 'expectedAmount', 'pendingAmount', 'receiptUrl'].filter(function(name) {
+    const missing = ['cashAmount', 'upiAmount', 'expectedAmount', 'pendingAmount', 'receiptUrl', 'coverageKind'].filter(function(name) {
       return !headers.some(function(header) {
         return DB._payloadKeyForHeader_(header) === name;
       });
@@ -317,6 +317,76 @@ function ensurePaymentSplitHeaders_() {
     return headers;
   } catch (error) {
     return null;
+  }
+}
+
+function ensureMemberHoldHeaders_() {
+  try {
+    if (!DB || typeof DB._getSheetMeta !== 'function' || typeof Sheets === 'undefined' || typeof SPREADSHEET_ID === 'undefined' || typeof colToLetter !== 'function') {
+      return null;
+    }
+    const meta = DB._getSheetMeta('MEMBERS');
+    const headers = (meta.headers || []).slice();
+    const missing = ['holdStatus', 'holdStart'].filter(function(name) {
+      return !headers.some(function(header) {
+        return DB._payloadKeyForHeader_(header) === name;
+      });
+    });
+    if (missing.length) {
+      const startCol = headers.length + 1;
+      const data = missing.map(function(name, index) {
+        headers.push(name);
+        return {
+          range: 'MEMBERS!' + colToLetter(startCol + index) + '1',
+          values: [[name]]
+        };
+      });
+      Sheets.Spreadsheets.Values.batchUpdate({ valueInputOption: 'RAW', data: data }, SPREADSHEET_ID);
+    }
+    return headers;
+  } catch (error) {
+    return null;
+  }
+}
+
+function normalizeCoverageKind_(value) {
+  const text = String(value || '').toLowerCase().replace(/[\s_-]+/g, '');
+  return text.indexOf('adhoc') >= 0 ? 'Ad hoc' : 'Quarter';
+}
+
+function formatHoldDate_(date) {
+  const d = date instanceof Date ? date : new Date();
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return String(d.getDate()).padStart(2, '0') + '-' + months[d.getMonth()] + '-' + d.getFullYear();
+}
+
+function clearMemberHold_(memberId) {
+  if (!memberId) return;
+  const headers = ensureMemberHoldHeaders_();
+  const members = DB.read('MEMBERS') || [];
+  const existing = members.find(function(member) {
+    return String(member.memberId) === String(memberId);
+  });
+  if (!existing || String(existing.holdStatus || '').toLowerCase().indexOf('paus') < 0) return;
+  DB.update('MEMBERS', memberId, { holdStatus: '', holdStart: '' }, headers);
+}
+
+function api_pauseMember(memberId) {
+  try {
+    const gate = requirePermission_('members', 'edit');
+    if (!gate.ok) return gate.response;
+    if (!memberId) throw new Error('Member ID is missing.');
+    const headers = ensureMemberHoldHeaders_();
+    const members = DB.read('MEMBERS') || [];
+    const existing = members.find(function(member) {
+      return String(member.memberId) === String(memberId);
+    });
+    if (!existing) throw new Error('Member not found.');
+    const holdStart = formatHoldDate_(new Date());
+    DB.update('MEMBERS', memberId, { holdStatus: 'Paused', holdStart: holdStart }, headers);
+    return { success: true, message: 'Membership paused.', data: { memberId: memberId, holdStatus: 'Paused', holdStart: holdStart } };
+  } catch (error) {
+    return { success: false, error: error.toString() };
   }
 }
 
@@ -628,6 +698,7 @@ function api_recordPayment(paymentData) {
     paymentData.updatedBy = userEmail;
     delete paymentData.notes;
     const paymentHeaders = ensurePaymentSplitHeaders_();
+    paymentData.coverageKind = normalizeCoverageKind_(paymentData.coverageKind);
     applyPaymentSplit_(paymentData);
     applyPartialBalance_(paymentData);
     if (isNewPayment) {
@@ -651,6 +722,8 @@ function api_recordPayment(paymentData) {
     } else {
       savedData = DB.update('PAYMENTS', paymentData.paymentId, paymentData, paymentHeaders);
     }
+
+    if (isNewPayment && paymentData.coverageKind === 'Quarter') clearMemberHold_(paymentData.memberId);
 
     if (isNewPayment && typeof maybeSendPaymentReceipt_ === 'function') {
       maybeSendPaymentReceipt_(savedData || paymentData);

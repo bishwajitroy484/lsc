@@ -112,9 +112,12 @@
               </div>
             </div>
             
+            <div class="flex items-center gap-2 shrink-0">
+            <button id="det-pause" type="button" data-perm="members:edit" onclick="MembersApp.pauseMembership()" class="hidden h-9 px-3 border border-amber-300 bg-amber-50 text-amber-800 text-xs font-bold rounded-lg hover:bg-amber-100 transition-all shrink-0">Pause</button>
             <button data-perm="members:create" onclick="MembersApp.openRecordPayment()" class="h-9 px-4 bg-brand-primary text-white text-xs font-bold rounded-lg shadow-md shadow-red-500/20 hover:bg-brand-hover transition-all active:scale-95 shrink-0 flex items-center gap-1">
               <span class="material-symbols-rounded text-[16px] hidden sm:block">payments</span> Pay
             </button>
+            </div>
           </div>
 
           
@@ -418,6 +421,11 @@
               <p class="text-[11px] font-bold text-amber-900">Coverage</p>
               <p id="pay-cycle-label" class="hidden text-[11px] font-bold text-amber-800"></p>
             </div>
+            <div id="pay-kind" class="grid grid-cols-2 gap-2 mt-2">
+              <button type="button" id="pay-kind-quarter" onclick="MembersApp.setCoverageKind('Quarter')" class="h-8 rounded-lg border border-amber-300 bg-amber-800 text-white text-[11px] font-bold">Quarter</button>
+              <button type="button" id="pay-kind-adhoc" onclick="MembersApp.setCoverageKind('Ad hoc')" class="h-8 rounded-lg border border-amber-300 bg-white text-amber-900 text-[11px] font-bold">Ad hoc</button>
+            </div>
+            <input type="hidden" id="pay-coverage-kind" value="Quarter">
             <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-end mt-2">
               <div>
                 <label for="pay-start" class="block text-[10px] font-semibold text-amber-800/80 mb-1">Start *</label>

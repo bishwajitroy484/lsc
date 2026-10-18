@@ -15,6 +15,7 @@
 
     statusBadgeClass: function(name) {
       const lower = String(name || '').toLowerCase();
+      if (lower.includes('paused') || lower.includes('pause')) return 'bg-amber-50 text-amber-700 border-amber-200';
       if (lower.includes('overdue') || lower.includes('in-active') || lower.includes('inactive')) return 'bg-red-50 text-red-700 border-red-200';
       if (lower === 'active') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       return 'bg-slate-50 text-slate-600 border-slate-200';
@@ -48,6 +49,10 @@
       return this.isStoredInactive(member && member.status);
     },
 
+    isMemberPaused: function(member) {
+      return String((member || {}).holdStatus || '').toLowerCase().indexOf('paus') >= 0;
+    },
+
     membershipRowState: function(member) {
       const owed = Number(member && (member.balanceDue || member.pendingAmount)) || 0;
       if (owed > 0) {
@@ -57,6 +62,15 @@
           statusClass: this.statusBadgeClass('overdue'),
           dueStr: dueStr,
           dueInfo: { text: 'Pending ' + AppUtils.formatCurrency(owed), class: 'bg-red-50 text-red-600 border-red-200' }
+        };
+      }
+      if (this.isMemberPaused(member)) {
+        const since = member.holdStart ? (AppUtils.formatDateDDMMMYYYY(member.holdStart, false, false) || member.holdStart) : '';
+        return {
+          statusName: 'Paused',
+          statusClass: this.statusBadgeClass('paused'),
+          dueStr: since || '--',
+          dueInfo: { text: since ? ('Paused ' + since) : 'Paused', class: 'bg-amber-50 text-amber-700 border-amber-200' }
         };
       }
       if (this.nonRecurringStillOpen(member)) {
@@ -998,9 +1012,21 @@
           dueBadge.innerText = 'Pending ' + AppUtils.formatCurrency(openPartial);
           dueBadge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border tracking-wider bg-amber-50 text-amber-700 border-amber-200';
         }
+        if (this.isMemberPaused(member) && openPartial <= 0) {
+          const since = member.holdStart ? this.formatDateDDMMMYYYY(member.holdStart) : '';
+          mainStatusName = 'Paused';
+          sClass = 'bg-amber-50 text-amber-700 border-amber-200';
+          dueBadge.innerText = since ? ('Paused ' + since) : 'Paused';
+          dueBadge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border tracking-wider bg-amber-50 text-amber-700 border-amber-200';
+        }
 
         document.getElementById('det-status').innerText = mainStatusName;
         document.getElementById('det-status').className = `text-[8px] font-bold px-1.5 py-0.5 rounded border tracking-wider ${sClass}`;
+        const pauseBtn = document.getElementById('det-pause');
+        if (pauseBtn) {
+          const canPause = !this.isMemberPaused(member) && !this.isNonRecurringPlan(member.membershipId) && !closedAccount;
+          pauseBtn.classList.toggle('hidden', !canPause);
+        }
         this.paintExitDate(member);
     },
 
@@ -1048,7 +1074,7 @@
 
     virtualPaymentCycles: function() {
       const m = this.currentActiveMember;
-      if (!m || this.openPartialPayment()) return [];
+      if (!m || this.openPartialPayment() || this.isMemberPaused(m)) return [];
       let currentDue = this.effectiveDueDate ? this.dateFromParts(this.effectiveDueDate) : null;
       if (!currentDue || isNaN(currentDue.getTime())) return [];
       const today = new Date();
@@ -1253,7 +1279,7 @@
             if (p.startDate && p.endDate) {
                 const startFmt = this.formatDateDDMMMYYYY(p.startDate);
                 const endFmt = this.formatDateDDMMMYYYY(p.endDate);
-                coverageHtml = `<div class="text-[9px] text-slate-500 mt-0.5">${startFmt} to ${endFmt}</div>`;
+                coverageHtml = `<div class="text-[9px] text-slate-500 mt-0.5">${startFmt} to ${endFmt}${p.coverageKind ? ' · ' + p.coverageKind : ''}</div>`;
                 periodText = startFmt + ' to ' + endFmt;
             } else {
                 coverageHtml = `<div class="text-[9px] text-slate-400 italic mt-0.5">No coverage period recorded</div>`;
@@ -1705,7 +1731,8 @@
               paymentMode: initialSplit.paymentMode,
               cashAmount: initialSplit.cashAmount,
               upiAmount: initialSplit.upiAmount,
-              paymentStatus: pendingFee > 0 ? (this.pendingStatusId() || this.paidStatusId()) : this.paidStatusId()
+              paymentStatus: pendingFee > 0 ? (this.pendingStatusId() || this.paidStatusId()) : this.paidStatusId(),
+              coverageKind: 'Quarter'
           };
       }
 
@@ -1855,7 +1882,6 @@
       }
       const amountEl = document.getElementById('pay-amount');
       const pendingEl = document.getElementById('pay-pending');
-      const expected = Number(document.getElementById('pay-expected')?.value) || 0;
       if (cash === null) {
         if (amountEl) amountEl.value = '';
         if (pendingEl) {
@@ -1866,6 +1892,14 @@
       }
       const paid = Math.round((cash + upi) * 100) / 100;
       if (amountEl) amountEl.value = String(paid);
+      let expected = Number(document.getElementById('pay-expected')?.value) || 0;
+      if (document.getElementById('pay-coverage-kind') && document.getElementById('pay-coverage-kind').value === 'Ad hoc') {
+        expected = paid;
+        const hidden = document.getElementById('pay-expected');
+        const label = document.getElementById('pay-expected-label');
+        if (hidden) hidden.value = String(paid);
+        if (label) label.value = paid ? AppUtils.formatCurrency(paid) : '—';
+      }
       const pending = Math.max(0, Math.round((expected - paid) * 100) / 100);
       if (pendingEl) {
         if (!expected || pending <= 0) {
@@ -1876,6 +1910,51 @@
           pendingEl.className = 'text-[11px] font-bold text-amber-700 text-right';
         }
       }
+    },
+
+    setCoverageKind: function(kind, keepExpected) {
+      const adhoc = String(kind || '').toLowerCase().replace(/[\s_-]+/g, '').indexOf('adhoc') >= 0;
+      const value = adhoc ? 'Ad hoc' : 'Quarter';
+      const hidden = document.getElementById('pay-coverage-kind');
+      if (hidden) hidden.value = value;
+      const quarterBtn = document.getElementById('pay-kind-quarter');
+      const adhocBtn = document.getElementById('pay-kind-adhoc');
+      if (quarterBtn) quarterBtn.className = 'h-8 rounded-lg border border-amber-300 text-[11px] font-bold ' + (adhoc ? 'bg-white text-amber-900' : 'bg-amber-800 text-white');
+      if (adhocBtn) adhocBtn.className = 'h-8 rounded-lg border border-amber-300 text-[11px] font-bold ' + (adhoc ? 'bg-amber-800 text-white' : 'bg-white text-amber-900');
+      if (!adhoc && !keepExpected && this.currentActiveMember) {
+        const fee = Number(String(this.currentActiveMember.membershipAmount || 0).replace(/[^0-9.-]+/g, '')) || 0;
+        this.setExpectedFee(fee);
+      } else {
+        this.syncPaymentAmount();
+      }
+    },
+
+    pauseMembership: function() {
+      const member = this.currentActiveMember;
+      if (!member || !member.memberId) return;
+      if (typeof AccessControl !== 'undefined' && AccessControl.deny('members', 'edit')) return;
+      const reopenMemberId = member.memberId;
+      const reopenDetails = () => {
+        const freshMember = this.allData.find(item => String(item.memberId) === String(reopenMemberId));
+        if (freshMember) this.openDetails(freshMember);
+      };
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (res && res.success) {
+            Toast.success(res.message || 'Membership paused.');
+            if (res.data) {
+              member.holdStatus = res.data.holdStatus;
+              member.holdStart = res.data.holdStart;
+            }
+          } else {
+            Toast.error((res && res.error) || 'Could not pause this membership.');
+          }
+          this.fetchData(reopenDetails);
+        })
+        .withFailureHandler((err) => {
+          Toast.error(err && err.message ? err.message : 'Could not pause this membership.');
+        })
+        .api_pauseMember(member.memberId);
     },
 
     openRecordPayment: function(payment = null) {
@@ -1901,6 +1980,7 @@
           this.setDatePicker('pay-start', this.dateFromParts(payment.virtualStartDate) || payment.virtualStartDate);
           this.setDatePicker('pay-end', this.dateFromParts(payment.virtualEndDate) || payment.virtualEndDate);
           document.getElementById('pay-header-due').innerText = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'Auto-calculated after payment';
+          this.setCoverageKind('Quarter', true);
           this.applyCoverageLock(true, cycleLabel);
       } else {
           document.getElementById('pay-modal-title').innerText = isPartial ? 'Pay balance' : (payment ? 'Edit Payment' : 'Record Payment');
@@ -1920,6 +2000,11 @@
           if (payment) {
               calcStartObj = this.dateFromParts(payment.startDate) || new Date();
               calcEndObj = this.dateFromParts(payment.endDate) || new Date();
+          } else if (this.isMemberPaused(m)) {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              calcStartObj = today;
+              calcEndObj = new Date(today.getTime());
           } else {
               const payments = this.currentMemberPayments || [];
               const sortedPayments = [...payments].sort((a, b) => new Date(this.parseToISODate(b.endDate || b.paidDate)) - new Date(this.parseToISODate(a.endDate || a.paidDate)));
@@ -1935,6 +2020,10 @@
           this.setDatePicker('pay-end', calcEndObj);
           document.getElementById('pay-header-due').innerText = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'Auto-calculated after payment';
           this.applyCoverageLock(!!isPartial, isPartial ? 'Balance due' : '');
+          const kind = payment && payment.coverageKind
+            ? payment.coverageKind
+            : (this.isMemberPaused(m) && !payment ? 'Ad hoc' : 'Quarter');
+          this.setCoverageKind(kind, !!payment);
       }
 
       document.getElementById('payment-modal').classList.remove('opacity-0', 'pointer-events-none');
@@ -1993,6 +2082,7 @@
         paymentStatus: pending > 0 ? (this.pendingStatusId() || this.paidStatusId()) : this.paidStatusId(),
         startDate: this.formatDateDDMMMYYYY(document.getElementById('pay-start').value),
         endDate: this.formatDateDDMMMYYYY(document.getElementById('pay-end').value),
+        coverageKind: (document.getElementById('pay-coverage-kind') && document.getElementById('pay-coverage-kind').value) || 'Quarter',
         receiptUrl: document.getElementById('pay-receipt').value,
         base64Image: base64Image,
         imageName: imageName

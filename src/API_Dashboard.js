@@ -575,6 +575,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
        let actualNextDue = null;
        const compactPlan = planDetails.replace(/[\s_-]+/g, '');
        const isAdHocOrTrial = compactPlan.includes('adhoc') || compactPlan.includes('trial');
+       const isPaused = String(m.holdStatus || '').toLowerCase().indexOf('paus') >= 0;
        
        if (mPayments.length > 0) {
            if (!isAdHocOrTrial) {
@@ -611,7 +612,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
            }
          });
        }
-       if (isActive && !isAdHocOrTrial && expectedPaymentAmount > 0 && actualNextDue && actualNextDue >= today) {
+       if (isActive && !isAdHocOrTrial && !isPaused && expectedPaymentAmount > 0 && actualNextDue && actualNextDue >= today) {
            const firstDueDate = new Date(actualNextDue);
            const targetYearEnd = new Date(targetYear, 11, 31, 23, 59, 59, 999);
            let billingNumber = 0;
@@ -633,7 +634,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
        let totalUnpaidForMember = 0;
        let firstUnpaidDate = null;
 
-       if (!isAdHocOrTrial && !isNaN(cycleDate.getTime())) {
+       if (!isAdHocOrTrial && !isPaused && !isNaN(cycleDate.getTime())) {
          while (cycleDate <= exitDate) {
            const cYear = cycleDate.getFullYear();
            const cMonth = cycleDate.getMonth();
@@ -677,7 +678,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
        const daysUntilDue = listDue
          ? Math.ceil((listDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
          : null;
-       const inUpcomingWindow = !isAdHocOrTrial && daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 7;
+       const inUpcomingWindow = !isPaused && !isAdHocOrTrial && daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 7;
 
        if (owed > 0 && !inUpcomingWindow) {
            const owedDate = listDue || new Date(today.getTime());

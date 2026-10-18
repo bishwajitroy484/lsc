@@ -361,6 +361,39 @@ describe('Dashboard Module', () => {
     expect(result.overdueList.filter(row => row.memberId === 'MEM-ADHOC')).toHaveLength(1);
   });
 
+  test('a paused quarterly member is not listed as an overdue renewal during the gap', () => {
+    const dashboardApi = loadDashboardApi();
+    const today = new Date(2026, 5, 20);
+    const members = [{
+      memberId: 'MEM-PAUSE',
+      fullName: 'Riya Sen',
+      membershipId: 'PLAN-Q',
+      membershipAmount: 30000,
+      joinDate: '2026-01-20',
+      status: 'Active',
+      holdStatus: 'Paused',
+      holdStart: '21-Apr-2026'
+    }];
+    const payments = [{
+      memberId: 'MEM-PAUSE',
+      paymentStatus: 'Paid',
+      amount: 30000,
+      startDate: '2026-01-20',
+      endDate: '2026-04-20',
+      paidDate: '2026-01-20',
+      coverageKind: 'Quarter'
+    }];
+    const resolveName = (tab, field, value) => {
+      if (field === 'membershipId') return 'Quarterly';
+      if (field === 'status') return 'Active';
+      return String(value || '');
+    };
+    const dropDowns = { membership: [{ id: 'PLAN-Q', name: 'Quarterly', frequency: 'Quarterly' }] };
+    const result = dashboardApi.processOperations(members, [], payments, 2026, today, resolveName, dropDowns, 'anchor');
+    expect(result.overdueList.some(row => row.memberId === 'MEM-PAUSE')).toBe(false);
+    expect(result.upcomingList.some(row => row.memberId === 'MEM-PAUSE')).toBe(false);
+  });
+
   test('keeps a partial balance on the dashboard overdue table when coverage ends next year', () => {
     const dashboardApi = loadDashboardApi('anchor', [], [
       { memberId: 'MEM-NEXT', fullName: 'Supreet Kaur', membershipId: 'PLAN-2', membershipAmount: 10000, joinDate: '2026-07-15', status: 'Active', phone: '111' }
