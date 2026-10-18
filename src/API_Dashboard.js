@@ -565,22 +565,28 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
            if (!isNaN(ed)) exitDate = ed;
        }
 
-       let totalPaidByMember = mPayments.reduce((sum, p) => sum + parseAmt(p.amount), 0);
-       const pendingExplicit = (payments || []).reduce((sum, payment) => {
-         if (String(payment.memberId || '') !== String(m.memberId || '')) return sum;
-         return sum + paymentPendingBalance_(payment);
-       }, 0);
-
        // 1. Calculate precise NEXT DUE DATE perfectly synced with Members UI
        let actualNextDue = null;
        const compactPlan = planDetails.replace(/[\s_-]+/g, '');
        const isAdHocOrTrial = compactPlan.includes('adhoc') || compactPlan.includes('trial');
-       const isPaused = String(m.holdStatus || '').toLowerCase().indexOf('paus') >= 0;
+       const isAdHocPay = (payment) => String(payment && payment.coverageKind || '').toLowerCase().replace(/[\s_-]+/g, '').indexOf('adhoc') >= 0;
+       const renewalPayments = mPayments.filter(payment => !isAdHocPay(payment));
+       let isPaused = String(m.holdStatus || '').toLowerCase().indexOf('paus') >= 0;
+       const pauseStart = m.holdStart ? parseSafeDate(m.holdStart) : null;
+       const pauseEnd = m.holdEnd ? parseSafeDate(m.holdEnd) : null;
+       const pauseWindow = pauseStart && pauseEnd && !isNaN(pauseStart.getTime()) && !isNaN(pauseEnd.getTime());
+       if (isPaused && pauseEnd && !isNaN(pauseEnd.getTime())) {
+         const endDay = new Date(pauseEnd.getTime());
+         endDay.setHours(0, 0, 0, 0);
+         const todayDay = new Date(today.getTime());
+         todayDay.setHours(0, 0, 0, 0);
+         if (endDay < todayDay) isPaused = false;
+       }
        
-       if (mPayments.length > 0) {
+       if (renewalPayments.length > 0) {
            if (!isAdHocOrTrial) {
-               mPayments.sort((a, b) => new Date(parseSafeDate(b.endDate || b.paidDate)) - new Date(parseSafeDate(a.endDate || a.paidDate)));
-               const latestP = mPayments[0];
+               renewalPayments.sort((a, b) => new Date(parseSafeDate(b.endDate || b.paidDate)) - new Date(parseSafeDate(a.endDate || a.paidDate)));
+               const latestP = renewalPayments[0];
                if (latestP.endDate) {
                    let d = parseSafeDate(latestP.endDate);
                    if (!isNaN(d)) {
@@ -597,8 +603,13 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
            if (!isNaN(joinDate)) actualNextDue = new Date(joinDate);
        }
 
-       const latestPaymentAmount = mPayments.length ? parseAmt(mPayments[0].amount) : 0;
+       const latestPaymentAmount = renewalPayments.length ? parseAmt(renewalPayments[0].amount) : 0;
        const expectedPaymentAmount = amt || latestPaymentAmount;
+       let totalPaidByMember = renewalPayments.reduce((sum, p) => sum + parseAmt(p.amount), 0);
+       const pendingExplicit = (payments || []).reduce((sum, payment) => {
+         if (String(payment.memberId || '') !== String(m.memberId || '')) return sum;
+         return sum + paymentPendingBalance_(payment);
+       }, 0);
        if (isActive && !isAdHocOrTrial) {
          payments.forEach(payment => {
            if (String(payment.memberId || '') !== String(m.memberId || '')) return;
@@ -639,6 +650,10 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
            const cYear = cycleDate.getFullYear();
            const cMonth = cycleDate.getMonth();
            const nextCycleDate = advanceCycle(cycleDate, 1);
+           if (pauseWindow && cycleDate >= pauseStart && cycleDate <= pauseEnd) {
+             cycleDate = nextCycleDate;
+             continue;
+           }
 
            let unpaidPortion = 0;
            if (totalPaidByMember >= amt) {
@@ -659,6 +674,18 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                }
            }
            cycleDate = nextCycleDate;
+         }
+       }
+
+       if (!isPaused && pauseWindow && pauseEnd < today && actualNextDue && actualNextDue <= pauseEnd && expectedPaymentAmount > 0) {
+         const rejoined = renewalPayments.some(payment => {
+           const end = parseSafeDate(payment.endDate || payment.paidDate);
+           return end && !isNaN(end.getTime()) && end > pauseEnd;
+         });
+         if (!rejoined) {
+           actualNextDue = new Date(pauseEnd.getTime());
+           totalUnpaidForMember = expectedPaymentAmount;
+           firstUnpaidDate = new Date(pauseEnd.getTime());
          }
        }
 

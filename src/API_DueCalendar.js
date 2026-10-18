@@ -162,6 +162,7 @@ function findLatestPaidPaymentForMember_(memberId, paymentHint) {
   }
 
   payments = payments.filter(function(p) {
+    if (String(p.coverageKind || '').toLowerCase().replace(/[\s_-]+/g, '').indexOf('adhoc') >= 0) return false;
     if (typeof paymentCoversMembershipCycle_ === 'function') {
       return paymentCoversMembershipCycle_(p, paymentStatuses);
     }
@@ -219,7 +220,16 @@ function syncMemberDueCalendarEvent_(memberId, paymentHint) {
     }
 
     const planMeta = findMemberPlanMeta_(member);
-    if (!isQuarterlyPlan_(planMeta)) {
+    const pauseOpen = String(member.holdStatus || '').toLowerCase().indexOf('paus') >= 0 && (function() {
+      if (!member.holdEnd || typeof parseSafeDate !== 'function') return true;
+      const end = parseSafeDate(member.holdEnd);
+      if (!end || isNaN(end.getTime())) return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      end.setHours(0, 0, 0, 0);
+      return end >= today;
+    })();
+    if (!isQuarterlyPlan_(planMeta) || pauseOpen) {
       if (previousEventId) {
         deleteDueCalendarEvent_(previousEventId);
         persistMemberDueCalendarEventId_(id, '');

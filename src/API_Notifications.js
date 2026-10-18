@@ -30,6 +30,28 @@ var PREVIOUS_SHORT_NOTIFY_RECEIPT_BODY =
   'validity: {{endDate}}\n\n' +
   'Please save this message. I will do too.\n' +
   'Thank you.';
+var DEFAULT_NOTIFY_ADHOC_BODY =
+  'Dear {{memberName}},\n\n' +
+  'Thank you for your visit.\n\n' +
+  'Amount received: {{amount}}\n' +
+  'Dates: {{startDate}} to {{endDate}}\n\n' +
+  'Please save this message.\n' +
+  'Thank you.';
+var DEFAULT_NOTIFY_ADHOC_PARTIAL_BODY =
+  'Dear {{memberName}},\n\n' +
+  'Thank you for your visit. A balance is still due.\n\n' +
+  'Amount received: {{amount}}\n' +
+  'Balance due: {{pendingAmount}}\n' +
+  'Dates: {{startDate}} to {{endDate}}\n\n' +
+  'Please save this message.\n' +
+  'Thank you.';
+var DEFAULT_NOTIFY_PAUSE_BODY =
+  'Dear {{memberName}},\n\n' +
+  'Your membership is paused for {{pauseDays}} day(s).\n\n' +
+  'Paused from: {{holdStart}}\n' +
+  'Paused until: {{holdEnd}}\n\n' +
+  'You can still come for selected days. A new quarter starts when you rejoin.\n\n' +
+  'Thank you.';
 var DEFAULT_NOTIFY_PARTIAL_BODY =
   'Dear {{memberName}},\n\n' +
   'Thank you for your payment. A balance is still due on this membership.\n\n' +
@@ -224,6 +246,18 @@ function receiptPendingBalance_(payment) {
   return 0;
 }
 
+function isAdHocCoverageMail_(payment) {
+  return String(payment && payment.coverageKind || '').toLowerCase().replace(/[\s_-]+/g, '').indexOf('adhoc') >= 0;
+}
+
+function memberPauseStillOpen_(member, today) {
+  if (String(member && member.holdStatus || '').toLowerCase().indexOf('paus') < 0) return false;
+  if (!member.holdEnd) return true;
+  const end = parseSafeDate(member.holdEnd);
+  if (!end || isNaN(end.getTime())) return true;
+  return startOfDay_(end) >= startOfDay_(today || new Date());
+}
+
 function buildPaymentReceiptEmail_(member, payment, config, planName) {
   const firstName = firstNameFromFull_(member.fullName, 'Member');
   const pending = receiptPendingBalance_(payment);
@@ -240,9 +274,11 @@ function buildPaymentReceiptEmail_(member, payment, config, planName) {
     memberId: String(member.memberId || '')
   };
   const subject = applyTemplate_(config.receiptSubject || DEFAULT_NOTIFY_RECEIPT_SUBJECT, vars);
-  const bodySource = pending > 0
-    ? DEFAULT_NOTIFY_PARTIAL_BODY
-    : (config.receiptBody || DEFAULT_NOTIFY_RECEIPT_BODY);
+  const visit = isAdHocCoverageMail_(payment);
+  let bodySource = config.receiptBody || DEFAULT_NOTIFY_RECEIPT_BODY;
+  if (visit && pending > 0) bodySource = DEFAULT_NOTIFY_ADHOC_PARTIAL_BODY;
+  else if (visit) bodySource = DEFAULT_NOTIFY_ADHOC_BODY;
+  else if (pending > 0) bodySource = DEFAULT_NOTIFY_PARTIAL_BODY;
   const bodyText = applyTemplate_(bodySource, vars);
   const htmlBody = wrapEmailHtml_('Payment received', textToHtmlParagraphs_(bodyText));
   return { subject: subject, htmlBody: htmlBody, textBody: bodyText };
@@ -285,6 +321,36 @@ function maybeSendPaymentReceipt_(paymentData) {
   }
 }
 
+function maybeSendPauseNotice_(member) {
+  try {
+    const config = getNotificationConfig_();
+    if (!config.masterEnabled) return { sent: false, reason: 'disabled' };
+    if (!member) return { sent: false, reason: 'missing-member' };
+    const email = String(member.email || '').trim();
+    if (!email || email.indexOf('@') < 0) return { sent: false, reason: 'no-email' };
+    const firstName = firstNameFromFull_(member.fullName, 'Member');
+    const vars = {
+      gymName: config.gymName,
+      memberName: firstName,
+      name: firstName,
+      pauseDays: String(member.holdDays || ''),
+      holdStart: formatDateForEmail_(member.holdStart),
+      holdEnd: formatDateForEmail_(member.holdEnd)
+    };
+    const bodyText = applyTemplate_(DEFAULT_NOTIFY_PAUSE_BODY, vars);
+    const subject = applyTemplate_('{{gymName}} — Membership paused', vars);
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      htmlBody: wrapEmailHtml_('Membership paused', textToHtmlParagraphs_(bodyText))
+    });
+    return { sent: true };
+  } catch (error) {
+    console.error('Pause email failed: ' + (error && error.message ? error.message : error));
+    return { sent: false, reason: 'error', error: String(error) };
+  }
+}
+
 function startOfDay_(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -294,6 +360,7 @@ function startOfDay_(date) {
 function computeMemberDueDate_(member, payments, paymentStatuses) {
   const memberPayments = (payments || [])
     .filter(p => String(p.memberId) === String(member.memberId))
+    .filter(p => !isAdHocCoverageMail_(p))
     .filter(p => (typeof paymentCoversMembershipCycle_ === 'function'
       ? paymentCoversMembershipCycle_(p, paymentStatuses)
       : isPaidPaymentStatus(p.paymentStatus, paymentStatuses)))
@@ -325,6 +392,7 @@ function classifyMembersForReport_(members, payments, paymentStatuses, asOfDate,
   (members || []).forEach(member => {
     const statusName = String(member.status || '').trim().toLowerCase();
     if (statusName === 'inactive' || statusName === 'left' || statusName.indexOf('inactive') >= 0) return;
+    if (memberPauseStillOpen_(member, today)) return;
 
     const dueDate = computeMemberDueDate_(member, payments, paymentStatuses);
     if (!dueDate) return;

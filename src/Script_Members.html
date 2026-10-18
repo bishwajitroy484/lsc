@@ -50,7 +50,33 @@
     },
 
     isMemberPaused: function(member) {
-      return String((member || {}).holdStatus || '').toLowerCase().indexOf('paus') >= 0;
+      const hold = String((member || {}).holdStatus || '').toLowerCase();
+      if (hold.indexOf('paus') < 0) return false;
+      if (!member.holdEnd) return true;
+      const end = this.dateFromParts(member.holdEnd);
+      if (!end) return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return end.getTime() >= today.getTime();
+    },
+
+    pauseLabel: function(member) {
+      const end = member && member.holdEnd ? (this.formatDateDDMMMYYYY(member.holdEnd) || member.holdEnd) : '';
+      if (end) return 'Paused until ' + end;
+      const days = parseInt(member && member.holdDays, 10);
+      if (days > 0) return 'Paused for ' + days + ' days';
+      const since = member && member.holdStart ? (this.formatDateDDMMMYYYY(member.holdStart) || member.holdStart) : '';
+      return since ? ('Paused ' + since) : 'Paused';
+    },
+
+    isAdHocCoverage: function(payment) {
+      return String(payment && payment.coverageKind || '').toLowerCase().replace(/[\s_-]+/g, '').indexOf('adhoc') >= 0;
+    },
+
+    isPauseStatusChoice: function(statusId) {
+      if (String(statusId || '') === '__PAUSE__') return true;
+      const name = String(this.getName('status', statusId) || statusId || '').toLowerCase();
+      return name.indexOf('paus') >= 0;
     },
 
     membershipRowState: function(member) {
@@ -65,12 +91,12 @@
         };
       }
       if (this.isMemberPaused(member)) {
-        const since = member.holdStart ? (AppUtils.formatDateDDMMMYYYY(member.holdStart, false, false) || member.holdStart) : '';
+        const label = this.pauseLabel(member);
         return {
           statusName: 'Paused',
           statusClass: this.statusBadgeClass('paused'),
-          dueStr: since || '--',
-          dueInfo: { text: since ? ('Paused ' + since) : 'Paused', class: 'bg-amber-50 text-amber-700 border-amber-200' }
+          dueStr: member.holdEnd ? (this.formatDateDDMMMYYYY(member.holdEnd) || member.holdEnd) : '--',
+          dueInfo: { text: label, class: 'bg-amber-50 text-amber-700 border-amber-200' }
         };
       }
       if (this.nonRecurringStillOpen(member)) {
@@ -187,7 +213,11 @@
       flatpickr(".date-field:not(#mem-dob)", {
         dateFormat: "d-M-Y",    
         allowInput: true,
-        disableMobile: "true"   
+        disableMobile: "true",
+        onChange: (selectedDates, dateStr, instance) => {
+          const id = instance && instance.element ? instance.element.id : '';
+          if (id === 'pay-start' || id === 'pay-end') this.onCoverageDatesChange();
+        }
       });
       
       flatpickr("#mem-dob", {
@@ -535,6 +565,7 @@
       html += `<option value="Active">Active</option>`;
       html += `<option value="Due Soon">Due Soon</option>`;
       html += `<option value="Overdue">Overdue</option>`;
+      html += `<option value="Paused">Paused</option>`;
       if (Array.isArray(statuses)) {
         statuses.forEach(opt => {
           const name = opt.name || opt.id;
@@ -567,6 +598,8 @@
           matchStatus = (dueInfo.days >= 0 && dueInfo.days <= 5);
         } else if (fStatus === 'Overdue') {
           matchStatus = (dueInfo.days < 0);
+        } else if (fStatus === 'Paused') {
+          matchStatus = this.isMemberPaused(m);
         } else {
           matchStatus = (m.status === fStatus || sName.toLowerCase() === fStatus.toLowerCase() || (this.dropdowns.status && this.getName('status', fStatus) === sName));
         }
@@ -941,7 +974,7 @@
         
         if (this.currentMemberPayments && this.currentMemberPayments.length > 0) {
             const validPayments = this.currentMemberPayments.filter(p => {
-                return p.endDate && (this.isPaidPayment(p) || this.isPartialPayment(p));
+                return p.endDate && !this.isAdHocCoverage(p) && (this.isPaidPayment(p) || this.isPartialPayment(p));
             });
             
             validPayments.sort((a, b) => new Date(this.parseToISODate(b.endDate)) - new Date(this.parseToISODate(a.endDate)));
@@ -1013,20 +1046,14 @@
           dueBadge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border tracking-wider bg-amber-50 text-amber-700 border-amber-200';
         }
         if (this.isMemberPaused(member) && openPartial <= 0) {
-          const since = member.holdStart ? this.formatDateDDMMMYYYY(member.holdStart) : '';
           mainStatusName = 'Paused';
           sClass = 'bg-amber-50 text-amber-700 border-amber-200';
-          dueBadge.innerText = since ? ('Paused ' + since) : 'Paused';
+          dueBadge.innerText = this.pauseLabel(member);
           dueBadge.className = 'text-[8px] font-bold px-1.5 py-0.5 rounded border tracking-wider bg-amber-50 text-amber-700 border-amber-200';
         }
 
         document.getElementById('det-status').innerText = mainStatusName;
         document.getElementById('det-status').className = `text-[8px] font-bold px-1.5 py-0.5 rounded border tracking-wider ${sClass}`;
-        const pauseBtn = document.getElementById('det-pause');
-        if (pauseBtn) {
-          const canPause = !this.isMemberPaused(member) && !this.isNonRecurringPlan(member.membershipId) && !closedAccount;
-          pauseBtn.classList.toggle('hidden', !canPause);
-        }
         this.paintExitDate(member);
     },
 
@@ -1301,6 +1328,8 @@
                 date: this.formatDateDDMMMYYYY(p.paidDate),
                 paidDate: this.formatDateDDMMMYYYY(p.paidDate),
                 endDate: p.endDate ? this.formatDateDDMMMYYYY(p.endDate) : '',
+                startDate: p.startDate ? this.formatDateDDMMMYYYY(p.startDate) : '',
+                coverageKind: p.coverageKind || '',
                 period: periodText
               };
               const waRowJson = JSON.stringify(waRow).replace(/"/g, '&quot;');
@@ -1568,14 +1597,26 @@
     },
 
     onStatusChange: function() {
+      this.ensurePauseStatusChoice();
       const statusId = document.getElementById('mem-status').value;
       const statusName = this.getName('status', statusId).toLowerCase();
+      const pausing = this.isPauseStatusChoice(statusId);
       const exitContainer = document.getElementById('mem-exit-container');
       const exitField = document.getElementById('mem-exit-date');
-      
+      const pauseContainer = document.getElementById('mem-pause-container');
+      const pauseField = document.getElementById('mem-pause-days');
+      if (pauseContainer) pauseContainer.classList.toggle('hidden', !pausing);
+      if (pauseField) pauseField.required = !!pausing;
+
       const planId = document.getElementById('mem-plan').value;
       const planMatch = (this.dropdowns.membership || []).find(p => p.id === planId);
       const isNonRecurring = this.isNonRecurringPlan(planMatch);
+
+      if (pausing) {
+        exitContainer.classList.add('hidden');
+        exitField.required = false;
+        return;
+      }
 
       if (statusName.includes('inactive') || statusName.includes('in-active') || isNonRecurring) {
         exitContainer.classList.remove('hidden');
@@ -1584,6 +1625,18 @@
         exitContainer.classList.add('hidden');
         exitField.required = false;
       }
+    },
+
+    ensurePauseStatusChoice: function() {
+      const el = document.getElementById('mem-status');
+      if (!el || !el.options) return;
+      const options = Array.from(el.options);
+      const exists = options.some(opt => String(opt.value) === '__PAUSE__' || /paus/i.test(String(opt.textContent || opt.innerText || '')));
+      if (exists) return;
+      const opt = document.createElement('option');
+      opt.value = '__PAUSE__';
+      opt.textContent = 'Pause';
+      el.appendChild(opt);
     },
 
     openModal: function(member = null) {
@@ -1617,7 +1670,16 @@
       
       const statusField = document.getElementById('mem-status-field');
       if (statusField) statusField.classList.toggle('hidden', !member);
-      document.getElementById('mem-status').value = member ? member.status : (this.activeStatusId() || document.getElementById('mem-status').options[1]?.value || '');
+      this.ensurePauseStatusChoice();
+      const statusEl = document.getElementById('mem-status');
+      if (member && this.isMemberPaused(member)) {
+        const pauseOpt = Array.from(statusEl.options || []).find(opt => String(opt.value) === '__PAUSE__' || /paus/i.test(String(opt.textContent || opt.innerText || '')));
+        statusEl.value = pauseOpt ? pauseOpt.value : '__PAUSE__';
+      } else {
+        statusEl.value = member ? member.status : (this.activeStatusId() || statusEl.options[1]?.value || '');
+      }
+      const pauseDays = document.getElementById('mem-pause-days');
+      if (pauseDays) pauseDays.value = member && this.isMemberPaused(member) ? (member.holdDays || '') : '';
       
       this.setDatePicker('mem-dob', member && member.dob ? member.dob : '');
       this.setDatePicker('mem-join', member && member.joinDate ? member.joinDate : '');
@@ -1681,6 +1743,15 @@
       const joinFmt = this.formatDateDDMMMYYYY(document.getElementById('mem-join').value);
       const exitFmt = this.formatDateDDMMMYYYY(document.getElementById('mem-exit-date').value); 
       const isNew = !document.getElementById('mem-id').value;
+      const statusId = document.getElementById('mem-status').value;
+      const pausing = !isNew && this.isPauseStatusChoice(statusId);
+      const pauseDays = pausing ? parseInt(document.getElementById('mem-pause-days').value, 10) : 0;
+      if (pausing && (!pauseDays || pauseDays < 1)) {
+        document.getElementById('mem-pause-days').focus();
+        btn.innerHTML = 'Save Member';
+        btn.disabled = false;
+        return Toast.error('Enter how many days to pause.');
+      }
 
       const payload = {
         memberId: document.getElementById('mem-id').value,
@@ -1692,7 +1763,11 @@
         dob: dobFmt,
         gender: document.getElementById('mem-gender').value,
         email: document.getElementById('mem-email').value,
-        status: isNew ? (this.activeStatusId() || document.getElementById('mem-status').value) : document.getElementById('mem-status').value,
+        status: pausing
+          ? (this.activeStatusId() || (this.currentActiveMember && this.currentActiveMember.status) || '')
+          : (isNew ? (this.activeStatusId() || statusId) : statusId),
+        accountPause: pausing,
+        pauseDays: pausing ? pauseDays : 0,
         membershipId: planVal,
         batchId: batchVal,
         joinDate: joinFmt,
@@ -1892,14 +1967,7 @@
       }
       const paid = Math.round((cash + upi) * 100) / 100;
       if (amountEl) amountEl.value = String(paid);
-      let expected = Number(document.getElementById('pay-expected')?.value) || 0;
-      if (document.getElementById('pay-coverage-kind') && document.getElementById('pay-coverage-kind').value === 'Ad hoc') {
-        expected = paid;
-        const hidden = document.getElementById('pay-expected');
-        const label = document.getElementById('pay-expected-label');
-        if (hidden) hidden.value = String(paid);
-        if (label) label.value = paid ? AppUtils.formatCurrency(paid) : '—';
-      }
+      const expected = Number(document.getElementById('pay-expected')?.value) || 0;
       const pending = Math.max(0, Math.round((expected - paid) * 100) / 100);
       if (pendingEl) {
         if (!expected || pending <= 0) {
@@ -1921,7 +1989,12 @@
       const adhocBtn = document.getElementById('pay-kind-adhoc');
       if (quarterBtn) quarterBtn.className = 'h-8 rounded-lg border border-amber-300 text-[11px] font-bold ' + (adhoc ? 'bg-white text-amber-900' : 'bg-amber-800 text-white');
       if (adhocBtn) adhocBtn.className = 'h-8 rounded-lg border border-amber-300 text-[11px] font-bold ' + (adhoc ? 'bg-amber-800 text-white' : 'bg-white text-amber-900');
-      if (!adhoc && !keepExpected && this.currentActiveMember) {
+      this.applyPayCompact(adhoc);
+      if (adhoc) {
+        this.applyCoverageLock(false, 'Ad hoc visit');
+        this.refreshAdhocFee(!keepExpected);
+      } else if (!keepExpected && this.currentActiveMember) {
+        this.prepareQuarterCoverage();
         const fee = Number(String(this.currentActiveMember.membershipAmount || 0).replace(/[^0-9.-]+/g, '')) || 0;
         this.setExpectedFee(fee);
       } else {
@@ -1929,32 +2002,97 @@
       }
     },
 
-    pauseMembership: function() {
-      const member = this.currentActiveMember;
-      if (!member || !member.memberId) return;
-      if (typeof AccessControl !== 'undefined' && AccessControl.deny('members', 'edit')) return;
-      const reopenMemberId = member.memberId;
-      const reopenDetails = () => {
-        const freshMember = this.allData.find(item => String(item.memberId) === String(reopenMemberId));
-        if (freshMember) this.openDetails(freshMember);
-      };
-      google.script.run
-        .withSuccessHandler((res) => {
-          if (res && res.success) {
-            Toast.success(res.message || 'Membership paused.');
-            if (res.data) {
-              member.holdStatus = res.data.holdStatus;
-              member.holdStart = res.data.holdStart;
-            }
-          } else {
-            Toast.error((res && res.error) || 'Could not pause this membership.');
-          }
-          this.fetchData(reopenDetails);
-        })
-        .withFailureHandler((err) => {
-          Toast.error(err && err.message ? err.message : 'Could not pause this membership.');
-        })
-        .api_pauseMember(member.memberId);
+    applyPayCompact: function(adhoc) {
+      const dueRow = document.getElementById('pay-due-row');
+      const note = document.getElementById('pay-adhoc-note');
+      const feeLabel = document.getElementById('pay-fee-label');
+      if (dueRow) dueRow.classList.toggle('hidden', !!adhoc);
+      if (note) note.classList.toggle('hidden', !adhoc);
+      if (feeLabel) feeLabel.textContent = adhoc ? 'Ad hoc fee' : 'Cycle fee';
+    },
+
+    inclusiveDayCount: function(startValue, endValue) {
+      const start = this.dateFromParts(startValue);
+      const end = this.dateFromParts(endValue);
+      if (!start || !end) return 0;
+      const diff = Math.round((end.getTime() - start.getTime()) / 86400000);
+      if (diff < 0) return 0;
+      return diff + 1;
+    },
+
+    adhocDailyRate: function(member) {
+      const plans = this.dropdowns.membership || [];
+      const adhocPlan = plans.find(plan => {
+        const blob = `${plan.name || ''} ${plan.frequency || ''}`.toLowerCase().replace(/[\s_-]+/g, '');
+        return blob.indexOf('adhoc') >= 0;
+      });
+      const planName = adhocPlan ? String(adhocPlan.name || '') : 'Ad hoc';
+      const batches = this.dropdowns.batch || [];
+      const batchMatch = batches.find(batch => String(batch.id) === String(member && member.batchId));
+      const groupName = batchMatch ? (batchMatch.groups || batchMatch.group || batchMatch.name || '') : '';
+      const prices = this.dropdowns.price || this.dropdowns.price_options || this.dropdowns.prices || [];
+      const matching = prices.filter(price => {
+        const name = String(price.name || '').trim().toLowerCase();
+        const compact = name.replace(/[\s_-]+/g, '');
+        return name === planName.trim().toLowerCase() || compact.indexOf('adhoc') >= 0;
+      });
+      const price = matching.find(item => String(item.group || '').trim().toLowerCase() === String(groupName).trim().toLowerCase())
+        || matching.find(item => ['', 'all', 'allgroups', 'allbatches', 'any', '*'].indexOf(String(item.group || '').trim().toLowerCase().replace(/[\s_-]+/g, '')) >= 0);
+      const raw = price && price.base_price != null && price.base_price !== ''
+        ? price.base_price
+        : (adhocPlan && (adhocPlan.baseamount || adhocPlan.baseAmount || adhocPlan.amount));
+      const amount = Number(String(raw == null ? '' : raw).replace(/[^0-9.-]+/g, ''));
+      return Number.isFinite(amount) && amount > 0 ? amount : 0;
+    },
+
+    refreshAdhocFee: function(fillPayment) {
+      const days = this.inclusiveDayCount(
+        document.getElementById('pay-start') && document.getElementById('pay-start').value,
+        document.getElementById('pay-end') && document.getElementById('pay-end').value
+      );
+      const rate = this.adhocDailyRate(this.currentActiveMember);
+      const note = document.getElementById('pay-adhoc-note');
+      if (!rate || days < 1) {
+        if (note) note.textContent = days < 1
+          ? 'Choose a start and end date. The end date can be the same day.'
+          : 'Set the Ad hoc daily price in Settings, then choose the dates again.';
+        this.setExpectedFee(0);
+        return 0;
+      }
+      const fee = Math.round(rate * days * 100) / 100;
+      if (note) note.textContent = days + ' day' + (days === 1 ? '' : 's') + ' × ' + AppUtils.formatCurrency(rate);
+      this.setExpectedFee(fee);
+      if (fillPayment) {
+        this.renderPaymentLines('pay-lines', [{ mode: 'cash', amount: fee }], 'MembersApp.syncPaymentAmount()');
+        this.syncPaymentAmount();
+      }
+      return fee;
+    },
+
+    onCoverageDatesChange: function() {
+      if (this._suppressCoverageFee) return;
+      const kind = document.getElementById('pay-coverage-kind');
+      if (kind && kind.value === 'Ad hoc') this.refreshAdhocFee(true);
+    },
+
+    prepareQuarterCoverage: function() {
+      const m = this.currentActiveMember;
+      if (!m) return;
+      const plans = this.dropdowns.membership || [];
+      const planMatch = plans.find(p => p.id === m.membershipId);
+      const planName = planMatch ? `${planMatch.name || ''} ${planMatch.frequency || ''}` : '';
+      const payments = (this.currentMemberPayments || []).filter(payment => !this.isAdHocCoverage(payment));
+      const sorted = payments.slice().sort((a, b) => new Date(this.parseToISODate(b.endDate || b.paidDate)) - new Date(this.parseToISODate(a.endDate || a.paidDate)));
+      let calcStartObj;
+      if (sorted.length > 0 && sorted[0].endDate) {
+        calcStartObj = this.nextCycleStart(this.dateFromParts(sorted[0].endDate), planName);
+      } else {
+        calcStartObj = m.joinDate ? (this.dateFromParts(m.joinDate) || new Date()) : new Date();
+      }
+      const calcEndObj = this.cycleEndFromStart(calcStartObj, planName);
+      this.setDatePicker('pay-start', calcStartObj);
+      this.setDatePicker('pay-end', calcEndObj);
+      this.applyCoverageLock(true, 'Quarter');
     },
 
     openRecordPayment: function(payment = null) {
@@ -1983,7 +2121,7 @@
           this.setCoverageKind('Quarter', true);
           this.applyCoverageLock(true, cycleLabel);
       } else {
-          document.getElementById('pay-modal-title').innerText = isPartial ? 'Pay balance' : (payment ? 'Edit Payment' : 'Record Payment');
+          document.getElementById('pay-modal-title').innerText = isPartial ? 'Pay balance' : (payment ? 'Edit Payment' : (this.isMemberPaused(m) ? 'Ad hoc payment' : 'Record Payment'));
           document.getElementById('pay-id').value = payment ? payment.paymentId : '';
           const expected = payment && payment.expectedAmount
             ? Number(String(payment.expectedAmount).replace(/[^0-9.-]+/g, ''))
@@ -2006,8 +2144,8 @@
               calcStartObj = today;
               calcEndObj = new Date(today.getTime());
           } else {
-              const payments = this.currentMemberPayments || [];
-              const sortedPayments = [...payments].sort((a, b) => new Date(this.parseToISODate(b.endDate || b.paidDate)) - new Date(this.parseToISODate(a.endDate || a.paidDate)));
+          const payments = (this.currentMemberPayments || []).filter(payment => !this.isAdHocCoverage(payment));
+          const sortedPayments = [...payments].sort((a, b) => new Date(this.parseToISODate(b.endDate || b.paidDate)) - new Date(this.parseToISODate(a.endDate || a.paidDate)));
               if (sortedPayments.length > 0 && sortedPayments[0].endDate) {
                   calcStartObj = this.nextCycleStart(this.dateFromParts(sortedPayments[0].endDate), planName);
               } else {
@@ -2047,6 +2185,13 @@
       }
 
       const expected = Number(document.getElementById('pay-expected').value) || 0;
+      const coverageKind = (document.getElementById('pay-coverage-kind') && document.getElementById('pay-coverage-kind').value) || 'Quarter';
+      if (coverageKind === 'Ad hoc' && expected <= 0) {
+        Toast.error('Set the Ad hoc daily price in Settings and choose the visit dates. The fee is that daily price times the days.');
+        btn.innerHTML = 'Save Payment';
+        btn.disabled = false;
+        return;
+      }
       const pending = Math.max(0, Math.round((expected - split.amount) * 100) / 100);
       const fileInput = document.getElementById('pay-receipt-file');
       let base64Image = null;
@@ -2082,7 +2227,7 @@
         paymentStatus: pending > 0 ? (this.pendingStatusId() || this.paidStatusId()) : this.paidStatusId(),
         startDate: this.formatDateDDMMMYYYY(document.getElementById('pay-start').value),
         endDate: this.formatDateDDMMMYYYY(document.getElementById('pay-end').value),
-        coverageKind: (document.getElementById('pay-coverage-kind') && document.getElementById('pay-coverage-kind').value) || 'Quarter',
+        coverageKind: coverageKind,
         receiptUrl: document.getElementById('pay-receipt').value,
         base64Image: base64Image,
         imageName: imageName

@@ -594,13 +594,22 @@ describe('Members Module', () => {
       PAYMENTS: [],
       SETTINGS: []
     });
-    const paused = api.api_pauseMember('MEM-1');
+    const paused = api.api_saveMember({
+      memberId: 'MEM-1',
+      fullName: 'Riya Sen',
+      phone: '9876543210',
+      status: 'Active',
+      accountPause: true,
+      pauseDays: 30
+    });
     expect(paused.success).toBe(true);
-    expect(paused.data.holdStatus).toBe('Paused');
-    expect(api.db.update).toHaveBeenCalledWith('MEMBERS', 'MEM-1', expect.objectContaining({ holdStatus: 'Paused' }), null);
+    const pausePayload = api.db.update.mock.calls.map(call => call[2]).find(row => row && row.holdStatus === 'Paused');
+    expect(pausePayload).toBeTruthy();
+    expect(String(pausePayload.holdDays)).toBe('30');
+    expect(pausePayload.holdEnd).toBeTruthy();
 
     api.db.read.mockImplementation((sheet) => {
-      if (sheet === 'MEMBERS') return [{ memberId: 'MEM-1', holdStatus: 'Paused', holdStart: paused.data.holdStart }];
+      if (sheet === 'MEMBERS') return [{ memberId: 'MEM-1', holdStatus: 'Paused', holdStart: pausePayload.holdStart, holdDays: '30', holdEnd: pausePayload.holdEnd }];
       return [];
     });
     const adhoc = api.api_recordPayment({
@@ -631,7 +640,7 @@ describe('Members Module', () => {
     expect(quarter.success).toBe(true);
     const quarterRow = api.db.create.mock.calls.map(call => call[1]).find(row => row && row.coverageKind === 'Quarter');
     expect(quarterRow).toBeTruthy();
-    expect(api.db.update).toHaveBeenCalledWith('MEMBERS', 'MEM-1', expect.objectContaining({ holdStatus: '', holdStart: '' }), null);
+    expect(api.db.update).toHaveBeenCalledWith('MEMBERS', 'MEM-1', expect.objectContaining({ holdStatus: '', holdStart: '', holdDays: '', holdEnd: '' }));
   });
 
   test('api_saveMember create still allows optional blanks', () => {
@@ -999,7 +1008,12 @@ describe('Members Module', () => {
     it('shows a paused quarterly member as Paused and opens Pay as Ad hoc', () => {
       const originalDropdowns = MembersApp.dropdowns;
       MembersApp.dropdowns = {
-        membership: [{ id: 'PLAN-Q', name: 'Quarterly', frequency: 'Quarterly' }],
+        membership: [
+          { id: 'PLAN-Q', name: 'Quarterly', frequency: 'Quarterly' },
+          { id: 'PLAN-AD', name: 'Ad hoc', frequency: 'Ad hoc' }
+        ],
+        batch: [{ id: 'B1', name: 'Morning', groups: 'Adult' }],
+        price: [{ name: 'Ad hoc', group: 'Adult', base_price: '400' }],
         status: [{ id: 'STATUS-ACTIVE', name: 'Active' }],
         paymentstatus: [{ id: 'PAID', name: 'Paid' }]
       };
@@ -1021,14 +1035,19 @@ describe('Members Module', () => {
         fullName: 'Riya Sen',
         membershipId: 'PLAN-Q',
         membershipAmount: 30000,
+        batchId: 'B1',
         status: 'STATUS-ACTIVE',
         holdStatus: 'Paused',
-        holdStart: '21-Apr-2026'
+        holdStart: '21-Apr-2026',
+        holdDays: '30',
+        holdEnd: '31-Dec-2026'
       };
       MembersApp.currentMemberPayments = [];
       MembersApp.effectiveDueDate = new Date(2026, 3, 20);
       MembersApp.openRecordPayment();
       expect(document.getElementById('pay-coverage-kind').value).toBe('Ad hoc');
+      expect(document.getElementById('pay-modal-title').innerText).toBe('Ad hoc payment');
+      expect(Number(document.getElementById('pay-expected').value)).toBe(400);
       expect(MembersApp.virtualPaymentCycles()).toHaveLength(0);
       MembersApp.dropdowns = originalDropdowns;
     });
