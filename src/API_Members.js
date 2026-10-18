@@ -91,6 +91,23 @@ function deactivateExpiredMemberStatuses(members, plans, memberStatuses, asOfDat
   });
 }
 
+function keepMemberStatusActiveWhilePaused_(members, memberStatuses) {
+  const pauseId = statusOptionId_(memberStatuses, function(item) {
+    return String(item.name || item.label || '').toLowerCase().indexOf('paus') >= 0;
+  });
+  const activeId = statusOptionId_(memberStatuses, function(item) {
+    return isActiveStatusLabel_(item.name || item.label || item.id);
+  });
+  if (!activeId) return;
+  (members || []).forEach(function(member) {
+    const raw = String(member.status || '');
+    const storedPause = (pauseId && raw === pauseId) || raw.toLowerCase().indexOf('paus') >= 0;
+    if (!storedPause) return;
+    member.status = activeId;
+    DB.update('MEMBERS', member.memberId, { status: activeId });
+  });
+}
+
 function releaseExpiredMemberPauses_(members, asOfDate) {
   const today = new Date(asOfDate || new Date());
   today.setHours(0, 0, 0, 0);
@@ -183,6 +200,7 @@ function api_getMembers() {
       : [];
 
     deactivateExpiredMemberStatuses(members, plans, memberStatuses);
+    keepMemberStatusActiveWhilePaused_(members, memberStatuses);
     releaseExpiredMemberPauses_(members);
 
     const paymentsByMember = {};
@@ -470,13 +488,19 @@ function applyAccountPause_(memberData, existing) {
   memberData.holdStart = formatHoldDate_(startDate);
   memberData.holdDays = String(days);
   memberData.holdEnd = formatHoldDate_(endDate);
-  const pauseId = statusOptionId_(memberStatusOptions_(), function(item) {
+  const statuses = memberStatusOptions_();
+  const pauseId = statusOptionId_(statuses, function(item) {
     return String(item.name || item.label || '').toLowerCase().indexOf('paus') >= 0;
   });
-  if (pauseId) memberData.status = pauseId;
-  else if (String(memberData.status || '') === '__PAUSE__') {
-    if (existing && existing.status) memberData.status = existing.status;
-    else delete memberData.status;
+  const activeId = statusOptionId_(statuses, function(item) {
+    return isActiveStatusLabel_(item.name || item.label || item.id);
+  });
+  const incoming = String(memberData.status || '');
+  const incomingIsPause = incoming === '__PAUSE__' || (pauseId && incoming === pauseId) || incoming.toLowerCase().indexOf('paus') >= 0;
+  if (!incoming || incomingIsPause) {
+    const previous = existing ? String(existing.status || '') : '';
+    const previousIsPause = previous === '__PAUSE__' || (pauseId && previous === pauseId) || previous.toLowerCase().indexOf('paus') >= 0;
+    memberData.status = (!previousIsPause && previous) ? previous : (activeId || previous || '');
   }
   result.notify = !(alreadyOpen && String(existing.holdDays) === String(days));
   return result;

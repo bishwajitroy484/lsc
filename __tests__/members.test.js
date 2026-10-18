@@ -643,6 +643,38 @@ describe('Members Module', () => {
     expect(api.db.update).toHaveBeenCalledWith('MEMBERS', 'MEM-1', expect.objectContaining({ holdStatus: '', holdStart: '', holdDays: '', holdEnd: '' }));
   });
 
+  test('pause records the hold and keeps the stored status Active', () => {
+    const api = loadMembersApi({
+      MEMBERS: [{ memberId: 'MEM-1', fullName: 'Riya Sen', status: 'STA-ACT', phone: '9876543210' }],
+      PAYMENTS: [],
+      SETTINGS: []
+    }, {
+      success: true,
+      data: {
+        options: {
+          status: [
+            { id: 'STA-ACT', name: 'Active' },
+            { id: 'STA-INACT', name: 'In-Active' },
+            { id: 'STA-PAUSE', name: 'Pause' }
+          ]
+        }
+      }
+    });
+    const paused = api.api_saveMember({
+      memberId: 'MEM-1',
+      fullName: 'Riya Sen',
+      phone: '9876543210',
+      status: 'STA-PAUSE',
+      accountPause: true,
+      pauseDays: 12
+    });
+    expect(paused.success).toBe(true);
+    const pausePayload = api.db.update.mock.calls.map(call => call[2]).find(row => row && row.holdStatus === 'Paused');
+    expect(pausePayload).toBeTruthy();
+    expect(pausePayload.status).toBe('STA-ACT');
+    expect(String(pausePayload.holdDays)).toBe('12');
+  });
+
   test('api_saveMember create still allows optional blanks', () => {
     const membersApi = loadMembersApi({ MEMBERS: [], PAYMENTS: [], SETTINGS: [] });
     const result = membersApi.api_saveMember({
@@ -1047,8 +1079,13 @@ describe('Members Module', () => {
       MembersApp.openRecordPayment();
       expect(document.getElementById('pay-coverage-kind').value).toBe('Ad hoc');
       expect(document.getElementById('pay-modal-title').innerText).toBe('Ad hoc payment');
+      expect(document.getElementById('pay-kind').classList.toggle).toHaveBeenCalledWith('hidden', true);
       expect(Number(document.getElementById('pay-expected').value)).toBe(400);
       expect(MembersApp.virtualPaymentCycles()).toHaveLength(0);
+      MembersApp.dropdowns = { AccountStatus: [{ id: 'STA-9', title: 'Pause' }] };
+      expect(MembersApp.getName('status', 'STA-9')).toBe('Pause');
+      expect(MembersApp.pendingBalance({ amount: 1000, expectedAmount: 4000, pendingAmount: '' })).toBe(3000);
+      expect(MembersApp.pauseDayCount({ holdDays: '', holdStart: '2026-04-21', holdEnd: '2026-04-30' })).toBe(10);
       MembersApp.dropdowns = originalDropdowns;
     });
   });

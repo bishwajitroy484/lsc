@@ -43,6 +43,7 @@
         if (key === 'paiddate' || key === 'renewedon') return ctx.paidDate || ctx.dueDate;
         if (key === 'enddate' || key === 'validity') return ctx.endDate;
         if (key === 'startdate') return ctx.startDate || '';
+        if (key === 'pendingamount' || key === 'pending' || key === 'balance' || key === 'balancedue') return ctx.pendingAmount || '';
         if (ctx[key] == null) return '';
         return String(ctx[key]);
       });

@@ -186,8 +186,14 @@
       this.dropdowns = response.data && response.data.options ? response.data.options : {};
 
       const roles = this.dropdowns.role || this.dropdowns.roles || this.dropdowns.staffrole || [];
-      const statuses = (this.dropdowns.status || this.dropdowns.staffstatus || this.dropdowns.statuses || []).filter(function(opt) {
-        return String(opt.name || opt.label || '').toLowerCase().indexOf('paus') < 0;
+      const statusLists = [];
+      Object.keys(this.dropdowns || {}).forEach((key) => {
+        const compact = String(key).toLowerCase().replace(/[\s_-]+/g, '');
+        if (compact.indexOf('payment') >= 0) return;
+        if (compact.indexOf('status') >= 0 && Array.isArray(this.dropdowns[key])) statusLists.push(this.dropdowns[key]);
+      });
+      const statuses = (statusLists.length ? statusLists.reduce((all, list) => all.concat(list), []) : []).filter(function(opt) {
+        return String(opt.name || opt.label || opt.title || opt.text || '').toLowerCase().indexOf('paus') < 0;
       });
       const creditTypes = this.dropdowns.credit_type_options || this.dropdowns.credittype || this.dropdowns.credit_type || [];
       const modes = this.dropdowns.paymentmode || [];
@@ -209,8 +215,9 @@
       
       if (Array.isArray(optionsArray)) {
         optionsArray.forEach(opt => {
-          const label = secondaryLabel && opt[secondaryLabel] ? `${opt.name} (${opt[secondaryLabel]})` : opt.name;
-          html += `<option value="${opt.id}">${label}</option>`;
+          const name = opt.name || opt.label || opt.title || opt.text || '';
+          const label = secondaryLabel && opt[secondaryLabel] ? `${name} (${opt[secondaryLabel]})` : name;
+          html += `<option value="${opt.id || opt.value || opt.key || ''}">${label}</option>`;
         });
       }
       el.innerHTML = html;
@@ -230,6 +237,8 @@
     },
 
     getName: function(type, id) {
+      if (!id) return 'N/A';
+      const raw = String(id).trim();
       let sourceArray = this.dropdowns[type];
       if (!sourceArray) {
           if (type === 'role') sourceArray = this.dropdowns.role || this.dropdowns.roles || this.dropdowns.staffrole || this.dropdowns.staff_role;
@@ -238,9 +247,37 @@
           if (type === 'paymentmode') sourceArray = this.dropdowns.paymentmode;
           if (type === 'paymentstatus') sourceArray = this.dropdowns.paymentstatus || this.dropdowns.status;
       }
-      if(!id || !sourceArray) return id || 'N/A';
-      const match = sourceArray.find(item => item.id === id);
-      return match ? match.name : id;
+      const lists = [];
+      if (Array.isArray(sourceArray)) lists.push(sourceArray);
+      Object.keys(this.dropdowns || {}).forEach((key) => {
+        const compact = String(key).toLowerCase().replace(/[\s_-]+/g, '');
+        if (String(type).toLowerCase() === 'status' && compact.indexOf('payment') >= 0) return;
+        if (compact.indexOf(String(type).toLowerCase()) >= 0 && Array.isArray(this.dropdowns[key]) && lists.indexOf(this.dropdowns[key]) < 0) {
+          lists.push(this.dropdowns[key]);
+        }
+      });
+      const labelOf = (item) => {
+        const id = String(item.id || item.value || item.key || '').trim();
+        const preferred = item.name || item.label || item.title || item.text;
+        if (preferred) return String(preferred);
+        const keys = Object.keys(item || {});
+        for (let i = 0; i < keys.length; i++) {
+          const key = String(keys[i]).toLowerCase();
+          if (key === 'id' || key === 'key' || key === 'value') continue;
+          const value = String(item[keys[i]] || '').trim();
+          if (value && value !== id) return value;
+        }
+        return id;
+      };
+      for (let i = 0; i < lists.length; i++) {
+        const match = lists[i].find((item) => {
+          const key = String(item.id || item.value || item.key || '').trim();
+          const name = labelOf(item);
+          return key === raw || key.toLowerCase() === raw.toLowerCase() || name.toLowerCase() === raw.toLowerCase();
+        });
+        if (match) return labelOf(match) || raw;
+      }
+      return raw;
     },
 
     refreshExpenseSummary: function() {
