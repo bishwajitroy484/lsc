@@ -18,10 +18,26 @@ var LEGACY_NOTIFY_RECEIPT_BODY =
   '{{gymName}} Team';
 var DEFAULT_NOTIFY_RECEIPT_BODY =
   'Dear {{memberName}},\n\n' +
+  'Thank you for your renewal. Please keep these membership details.\n\n' +
+  'Renewed on: {{paidDate}}\n' +
+  'Validity: {{endDate}}\n\n' +
+  'Please save this message.\n' +
+  'Thank you.';
+var PREVIOUS_SHORT_NOTIFY_RECEIPT_BODY =
+  'Dear {{memberName}},\n\n' +
   'Thank you for your renewal. Please note your Membership details.\n' +
   'Renewed on: {{paidDate}}\n' +
   'validity: {{endDate}}\n\n' +
   'Please save this message. I will do too.\n' +
+  'Thank you.';
+var DEFAULT_NOTIFY_PARTIAL_BODY =
+  'Dear {{memberName}},\n\n' +
+  'Thank you for your payment. A balance is still due on this membership.\n\n' +
+  'Amount received: {{amount}}\n' +
+  'Balance due: {{pendingAmount}}\n' +
+  'Paid on: {{paidDate}}\n' +
+  'Validity: {{endDate}}\n\n' +
+  'Please save this message.\n' +
   'Thank you.';
 
 var DEFAULT_NOTIFY_WEEKLY_SUBJECT = '{{gymName}} — Weekly renewal report ({{rangeLabel}})';
@@ -108,7 +124,7 @@ function getNotificationConfig_(settingsMap) {
     weeklyCc: normalizeEmailList_(settings.NOTIFY_WEEKLY_CC),
     gymName: String(settings.GYM_NAME || 'LSC').trim() || 'LSC',
     receiptSubject: String(settings.NOTIFY_RECEIPT_SUBJECT || DEFAULT_NOTIFY_RECEIPT_SUBJECT),
-    receiptBody: useCurrentTemplate_(settings.NOTIFY_RECEIPT_BODY, LEGACY_NOTIFY_RECEIPT_BODY, DEFAULT_NOTIFY_RECEIPT_BODY),
+    receiptBody: useCurrentTemplate_(settings.NOTIFY_RECEIPT_BODY, [LEGACY_NOTIFY_RECEIPT_BODY, PREVIOUS_SHORT_NOTIFY_RECEIPT_BODY], DEFAULT_NOTIFY_RECEIPT_BODY),
     weeklySubject: String(settings.NOTIFY_WEEKLY_SUBJECT || DEFAULT_NOTIFY_WEEKLY_SUBJECT),
     weeklyIntro: String(settings.NOTIFY_WEEKLY_INTRO || DEFAULT_NOTIFY_WEEKLY_INTRO),
     weeklyFields: parseWeeklyFields_(settings.NOTIFY_WEEKLY_FIELDS)
@@ -126,7 +142,8 @@ function useCurrentTemplate_(stored, legacy, current) {
     return String(value || '').trim().replace(/\s+/g, ' ');
   };
   const text = String(stored || '').trim();
-  if (!text || normalize(text) === normalize(legacy)) return current;
+  const legacies = Array.isArray(legacy) ? legacy : [legacy];
+  if (!text || legacies.some(function(item) { return normalize(text) === normalize(item); })) return current;
   return text;
 }
 
@@ -150,13 +167,12 @@ function escapeHtmlEmail_(value) {
 }
 
 function textToHtmlParagraphs_(text) {
-  const escaped = escapeHtmlEmail_(text).replace(/\r\n/g, '\n');
+  const escaped = escapeHtmlEmail_(text).replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n');
   return escaped
     .split('\n')
     .map(function(line) {
-      return line
-        ? '<p style="margin:0 0 10px;font-size:14px;line-height:1.55;color:#334155">' + line + '</p>'
-        : '<p style="margin:0 0 10px">&nbsp;</p>';
+      if (!String(line).trim()) return '<div style="height:8px;line-height:8px;font-size:0">&nbsp;</div>';
+      return '<p style="margin:0 0 4px;font-size:14px;line-height:1.5;color:#334155">' + line + '</p>';
     })
     .join('');
 }
@@ -198,21 +214,36 @@ function resolveDropdownName_(options, id) {
   return match ? String(match.name || match.label || match.id) : String(id);
 }
 
+function receiptPendingBalance_(payment) {
+  const explicit = Number(String(payment && payment.pendingAmount || '').replace(/[^0-9.-]+/g, '')) || 0;
+  if (explicit > 0) return explicit;
+  const expected = Number(String(payment && payment.expectedAmount || '').replace(/[^0-9.-]+/g, '')) || 0;
+  const paid = Number(String(payment && payment.amount || '').replace(/[^0-9.-]+/g, '')) || 0;
+  const status = String(payment && payment.paymentStatus || '').trim().toLowerCase();
+  if ((status === 'pending' || status.indexOf('partial') >= 0) && expected > paid) return expected - paid;
+  return 0;
+}
+
 function buildPaymentReceiptEmail_(member, payment, config, planName) {
   const firstName = firstNameFromFull_(member.fullName, 'Member');
+  const pending = receiptPendingBalance_(payment);
   const vars = {
     gymName: config.gymName,
     memberName: firstName,
     name: firstName,
     plan: planName || 'membership',
     amount: formatMoneyForEmail_(payment.amount),
+    pendingAmount: formatMoneyForEmail_(pending),
     paidDate: formatDateForEmail_(payment.paidDate || payment.date),
     startDate: formatDateForEmail_(payment.startDate),
     endDate: formatDateForEmail_(payment.endDate),
     memberId: String(member.memberId || '')
   };
   const subject = applyTemplate_(config.receiptSubject || DEFAULT_NOTIFY_RECEIPT_SUBJECT, vars);
-  const bodyText = applyTemplate_(config.receiptBody || DEFAULT_NOTIFY_RECEIPT_BODY, vars);
+  const bodySource = pending > 0
+    ? DEFAULT_NOTIFY_PARTIAL_BODY
+    : (config.receiptBody || DEFAULT_NOTIFY_RECEIPT_BODY);
+  const bodyText = applyTemplate_(bodySource, vars);
   const htmlBody = wrapEmailHtml_('Payment received', textToHtmlParagraphs_(bodyText));
   return { subject: subject, htmlBody: htmlBody, textBody: bodyText };
 }
@@ -228,7 +259,8 @@ function maybeSendPaymentReceipt_(paymentData) {
       ? globalData.data.options
       : {};
     const paymentStatuses = options.paymentstatus || options.status || [];
-    if (!isPaidPaymentStatus(paymentData.paymentStatus, paymentStatuses)) {
+    const pending = receiptPendingBalance_(paymentData);
+    if (!isPaidPaymentStatus(paymentData.paymentStatus, paymentStatuses) && !(pending > 0)) {
       return { sent: false, reason: 'not-paid' };
     }
 

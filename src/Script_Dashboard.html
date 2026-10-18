@@ -20,42 +20,59 @@
 
   window.openChartModal = function(title, chartKey) {
     const config = window.AppChartConfigs[chartKey];
-    if (!config) return;
-    
-    const backdrop = document.getElementById('chart-modal-backdrop');
-    if (backdrop && backdrop.parentNode !== document.body) {
-      document.body.appendChild(backdrop);
+    const nodes = Array.prototype.slice.call(document.querySelectorAll('#chart-modal-backdrop'));
+    if (!config || !nodes.length) {
+      window.closeChartModal();
+      return;
     }
-    
+    const backdrop = nodes[nodes.length - 1];
+    nodes.slice(0, -1).forEach(function(node) {
+      if (node.parentNode) node.parentNode.removeChild(node);
+    });
+    if (backdrop.parentNode !== document.body) document.body.appendChild(backdrop);
+
+    const content = backdrop.querySelector('#chart-modal-content');
     safeSetText('chart-modal-title', title);
-    const content = document.getElementById('chart-modal-content');
-    
-    if(backdrop) {
-      backdrop.classList.remove('opacity-0', 'pointer-events-none');
-      backdrop.classList.add('opacity-100', 'pointer-events-auto');
+    backdrop.classList.remove('opacity-0', 'pointer-events-none');
+    backdrop.classList.add('opacity-100', 'pointer-events-auto', 'is-open');
+    if (content) {
+      content.classList.remove('scale-95', 'opacity-0');
+      content.style.opacity = '1';
+      content.style.transform = 'none';
     }
-    if(content) content.classList.remove('scale-95', 'opacity-0');
-    
+
     const modalConfig = { ...config, chart: { ...config.chart, height: '100%', minHeight: 400 } };
-    const container = document.getElementById('modal-chart-container');
-    if(container) {
-      container.innerHTML = ''; 
-      window.modalChartInstance = new ApexCharts(container, modalConfig);
-      window.modalChartInstance.render();
+    const container = backdrop.querySelector('#modal-chart-container');
+    if (container) {
+      container.innerHTML = '';
+      try {
+        if (window.modalChartInstance && typeof window.modalChartInstance.destroy === 'function') {
+          window.modalChartInstance.destroy();
+        }
+        window.modalChartInstance = new ApexCharts(container, modalConfig);
+        window.modalChartInstance.render();
+      } catch (err) {
+        window.modalChartInstance = null;
+        container.textContent = 'This chart could not be expanded. Close and try again.';
+      }
     }
   };
 
   window.closeChartModal = function() {
-    const backdrop = document.getElementById('chart-modal-backdrop');
-    const content = document.getElementById('chart-modal-content');
-    if (backdrop) {
-      backdrop.classList.remove('opacity-100', 'pointer-events-auto');
+    document.querySelectorAll('#chart-modal-backdrop').forEach(function(backdrop) {
+      backdrop.classList.remove('opacity-100', 'pointer-events-auto', 'is-open');
       backdrop.classList.add('opacity-0', 'pointer-events-none');
-    }
-    if (content) content.classList.add('scale-95', 'opacity-0');
-    
+      const content = backdrop.querySelector('#chart-modal-content');
+      if (content) {
+        content.classList.add('scale-95', 'opacity-0');
+        content.style.opacity = '';
+        content.style.transform = '';
+      }
+    });
     if (window.modalChartInstance) {
-      setTimeout(() => { window.modalChartInstance.destroy(); window.modalChartInstance = null; }, 300);
+      const instance = window.modalChartInstance;
+      window.modalChartInstance = null;
+      setTimeout(function() { try { instance.destroy(); } catch (e) {} }, 300);
     }
   };
 
@@ -348,7 +365,7 @@
   };
 
   function toggleShimmer(isActive) {
-    const kpis = ['kpi-active', 'kpi-collected', 'kpi-overdue', 'kpi-bus-exp', 'kpi-staff-cost', 'kpi-total-exp', 'kpi-net', 'kpi-net-forecast', 'pred-sum-actual', 'pred-sum-remaining', 'pred-sum-total'];
+    const kpis = ['kpi-active', 'kpi-collected', 'kpi-overdue', 'kpi-bus-exp', 'kpi-staff-cost', 'kpi-total-exp', 'kpi-net', 'kpi-net-forecast', 'pred-sum-actual', 'pred-sum-remaining', 'pred-sum-total', 'revexp-sum-revenue', 'revexp-sum-expenses', 'cashupi-sum-cash', 'cashupi-sum-upi'];
     const chartIds = ['chart-batch', 'chart-rev-exp', 'chart-trend', 'chart-expense-breakdown', 'chart-prediction'];
     const tables = ['table-overdue', 'table-upcoming'];
     const seg = document.getElementById('kpi-active-segregation');
@@ -464,6 +481,8 @@
       safeSetText('mini-staff-avg', formatCurrency(Math.round(avgStaffCost)));
     }
 
+    if (typeof window.closeChartModal === 'function') window.closeChartModal();
+
     Object.keys(window.AppCharts).forEach(key => {
       if (window.AppCharts[key] && typeof window.AppCharts[key].destroy === 'function') {
         window.AppCharts[key].destroy();
@@ -515,6 +534,9 @@
       elRevExp.innerHTML = ''; 
       window.AppCharts.revExp = new ApexCharts(elRevExp, window.AppChartConfigs.revExp);
       window.AppCharts.revExp.render();
+      const sumSeries = (values) => (values || []).reduce((sum, value) => sum + (Number(value) || 0), 0);
+      safeSetText('revexp-sum-revenue', formatCurrency(sumSeries(data.charts.revenue)));
+      safeSetText('revexp-sum-expenses', formatCurrency(sumSeries(data.charts.expenses)));
     }
 
     // 2. Batch
@@ -791,6 +813,9 @@
       const paymentModes = chartData.charts.paymentModes || {};
       const cashRaw = (paymentModes.cash || []).map((value) => Number(value) || 0);
       const upiRaw = (paymentModes.upi || []).map((value) => Number(value) || 0);
+      const sumSeries = (values) => values.reduce((sum, value) => sum + (Number(value) || 0), 0);
+      safeSetText('cashupi-sum-cash', AppUtils.formatCurrency(sumSeries(cashRaw)));
+      safeSetText('cashupi-sum-upi', AppUtils.formatCurrency(sumSeries(upiRaw)));
       const shareOf = (values) => values.map((value, index) => {
         const total = (cashRaw[index] || 0) + (upiRaw[index] || 0);
         if (!total || !value) return 0;

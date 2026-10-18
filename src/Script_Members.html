@@ -25,6 +25,29 @@
       return label.includes('inactive') || label.includes('in-active') || label.includes('exit');
     },
 
+    exitDateState: function(member) {
+      const raw = member && member.exitDate ? String(member.exitDate).trim() : '';
+      if (!raw) return 'missing';
+      const exit = new Date(this.parseToISODate(raw));
+      if (isNaN(exit.getTime())) return 'missing';
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      exit.setHours(0, 0, 0, 0);
+      return exit.getTime() < today.getTime() ? 'passed' : 'open';
+    },
+
+    nonRecurringStillOpen: function(member) {
+      return this.isNonRecurringPlan(member && member.membershipId) && this.exitDateState(member) === 'open';
+    },
+
+    nonRecurringClosed: function(member) {
+      if (!this.isNonRecurringPlan(member && member.membershipId)) return false;
+      const state = this.exitDateState(member);
+      if (state === 'open') return false;
+      if (state === 'passed') return true;
+      return this.isStoredInactive(member && member.status);
+    },
+
     membershipRowState: function(member) {
       const owed = Number(member && (member.balanceDue || member.pendingAmount)) || 0;
       if (owed > 0) {
@@ -36,7 +59,16 @@
           dueInfo: { text: 'Pending ' + AppUtils.formatCurrency(owed), class: 'bg-red-50 text-red-600 border-red-200' }
         };
       }
-      const closed = this.isStoredInactive(member && member.status) || this.isNonRecurringPlan(member && member.membershipId);
+      if (this.nonRecurringStillOpen(member)) {
+        const exitLabel = AppUtils.formatDateDDMMMYYYY(member.exitDate, false, false) || String(member.exitDate);
+        return {
+          statusName: 'Active',
+          statusClass: this.statusBadgeClass('active'),
+          dueStr: exitLabel,
+          dueInfo: { text: 'Ends ' + exitLabel, class: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+        };
+      }
+      const closed = this.isStoredInactive(member && member.status) || this.nonRecurringClosed(member);
       if (closed) {
         return {
           statusName: 'In-Active',
@@ -917,8 +949,6 @@
     },
 
     updateDetailHeader: function(member) {
-        const isNonRecurring = this.isNonRecurringPlan(member.membershipId);
-
         let dueStr = this.effectiveDueDate ? this.formatDateDDMMMYYYY(this.effectiveDueDate) : 'N/A';
         let dueInfo = this.getDueInfo(dueStr);
         
@@ -926,11 +956,16 @@
         const today = new Date();
         today.setHours(0,0,0,0);
         const owed = Number(member.balanceDue || member.pendingAmount) || 0;
-        const closedAccount = !owed && (this.isStoredInactive(member.status) || isNonRecurring);
+        const stillOpen = this.nonRecurringStillOpen(member);
+        const closedAccount = !owed && !stillOpen && (this.isStoredInactive(member.status) || this.nonRecurringClosed(member));
         
         if (owed > 0) {
              mainStatusName = 'Overdue';
              dueInfo = { text: 'Pending ' + AppUtils.formatCurrency(owed), class: 'bg-red-50 text-red-600 border-red-200' };
+        } else if (stillOpen) {
+             mainStatusName = 'Active';
+             dueStr = this.formatDateDDMMMYYYY(member.exitDate);
+             dueInfo = { text: 'Ends ' + dueStr, class: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
         } else if (closedAccount) {
              mainStatusName = 'In-Active';
              dueStr = '--';
@@ -1169,14 +1204,18 @@
             }
 
             const isPaidRow = this.isPaidPayment(p);
+            const isPartialRow = this.isPartialPayment(p);
             const hasPhone = Boolean(WhatsAppNotify.normalizePhone(memberPhone));
             let waBtn = '';
-            if (isPaidRow) {
+            if (isPaidRow || isPartialRow) {
+              const pendingRaw = Number(String(p.pendingAmount || 0).replace(/[^0-9.-]+/g, '')) || 0;
               const waRow = {
                 name: memberName,
                 phone: memberPhone,
                 plan: planLabel,
                 amount: Number(pAmt) || 0,
+                pendingAmount: pendingRaw,
+                partial: isPartialRow,
                 date: this.formatDateDDMMMYYYY(p.paidDate),
                 paidDate: this.formatDateDDMMMYYYY(p.paidDate),
                 endDate: p.endDate ? this.formatDateDDMMMYYYY(p.endDate) : '',
@@ -1185,7 +1224,7 @@
               const waRowJson = JSON.stringify(waRow).replace(/"/g, '&quot;');
               waBtn = WhatsAppNotify.renderButton(
                 hasPhone,
-                `WhatsAppNotify.open('paid', ${waRowJson}, event)`
+                `WhatsAppNotify.open('${isPartialRow ? 'partial' : 'paid'}', ${waRowJson}, event)`
               );
             }
 

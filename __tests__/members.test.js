@@ -823,7 +823,7 @@ describe('Members Module', () => {
       MembersApp.dropdowns = originalDropdowns;
     });
 
-    it('shows Trial and Ad hoc as In-Active with Account Closed, and paints an exit date', () => {
+    it('keeps Trial and Ad hoc Active until the exit date, then marks them In-Active', () => {
       const originalDropdowns = MembersApp.dropdowns;
       MembersApp.dropdowns = {
         membership: [
@@ -837,27 +837,41 @@ describe('Members Module', () => {
         ]
       };
 
-      const trialHtml = MembersApp.buildDesktopRowHtml({
-        memberId: 'LSC-MEM-3',
-        fullName: 'Dhriti Roy',
-        membershipId: 'PLAN-TRIAL',
-        status: 'STATUS-INACTIVE',
-        dueDate: 'N/A',
-        joinDate: '01-Oct-2026'
-      });
-      const adhocHtml = MembersApp.buildDesktopRowHtml({
+      const openAdhoc = MembersApp.buildDesktopRowHtml({
         memberId: 'LSC-MEM-7',
         fullName: 'Reena Roy',
         membershipId: 'PLAN-ADHOC',
         status: 'STATUS-ACTIVE',
         dueDate: 'N/A',
-        joinDate: '20-Jul-2026'
+        joinDate: '20-Jul-2026',
+        exitDate: '2099-12-31'
       });
-      expect(trialHtml).toContain('In-Active');
-      expect(trialHtml).toContain('Account Closed');
-      expect(adhocHtml).toContain('In-Active');
-      expect(adhocHtml).toContain('Account Closed');
-      expect(adhocHtml).not.toContain('No Due Date');
+      expect(openAdhoc).toContain('Active');
+      expect(openAdhoc).toContain('Ends');
+      expect(openAdhoc).not.toContain('Account Closed');
+
+      const closedTrial = MembersApp.buildDesktopRowHtml({
+        memberId: 'LSC-MEM-3',
+        fullName: 'Dhriti Roy',
+        membershipId: 'PLAN-TRIAL',
+        status: 'STATUS-ACTIVE',
+        dueDate: 'N/A',
+        joinDate: '01-Jan-2020',
+        exitDate: '2020-01-08'
+      });
+      expect(closedTrial).toContain('In-Active');
+      expect(closedTrial).toContain('Account Closed');
+
+      const storedClosed = MembersApp.buildDesktopRowHtml({
+        memberId: 'LSC-MEM-4',
+        fullName: 'Closed Trial',
+        membershipId: 'PLAN-TRIAL',
+        status: 'STATUS-INACTIVE',
+        dueDate: 'N/A',
+        joinDate: '01-Oct-2026'
+      });
+      expect(storedClosed).toContain('In-Active');
+      expect(storedClosed).toContain('Account Closed');
 
       const quarterlyHtml = MembersApp.buildDesktopRowHtml({
         memberId: 'LSC-MEM-1',

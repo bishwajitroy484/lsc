@@ -666,10 +666,18 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
        const pNameLabel = resolveName('MEMBERS', 'membershipId', m.membershipId);
        const formatDue = (dateObj) => dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
 
-       if (owed > 0) {
-           const owedDate = (firstUnpaidDate && firstUnpaidDate < today)
+       const listDue = (actualNextDue && !isNaN(actualNextDue.getTime()))
+         ? actualNextDue
+         : ((firstUnpaidDate && !isNaN(firstUnpaidDate.getTime()))
              ? firstUnpaidDate
-             : ((actualNextDue && !isNaN(actualNextDue.getTime())) ? actualNextDue : (!isNaN(joinDate.getTime()) ? joinDate : new Date(today.getTime())));
+             : (!isNaN(joinDate.getTime()) ? joinDate : null));
+       const daysUntilDue = listDue
+         ? Math.ceil((listDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+         : null;
+       const inUpcomingWindow = !isAdHocOrTrial && daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 7;
+
+       if (owed > 0 && !inUpcomingWindow) {
+           const owedDate = listDue || new Date(today.getTime());
            const diffDays = Math.ceil((today.getTime() - owedDate.getTime()) / (1000 * 60 * 60 * 24));
            overdueList.push({
                memberId: m.memberId || '',
@@ -677,24 +685,23 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                phone: m.phone || '',
                plan: pNameLabel,
                amount: owed,
+               partial: true,
                date: formatDue(owedDate),
                days: Math.max(0, diffDays),
                status: 'text-red-600 bg-red-50 border-red-100'
            });
-       } else if (isActive && actualNextDue && !isAdHocOrTrial) {
-           const diffDays = Math.ceil((actualNextDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-           if (diffDays >= 0 && diffDays <= 7) {
-               upcomingList.push({
-                   memberId: m.memberId || '',
-                   name: m.fullName || 'Unknown',
-                   phone: m.phone || '',
-                   plan: pNameLabel,
-                   amount: amt,
-                   date: formatDue(actualNextDue),
-                   days: diffDays,
-                   status: 'text-amber-600 bg-amber-50 border-amber-100'
-               });
-           }
+       } else if (inUpcomingWindow && (isActive || owed > 0)) {
+           upcomingList.push({
+               memberId: m.memberId || '',
+               name: m.fullName || 'Unknown',
+               phone: m.phone || '',
+               plan: pNameLabel,
+               amount: owed > 0 ? owed : amt,
+               partial: owed > 0,
+               date: formatDue(listDue),
+               days: daysUntilDue,
+               status: 'text-amber-600 bg-amber-50 border-amber-100'
+           });
        }
     }
   });
