@@ -72,30 +72,13 @@ describe('notification report helpers', () => {
       { memberId: 'M1', fullName: 'Upcoming', phone: '111', status: 'Active', dueDate: '2026-10-05' },
       { memberId: 'M2', fullName: 'Overdue', phone: '222', status: 'Active', dueDate: '2026-09-20' },
       { memberId: 'M3', fullName: 'Later', phone: '333', status: 'Active', dueDate: '2026-10-20' },
-      { memberId: 'M4', fullName: 'Inactive', phone: '444', status: 'Inactive', dueDate: '2026-10-03' },
-      { memberId: 'M5', fullName: 'Paused', phone: '555', status: 'Active', dueDate: '2026-09-20', holdStatus: 'Paused', holdEnd: '2026-10-20' }
+      { memberId: 'M4', fullName: 'Inactive', phone: '444', status: 'Inactive', dueDate: '2026-10-03' }
     ];
     const payments = [];
     const report = api.classifyMembersForReport_(members, payments, [], asOf);
 
     expect(report.upcoming.map(r => r.memberId)).toEqual(['M1']);
     expect(report.overdue.map(r => r.memberId)).toEqual(['M2']);
-    expect(report.overdue.map(r => r.memberId)).not.toContain('M5');
-    expect(report.upcoming.map(r => r.memberId)).not.toContain('M5');
-  });
-
-  test('an ad hoc receipt thanks the member for the visit instead of a renewal', () => {
-    const api = loadNotificationsApi();
-    const mail = api.buildPaymentReceiptEmail_(
-      { fullName: 'Riya Sen', memberId: 'MEM1' },
-      { amount: 2000, paidDate: '2026-06-10', startDate: '2026-06-10', endDate: '2026-06-14', coverageKind: 'Ad hoc' },
-      { gymName: 'Lakeside', receiptBody: 'Thank you for your renewal.' },
-      'Quarterly'
-    );
-    expect(mail.htmlBody).toContain('Thank you for your visit');
-    expect(mail.htmlBody).toContain('10-Jun-2026');
-    expect(mail.htmlBody).toContain('14-Jun-2026');
-    expect(mail.htmlBody).not.toContain('Thank you for your renewal');
   });
 
   test('builds a payment receipt with coverage details', () => {

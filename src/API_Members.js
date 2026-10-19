@@ -91,50 +91,6 @@ function deactivateExpiredMemberStatuses(members, plans, memberStatuses, asOfDat
   });
 }
 
-function keepMemberStatusActiveWhilePaused_(members, memberStatuses) {
-  const pauseId = statusOptionId_(memberStatuses, function(item) {
-    return String(item.name || item.label || '').toLowerCase().indexOf('paus') >= 0;
-  });
-  const activeId = statusOptionId_(memberStatuses, function(item) {
-    return isActiveStatusLabel_(item.name || item.label || item.id);
-  });
-  if (!activeId) return;
-  (members || []).forEach(function(member) {
-    const raw = String(member.status || '');
-    const storedPause = (pauseId && raw === pauseId) || raw.toLowerCase().indexOf('paus') >= 0;
-    if (!storedPause) return;
-    member.status = activeId;
-    DB.update('MEMBERS', member.memberId, { status: activeId });
-  });
-}
-
-function releaseExpiredMemberPauses_(members, asOfDate) {
-  const today = new Date(asOfDate || new Date());
-  today.setHours(0, 0, 0, 0);
-  (members || []).forEach(function(member) {
-    if (String(member.holdStatus || '').toLowerCase().indexOf('paus') < 0 || !member.holdEnd) return;
-    const end = typeof parseSafeDate === 'function' ? parseSafeDate(member.holdEnd) : new Date(member.holdEnd);
-    if (!end || isNaN(end.getTime())) return;
-    end.setHours(0, 0, 0, 0);
-    if (end >= today) return;
-    member.holdStatus = '';
-    const payload = { holdStatus: '' };
-    const statuses = memberStatusOptions_();
-    const activeId = statusOptionId_(statuses, function(item) {
-      return isActiveStatusLabel_(item.name || item.label || item.id);
-    });
-    const currentIsPause = String(member.status || '').toLowerCase().indexOf('paus') >= 0 || statuses.some(function(item) {
-      return String(item.id || item.value || '') === String(member.status) && String(item.name || item.label || '').toLowerCase().indexOf('paus') >= 0;
-    });
-    if (activeId && currentIsPause) {
-      member.status = activeId;
-      payload.status = activeId;
-    }
-    DB.update('MEMBERS', member.memberId, payload);
-    if (typeof syncMemberDueCalendarEvent_ === 'function') syncMemberDueCalendarEvent_(member.memberId);
-  });
-}
-
 function runDailyMemberExitDateCheck() {
   const members = DB.read('MEMBERS');
   const globalData = api_getGlobalDropdowns();
@@ -144,7 +100,6 @@ function runDailyMemberExitDateCheck() {
 
   const options = globalData.data.options;
   deactivateExpiredMemberStatuses(members, options.membership || [], options.status || []);
-  releaseExpiredMemberPauses_(members);
 }
 
 function setupMemberExitDateTrigger() {
@@ -162,7 +117,6 @@ function api_getMembers() {
   try {
     const gate = requirePermission_('members', 'view');
     if (!gate.ok) return gate.response;
-    ensureMemberHoldHeaders_();
     // 1. Batch read for performance, including SETTINGS
     const dbData = DB.batchRead(['MEMBERS', 'PAYMENTS', 'SETTINGS']);
     const members = dbData['MEMBERS'] || [];
@@ -201,8 +155,6 @@ function api_getMembers() {
       : [];
 
     deactivateExpiredMemberStatuses(members, plans, memberStatuses);
-    keepMemberStatusActiveWhilePaused_(members, memberStatuses);
-    releaseExpiredMemberPauses_(members);
 
     const paymentsByMember = {};
     payments.forEach(p => {
@@ -226,7 +178,6 @@ function api_getMembers() {
       m.pendingAmount = Math.round(pendingAmount * 100) / 100;
 
       mPayments = mPayments.filter(p => paymentCoversMembershipCycle_(p, paymentStatuses));
-      mPayments = mPayments.filter(p => !isAdHocCoveragePayment_(p));
 
       mPayments.sort((a, b) => new Date(b.endDate || b.paidDate || 0) - new Date(a.endDate || a.paidDate || 0));
       const latestPayment = mPayments.length > 0 ? mPayments[0] : null;
@@ -267,14 +218,6 @@ function api_getMembers() {
         let d = new Date(m.joinDate);
         if (!isNaN(d)) {
           nextDue = formatToDDMMMYYYY(d);
-        }
-      }
-
-      if (!isAdHocOrTrial && m.holdEnd && String(m.holdStatus || '').toLowerCase().indexOf('paus') < 0) {
-        const holdEnd = typeof parseSafeDate === 'function' ? parseSafeDate(m.holdEnd) : new Date(m.holdEnd);
-        const due = nextDue && typeof parseSafeDate === 'function' ? parseSafeDate(nextDue) : (nextDue ? new Date(nextDue) : null);
-        if (holdEnd && !isNaN(holdEnd.getTime()) && (!due || isNaN(due.getTime()) || due < holdEnd)) {
-          nextDue = formatToDDMMMYYYY(holdEnd);
         }
       }
 
@@ -355,7 +298,7 @@ function ensurePaymentSplitHeaders_() {
     }
     const meta = DB._getSheetMeta('PAYMENTS');
     const headers = (meta.headers || []).slice();
-    const missing = ['cashAmount', 'upiAmount', 'expectedAmount', 'pendingAmount', 'receiptUrl', 'coverageKind'].filter(function(name) {
+    const missing = ['cashAmount', 'upiAmount', 'expectedAmount', 'pendingAmount', 'receiptUrl'].filter(function(name) {
       return !headers.some(function(header) {
         return DB._payloadKeyForHeader_(header) === name;
       });
@@ -374,159 +317,6 @@ function ensurePaymentSplitHeaders_() {
     return headers;
   } catch (error) {
     return null;
-  }
-}
-
-function ensureMemberHoldHeaders_() {
-  try {
-    const letter = typeof colToLetter === 'function' ? colToLetter : (typeof _colToLetter === 'function' ? _colToLetter : null);
-    if (!DB || typeof Sheets === 'undefined' || !Sheets.Spreadsheets || typeof SPREADSHEET_ID === 'undefined' || !letter) {
-      return null;
-    }
-    const response = Sheets.Spreadsheets.Values.get(SPREADSHEET_ID, "'MEMBERS'!1:1");
-    const headers = ((response && response.values && response.values[0]) || []).slice();
-    while (headers.length && !String(headers[headers.length - 1] || '').trim()) headers.pop();
-    const missing = ['holdStatus', 'holdStart', 'holdDays', 'holdEnd'].filter(function(name) {
-      return !headers.some(function(header) {
-        const key = DB._payloadKeyForHeader_ ? DB._payloadKeyForHeader_(header) : header;
-        return String(key || '').replace(/[\s_-]+/g, '').toLowerCase() === name.toLowerCase();
-      });
-    });
-    if (missing.length) {
-      const startCol = headers.length + 1;
-      const data = missing.map(function(name, index) {
-        headers.push(name);
-        return {
-          range: "'MEMBERS'!" + letter(startCol + index) + '1',
-          values: [[name]]
-        };
-      });
-      Sheets.Spreadsheets.Values.batchUpdate({ valueInputOption: 'RAW', data: data }, SPREADSHEET_ID);
-      if (typeof DB._invalidateSheet === 'function') DB._invalidateSheet('MEMBERS');
-    }
-    return headers;
-  } catch (error) {
-    return null;
-  }
-}
-
-function normalizeCoverageKind_(value) {
-  const text = String(value || '').toLowerCase().replace(/[\s_-]+/g, '');
-  return text.indexOf('adhoc') >= 0 ? 'Ad hoc' : 'Quarter';
-}
-
-function formatHoldDate_(date) {
-  const d = date instanceof Date ? date : new Date();
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return String(d.getDate()).padStart(2, '0') + '-' + months[d.getMonth()] + '-' + d.getFullYear();
-}
-
-function isAdHocCoveragePayment_(payment) {
-  return String(payment && payment.coverageKind || '').toLowerCase().replace(/[\s_-]+/g, '').indexOf('adhoc') >= 0;
-}
-
-function memberStatusOptions_() {
-  try {
-    if (typeof api_getGlobalDropdowns !== 'function') return [];
-    const data = api_getGlobalDropdowns();
-    const options = data && data.success && data.data && data.data.options;
-    return (options && (options.status || options.Status)) || [];
-  } catch (error) {
-    return [];
-  }
-}
-
-function statusOptionId_(statuses, matcher) {
-  const hit = (statuses || []).find(matcher);
-  return hit ? String(hit.id || hit.value || '') : '';
-}
-
-function clearMemberHold_(memberId) {
-  if (!memberId) return;
-  const headers = ensureMemberHoldHeaders_();
-  const members = DB.read('MEMBERS') || [];
-  const existing = members.find(function(member) {
-    return String(member.memberId) === String(memberId);
-  });
-  if (!existing || String(existing.holdStatus || '').toLowerCase().indexOf('paus') < 0) return;
-  const payload = { holdStatus: '', holdStart: '', holdDays: '', holdEnd: '' };
-  const statuses = memberStatusOptions_();
-  const activeId = statusOptionId_(statuses, function(item) {
-    return isActiveStatusLabel_(item.name || item.label || item.id);
-  });
-  const currentName = String(existing.status || '').toLowerCase();
-  const currentIsPause = currentName.indexOf('paus') >= 0 || statuses.some(function(item) {
-    return String(item.id || item.value || '') === String(existing.status) && String(item.name || item.label || '').toLowerCase().indexOf('paus') >= 0;
-  });
-  if (activeId && currentIsPause) payload.status = activeId;
-  if (headers && headers.length) DB.update('MEMBERS', memberId, payload, headers);
-  else DB.update('MEMBERS', memberId, payload);
-}
-
-function applyAccountPause_(memberData, existing) {
-  const headers = ensureMemberHoldHeaders_();
-  const pausing = memberData && (memberData.accountPause === true || String(memberData.accountPause) === 'true');
-  delete memberData.accountPause;
-  const days = parseInt(memberData.pauseDays, 10);
-  delete memberData.pauseDays;
-  const result = { headers: headers, notify: false };
-  if (!pausing) {
-    if (existing && String(existing.holdStatus || '').toLowerCase().indexOf('paus') >= 0) {
-      memberData.holdStatus = '';
-      memberData.holdStart = '';
-      memberData.holdDays = '';
-      memberData.holdEnd = '';
-    }
-    return result;
-  }
-  if (!days || days < 1) throw new Error('Enter how many days to pause.');
-  const alreadyOpen = existing && String(existing.holdStatus || '').toLowerCase().indexOf('paus') >= 0 && existing.holdStart;
-  let startDate = new Date();
-  if (alreadyOpen && typeof parseSafeDate === 'function') {
-    const parsed = parseSafeDate(existing.holdStart);
-    if (parsed && !isNaN(parsed.getTime())) startDate = new Date(parsed.getTime());
-  }
-  startDate.setHours(0, 0, 0, 0);
-  const endDate = new Date(startDate.getTime());
-  endDate.setDate(endDate.getDate() + days - 1);
-  memberData.holdStatus = 'Paused';
-  memberData.holdStart = formatHoldDate_(startDate);
-  memberData.holdDays = String(days);
-  memberData.holdEnd = formatHoldDate_(endDate);
-  const statuses = memberStatusOptions_();
-  const pauseId = statusOptionId_(statuses, function(item) {
-    return String(item.name || item.label || '').toLowerCase().indexOf('paus') >= 0;
-  });
-  const activeId = statusOptionId_(statuses, function(item) {
-    return isActiveStatusLabel_(item.name || item.label || item.id);
-  });
-  const incoming = String(memberData.status || '');
-  const incomingIsPause = incoming === '__PAUSE__' || (pauseId && incoming === pauseId) || incoming.toLowerCase().indexOf('paus') >= 0;
-  if (!incoming || incomingIsPause) {
-    const previous = existing ? String(existing.status || '') : '';
-    const previousIsPause = previous === '__PAUSE__' || (pauseId && previous === pauseId) || previous.toLowerCase().indexOf('paus') >= 0;
-    memberData.status = (!previousIsPause && previous) ? previous : (activeId || previous || '');
-  }
-  result.notify = !(alreadyOpen && String(existing.holdDays) === String(days));
-  return result;
-}
-
-function api_pauseMember(memberId) {
-  try {
-    const gate = requirePermission_('members', 'edit');
-    if (!gate.ok) return gate.response;
-    if (!memberId) throw new Error('Member ID is missing.');
-    const headers = ensureMemberHoldHeaders_();
-    const members = DB.read('MEMBERS') || [];
-    const existing = members.find(function(member) {
-      return String(member.memberId) === String(memberId);
-    });
-    if (!existing) throw new Error('Member not found.');
-    const holdStart = formatHoldDate_(new Date());
-    DB.update('MEMBERS', memberId, { holdStatus: 'Paused', holdStart: holdStart }, headers);
-    return { success: true, message: 'Membership paused.', data: { memberId: memberId, holdStatus: 'Paused', holdStart: holdStart } };
-  } catch (error) {
-    return { success: false, error: error.toString() };
   }
 }
 
@@ -643,28 +433,17 @@ function api_saveMember(memberData) {
     delete memberData.base64Image;
     delete memberData.imageName;
     delete memberData.notes;
-    if (isNew) {
-      delete memberData.accountPause;
-      delete memberData.pauseDays;
-    }
 
     // 3. Save Member to DB
     let savedData;
-    let pauseNotice = null;
     if (!isNew) {
       const members = DB.read('MEMBERS') || [];
       const existing = members.find(function(m) {
         return String(m.memberId) === String(memberData.memberId);
       });
       if (!existing) throw new Error('Member not found.');
-      pauseNotice = applyAccountPause_(memberData, existing);
       const merged = mergeMemberUpdatePayload_(existing, memberData);
-      savedData = (pauseNotice.headers && pauseNotice.headers.length)
-        ? DB.update('MEMBERS', memberData.memberId, merged, pauseNotice.headers)
-        : DB.update('MEMBERS', memberData.memberId, merged);
-      if (pauseNotice.notify && typeof maybeSendPauseNotice_ === 'function') {
-        maybeSendPauseNotice_(Object.assign({}, existing, merged));
-      }
+      savedData = DB.update('MEMBERS', memberData.memberId, merged);
     } else {
       savedData = DB.create('MEMBERS', memberData);
       
@@ -849,7 +628,6 @@ function api_recordPayment(paymentData) {
     paymentData.updatedBy = userEmail;
     delete paymentData.notes;
     const paymentHeaders = ensurePaymentSplitHeaders_();
-    paymentData.coverageKind = normalizeCoverageKind_(paymentData.coverageKind);
     applyPaymentSplit_(paymentData);
     applyPartialBalance_(paymentData);
     if (isNewPayment) {
@@ -873,8 +651,6 @@ function api_recordPayment(paymentData) {
     } else {
       savedData = DB.update('PAYMENTS', paymentData.paymentId, paymentData, paymentHeaders);
     }
-
-    if (isNewPayment && paymentData.coverageKind === 'Quarter') clearMemberHold_(paymentData.memberId);
 
     if (isNewPayment && typeof maybeSendPaymentReceipt_ === 'function') {
       maybeSendPaymentReceipt_(savedData || paymentData);

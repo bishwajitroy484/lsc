@@ -1,4 +1,4 @@
-const { colToLetter, _colToLetter, parseSafeDate, distributeDailyProration, ensurePauseStatusOption_, DB } = require('../src/Utils_DB');
+const { colToLetter, _colToLetter, parseSafeDate, distributeDailyProration, DB } = require('../src/Utils_DB');
 
 describe('Universal Column Converter (colToLetter)', () => {
   test('correctly converts 1-based indices to column letters', () => {
@@ -442,56 +442,5 @@ describe('DB read cache', () => {
     expect(DB._cacheGet('batch:MEMBERS|PAYMENTS')).toBeNull();
 
     delete global.CacheService;
-  });
-});
-
-describe('Status dropdown', () => {
-  test('adds Pause beside Active and In-Active when the status list does not have it', () => {
-    const updates = [];
-    global.Sheets = {
-      Spreadsheets: {
-        Values: {
-          update: (body, spreadsheetId, range) => {
-            updates.push({ body, spreadsheetId, range });
-          }
-        }
-      }
-    };
-    global.SPREADSHEET_ID = 'sheet-1';
-    const options = {
-      status: [
-        { id: 'STA-ACTIVE', name: 'Active' },
-        { id: 'STA-INACTIVE', name: 'In-Active' }
-      ]
-    };
-    ensurePauseStatusOption_({
-      status: {
-        key: 'status',
-        name: 'Status',
-        prefix: 'STA',
-        columns: [{ key: 'id' }, { key: 'name' }],
-        startCol: 9,
-        numCols: 2
-      }
-    }, options);
-    expect(options.status.map(item => item.name)).toEqual(['Active', 'In-Active', 'Pause']);
-    expect(options.status[2].id).toBe('STA-PAUSE');
-    expect(updates).toHaveLength(1);
-    expect(updates[0].body.values).toEqual([['STA-PAUSE', 'Pause']]);
-    expect(updates[0].range).toBe("'DROP_DOWN'!I5");
-
-    ensurePauseStatusOption_({
-      status: {
-        key: 'status',
-        name: 'Status',
-        prefix: 'STA',
-        columns: [{ key: 'id' }, { key: 'name' }],
-        startCol: 9,
-        numCols: 2
-      }
-    }, options);
-    expect(updates).toHaveLength(1);
-    delete global.Sheets;
-    delete global.SPREADSHEET_ID;
   });
 });

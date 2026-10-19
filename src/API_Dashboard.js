@@ -565,28 +565,21 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
            if (!isNaN(ed)) exitDate = ed;
        }
 
+       let totalPaidByMember = mPayments.reduce((sum, p) => sum + parseAmt(p.amount), 0);
+       const pendingExplicit = (payments || []).reduce((sum, payment) => {
+         if (String(payment.memberId || '') !== String(m.memberId || '')) return sum;
+         return sum + paymentPendingBalance_(payment);
+       }, 0);
+
        // 1. Calculate precise NEXT DUE DATE perfectly synced with Members UI
        let actualNextDue = null;
        const compactPlan = planDetails.replace(/[\s_-]+/g, '');
        const isAdHocOrTrial = compactPlan.includes('adhoc') || compactPlan.includes('trial');
-       const isAdHocPay = (payment) => String(payment && payment.coverageKind || '').toLowerCase().replace(/[\s_-]+/g, '').indexOf('adhoc') >= 0;
-       const renewalPayments = mPayments.filter(payment => !isAdHocPay(payment));
-       let isPaused = String(m.holdStatus || '').toLowerCase().indexOf('paus') >= 0;
-       const pauseStart = m.holdStart ? parseSafeDate(m.holdStart) : null;
-       const pauseEnd = m.holdEnd ? parseSafeDate(m.holdEnd) : null;
-       const pauseWindow = pauseStart && pauseEnd && !isNaN(pauseStart.getTime()) && !isNaN(pauseEnd.getTime());
-       if (isPaused && pauseEnd && !isNaN(pauseEnd.getTime())) {
-         const endDay = new Date(pauseEnd.getTime());
-         endDay.setHours(0, 0, 0, 0);
-         const todayDay = new Date(today.getTime());
-         todayDay.setHours(0, 0, 0, 0);
-         if (endDay < todayDay) isPaused = false;
-       }
        
-       if (renewalPayments.length > 0) {
+       if (mPayments.length > 0) {
            if (!isAdHocOrTrial) {
-               renewalPayments.sort((a, b) => new Date(parseSafeDate(b.endDate || b.paidDate)) - new Date(parseSafeDate(a.endDate || a.paidDate)));
-               const latestP = renewalPayments[0];
+               mPayments.sort((a, b) => new Date(parseSafeDate(b.endDate || b.paidDate)) - new Date(parseSafeDate(a.endDate || a.paidDate)));
+               const latestP = mPayments[0];
                if (latestP.endDate) {
                    let d = parseSafeDate(latestP.endDate);
                    if (!isNaN(d)) {
@@ -603,13 +596,8 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
            if (!isNaN(joinDate)) actualNextDue = new Date(joinDate);
        }
 
-       const latestPaymentAmount = renewalPayments.length ? parseAmt(renewalPayments[0].amount) : 0;
+       const latestPaymentAmount = mPayments.length ? parseAmt(mPayments[0].amount) : 0;
        const expectedPaymentAmount = amt || latestPaymentAmount;
-       let totalPaidByMember = renewalPayments.reduce((sum, p) => sum + parseAmt(p.amount), 0);
-       const pendingExplicit = (payments || []).reduce((sum, payment) => {
-         if (String(payment.memberId || '') !== String(m.memberId || '')) return sum;
-         return sum + paymentPendingBalance_(payment);
-       }, 0);
        if (isActive && !isAdHocOrTrial) {
          payments.forEach(payment => {
            if (String(payment.memberId || '') !== String(m.memberId || '')) return;
@@ -623,7 +611,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
            }
          });
        }
-       if (isActive && !isAdHocOrTrial && !isPaused && expectedPaymentAmount > 0 && actualNextDue && actualNextDue >= today) {
+       if (isActive && !isAdHocOrTrial && expectedPaymentAmount > 0 && actualNextDue && actualNextDue >= today) {
            const firstDueDate = new Date(actualNextDue);
            const targetYearEnd = new Date(targetYear, 11, 31, 23, 59, 59, 999);
            let billingNumber = 0;
@@ -645,15 +633,11 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
        let totalUnpaidForMember = 0;
        let firstUnpaidDate = null;
 
-       if (!isAdHocOrTrial && !isPaused && !isNaN(cycleDate.getTime())) {
+       if (!isAdHocOrTrial && !isNaN(cycleDate.getTime())) {
          while (cycleDate <= exitDate) {
            const cYear = cycleDate.getFullYear();
            const cMonth = cycleDate.getMonth();
            const nextCycleDate = advanceCycle(cycleDate, 1);
-           if (pauseWindow && cycleDate >= pauseStart && cycleDate <= pauseEnd) {
-             cycleDate = nextCycleDate;
-             continue;
-           }
 
            let unpaidPortion = 0;
            if (totalPaidByMember >= amt) {
@@ -677,18 +661,6 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
          }
        }
 
-       if (!isPaused && pauseWindow && pauseEnd < today && actualNextDue && actualNextDue <= pauseEnd && expectedPaymentAmount > 0) {
-         const rejoined = renewalPayments.some(payment => {
-           const end = parseSafeDate(payment.endDate || payment.paidDate);
-           return end && !isNaN(end.getTime()) && end > pauseEnd;
-         });
-         if (!rejoined) {
-           actualNextDue = new Date(pauseEnd.getTime());
-           totalUnpaidForMember = expectedPaymentAmount;
-           firstUnpaidDate = new Date(pauseEnd.getTime());
-         }
-       }
-
        const feeGap = isAdHocOrTrial ? Math.max(0, Math.round((amt - receivedByMember) * 100) / 100) : 0;
        const coverageStillOpen = actualNextDue && !isNaN(actualNextDue.getTime()) && actualNextDue >= today;
        const owed = (coverageStillOpen && pendingExplicit > 0)
@@ -705,7 +677,7 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
        const daysUntilDue = listDue
          ? Math.ceil((listDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
          : null;
-       const inUpcomingWindow = !isPaused && !isAdHocOrTrial && daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 7;
+       const inUpcomingWindow = !isAdHocOrTrial && daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 7;
 
        if (owed > 0 && !inUpcomingWindow) {
            const owedDate = listDue || new Date(today.getTime());

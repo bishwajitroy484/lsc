@@ -112,11 +112,9 @@
               </div>
             </div>
             
-            <div class="flex items-center gap-2 shrink-0">
             <button data-perm="members:create" onclick="MembersApp.openRecordPayment()" class="h-9 px-4 bg-brand-primary text-white text-xs font-bold rounded-lg shadow-md shadow-red-500/20 hover:bg-brand-hover transition-all active:scale-95 shrink-0 flex items-center gap-1">
               <span class="material-symbols-rounded text-[16px] hidden sm:block">payments</span> Pay
             </button>
-            </div>
           </div>
 
           
@@ -353,10 +351,6 @@
                       <span class="material-symbols-rounded absolute right-2 top-2 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
                     </div>
                   </div>
-                  <div id="mem-pause-container" class="hidden">
-                    <label for="mem-pause-days" class="block text-[9px] font-bold text-amber-700 mb-1 tracking-wide">Pause days *</label>
-                    <input type="number" id="mem-pause-days" min="1" step="1" placeholder="How many days" class="w-full px-2.5 py-2 bg-amber-50/40 border border-amber-200 rounded-lg text-xs font-bold text-slate-800 focus:border-amber-400 outline-none shadow-sm">
-                  </div>
                   <div id="mem-exit-container" class="hidden">
                     <label class="block text-[9px] font-bold text-red-500 mb-1 tracking-wide">Exit Date *</label>
                     <div class="relative">
@@ -404,8 +398,8 @@
 
       
       <div
-        class="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0 bg-slate-50 rounded-t-2xl">
-        <h2 id="pay-modal-title" class="text-base font-bold text-slate-800">Record Payment</h2>
+        class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0 bg-slate-50 rounded-t-2xl">
+        <h2 id="pay-modal-title" class="text-lg font-bold text-slate-800">Record Payment</h2>
         <button onclick="MembersApp.closeRecordPayment()" class="w-8 h-8 flex items-center justify-center bg-white text-slate-500 rounded-full hover:bg-slate-200 shadow-sm border border-slate-100 transition-colors">
           <span class="material-symbols-rounded text-lg">close</span>
         </button>
@@ -416,37 +410,32 @@
         <input type="hidden" id="pay-id">
 
         
-        <div class="flex-1 overflow-y-auto no-scrollbar p-3 sm:p-4 space-y-2">
+        <div class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3">
           <input type="hidden" id="pay-expected" value="0">
 
-          <div id="pay-coverage-container" class="rounded-xl border border-amber-200 bg-amber-50/80 p-2.5">
+          <div id="pay-coverage-container" class="rounded-2xl border border-amber-200 bg-amber-50/80 p-3">
             <div class="flex items-center justify-between gap-2">
               <p class="text-[11px] font-bold text-amber-900">Coverage</p>
               <p id="pay-cycle-label" class="hidden text-[11px] font-bold text-amber-800"></p>
             </div>
-            <div id="pay-kind" class="grid grid-cols-2 gap-2 mt-2">
-              <button type="button" id="pay-kind-quarter" onclick="MembersApp.setCoverageKind('Quarter')" class="h-8 rounded-lg border border-amber-300 bg-amber-800 text-white text-[11px] font-bold">Quarter</button>
-              <button type="button" id="pay-kind-adhoc" onclick="MembersApp.setCoverageKind('Ad hoc')" class="h-8 rounded-lg border border-amber-300 bg-white text-amber-900 text-[11px] font-bold">Ad hoc</button>
-            </div>
-            <input type="hidden" id="pay-coverage-kind" value="Quarter">
-            <div class="grid grid-cols-2 gap-2 mt-2">
-              <div class="min-w-0">
+            <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-end mt-2">
+              <div>
                 <label for="pay-start" class="block text-[10px] font-semibold text-amber-800/80 mb-1">Start *</label>
-                <input type="text" id="pay-start" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2 py-1.5 bg-white border border-amber-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-amber-400 outline-none">
+                <input type="text" id="pay-start" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-white border border-amber-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-amber-400 outline-none">
               </div>
-              <div class="min-w-0">
+              <span class="material-symbols-rounded text-amber-700 text-[18px] pb-2">arrow_forward</span>
+              <div>
                 <label for="pay-end" class="block text-[10px] font-semibold text-amber-800/80 mb-1">End *</label>
-                <input type="text" id="pay-end" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2 py-1.5 bg-white border border-amber-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-amber-400 outline-none">
+                <input type="text" id="pay-end" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-white border border-amber-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-amber-400 outline-none">
               </div>
             </div>
             <label id="pay-custom-wrap" class="hidden mt-2 flex items-center gap-2 text-[11px] font-semibold text-amber-900">
               <input type="checkbox" id="pay-custom-dates" onchange="MembersApp.toggleCustomCoverage()" class="rounded border-amber-300 text-brand-primary focus:ring-brand-primary">
               Different dates
             </label>
-            <p id="pay-adhoc-note" class="hidden mt-1.5 text-[10px] font-semibold text-amber-900"></p>
           </div>
 
-          <div id="pay-due-row" class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 flex justify-between items-center">
+          <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 flex justify-between items-center">
             <span class="text-[10px] font-bold text-slate-500">Expected Next Due</span>
             <span id="pay-header-due" class="text-xs font-bold text-slate-800">--</span>
           </div>
@@ -457,7 +446,7 @@
               <input type="text" id="pay-date" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs focus:border-brand-primary outline-none shadow-sm text-slate-700">
             </div>
             <div>
-              <label id="pay-fee-label" class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Cycle fee</label>
+              <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Cycle Fee</label>
               <input type="text" id="pay-expected-label" readonly class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none">
             </div>
           </div>
@@ -470,7 +459,7 @@
             </div>
             <p id="pay-pending" class="text-[11px] font-bold text-emerald-700 text-right">Fully paid</p>
           </div>
-          <p class="text-[10px] text-slate-500 font-medium -mt-1">Cash and UPI share the row equally. Add another line if both were used. Less than the fee stays pending.</p>
+          <p class="text-[10px] text-slate-500 font-medium -mt-1">Choose Cash or UPI, then the amount. Add another line if both were used. The same mode is saved as one total. Less than the cycle fee stays as a pending partial payment.</p>
 
           <div>
             <label class="block text-[9px] font-bold text-slate-600 mb-1 tracking-wide">Receipt Image</label>

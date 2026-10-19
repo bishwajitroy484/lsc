@@ -57,7 +57,7 @@ function loadMembersApi(dbData = {
     'ScriptApp',
     `
       ${source};
-      return { api_getMembers, api_getMemberPayments, api_saveMember, api_pauseMember, api_recordPayment, mergeMemberUpdatePayload_, setupMemberExitDateTrigger, db: DB, scriptApp: ScriptApp, trigger: ScriptApp.trigger };
+      return { api_getMembers, api_getMemberPayments, api_saveMember, mergeMemberUpdatePayload_, setupMemberExitDateTrigger, db: DB, scriptApp: ScriptApp, trigger: ScriptApp.trigger };
     `
   )(
     db,
@@ -588,93 +588,6 @@ describe('Members Module', () => {
     expect(String(result.error)).toMatch(/numbers/i);
   });
 
-  test('pause keeps the same member, an ad hoc payment leaves the pause, and a new quarter clears it', () => {
-    const api = loadMembersApi({
-      MEMBERS: [{ memberId: 'MEM-1', fullName: 'Riya Sen', membershipId: 'PLAN-Q', status: 'Active', holdStatus: '', holdStart: '' }],
-      PAYMENTS: [],
-      SETTINGS: []
-    });
-    const paused = api.api_saveMember({
-      memberId: 'MEM-1',
-      fullName: 'Riya Sen',
-      phone: '9876543210',
-      status: 'Active',
-      accountPause: true,
-      pauseDays: 30
-    });
-    expect(paused.success).toBe(true);
-    const pausePayload = api.db.update.mock.calls.map(call => call[2]).find(row => row && row.holdStatus === 'Paused');
-    expect(pausePayload).toBeTruthy();
-    expect(String(pausePayload.holdDays)).toBe('30');
-    expect(pausePayload.holdEnd).toBeTruthy();
-
-    api.db.read.mockImplementation((sheet) => {
-      if (sheet === 'MEMBERS') return [{ memberId: 'MEM-1', holdStatus: 'Paused', holdStart: pausePayload.holdStart, holdDays: '30', holdEnd: pausePayload.holdEnd }];
-      return [];
-    });
-    const adhoc = api.api_recordPayment({
-      memberId: 'MEM-1',
-      amount: 2500,
-      paidDate: '10-Jun-2026',
-      startDate: '10-Jun-2026',
-      endDate: '14-Jun-2026',
-      coverageKind: 'Ad hoc',
-      paymentStatus: 'Paid'
-    });
-    expect(adhoc.success).toBe(true);
-    const adhocRow = api.db.create.mock.calls.map(call => call[1]).find(row => row && row.coverageKind === 'Ad hoc');
-    expect(adhocRow).toBeTruthy();
-    expect(adhocRow.coverageKind).toBe('Ad hoc');
-    const clearCalls = api.db.update.mock.calls.filter(call => call[0] === 'MEMBERS' && call[2] && call[2].holdStatus === '');
-    expect(clearCalls).toHaveLength(0);
-
-    const quarter = api.api_recordPayment({
-      memberId: 'MEM-1',
-      amount: 30000,
-      paidDate: '10-Jul-2026',
-      startDate: '10-Jul-2026',
-      endDate: '08-Oct-2026',
-      coverageKind: 'Quarter',
-      paymentStatus: 'Paid'
-    });
-    expect(quarter.success).toBe(true);
-    const quarterRow = api.db.create.mock.calls.map(call => call[1]).find(row => row && row.coverageKind === 'Quarter');
-    expect(quarterRow).toBeTruthy();
-    expect(api.db.update).toHaveBeenCalledWith('MEMBERS', 'MEM-1', expect.objectContaining({ holdStatus: '', holdStart: '', holdDays: '', holdEnd: '' }));
-  });
-
-  test('pause records the hold and keeps the stored status Active', () => {
-    const api = loadMembersApi({
-      MEMBERS: [{ memberId: 'MEM-1', fullName: 'Riya Sen', status: 'STA-ACT', phone: '9876543210' }],
-      PAYMENTS: [],
-      SETTINGS: []
-    }, {
-      success: true,
-      data: {
-        options: {
-          status: [
-            { id: 'STA-ACT', name: 'Active' },
-            { id: 'STA-INACT', name: 'In-Active' },
-            { id: 'STA-PAUSE', name: 'Pause' }
-          ]
-        }
-      }
-    });
-    const paused = api.api_saveMember({
-      memberId: 'MEM-1',
-      fullName: 'Riya Sen',
-      phone: '9876543210',
-      status: 'STA-PAUSE',
-      accountPause: true,
-      pauseDays: 12
-    });
-    expect(paused.success).toBe(true);
-    const pausePayload = api.db.update.mock.calls.map(call => call[2]).find(row => row && row.holdStatus === 'Paused');
-    expect(pausePayload).toBeTruthy();
-    expect(pausePayload.status).toBe('STA-ACT');
-    expect(String(pausePayload.holdDays)).toBe('12');
-  });
-
   test('api_saveMember create still allows optional blanks', () => {
     const membersApi = loadMembersApi({ MEMBERS: [], PAYMENTS: [], SETTINGS: [] });
     const result = membersApi.api_saveMember({
@@ -1034,58 +947,6 @@ describe('Members Module', () => {
       expect(document.getElementById('pay-cycle-label').textContent).toBe('Balance due');
       expect(MembersApp.formatDateDDMMMYYYY(document.getElementById('pay-start').value)).toBe(MembersApp.formatDateDDMMMYYYY('2026-04-15'));
       expect(MembersApp.formatDateDDMMMYYYY(document.getElementById('pay-end').value)).toBe(MembersApp.formatDateDDMMMYYYY('2026-07-14'));
-      MembersApp.dropdowns = originalDropdowns;
-    });
-
-    it('shows a paused quarterly member as Paused and opens Pay as Ad hoc', () => {
-      const originalDropdowns = MembersApp.dropdowns;
-      MembersApp.dropdowns = {
-        membership: [
-          { id: 'PLAN-Q', name: 'Quarterly', frequency: 'Quarterly' },
-          { id: 'PLAN-AD', name: 'Ad hoc', frequency: 'Ad hoc' }
-        ],
-        batch: [{ id: 'B1', name: 'Morning', groups: 'Adult' }],
-        price: [{ name: 'Ad hoc', group: 'Adult', base_price: '400' }],
-        status: [{ id: 'STATUS-ACTIVE', name: 'Active' }],
-        paymentstatus: [{ id: 'PAID', name: 'Paid' }]
-      };
-      const html = MembersApp.buildDesktopRowHtml({
-        memberId: 'LSC-MEM-9',
-        fullName: 'Riya Sen',
-        membershipId: 'PLAN-Q',
-        status: 'STATUS-ACTIVE',
-        dueDate: '20-Apr-2026',
-        joinDate: '20-Jan-2026',
-        holdStatus: 'Paused',
-        holdStart: '21-Apr-2026'
-      });
-      expect(html).toContain('Paused');
-      expect(html).not.toContain('Account Closed');
-
-      MembersApp.currentActiveMember = {
-        memberId: 'LSC-MEM-9',
-        fullName: 'Riya Sen',
-        membershipId: 'PLAN-Q',
-        membershipAmount: 30000,
-        batchId: 'B1',
-        status: 'STATUS-ACTIVE',
-        holdStatus: 'Paused',
-        holdStart: '21-Apr-2026',
-        holdDays: '30',
-        holdEnd: '31-Dec-2026'
-      };
-      MembersApp.currentMemberPayments = [];
-      MembersApp.effectiveDueDate = new Date(2026, 3, 20);
-      MembersApp.openRecordPayment();
-      expect(document.getElementById('pay-coverage-kind').value).toBe('Ad hoc');
-      expect(document.getElementById('pay-modal-title').innerText).toBe('Ad hoc payment');
-      expect(document.getElementById('pay-kind').classList.toggle).toHaveBeenCalledWith('hidden', true);
-      expect(Number(document.getElementById('pay-expected').value)).toBe(400);
-      expect(MembersApp.virtualPaymentCycles()).toHaveLength(0);
-      MembersApp.dropdowns = { AccountStatus: [{ id: 'STA-9', title: 'Pause' }] };
-      expect(MembersApp.getName('status', 'STA-9')).toBe('Pause');
-      expect(MembersApp.pendingBalance({ amount: 1000, expectedAmount: 4000, pendingAmount: '' })).toBe(3000);
-      expect(MembersApp.pauseDayCount({ holdDays: '', holdStart: '2026-04-21', holdEnd: '2026-04-30' })).toBe(10);
       MembersApp.dropdowns = originalDropdowns;
     });
   });

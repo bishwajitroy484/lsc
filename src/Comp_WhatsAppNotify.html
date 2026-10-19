@@ -42,8 +42,6 @@
         if (key === 'duedate' || key === 'due') return ctx.dueDate;
         if (key === 'paiddate' || key === 'renewedon') return ctx.paidDate || ctx.dueDate;
         if (key === 'enddate' || key === 'validity') return ctx.endDate;
-        if (key === 'startdate') return ctx.startDate || '';
-        if (key === 'pendingamount' || key === 'pending' || key === 'balance' || key === 'balancedue') return ctx.pendingAmount || '';
         if (ctx[key] == null) return '';
         return String(ctx[key]);
       });
@@ -103,24 +101,10 @@
         pendingAmount: money(row.pendingAmount != null ? row.pendingAmount : row.amount),
         dueDate: dueDate,
         paidDate: row.paidDate || row.date || '--',
-        startDate: row.startDate || '--',
         endDate: row.endDate || row.period || '--',
         days: days,
         plan: plan
       };
-      const visit = String(row.coverageKind || '').toLowerCase().replace(/[\s_-]+/g, '').indexOf('adhoc') >= 0;
-      if (visit) {
-        if (row.partial) {
-          return this.applyTemplate(
-            'Dear {{memberName}},\n\nThank you for your visit. A balance is still due.\n\nAmount received: {{amount}}\nBalance due: {{pendingAmount}}\nDates: {{startDate}} to {{endDate}}\n\nPlease save this message.\nThank you.',
-            ctx
-          );
-        }
-        return this.applyTemplate(
-          'Dear {{memberName}},\n\nThank you for your visit.\n\nAmount received: {{amount}}\nDates: {{startDate}} to {{endDate}}\n\nPlease save this message.\nThank you.',
-          ctx
-        );
-      }
       if (row && row.partial) {
         if (type === 'overdue') {
           return this.applyTemplate(
