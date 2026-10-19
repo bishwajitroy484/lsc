@@ -345,6 +345,15 @@
     margin: auto;
     width: 100%;
   }
+  #chart-modal-backdrop.is-open {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  #chart-modal-backdrop.is-open #chart-modal-content {
+    opacity: 1 !important;
+    transform: none !important;
+    visibility: visible !important;
+  }
 
   /* Spinner / % progress dialog: true center of the screen, ignoring the bottom-nav clearance */
   #action-progress-overlay {

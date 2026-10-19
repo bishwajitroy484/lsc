@@ -3,36 +3,50 @@
   <script>
     const Toast = {
       show: function(msg, type = 'success') {
-        const container = document.getElementById('toast-container');
-        const id = 'toast-' + Date.now();
-        
+        let container = document.getElementById('toast-container');
+        if (!container && document.body) {
+          container = document.createElement('div');
+          container.id = 'toast-container';
+          container.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none w-full max-w-sm px-4';
+          document.body.appendChild(container);
+        }
+        if (!container) return;
+
         const isSuccess = type === 'success';
-        const icon = isSuccess ? 'check_circle' : 'error';
+        const iconName = isSuccess ? 'check_circle' : 'error';
         const color = isSuccess ? 'bg-emerald-500' : 'bg-red-500';
 
-        const html = `
-          <div id="${id}" class="flex items-center gap-3 px-4 py-3 text-white ${color} rounded-xl shadow-lg transform -translate-y-4 opacity-0 transition-all duration-300 pointer-events-auto">
-            <span class="material-symbols-rounded text-lg">${icon}</span>
-            <span class="text-sm font-medium flex-1">${msg}</span>
-            <button onclick="document.getElementById('${id}').remove()" class="material-symbols-rounded text-lg opacity-70 hover:opacity-100">close</button>
-          </div>
-        `;
-        
-        container.insertAdjacentHTML('beforeend', html);
-        
-        // Trigger entrance animation
-        requestAnimationFrame(() => {
-          const el = document.getElementById(id);
+        const el = document.createElement('div');
+        el.className = 'flex items-center gap-3 px-4 py-3 text-white ' + color + ' rounded-xl shadow-lg transform -translate-y-4 opacity-0 transition-all duration-300 pointer-events-auto';
+
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-rounded text-lg';
+        icon.textContent = iconName;
+
+        const label = document.createElement('span');
+        label.className = 'text-sm font-medium flex-1';
+        label.textContent = msg == null ? '' : String(msg);
+
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'material-symbols-rounded text-lg opacity-70 hover:opacity-100';
+        close.textContent = 'close';
+        close.addEventListener('click', function() { el.remove(); });
+
+        el.appendChild(icon);
+        el.appendChild(label);
+        el.appendChild(close);
+        container.appendChild(el);
+
+        requestAnimationFrame(function() {
+          if (!el.classList) return;
           el.classList.remove('-translate-y-4', 'opacity-0');
         });
 
-        // Auto-remove after 3 seconds
-        setTimeout(() => {
-          const el = document.getElementById(id);
-          if(el) {
-            el.classList.add('-translate-y-4', 'opacity-0');
-            setTimeout(() => el.remove(), 300);
-          }
+        setTimeout(function() {
+          if (!el.classList) return;
+          el.classList.add('-translate-y-4', 'opacity-0');
+          setTimeout(function() { el.remove(); }, 300);
         }, 3000);
       },
       success: (msg) => Toast.show(msg, 'success'),

@@ -110,6 +110,17 @@
           <button onclick="window.openChartModal('Revenue vs Expenses', 'revExp')" class="hidden md:flex hover:text-brand-primary p-0.5 rounded transition-colors"><span class="material-symbols-rounded text-[16px]">open_in_full</span></button>
         </div>
       </div>
+      <div id="revexp-summary-bar" class="flex flex-wrap items-center justify-between gap-1 text-[10px] bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1 mb-2 shrink-0 min-w-0">
+        <div class="flex items-center gap-1 min-w-0">
+          <span class="text-slate-400 font-medium truncate">Revenue:</span>
+          <span id="revexp-sum-revenue" class="font-bold text-slate-700">--</span>
+        </div>
+        <span class="text-slate-300">•</span>
+        <div class="flex items-center gap-1 min-w-0">
+          <span class="text-slate-400 font-medium truncate">Expenses:</span>
+          <span id="revexp-sum-expenses" class="font-bold text-rose-600">--</span>
+        </div>
+      </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">
         <div class="dash-chart-shimmer absolute inset-0 z-10 rounded-xl shimmer opacity-70 hidden"></div>
         <div id="chart-rev-exp" class="absolute inset-0"></div>
@@ -183,6 +194,17 @@
           </select>
           <button onclick="window.toggleDataLabels('trend', this)" class="text-brand-primary p-0.5 rounded transition-colors" title="Toggle value labels"><span class="material-symbols-rounded text-[16px]">label</span></button>
           <button onclick="window.openChartModal('Cash vs UPI', 'trend')" class="hidden md:flex hover:text-brand-primary p-0.5 rounded"><span class="material-symbols-rounded text-[16px]">open_in_full</span></button>
+        </div>
+      </div>
+      <div id="cashupi-summary-bar" class="flex flex-wrap items-center justify-between gap-1 text-[10px] bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1 mb-2 shrink-0 min-w-0">
+        <div class="flex items-center gap-1 min-w-0">
+          <span class="text-slate-400 font-medium truncate">Cash:</span>
+          <span id="cashupi-sum-cash" class="font-bold text-slate-700">--</span>
+        </div>
+        <span class="text-slate-300">•</span>
+        <div class="flex items-center gap-1 min-w-0">
+          <span class="text-slate-400 font-medium truncate">UPI:</span>
+          <span id="cashupi-sum-upi" class="font-bold text-indigo-600">--</span>
         </div>
       </div>
       <div class="relative w-full flex-1 min-h-[220px] overflow-visible">

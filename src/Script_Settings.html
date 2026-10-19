@@ -38,10 +38,10 @@
         subject: '{{gymName}} — Payment confirmation',
         body:
           'Dear {{memberName}},\n\n' +
-          'Thank you for your renewal. Please note your Membership details.\n' +
+          'Thank you for your renewal. Please keep these membership details.\n\n' +
           'Renewed on: {{paidDate}}\n' +
-          'validity: {{endDate}}\n\n' +
-          'Please save this message. I will do too.\n' +
+          'Validity: {{endDate}}\n\n' +
+          'Please save this message.\n' +
           'Thank you.'
       },
       weekly: {
@@ -58,14 +58,14 @@
         body:
           'Dear {{memberName}},\n\n' +
           'Your renewal was due on {{dueDate}} and is {{days}} day(s) overdue.\n\n' +
-          'Thank you!'
+          'Thank you.'
       },
       waUpcoming: {
         subject: '',
         body:
           'Dear {{memberName}},\n\n' +
-          'A quick reminder for your upcoming renewal due on {{dueDate}}. {{days}} day(s) left.\n\n' +
-          'Thank you!'
+          'Your renewal is due on {{dueDate}}. {{days}} day(s) are left.\n\n' +
+          'Thank you.'
       }
     },
 
@@ -74,12 +74,22 @@
 
     isPreviousTemplate: function(value, kind) {
       const previous = {
-        receipt: 'Hi {{memberName}}, Thank you for your payment at {{gymName}}. Your membership has been updated successfully. Plan: {{plan}} Amount paid: {{amount}} Payment date: {{paidDate}} Coverage period: {{startDate}} to {{endDate}} Member ID: {{memberId}} If you have any questions, please reply to this email or contact the front desk. Warm regards, {{gymName}} Team',
-        waOverdue: 'Hi {{name}}, This is a friendly reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} was due on {{dueDate}} and is now overdue by {{days}} day(s). Please complete the payment at your earliest convenience. Thank you!',
-        waUpcoming: 'Hi {{name}}, A quick reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} is due on {{dueDate}} ({{days}} day(s) left). Please arrange payment before the due date. Thank you!'
+        receipt: [
+          'Hi {{memberName}}, Thank you for your payment at {{gymName}}. Your membership has been updated successfully. Plan: {{plan}} Amount paid: {{amount}} Payment date: {{paidDate}} Coverage period: {{startDate}} to {{endDate}} Member ID: {{memberId}} If you have any questions, please reply to this email or contact the front desk. Warm regards, {{gymName}} Team',
+          'Dear {{memberName}}, Thank you for your renewal. Please note your Membership details. Renewed on: {{paidDate}} validity: {{endDate}} Please save this message. I will do too. Thank you.'
+        ],
+        waOverdue: [
+          'Hi {{name}}, This is a friendly reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} was due on {{dueDate}} and is now overdue by {{days}} day(s). Please complete the payment at your earliest convenience. Thank you!',
+          'Dear {{memberName}}, Your renewal was due on {{dueDate}} and is {{days}} day(s) overdue. Thank you!'
+        ],
+        waUpcoming: [
+          'Hi {{name}}, A quick reminder from {{gymName}}. Your {{plan}} renewal of {{amount}} is due on {{dueDate}} ({{days}} day(s) left). Please arrange payment before the due date. Thank you!',
+          'Dear {{memberName}}, A quick reminder for your upcoming renewal due on {{dueDate}}. {{days}} day(s) left. Thank you!'
+        ]
       };
       const normalize = function(text) { return String(text || '').trim().replace(/\s+/g, ' '); };
-      return normalize(value) === normalize(previous[kind]);
+      const list = previous[kind] || [];
+      return list.some(function(item) { return normalize(value) === normalize(item); });
     },
 
     showToast: function(msg, isError = false) {

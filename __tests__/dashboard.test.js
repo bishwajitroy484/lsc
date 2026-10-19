@@ -348,14 +348,34 @@ describe('Dashboard Module', () => {
     };
     const result = dashboardApi.processOperations(members, [], payments, 2026, today, resolveName, dropDowns, 'anchor');
     const names = result.overdueList.map(row => row.name);
-    expect(names).toContain('Short Pay');
+    expect(names).not.toContain('Short Pay');
     expect(names).toContain('Reena Roy');
     expect(names).not.toContain('Paid Adhoc');
-    const shortRow = result.overdueList.find(row => row.memberId === 'MEM-SHORT');
+    const upcomingNames = result.upcomingList.map(row => row.name);
+    expect(upcomingNames).toContain('Short Pay');
+    const shortRow = result.upcomingList.find(row => row.memberId === 'MEM-SHORT');
     const adhocRow = result.overdueList.find(row => row.memberId === 'MEM-ADHOC');
     expect(shortRow.amount).toBe(2400);
+    expect(shortRow.partial).toBe(true);
     expect(adhocRow.amount).toBe(2400);
     expect(result.overdueList.filter(row => row.memberId === 'MEM-ADHOC')).toHaveLength(1);
+  });
+
+  test('keeps a partial balance on the dashboard overdue table when coverage ends next year', () => {
+    const dashboardApi = loadDashboardApi('anchor', [], [
+      { memberId: 'MEM-NEXT', fullName: 'Supreet Kaur', membershipId: 'PLAN-2', membershipAmount: 10000, joinDate: '2026-07-15', status: 'Active', phone: '111' }
+    ], [
+      { memberId: 'MEM-NEXT', paymentStatus: 'Pending', amount: 5000, pendingAmount: 5000, expectedAmount: 10000, startDate: '2026-07-15', endDate: '2027-01-11', paidDate: '2026-07-15' }
+    ]);
+    const currentMonth = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][new Date().getMonth()];
+    const shown = dashboardApi.api_getDashboardMetrics(String(new Date().getFullYear()), 'Monthly', [currentMonth]);
+    const hidden = dashboardApi.api_getDashboardMetrics(String(new Date().getFullYear()), 'Monthly', ['Jan']);
+    const row = (shown.data.overdue || []).find(item => item.memberId === 'MEM-NEXT');
+    expect(row).toBeTruthy();
+    expect(row.amount).toBe(5000);
+    if (currentMonth !== 'Jan') {
+      expect((hidden.data.overdue || []).some(item => item.memberId === 'MEM-NEXT')).toBe(false);
+    }
   });
 
   test('counts an open partial balance toward the forecast without treating it as received', () => {
@@ -462,6 +482,11 @@ describe('Dashboard Module', () => {
     expect(predictionConfig).toContain('forecastFrom');
     expect(script).toContain('window.renderPredictionChart');
     expect(script).toContain('window.renderExpenseBreakdownChart');
+    expect(view).toContain('id="revexp-sum-revenue"');
+    expect(view).toContain('id="cashupi-sum-cash"');
+    expect(script).toContain('revexp-sum-revenue');
+    expect(script).toContain('cashupi-sum-upi');
+    expect(script).toContain("backdrop.classList.add('opacity-100', 'pointer-events-auto', 'is-open')");
     const miscToggle = script.slice(script.indexOf('toggleMisc: function'), script.indexOf('rebuildCharts: function'));
     expect(miscToggle).toContain('renderExpenseBreakdownChart');
     expect(miscToggle).not.toContain('this.rebuildCharts()');
