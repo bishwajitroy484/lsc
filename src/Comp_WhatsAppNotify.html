@@ -57,6 +57,16 @@
       return '';
     },
 
+    previousTemplate: function(type) {
+      if (type === 'overdue') {
+        return 'Dear {{memberName}},\n\nYour renewal was due on {{dueDate}} and is {{days}} day(s) overdue.\n\nThank you!';
+      }
+      if (type === 'upcoming') {
+        return 'Dear {{memberName}},\n\nA quick reminder for your upcoming renewal due on {{dueDate}}. {{days}} day(s) left.\n\nThank you!';
+      }
+      return '';
+    },
+
     customTemplate: function(type) {
       const branding = (window.LSC_SESSION && window.LSC_SESSION.branding) || {};
       const stored = type === 'overdue'
@@ -65,6 +75,7 @@
       if (!stored) return '';
       const normalize = function(value) { return String(value || '').trim().replace(/\s+/g, ' '); };
       if (normalize(stored) === normalize(this.legacyTemplate(type))) return '';
+      if (normalize(stored) === normalize(this.previousTemplate(type))) return '';
       return stored;
     },
 
@@ -77,35 +88,59 @@
       const dueDate = row.date || row.paidDate || '--';
       const days = row.days;
       const plan = row.plan || 'membership';
-      const custom = (type === 'overdue' || type === 'upcoming') ? this.customTemplate(type) : '';
+      const money = function(value) {
+        return (typeof AppUtils !== 'undefined' && AppUtils.formatCurrency)
+          ? AppUtils.formatCurrency(value)
+          : ('₹' + String(value || 0));
+      };
+      const custom = (type === 'overdue' || type === 'upcoming') && !row.partial ? this.customTemplate(type) : '';
       const ctx = {
         gym: gym,
         name: name,
         amount: amount,
+        pendingAmount: money(row.pendingAmount != null ? row.pendingAmount : row.amount),
         dueDate: dueDate,
         paidDate: row.paidDate || row.date || '--',
         endDate: row.endDate || row.period || '--',
         days: days,
         plan: plan
       };
+      if (row && row.partial) {
+        if (type === 'overdue') {
+          return this.applyTemplate(
+            'Dear {{memberName}},\n\nA balance of {{amount}} was due on {{dueDate}} and is {{days}} day(s) overdue.\n\nThank you.',
+            ctx
+          );
+        }
+        if (type === 'paid' || type === 'receipt' || type === 'partial') {
+          return this.applyTemplate(
+            'Dear {{memberName}},\n\nThank you for your payment. A balance is still due.\n\nAmount received: {{amount}}\nBalance due: {{pendingAmount}}\nPaid on: {{paidDate}}\nValidity: {{endDate}}\n\nPlease save this message.\nThank you.',
+            ctx
+          );
+        }
+        return this.applyTemplate(
+          'Dear {{memberName}},\n\nA balance of {{amount}} is due on {{dueDate}}. {{days}} day(s) are left.\n\nThank you.',
+          ctx
+        );
+      }
       if (custom) return this.applyTemplate(custom, ctx);
 
       if (type === 'overdue') {
         return this.applyTemplate(
-          'Dear {{memberName}},\n\nYour renewal was due on {{dueDate}} and is {{days}} day(s) overdue.\n\nThank you!',
+          'Dear {{memberName}},\n\nYour renewal was due on {{dueDate}} and is {{days}} day(s) overdue.\n\nThank you.',
           ctx
         );
       }
 
       if (type === 'paid' || type === 'receipt') {
         return this.applyTemplate(
-          'Dear {{memberName}},\n\nThank you for your renewal. Please note your Membership details.\nRenewed on: {{paidDate}}\nvalidity: {{endDate}}\n\nPlease save this message. I will do too.\nThank you.',
+          'Dear {{memberName}},\n\nThank you for your renewal. Please keep these membership details.\n\nRenewed on: {{paidDate}}\nValidity: {{endDate}}\n\nPlease save this message.\nThank you.',
           ctx
         );
       }
 
       return this.applyTemplate(
-        'Dear {{memberName}},\n\nA quick reminder for your upcoming renewal due on {{dueDate}}. {{days}} day(s) left.\n\nThank you!',
+        'Dear {{memberName}},\n\nYour renewal is due on {{dueDate}}. {{days}} day(s) are left.\n\nThank you.',
         ctx
       );
     },
@@ -118,11 +153,11 @@
           subtitle: 'Overdue payment reminder'
         };
       }
-      if (type === 'paid' || type === 'receipt') {
+      if (type === 'paid' || type === 'receipt' || type === 'partial') {
         return {
-          badge: 'Paid',
+          badge: type === 'partial' ? 'Partial' : 'Paid',
           badgeClass: 'text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 shrink-0',
-          subtitle: 'Payment received message'
+          subtitle: type === 'partial' ? 'Partial payment message' : 'Payment received message'
         };
       }
       return {

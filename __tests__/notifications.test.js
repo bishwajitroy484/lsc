@@ -95,6 +95,20 @@ describe('notification report helpers', () => {
     expect(mail.htmlBody).toContain('1-Oct-2026');
     expect(mail.htmlBody).toContain('31-Dec-2026');
     expect(mail.htmlBody).not.toContain('Bishwajit Roy');
+    expect(mail.htmlBody).not.toContain('margin:0 0 10px');
+  });
+
+  test('builds a partial receipt that names the remaining balance', () => {
+    const api = loadNotificationsApi();
+    const mail = api.buildPaymentReceiptEmail_(
+      { fullName: 'Bishwajit Roy', memberId: 'MEM1' },
+      { amount: 1500, pendingAmount: 1500, expectedAmount: 3000, paymentStatus: 'Pending', paidDate: '2026-10-01', endDate: '2026-12-31' },
+      { gymName: 'Lakeside', receiptBody: 'Thank you for your renewal.' },
+      'Quarterly'
+    );
+    expect(mail.htmlBody).toContain('balance is still due');
+    expect(mail.htmlBody).toContain('Balance due:');
+    expect(mail.htmlBody).not.toContain('Thank you for your renewal');
   });
 
   test('api_sendTestNotificationEmail sends sample receipt to signed-in admin', () => {

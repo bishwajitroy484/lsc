@@ -117,7 +117,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
     const chartMetrics = formatTimePeriods(financialData, operationalData, mode, periods, targetYear, today, expenseAverages, actualAnchor);
     const expenseBreakdown = formatExpenseBreakdown(financialData, mode, periods);
     const membership = summarizeMembershipForPeriods_(members, targetYear, mode, periods, resolveName, dropDowns);
-    const overdueRows = filterDashboardRowsToPeriods_(operationalData.overdueList, mode, periods, targetYear);
+    const overdueRows = filterDashboardRowsToPeriods_(operationalData.overdueList, mode, periods, targetYear, today);
     const periodOverdue = overdueRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
 
     // Dynamic Greeting Name Extraction based on Login Email
@@ -174,7 +174,7 @@ function api_getDashboardMetrics(year = new Date().getFullYear().toString(), mod
           staffTrend: chartMetrics.filteredStaff
         },
         overdue: overdueRows,
-        upcoming: filterDashboardRowsToPeriods_(operationalData.upcomingList, mode, periods, targetYear),
+        upcoming: filterDashboardRowsToPeriods_(operationalData.upcomingList, mode, periods, targetYear, today),
         birthdays: operationalData.birthdayList || []
       }
     };
@@ -662,14 +662,25 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
        }
 
        const feeGap = isAdHocOrTrial ? Math.max(0, Math.round((amt - receivedByMember) * 100) / 100) : 0;
-       const owed = Math.round(Math.max(pendingExplicit, totalUnpaidForMember, feeGap) * 100) / 100;
+       const coverageStillOpen = actualNextDue && !isNaN(actualNextDue.getTime()) && actualNextDue >= today;
+       const owed = (coverageStillOpen && pendingExplicit > 0)
+         ? Math.round(pendingExplicit * 100) / 100
+         : Math.round(Math.max(pendingExplicit, totalUnpaidForMember, feeGap) * 100) / 100;
        const pNameLabel = resolveName('MEMBERS', 'membershipId', m.membershipId);
        const formatDue = (dateObj) => dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
 
-       if (owed > 0) {
-           const owedDate = (firstUnpaidDate && firstUnpaidDate < today)
+       const listDue = (actualNextDue && !isNaN(actualNextDue.getTime()))
+         ? actualNextDue
+         : ((firstUnpaidDate && !isNaN(firstUnpaidDate.getTime()))
              ? firstUnpaidDate
-             : ((actualNextDue && !isNaN(actualNextDue.getTime())) ? actualNextDue : (!isNaN(joinDate.getTime()) ? joinDate : new Date(today.getTime())));
+             : (!isNaN(joinDate.getTime()) ? joinDate : null));
+       const daysUntilDue = listDue
+         ? Math.ceil((listDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+         : null;
+       const inUpcomingWindow = !isAdHocOrTrial && daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 7;
+
+       if (owed > 0 && !inUpcomingWindow) {
+           const owedDate = listDue || new Date(today.getTime());
            const diffDays = Math.ceil((today.getTime() - owedDate.getTime()) / (1000 * 60 * 60 * 24));
            overdueList.push({
                memberId: m.memberId || '',
@@ -677,24 +688,23 @@ function processOperations(members, staff, payments, targetYear, today, resolveN
                phone: m.phone || '',
                plan: pNameLabel,
                amount: owed,
+               partial: true,
                date: formatDue(owedDate),
                days: Math.max(0, diffDays),
                status: 'text-red-600 bg-red-50 border-red-100'
            });
-       } else if (isActive && actualNextDue && !isAdHocOrTrial) {
-           const diffDays = Math.ceil((actualNextDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-           if (diffDays >= 0 && diffDays <= 7) {
-               upcomingList.push({
-                   memberId: m.memberId || '',
-                   name: m.fullName || 'Unknown',
-                   phone: m.phone || '',
-                   plan: pNameLabel,
-                   amount: amt,
-                   date: formatDue(actualNextDue),
-                   days: diffDays,
-                   status: 'text-amber-600 bg-amber-50 border-amber-100'
-               });
-           }
+       } else if (inUpcomingWindow && (isActive || owed > 0)) {
+           upcomingList.push({
+               memberId: m.memberId || '',
+               name: m.fullName || 'Unknown',
+               phone: m.phone || '',
+               plan: pNameLabel,
+               amount: owed > 0 ? owed : amt,
+               partial: owed > 0,
+               date: formatDue(listDue),
+               days: daysUntilDue,
+               status: 'text-amber-600 bg-amber-50 border-amber-100'
+           });
        }
     }
   });
@@ -972,12 +982,18 @@ function summarizeMembershipForPeriods_(members, targetYear, mode, periods, reso
   };
 }
 
-function filterDashboardRowsToPeriods_(rows, mode, periods, targetYear) {
+function filterDashboardRowsToPeriods_(rows, mode, periods, targetYear, today) {
   const monthIndexes = selectedMonthIndexes_(mode, periods);
+  const now = today ? new Date(today) : new Date();
+  now.setHours(0, 0, 0, 0);
+  const currentMonthSelected = now.getFullYear() === Number(targetYear) && monthIndexes.indexOf(now.getMonth()) >= 0;
   return (rows || []).filter(function(row) {
     const due = parseSafeDate(row && (row.date || row.dueDate));
     if (isNaN(due.getTime())) return false;
-    return due.getFullYear() === Number(targetYear) && monthIndexes.indexOf(due.getMonth()) >= 0;
+    if (due.getFullYear() === Number(targetYear) && monthIndexes.indexOf(due.getMonth()) >= 0) return true;
+    // A balance whose coverage end is still ahead of this year stays on the overdue table
+    // for the current month, matching the member list.
+    return currentMonthSelected && due.getTime() > now.getTime();
   });
 }
 

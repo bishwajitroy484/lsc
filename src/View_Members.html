@@ -414,7 +414,10 @@
           <input type="hidden" id="pay-expected" value="0">
 
           <div id="pay-coverage-container" class="rounded-2xl border border-amber-200 bg-amber-50/80 p-3">
-            <p class="text-[11px] font-bold text-amber-900">Coverage</p>
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-[11px] font-bold text-amber-900">Coverage</p>
+              <p id="pay-cycle-label" class="hidden text-[11px] font-bold text-amber-800"></p>
+            </div>
             <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-end mt-2">
               <div>
                 <label for="pay-start" class="block text-[10px] font-semibold text-amber-800/80 mb-1">Start *</label>
@@ -426,6 +429,10 @@
                 <input type="text" id="pay-end" placeholder="DD-MMM-YYYY" required class="date-field w-full px-2.5 py-2 bg-white border border-amber-200 rounded-lg text-xs font-semibold text-slate-800 focus:border-amber-400 outline-none">
               </div>
             </div>
+            <label id="pay-custom-wrap" class="hidden mt-2 flex items-center gap-2 text-[11px] font-semibold text-amber-900">
+              <input type="checkbox" id="pay-custom-dates" onchange="MembersApp.toggleCustomCoverage()" class="rounded border-amber-300 text-brand-primary focus:ring-brand-primary">
+              Different dates
+            </label>
           </div>
 
           <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 flex justify-between items-center">
