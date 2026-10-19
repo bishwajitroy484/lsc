@@ -162,6 +162,7 @@ function api_getMembers() {
   try {
     const gate = requirePermission_('members', 'view');
     if (!gate.ok) return gate.response;
+    ensureMemberHoldHeaders_();
     // 1. Batch read for performance, including SETTINGS
     const dbData = DB.batchRead(['MEMBERS', 'PAYMENTS', 'SETTINGS']);
     const members = dbData['MEMBERS'] || [];
@@ -378,14 +379,17 @@ function ensurePaymentSplitHeaders_() {
 
 function ensureMemberHoldHeaders_() {
   try {
-    if (!DB || typeof DB._getSheetMeta !== 'function' || typeof Sheets === 'undefined' || typeof SPREADSHEET_ID === 'undefined' || typeof colToLetter !== 'function') {
+    const letter = typeof colToLetter === 'function' ? colToLetter : (typeof _colToLetter === 'function' ? _colToLetter : null);
+    if (!DB || typeof Sheets === 'undefined' || !Sheets.Spreadsheets || typeof SPREADSHEET_ID === 'undefined' || !letter) {
       return null;
     }
-    const meta = DB._getSheetMeta('MEMBERS');
-    const headers = (meta.headers || []).slice();
+    const response = Sheets.Spreadsheets.Values.get(SPREADSHEET_ID, "'MEMBERS'!1:1");
+    const headers = ((response && response.values && response.values[0]) || []).slice();
+    while (headers.length && !String(headers[headers.length - 1] || '').trim()) headers.pop();
     const missing = ['holdStatus', 'holdStart', 'holdDays', 'holdEnd'].filter(function(name) {
       return !headers.some(function(header) {
-        return DB._payloadKeyForHeader_(header) === name;
+        const key = DB._payloadKeyForHeader_ ? DB._payloadKeyForHeader_(header) : header;
+        return String(key || '').replace(/[\s_-]+/g, '').toLowerCase() === name.toLowerCase();
       });
     });
     if (missing.length) {
@@ -393,11 +397,12 @@ function ensureMemberHoldHeaders_() {
       const data = missing.map(function(name, index) {
         headers.push(name);
         return {
-          range: 'MEMBERS!' + colToLetter(startCol + index) + '1',
+          range: "'MEMBERS'!" + letter(startCol + index) + '1',
           values: [[name]]
         };
       });
       Sheets.Spreadsheets.Values.batchUpdate({ valueInputOption: 'RAW', data: data }, SPREADSHEET_ID);
+      if (typeof DB._invalidateSheet === 'function') DB._invalidateSheet('MEMBERS');
     }
     return headers;
   } catch (error) {
